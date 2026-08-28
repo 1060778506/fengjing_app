@@ -1,0 +1,235 @@
+{
+ "app": "fengjing_app",
+ "charts": [],
+ "content": "[{\"id\":\"zDZ9WZvvQO\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">\u4e30\u5883\u4e1a\u52a1APP</span>\",\"col\":12}},{\"id\":\"fHKKg56N5o\",\"type\":\"card\",\"data\":{\"card_name\":\"\u4e3b\u914d\u7f6e\",\"col\":3}},{\"id\":\"ZgprkHgegZ\",\"type\":\"card\",\"data\":{\"card_name\":\"temu\u5168\u6258\u7ba1\",\"col\":3}},{\"id\":\"d7qYNDYLMb\",\"type\":\"card\",\"data\":{\"card_name\":\"\u4e9a\u9a6c\u900a\",\"col\":3}},{\"id\":\"LfpK-k7-L3\",\"type\":\"card\",\"data\":{\"card_name\":\"\u4e9a\u9a6c\u900a\u4fe1\u606f\",\"col\":3}},{\"id\":\"TnN8sPxIbP\",\"type\":\"card\",\"data\":{\"card_name\":\"\u4e9a\u9a6c\u900a\u5176\u4ed6\u529f\u80fd\",\"col\":3}},{\"id\":\"pNUcY93mFd\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"G47h2U-d06\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"\u4e9a\u9a6c\u900a\u8282\u70b9\u56fe\",\"col\":3}}]",
+ "creation": "2026-02-04 18:27:27.827398",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "liabilities",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "\u4e30\u5883\u4e1a\u52a1APP",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u5bfc\u5165\u4e9a\u9a6c\u900a\u8ba2\u5355",
+   "link_count": 0,
+   "link_to": "Amazon Order Import Session",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "temu\u5168\u6258\u7ba1",
+   "link_count": 1,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "temu\u5b8c\u7ed3\u5355",
+   "link_count": 0,
+   "link_to": "TEMU - Full Custody - Completion Document",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u4e3b\u914d\u7f6e",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u914d\u7f6e\u4e30\u5883app",
+   "link_count": 0,
+   "link_to": "Fengjing - Product Corresponding Platform - Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u7269\u6599\u5bf9\u5e94\u5e73\u53f0SKU",
+   "link_count": 0,
+   "link_to": "Fengjing - Product Corresponding Platform - Main Table",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u4e9a\u9a6c\u900a\u4fe1\u606f",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u57fa\u7840\u8ba2\u5355\u660e\u7ec6",
+   "link_count": 0,
+   "link_to": "Amazon Order Summary",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u79fb\u9664\u8ba2\u5355\u660e\u7ec6",
+   "link_count": 0,
+   "link_to": "Amazon removes order details",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u7ed3\u7b97\u8ba2\u5355\u660e\u7ec6",
+   "link_count": 0,
+   "link_to": "Amazon Settlement Detail",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u4e9a\u9a6c\u900a",
+   "link_count": 4,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "1.\u5bfc\u5165\u4e9a\u9a6c\u900a\u57fa\u7840\u8ba2\u5355\u660e\u7ec6\u2192",
+   "link_count": 0,
+   "link_to": "Amazon Order Import Session",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "2.\u5bfc\u5165\u4e9a\u9a6c\u900a\u79fb\u9664\u8ba2\u5355\u660e\u7ec6\u2192",
+   "link_count": 0,
+   "link_to": "Import Amazon and remove orders",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "3\u5bfc\u5165\u4e9a\u9a6c\u900aAWD\u8ba2\u5355\u660e\u7ec6\u2192",
+   "link_count": 0,
+   "link_to": "Amazon AWD Import List",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "4.\u5bfc\u5165\u4e9a\u9a6c\u900a\u7ed3\u7b97\u8ba2\u5355\u660e\u7ec6\u2192",
+   "link_count": 0,
+   "link_to": "Import Amazon order settlement details",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u4e9a\u9a6c\u900a\u5176\u4ed6\u529f\u80fd",
+   "link_count": 4,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "sku\u9500\u91cf\u6392\u540d",
+   "link_count": 0,
+   "link_to": "Amazon Rank SKU Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u4e9a\u9a6c\u900a\u8ba2\u5355\u5730\u56fe",
+   "link_count": 0,
+   "link_to": "\u4e9a\u9a6c\u900a\u8ba2\u5355\u5730\u56fe",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u4e9a\u9a6c\u900a\u8ba2\u5355\u5730\u56fe-\u8857\u666f",
+   "link_count": 0,
+   "link_to": "\u8c37\u6b4c3d\u5730\u56fe",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u4e9a\u9a6c\u900a\u5546\u54c1\u6392\u540d",
+   "link_count": 0,
+   "link_to": "amazon-rank-trend",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-08-27 19:48:35.789272",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "\u4e30\u5883\u4e1a\u52a1APP",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 39.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "\u4e9a\u9a6c\u900a\u8282\u70b9\u56fe",
+   "type": "URL",
+   "url": "/thought_map.html"
+  }
+ ],
+ "title": "\u4e30\u5883\u4e1a\u52a1APP",
+ "type": "Workspace"
+}

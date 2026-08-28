@@ -1,0 +1,88 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-14 16:22:47.975955",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "\u7269\u6599id",
+  "\u7269\u6599\u540d\u79f0",
+  "\u5e73\u53f0",
+  "\u5e73\u53f0sku",
+  "\u5e73\u53f0sku_\u5c5e\u6027",
+  "\u5e73\u53f0\u94fe\u63a5"
+ ],
+ "fields": [
+  {
+   "fieldname": "\u7269\u6599id",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u7269\u6599id",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "\u7269\u6599id.item_name",
+   "fieldname": "\u7269\u6599\u540d\u79f0",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u7269\u6599\u540d\u79f0",
+   "reqd": 1
+  },
+  {
+   "fieldname": "\u5e73\u53f0",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u5e73\u53f0",
+   "options": "Project",
+   "reqd": 1
+  },
+  {
+   "fieldname": "\u5e73\u53f0sku",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u5e73\u53f0SKU",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "\u5e73\u53f0sku_\u5c5e\u6027",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u5e73\u53f0SKU_\u5c5e\u6027"
+  },
+  {
+   "fieldname": "\u5e73\u53f0\u94fe\u63a5",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u5e73\u53f0\u94fe\u63a5"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-14 16:36:48.769051",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Fengjing - Product Corresponding Platform - Main Table",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

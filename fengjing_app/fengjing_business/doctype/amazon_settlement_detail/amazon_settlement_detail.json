@@ -1,0 +1,291 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-14 21:53:36.521234",
+ "default_view": "Dashboard",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u65e5\u671f_\u65f6\u95f4",
+  "\u94fe\u63a5\u4e3b\u8868",
+  "\u662f\u5426\u627e\u5230\u6570\u636e",
+  "\u94fe\u63a5\u5e97\u94fa",
+  "\u94fe\u63a5\u65e5\u8bb0\u8d26\u51ed\u8bc1",
+  "\u94fe\u63a5\u4e9a\u9a6c\u900a\u57fa\u7840\u8ba2\u5355\u8868",
+  "\u884c\u552f\u4e00\u6807\u8bc6md5",
+  "\u4e9a\u9a6c\u900a\u5e97\u94fa\u56fd\u5bb6",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u7ed3\u7b97\u5355\u53f7",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4ea4\u6613\u7c7b\u578b",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8ba2\u5355\u7f16\u53f7",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u5356\u5bb6sku",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u63cf\u8ff0",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u6570\u91cf",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u7ad9\u70b9",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8d26\u6237\u7c7b\u578b",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u914d\u9001\u65b9\u5f0f",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8ba2\u5355\u57ce\u5e02",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8ba2\u5355\u5dde_\u7701",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u90ae\u7f16",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u7b97\u7a0e\u6a21\u5f0f",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4ea7\u54c1\u9500\u552e\u989d",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u9500\u552e\u7a0e",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8fd0\u8d39\u6536\u5165",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8fd0\u8d39\u7a0e\u91d1",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u793c\u54c1\u5305\u88c5\u8d39",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u793c\u54c1\u5305\u88c5\u7a0e",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u76d1\u7ba1\u8d39",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u76d1\u7ba1\u8d39\u7a0e\u91d1",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4fc3\u9500\u6298\u6263",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4fc3\u9500\u6298\u6263\u7a0e",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u5e73\u53f0\u4ee3\u6263\u7a0e",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u9500\u552e\u4f63\u91d1",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_fba\u914d\u9001\u8d39",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u5176\u4ed6\u4ea4\u6613\u8d39",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u5176\u4ed6",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u603b\u8ba1",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u793c\u54c1\u5305\u88c5\u8d39\u7528\u7a0e\u6b3e",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4ea4\u6613\u72b6\u6001",
+  "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4ea4\u6613\u53d1\u5e03\u65e5\u671f"
+ ],
+ "fields": [
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u65e5\u671f_\u65f6\u95f4",
+   "fieldtype": "Autocomplete",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u65e5\u671f_\u65f6\u95f4"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u7ed3\u7b97\u5355\u53f7",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u7ed3\u7b97\u5355\u53f7"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4ea4\u6613\u7c7b\u578b",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4ea4\u6613\u7c7b\u578b"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8ba2\u5355\u7f16\u53f7",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8ba2\u5355\u7f16\u53f7"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u5356\u5bb6sku",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u5356\u5bb6SKU"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u63cf\u8ff0",
+   "fieldtype": "Text",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u63cf\u8ff0"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u6570\u91cf",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u6570\u91cf"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u7ad9\u70b9",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u7ad9\u70b9"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8d26\u6237\u7c7b\u578b",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8d26\u6237\u7c7b\u578b"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u914d\u9001\u65b9\u5f0f",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u914d\u9001\u65b9\u5f0f"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8ba2\u5355\u57ce\u5e02",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8ba2\u5355\u57ce\u5e02"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8ba2\u5355\u5dde_\u7701",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8ba2\u5355\u5dde_\u7701"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u90ae\u7f16",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u90ae\u7f16"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u7b97\u7a0e\u6a21\u5f0f",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u7b97\u7a0e\u6a21\u5f0f"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4ea7\u54c1\u9500\u552e\u989d",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4ea7\u54c1\u9500\u552e\u989d"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u9500\u552e\u7a0e",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u9500\u552e\u7a0e"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8fd0\u8d39\u6536\u5165",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8fd0\u8d39\u6536\u5165"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8fd0\u8d39\u7a0e\u91d1",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u8fd0\u8d39\u7a0e\u91d1"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u793c\u54c1\u5305\u88c5\u8d39",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u793c\u54c1\u5305\u88c5\u8d39"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u793c\u54c1\u5305\u88c5\u7a0e",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u793c\u54c1\u5305\u88c5\u7a0e"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u76d1\u7ba1\u8d39",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u76d1\u7ba1\u8d39"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u76d1\u7ba1\u8d39\u7a0e\u91d1",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u76d1\u7ba1\u8d39\u7a0e\u91d1"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4fc3\u9500\u6298\u6263",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4fc3\u9500\u6298\u6263"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4fc3\u9500\u6298\u6263\u7a0e",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4fc3\u9500\u6298\u6263\u7a0e"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u5e73\u53f0\u4ee3\u6263\u7a0e",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u5e73\u53f0\u4ee3\u6263\u7a0e"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u9500\u552e\u4f63\u91d1",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u9500\u552e\u4f63\u91d1"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_fba\u914d\u9001\u8d39",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_FBA\u914d\u9001\u8d39"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u5176\u4ed6\u4ea4\u6613\u8d39",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u5176\u4ed6\u4ea4\u6613\u8d39"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u5176\u4ed6",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u5176\u4ed6"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u603b\u8ba1",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u603b\u8ba1"
+  },
+  {
+   "fieldname": "\u94fe\u63a5\u4e3b\u8868",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u94fe\u63a5\u4e3b\u8868",
+   "options": "Import Amazon order settlement details"
+  },
+  {
+   "fieldname": "\u884c\u552f\u4e00\u6807\u8bc6md5",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u884c\u552f\u4e00\u6807\u8bc6MD5"
+  },
+  {
+   "fieldname": "\u94fe\u63a5\u4e9a\u9a6c\u900a\u57fa\u7840\u8ba2\u5355\u8868",
+   "fieldtype": "Link",
+   "label": "\u94fe\u63a5\u4e9a\u9a6c\u900a\u57fa\u7840\u8ba2\u5355\u8868",
+   "options": "Amazon Order Summary"
+  },
+  {
+   "fieldname": "\u94fe\u63a5\u5e97\u94fa",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u94fe\u63a5\u5e97\u94fa",
+   "options": "Project"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u793c\u54c1\u5305\u88c5\u8d39\u7528\u7a0e\u6b3e",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u793c\u54c1\u5305\u88c5\u8d39\u7528\u7a0e\u6b3e"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4ea4\u6613\u72b6\u6001",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4ea4\u6613\u72b6\u6001"
+  },
+  {
+   "fieldname": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4ea4\u6613\u53d1\u5e03\u65e5\u671f",
+   "fieldtype": "Data",
+   "label": "\u7ed3\u7b97\u660e\u7ec6\u8868_\u4ea4\u6613\u53d1\u5e03\u65e5\u671f"
+  },
+  {
+   "fieldname": "\u662f\u5426\u627e\u5230\u6570\u636e",
+   "fieldtype": "Select",
+   "label": "\u662f\u5426\u627e\u5230\u6570\u636e",
+   "options": "\n\u57fa\u7840\u8ba2\u5355\n\u57fa\u7840\u8ba2\u5355\u4e0d\u5b58\u5728\n\u5f03\u7f6e\u8d27\u7269"
+  },
+  {
+   "fieldname": "\u4e9a\u9a6c\u900a\u5e97\u94fa\u56fd\u5bb6",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u4e9a\u9a6c\u900a\u5e97\u94fa\u56fd\u5bb6",
+   "options": "Country"
+  },
+  {
+   "fieldname": "\u94fe\u63a5\u65e5\u8bb0\u8d26\u51ed\u8bc1",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u94fe\u63a5\u65e5\u8bb0\u8d26\u51ed\u8bc1",
+   "options": "Journal Entry"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-05-19 17:29:27.785441",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon Settlement Detail",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_views": 1
+}

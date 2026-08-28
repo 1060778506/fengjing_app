@@ -1,0 +1,177 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-05 20:43:36.762542",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "\u5185\u90e8\u7269\u6599id",
+  "\u5185\u90e8\u7269\u6599\u540d\u79f0",
+  "\u533a\u57df",
+  "\u8ba2\u5355\u7f16\u53f7",
+  "\u552e\u540e\u5355\u53f7",
+  "\u5907\u8d27\u5355\u53f7",
+  "\u5907\u8d27\u5355\u7c7b\u578b",
+  "sku_id",
+  "sku\u8d27\u53f7",
+  "\u8d27\u54c1\u540d\u79f0",
+  "sku\u5c5e\u6027",
+  "\u6570\u91cf",
+  "\u5355\u54c1\u5238\u91d1\u989d",
+  "\u5e97\u94fa\u6ee1\u51cf\u5238\u91d1\u989d",
+  "\u7533\u62a5\u4ef7\u683c\u6298\u6263\u91d1\u989d",
+  "\u4ea4\u6613\u7c7b\u578b",
+  "\u91d1\u989d",
+  "\u5e01\u79cd",
+  "\u8d26\u52a1\u65f6\u95f4"
+ ],
+ "fields": [
+  {
+   "fieldname": "\u533a\u57df",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u533a\u57df",
+   "options": "\u5168\u7403\n\u7f8e\u533a\n\u6b27\u533a",
+   "reqd": 1
+  },
+  {
+   "fieldname": "\u8ba2\u5355\u7f16\u53f7",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u8ba2\u5355\u7f16\u53f7",
+   "reqd": 1
+  },
+  {
+   "fieldname": "\u552e\u540e\u5355\u53f7",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u552e\u540e\u5355\u53f7"
+  },
+  {
+   "fieldname": "\u5907\u8d27\u5355\u53f7",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u5907\u8d27\u5355\u53f7",
+   "reqd": 1
+  },
+  {
+   "fieldname": "\u5907\u8d27\u5355\u7c7b\u578b",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u5907\u8d27\u5355\u7c7b\u578b",
+   "options": "\u9500\u552e\u56de\u6b3e",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sku_id",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "SKU ID",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sku\u8d27\u53f7",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "SKU\u8d27\u53f7"
+  },
+  {
+   "fieldname": "\u8d27\u54c1\u540d\u79f0",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u8d27\u54c1\u540d\u79f0",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sku\u5c5e\u6027",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "SKU\u5c5e\u6027",
+   "reqd": 1
+  },
+  {
+   "fieldname": "\u6570\u91cf",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u6570\u91cf"
+  },
+  {
+   "fieldname": "\u5355\u54c1\u5238\u91d1\u989d",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u5355\u54c1\u5238\u91d1\u989d"
+  },
+  {
+   "fieldname": "\u5e97\u94fa\u6ee1\u51cf\u5238\u91d1\u989d",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u5e97\u94fa\u6ee1\u51cf\u5238\u91d1\u989d"
+  },
+  {
+   "fieldname": "\u7533\u62a5\u4ef7\u683c\u6298\u6263\u91d1\u989d",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u7533\u62a5\u4ef7\u683c\u6298\u6263\u91d1\u989d"
+  },
+  {
+   "fieldname": "\u4ea4\u6613\u7c7b\u578b",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u4ea4\u6613\u7c7b\u578b",
+   "options": "\u9500\u552e\u56de\u6b3e",
+   "reqd": 1
+  },
+  {
+   "fieldname": "\u91d1\u989d",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u91d1\u989d",
+   "reqd": 1
+  },
+  {
+   "fieldname": "\u5e01\u79cd",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u5e01\u79cd",
+   "reqd": 1
+  },
+  {
+   "fieldname": "\u8d26\u52a1\u65f6\u95f4",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u8d26\u52a1\u65f6\u95f4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "\u5185\u90e8\u7269\u6599id",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u7269\u6599ID",
+   "options": "Item"
+  },
+  {
+   "fetch_from": "\u5185\u90e8\u7269\u6599id.item_name",
+   "fieldname": "\u5185\u90e8\u7269\u6599\u540d\u79f0",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u7269\u6599\u540d\u79f0"
+  }
+ ],
+ "grid_page_length": 20,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-02-10 00:30:01.930252",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "TEMU - Full Custody - Order - Sub - Table - Sales outstanding",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

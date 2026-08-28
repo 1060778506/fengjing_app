@@ -1,0 +1,87 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-03-28 13:54:25.642667",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "\u9009\u62e9\u8868",
+  "erpnext\u5185\u90e8\u5b57\u6bb5",
+  "\u5916\u90e8\u8868\u683c\u6807\u9898",
+  "\u7ffb\u8bd1\u6210\u4e2d\u6587",
+  "\u5355\u636e\u7c7b\u578b",
+  "\u4e9a\u9a6c\u900a\u533a\u57df",
+  "\u4e9a\u9a6c\u900a\u56fd\u5bb6"
+ ],
+ "fields": [
+  {
+   "fieldname": "\u9009\u62e9\u8868",
+   "fieldtype": "Select",
+   "label": "\u9009\u62e9\u8868",
+   "options": "\u57fa\u7840\u8ba2\u5355\n\u7ed3\u7b97\u8ba2\u5355\n\u79fb\u9664\u8ba2\u5355"
+  },
+  {
+   "fieldname": "erpnext\u5185\u90e8\u5b57\u6bb5",
+   "fieldtype": "Autocomplete",
+   "label": "erpnext\u5185\u90e8\u5b57\u6bb5"
+  },
+  {
+   "fieldname": "\u5916\u90e8\u8868\u683c\u6807\u9898",
+   "fieldtype": "Long Text",
+   "label": "\u5916\u90e8\u8868\u683c\u6807\u9898"
+  },
+  {
+   "fieldname": "\u5355\u636e\u7c7b\u578b",
+   "fieldtype": "Link",
+   "label": "\u5355\u636e\u7c7b\u578b",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "\u7ffb\u8bd1\u6210\u4e2d\u6587",
+   "fieldtype": "Long Text",
+   "label": "\u7ffb\u8bd1\u6210\u4e2d\u6587"
+  },
+  {
+   "fieldname": "\u4e9a\u9a6c\u900a\u533a\u57df",
+   "fieldtype": "Link",
+   "label": "\u4e9a\u9a6c\u900a\u533a\u57df",
+   "options": "Project Type"
+  },
+  {
+   "fieldname": "\u4e9a\u9a6c\u900a\u56fd\u5bb6",
+   "fieldtype": "Link",
+   "label": "\u4e9a\u9a6c\u900a\u56fd\u5bb6",
+   "options": "Country"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-04-04 19:49:12.174752",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon internal form binding table title",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

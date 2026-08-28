@@ -1,0 +1,75 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-12 20:45:22.229714",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "\u9700\u8981\u6293\u53d6\u6570\u636e\u7684asin",
+  "\u5c5e\u4e8e\u54ea\u4e2a\u5e97\u94fa",
+  "asin\u5bf9\u5e94\u7269\u6599",
+  "\u662f\u5426\u76d1\u542c\u6392\u540d",
+  "\u4e0a\u6b21\u6293\u53d6\u7684\u65f6\u95f4",
+  "\u5907\u6ce8"
+ ],
+ "fields": [
+  {
+   "fieldname": "\u9700\u8981\u6293\u53d6\u6570\u636e\u7684asin",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u9700\u8981\u6293\u53d6\u6570\u636e\u7684asin"
+  },
+  {
+   "description": "*\u5982\u679c\u662f\u540c\u884c\u7684\u5e97\u94fa\u8bf7\u4e0d\u8981\u9009\u62e9",
+   "fieldname": "\u5c5e\u4e8e\u54ea\u4e2a\u5e97\u94fa",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u5e97\u94fa",
+   "options": "Project"
+  },
+  {
+   "fieldname": "\u4e0a\u6b21\u6293\u53d6\u7684\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "\u4e0a\u6b21\u6293\u53d6\u7684\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "description": "*\u5907\u6ce8\u540c\u884c\u5e97\u94fa\u6216\u8005\u5176\u4ed6\u4fe1\u606f",
+   "fieldname": "\u5907\u6ce8",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u5907\u6ce8"
+  },
+  {
+   "fieldname": "asin\u5bf9\u5e94\u7269\u6599",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "asin\u5bf9\u5e94\u7269\u6599",
+   "options": "Item"
+  },
+  {
+   "default": "0",
+   "fieldname": "\u662f\u5426\u76d1\u542c\u6392\u540d",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "\u662f\u5426\u76d1\u542c\u6392\u540d"
+  }
+ ],
+ "grid_page_length": 10,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-08-27 19:10:31.840371",
+ "modified_by": "1060778506@qq.com",
+ "module": "Fengjing Business",
+ "name": "Amazon SKU Ranking Configuration Table",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

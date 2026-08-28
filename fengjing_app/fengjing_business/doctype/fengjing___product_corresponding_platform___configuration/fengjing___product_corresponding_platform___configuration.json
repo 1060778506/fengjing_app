@@ -1,0 +1,160 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-02-05 00:06:09.331999",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "\u4e30\u5883_ai\u914d\u7f6e\u9875\u9762",
+  "\u4e9a\u9a6c\u900aapi",
+  "\u7ad9\u70b9id\u5bf9\u5e94\u8868",
+  "section_break_hvkg",
+  "\u4e30\u5883_ai\u751f\u6210\u7269\u6599\u63d0\u793a\u8bcd",
+  "\u7269\u6599\u547d\u540d\u6a21\u7248",
+  "\u4e30\u5883_\u6062\u590d\u7269\u6599\u63d0\u793a\u8bcd",
+  "\u4e9a\u9a6c\u900a\u6570\u636e\u6293\u53d6\u914d\u7f6e_tab",
+  "\u6293\u53d6asin\u914d\u7f6e\u7684\u5b50\u8868",
+  "section_break_aviq",
+  "\u7acb\u5373\u6293\u53d6",
+  "\u67e5\u770b\u8d70\u52bf",
+  "column_break_uvzj",
+  "\u95f4\u9694\u5206\u949f",
+  "\u5f00\u542f\u4efb\u52a1\u8c03\u5ea6\u5668",
+  "\u5f00\u542f\u5b9a\u65f6\u6293\u53d6",
+  "\u4e0a\u6b21\u6293\u53d6\u65f6\u95f4",
+  "\u4e0b\u6b21\u5141\u8bb8\u6293\u53d6\u7684\u65f6\u95f4"
+ ],
+ "fields": [
+  {
+   "default": "0",
+   "fieldname": "\u4e30\u5883_ai\u914d\u7f6e\u9875\u9762",
+   "fieldtype": "Table",
+   "label": "Ai\u914d\u7f6e\u9875\u9762   \u26a0\ufe0ferpnext\u9700\u8981\u80fd\u63a5\u5165\u5916\u7f51",
+   "options": "Fengjing - AI Configuration"
+  },
+  {
+   "fieldname": "\u4e30\u5883_ai\u751f\u6210\u7269\u6599\u63d0\u793a\u8bcd",
+   "fieldtype": "Long Text",
+   "in_list_view": 1,
+   "label": "Ai\u751f\u6210\u7269\u6599\u63d0\u793a\u8bcd"
+  },
+  {
+   "fieldname": "\u4e30\u5883_\u6062\u590d\u7269\u6599\u63d0\u793a\u8bcd",
+   "fieldtype": "Button",
+   "label": "\u6062\u590d\u7269\u6599\u63d0\u793a\u8bcd"
+  },
+  {
+   "fieldname": "\u4e9a\u9a6c\u900aapi",
+   "fieldtype": "Table",
+   "label": "\u4e9a\u9a6c\u900aapi",
+   "options": "Amazon API configuration"
+  },
+  {
+   "fieldname": "\u7ad9\u70b9id\u5bf9\u5e94\u8868",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "\u7ad9\u70b9ID\u5bf9\u5e94\u8868",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_hvkg",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "\u4e9a\u9a6c\u900a\u6570\u636e\u6293\u53d6\u914d\u7f6e_tab",
+   "fieldtype": "Tab Break",
+   "label": "\u4e9a\u9a6c\u900a\u6570\u636e\u6293\u53d6\u914d\u7f6e"
+  },
+  {
+   "fieldname": "\u7acb\u5373\u6293\u53d6",
+   "fieldtype": "Button",
+   "label": "\u7acb\u5373\u6293\u53d6"
+  },
+  {
+   "fieldname": "\u67e5\u770b\u8d70\u52bf",
+   "fieldtype": "Button",
+   "label": "\u67e5\u770b\u8d70\u52bf"
+  },
+  {
+   "fieldname": "section_break_aviq",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_uvzj",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "*\u5c0f\u4e8e60\u5206\u949f\u9ed8\u8ba4\u4e3a60\u5206\u949f,\u4e9a\u9a6c\u900a\u6bcf60\u5206\u949f\u66f4\u65b0\u4e00\u6b21,\u5c0f\u4e8e60\u5206\u949f\u65e0\u610f\u4e49\u3002",
+   "fieldname": "\u95f4\u9694\u5206\u949f",
+   "fieldtype": "Int",
+   "label": "\u95f4\u9694\u5206\u949f",
+   "options": "60"
+  },
+  {
+   "default": "0",
+   "fieldname": "\u5f00\u542f\u5b9a\u65f6\u6293\u53d6",
+   "fieldtype": "Check",
+   "label": "\u5f00\u542f\u5b9a\u65f6\u6293\u53d6"
+  },
+  {
+   "fieldname": "\u6293\u53d6asin\u914d\u7f6e\u7684\u5b50\u8868",
+   "fieldtype": "Table",
+   "label": "\u6293\u53d6asin\u914d\u7f6e\u7684\u5b50\u8868",
+   "options": "Amazon SKU Ranking Configuration Table"
+  },
+  {
+   "fieldname": "\u4e0a\u6b21\u6293\u53d6\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "\u4e0a\u6b21\u6293\u53d6\u65f6\u95f4",
+   "placeholder": "0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "\u4e0b\u6b21\u5141\u8bb8\u6293\u53d6\u7684\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "\u4e0b\u6b21\u5141\u8bb8\u6293\u53d6\u7684\u65f6\u95f4",
+   "placeholder": "0",
+   "read_only": 1
+  },
+  {
+   "description": "*\u65b0\u7cfb\u7edf\u5fc5\u987b\u5f00\u542f,\u624d\u53ef\u4ee5\u4f7f\u7528\u5b9a\u65f6\u6293\u53d6",
+   "fieldname": "\u5f00\u542f\u4efb\u52a1\u8c03\u5ea6\u5668",
+   "fieldtype": "Button",
+   "label": "\u5f00\u542f\u4efb\u52a1\u8c03\u5ea6\u5668"
+  },
+  {
+   "fieldname": "\u7269\u6599\u547d\u540d\u6a21\u7248",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "\u7269\u6599\u547d\u540d\u6a21\u7248"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-05-19 21:37:18.470524",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Fengjing - Product Corresponding Platform - Configuration",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

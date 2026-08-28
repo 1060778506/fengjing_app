@@ -1,0 +1,85 @@
+[
+ {
+  "cards": [
+   {
+    "card": "全部订单"
+   },
+   {
+    "card": "取消的订单"
+   },
+   {
+    "card": "已发货已绑定"
+   },
+   {
+    "card": "已发货未绑定"
+   },
+   {
+    "card": "弃置货物"
+   },
+   {
+    "card": "待定"
+   },
+   {
+    "card": "未知原因未绑定"
+   },
+   {
+    "card": "等待绑定"
+   }
+  ],
+  "chart_options": null,
+  "charts": [
+   {
+    "chart": null,
+    "width": "Half"
+   }
+  ],
+  "dashboard_name": "基础订单数据面板",
+  "docstatus": 0,
+  "doctype": "Dashboard",
+  "is_default": 0,
+  "is_standard": 0,
+  "modified": "2026-04-04 19:25:42.113438",
+  "module": "Fengjing Business",
+  "name": "基础订单数据面板"
+ },
+ {
+  "cards": [
+   {
+    "card": "全部结算订单"
+   },
+   {
+    "card": "全部已经绑定"
+   },
+   {
+    "card": "已绑定(结算成功)"
+   },
+   {
+    "card": "已绑定(退款成功)"
+   },
+   {
+    "card": "弃置订单"
+   },
+   {
+    "card": "没有基础订单"
+   },
+   {
+    "card": "不知道因为什么未绑定"
+   }
+  ],
+  "chart_options": null,
+  "charts": [
+   {
+    "chart": null,
+    "width": "Half"
+   }
+  ],
+  "dashboard_name": "亚马逊结算订单数据面板",
+  "docstatus": 0,
+  "doctype": "Dashboard",
+  "is_default": 0,
+  "is_standard": 0,
+  "modified": "2026-04-04 19:30:29.694237",
+  "module": "Fengjing Business",
+  "name": "亚马逊结算订单数据面板"
+ }
+]

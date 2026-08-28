@@ -1,0 +1,34 @@
+[
+ {
+  "description": "",
+  "docstatus": 0,
+  "doctype": "Project Type",
+  "modified": "2026-04-04 16:15:57.474310",
+  "name": "亚马逊-亚太(日本、澳大利亚、新加坡、印度)=站点",
+  "project_type": "亚马逊-亚太(日本、澳大利亚、新加坡、印度)=站点"
+ },
+ {
+  "description": "",
+  "docstatus": 0,
+  "doctype": "Project Type",
+  "modified": "2026-04-04 16:16:20.337203",
+  "name": "亚马逊-中东(土耳其、阿联酋、沙特、埃及)=站点",
+  "project_type": "亚马逊-中东(土耳其、阿联酋、沙特、埃及)=站点"
+ },
+ {
+  "description": "",
+  "docstatus": 0,
+  "doctype": "Project Type",
+  "modified": "2026-04-04 16:15:33.337808",
+  "name": "亚马逊-欧洲(英国、德国、法国、意大利、西班牙、波兰、荷兰、瑞典、比利时)=站点",
+  "project_type": "亚马逊-欧洲(英国、德国、法国、意大利、西班牙、波兰、荷兰、瑞典、比利时)=站点"
+ },
+ {
+  "description": "",
+  "docstatus": 0,
+  "doctype": "Project Type",
+  "modified": "2026-04-04 16:14:59.185673",
+  "name": "亚马逊-北美(美国、加拿大、墨西哥、巴西)=站点",
+  "project_type": "亚马逊-北美(美国、加拿大、墨西哥、巴西)=站点"
+ }
+]

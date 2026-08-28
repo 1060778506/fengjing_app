@@ -1,0 +1,304 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-03-11 20:18:07.367969",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "\u5546\u54c1\u5217\u8868api_asin",
+  "\u6293\u53d6\u6570\u636e\u7684\u65f6\u95f4",
+  "\u5546\u54c1\u5217\u8868api_sku",
+  "\u7ed1\u5b9a\u7684\u7269\u6599",
+  "\u7269\u6599\u540d\u79f0",
+  "\u5546\u54c1\u5217\u8868api_\u7ad9\u70b9id",
+  "\u5546\u54c1\u5217\u8868api_\u5546\u54c1\u6807\u9898",
+  "\u5546\u54c1\u5217\u8868api_\u4ea7\u54c1\u7c7b\u578b",
+  "\u5546\u54c1\u5217\u8868api_\u6210\u8272",
+  "\u5546\u54c1\u5217\u8868api_\u72b6\u6001",
+  "\u5546\u54c1\u5217\u8868api_\u521b\u5efa\u65f6\u95f4",
+  "\u5546\u54c1\u5217\u8868api_\u6700\u540e\u66f4\u65b0\u65f6\u95f4",
+  "\u5546\u54c1\u5217\u8868api_\u4e3b\u56fe\u94fe\u63a5",
+  "\u5546\u54c1\u5217\u8868api_\u56fe\u7247\u5bbd",
+  "\u5546\u54c1\u5217\u8868api_\u56fe\u7247\u9ad8",
+  "\u6392\u540dapi_asin",
+  "\u6392\u540dapi_\u7ad9\u70b9id",
+  "\u6392\u540dapi_\u5546\u54c1\u540d\u79f0",
+  "\u6392\u540dapi_\u54c1\u724c",
+  "\u6392\u540dapi_\u5236\u9020\u5546",
+  "\u6392\u540dapi_\u578b\u53f7",
+  "\u6392\u540dapi_\u96f6\u4ef6\u7f16\u53f7",
+  "\u6392\u540dapi_\u989c\u8272",
+  "\u6392\u540dapi_\u5c3a\u5bf8",
+  "\u6392\u540dapi_\u6837\u5f0f",
+  "\u6392\u540dapi_\u4e3b\u7c7b\u76ee\u6392\u540d",
+  "\u6392\u540dapi_\u4e3b\u7c7b\u76ee\u540d\u79f0",
+  "\u6392\u540dapi_\u4e3b\u7c7b\u76ee\u94fe\u63a5",
+  "\u6392\u540dapi_\u7ec6\u5206\u7c7b\u76ee\u6392\u540d",
+  "\u6392\u540dapi_\u7ec6\u5206\u7c7b\u76ee\u540d\u79f0",
+  "\u6392\u540dapi_\u7ec6\u5206\u7c7b\u76ee\u94fe\u63a5",
+  "\u6392\u540dapi_\u5206\u7c7bid",
+  "\u6392\u540dapi_\u6d4f\u89c8\u8282\u70b9\u540d\u79f0",
+  "\u6392\u540dapi_\u6d4f\u89c8\u8282\u70b9id",
+  "\u6392\u540dapi_\u7f51\u7ad9\u663e\u793a\u5206\u7ec4",
+  "\u6392\u540dapi_\u7f51\u7ad9\u663e\u793a\u5206\u7ec4\u540d\u79f0",
+  "\u6392\u540dapi_\u5546\u54c1\u5206\u7c7b\u7c7b\u578b",
+  "\u6392\u540dapi_\u6210\u4eba\u7528\u54c1",
+  "\u6392\u540dapi_\u4eb2\u7b14\u7b7e\u540d",
+  "\u6392\u540dapi_\u7eaa\u5ff5\u54c1",
+  "\u6392\u540dapi_\u652f\u6301\u4ee5\u65e7\u6362\u65b0",
+  "\u6392\u540dapi_\u5305\u88c5\u6570\u91cf",
+  "\u6392\u540dapi_\u53d1\u5e03\u65e5\u671f"
+ ],
+ "fields": [
+  {
+   "fieldname": "\u5546\u54c1\u5217\u8868api_asin",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "\u5546\u54c1\u5217\u8868api_ASIN"
+  },
+  {
+   "fieldname": "\u5546\u54c1\u5217\u8868api_sku",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "\u5546\u54c1\u5217\u8868api_SKU"
+  },
+  {
+   "fieldname": "\u5546\u54c1\u5217\u8868api_\u7ad9\u70b9id",
+   "fieldtype": "Data",
+   "label": "\u5546\u54c1\u5217\u8868api_\u7ad9\u70b9id"
+  },
+  {
+   "fieldname": "\u5546\u54c1\u5217\u8868api_\u5546\u54c1\u6807\u9898",
+   "fieldtype": "Text",
+   "label": "\u5546\u54c1\u5217\u8868api_\u5546\u54c1\u6807\u9898"
+  },
+  {
+   "fieldname": "\u5546\u54c1\u5217\u8868api_\u4ea7\u54c1\u7c7b\u578b",
+   "fieldtype": "Data",
+   "label": "\u5546\u54c1\u5217\u8868api_\u4ea7\u54c1\u7c7b\u578b"
+  },
+  {
+   "fieldname": "\u5546\u54c1\u5217\u8868api_\u6210\u8272",
+   "fieldtype": "Data",
+   "label": "\u5546\u54c1\u5217\u8868api_\u6210\u8272"
+  },
+  {
+   "fieldname": "\u5546\u54c1\u5217\u8868api_\u72b6\u6001",
+   "fieldtype": "Data",
+   "label": "\u5546\u54c1\u5217\u8868api_\u72b6\u6001"
+  },
+  {
+   "fieldname": "\u5546\u54c1\u5217\u8868api_\u521b\u5efa\u65f6\u95f4",
+   "fieldtype": "Data",
+   "label": "\u5546\u54c1\u5217\u8868api_\u521b\u5efa\u65f6\u95f4"
+  },
+  {
+   "fieldname": "\u5546\u54c1\u5217\u8868api_\u6700\u540e\u66f4\u65b0\u65f6\u95f4",
+   "fieldtype": "Data",
+   "label": "\u5546\u54c1\u5217\u8868api_\u6700\u540e\u66f4\u65b0\u65f6\u95f4"
+  },
+  {
+   "fieldname": "\u5546\u54c1\u5217\u8868api_\u4e3b\u56fe\u94fe\u63a5",
+   "fieldtype": "Data",
+   "label": "\u5546\u54c1\u5217\u8868api_\u4e3b\u56fe\u94fe\u63a5"
+  },
+  {
+   "fieldname": "\u5546\u54c1\u5217\u8868api_\u56fe\u7247\u5bbd",
+   "fieldtype": "Data",
+   "label": "\u5546\u54c1\u5217\u8868api_\u56fe\u7247\u5bbd"
+  },
+  {
+   "fieldname": "\u5546\u54c1\u5217\u8868api_\u56fe\u7247\u9ad8",
+   "fieldtype": "Data",
+   "label": "\u5546\u54c1\u5217\u8868api_\u56fe\u7247\u9ad8"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_asin",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_asin"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u7ad9\u70b9id",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u7ad9\u70b9ID"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u5546\u54c1\u540d\u79f0",
+   "fieldtype": "Text",
+   "label": "\u6392\u540dapi_\u5546\u54c1\u540d\u79f0"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u54c1\u724c",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u54c1\u724c"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u5236\u9020\u5546",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u5236\u9020\u5546"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u578b\u53f7",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u578b\u53f7"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u96f6\u4ef6\u7f16\u53f7",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u96f6\u4ef6\u7f16\u53f7"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u989c\u8272",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u989c\u8272"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u5c3a\u5bf8",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u5c3a\u5bf8"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u6837\u5f0f",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u6837\u5f0f"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u4e3b\u7c7b\u76ee\u6392\u540d",
+   "fieldtype": "Int",
+   "label": "\u6392\u540dapi_\u4e3b\u7c7b\u76ee\u6392\u540d"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u4e3b\u7c7b\u76ee\u540d\u79f0",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u4e3b\u7c7b\u76ee\u540d\u79f0"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u4e3b\u7c7b\u76ee\u94fe\u63a5",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u4e3b\u7c7b\u76ee\u94fe\u63a5"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u7ec6\u5206\u7c7b\u76ee\u6392\u540d",
+   "fieldtype": "Int",
+   "label": "\u6392\u540dapi_\u7ec6\u5206\u7c7b\u76ee\u6392\u540d"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u7ec6\u5206\u7c7b\u76ee\u540d\u79f0",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u7ec6\u5206\u7c7b\u76ee\u540d\u79f0"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u7ec6\u5206\u7c7b\u76ee\u94fe\u63a5",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u7ec6\u5206\u7c7b\u76ee\u94fe\u63a5"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u5206\u7c7bid",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u5206\u7c7bID"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u6d4f\u89c8\u8282\u70b9\u540d\u79f0",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u6d4f\u89c8\u8282\u70b9\u540d\u79f0"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u6d4f\u89c8\u8282\u70b9id",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u6d4f\u89c8\u8282\u70b9ID"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u7f51\u7ad9\u663e\u793a\u5206\u7ec4",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u7f51\u7ad9\u663e\u793a\u5206\u7ec4"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u7f51\u7ad9\u663e\u793a\u5206\u7ec4\u540d\u79f0",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u7f51\u7ad9\u663e\u793a\u5206\u7ec4\u540d\u79f0"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u5546\u54c1\u5206\u7c7b\u7c7b\u578b",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u5546\u54c1\u5206\u7c7b\u7c7b\u578b"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u6210\u4eba\u7528\u54c1",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u6210\u4eba\u7528\u54c1"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u4eb2\u7b14\u7b7e\u540d",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u4eb2\u7b14\u7b7e\u540d"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u7eaa\u5ff5\u54c1",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u7eaa\u5ff5\u54c1"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u652f\u6301\u4ee5\u65e7\u6362\u65b0",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u652f\u6301\u4ee5\u65e7\u6362\u65b0"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u5305\u88c5\u6570\u91cf",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u5305\u88c5\u6570\u91cf"
+  },
+  {
+   "fieldname": "\u6392\u540dapi_\u53d1\u5e03\u65e5\u671f",
+   "fieldtype": "Data",
+   "label": "\u6392\u540dapi_\u53d1\u5e03\u65e5\u671f"
+  },
+  {
+   "fieldname": "\u6293\u53d6\u6570\u636e\u7684\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "label": "\u6293\u53d6\u6570\u636e\u7684\u65f6\u95f4"
+  },
+  {
+   "fieldname": "\u7ed1\u5b9a\u7684\u7269\u6599",
+   "fieldtype": "Link",
+   "label": "\u7ed1\u5b9a\u7684\u7269\u6599",
+   "options": "Item"
+  },
+  {
+   "fetch_from": "\u7ed1\u5b9a\u7684\u7269\u6599.item_name",
+   "fieldname": "\u7269\u6599\u540d\u79f0",
+   "fieldtype": "Autocomplete",
+   "label": "\u7269\u6599\u540d\u79f0"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-03-14 16:59:03.914856",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon Rank SKU Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

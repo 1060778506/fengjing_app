@@ -1,0 +1,623 @@
+{
+    "country": "China",
+    "name": "丰境小企业会计准则",
+    "tree": {
+        "资产类-资产": {
+            "root_type": "Asset",
+            "is_group": 1,
+            "account_number": "1000_fj",
+            "库存现金": {
+                "account_number": "1001_fj",
+                "is_group": 0,
+                "account_type": "Cash"
+            },
+            "银行存款": {
+                "account_number": "1002_fj",
+                "is_group": 1,
+                "account_type": "Bank",
+                "亚马逊美国站USD【银行存款】": {
+                    "account_number": "100230_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "USD"
+                },
+                "亚马逊加拿大站CAD【银行存款】": {
+                    "account_number": "100231_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "CAD"
+                },
+                "银行存款【银行存款】": {
+                    "account_number": "100299_fj",
+                    "is_group": 0,
+                    "account_type": "Bank"
+                }
+            },
+            "其他货币资金": {
+                "account_number": "1012_fj",
+                "is_group": 1,
+                "account_type": "Bank",
+                "其他货币资金【其他货币资金】_fj": {
+                    "account_number": "101299_fj",
+                    "is_group": 0,
+                    "account_type": "Bank"
+                }
+            },
+            "短期投资": {
+                "account_number": "1101_fj",
+                "is_group": 0,
+                "account_type": "Current Asset"
+            },
+            "应收票据": {
+                "account_number": "1121_fj",
+                "is_group": 0,
+                "account_type": "Receivable"
+            },
+            "应收账款": {
+                "account_number": "1122_fj",
+                "is_group": 0,
+                "account_type": "Receivable"
+            },
+            "预付账款": {
+                "account_number": "1123_fj",
+                "is_group": 0,
+                "account_type": "Receivable"
+            },
+            "应收股利": {
+                "account_number": "1131_fj",
+                "is_group": 0,
+                "account_type": "Current Asset"
+            },
+            "应收利息": {
+                "account_number": "1132_fj",
+                "is_group": 0,
+                "account_type": "Current Asset"
+            },
+            "其他应收款": {
+                "account_number": "1221_fj",
+                "is_group": 0,
+                "account_type": "Receivable"
+            },
+            "材料采购": {
+                "account_number": "1401_fj",
+                "is_group": 0,
+                "account_type": "Stock Received But Not Billed"
+            },
+            "在途物资": {
+                "account_number": "1402_fj",
+                "is_group": 0,
+                "account_type": "Stock Received But Not Billed"
+            },
+            "原材料": {
+                "account_number": "1403_fj",
+                "is_group": 0,
+                "account_type": "Stock"
+            },
+            "材料成本差异": {
+                "account_number": "1404_fj",
+                "is_group": 0,
+                "account_type": "Stock Adjustment"
+            },
+            "库存商品": {
+                "account_number": "1405_fj",
+                "is_group": 0,
+                "account_type": "Stock"
+            },
+            "商品进销差价": {
+                "account_number": "1407_fj",
+                "is_group": 0,
+                "account_type": "Stock Adjustment"
+            },
+            "委托加工物资": {
+                "account_number": "1408_fj",
+                "is_group": 0,
+                "account_type": "Stock"
+            },
+            "周转材料": {
+                "account_number": "1411_fj",
+                "is_group": 1,
+                "account_type": "Stock",
+                "包装物【周转材料】": {
+                    "account_number": "141101_fj",
+                    "is_group": 0,
+                    "account_type": "Stock"
+                }
+            },
+            "消耗性生物资产": {
+                "account_number": "1421_fj",
+                "is_group": 0,
+                "account_type": "Current Asset"
+            },
+            "长期债券投资": {
+                "account_number": "1501_fj",
+                "is_group": 0,
+                "account_type": "Fixed Asset"
+            },
+            "长期股权投资": {
+                "account_number": "1511_fj",
+                "is_group": 0,
+                "account_type": "Fixed Asset"
+            },
+            "固定资产": {
+                "account_number": "1601_fj",
+                "is_group": 0,
+                "account_type": "Fixed Asset"
+            },
+            "累计折旧": {
+                "account_number": "1602_fj",
+                "is_group": 0,
+                "account_type": "Accumulated Depreciation"
+            },
+            "在建工程": {
+                "account_number": "1604_fj",
+                "is_group": 0,
+                "account_type": "Capital Work in Progress"
+            },
+            "工程物资": {
+                "account_number": "1605_fj",
+                "is_group": 0,
+                "account_type": "Capital Work in Progress"
+            },
+            "固定资产清理": {
+                "account_number": "1606_fj",
+                "is_group": 0,
+                "account_type": "Fixed Asset"
+            },
+            "生产性生物资产": {
+                "account_number": "1621_fj",
+                "is_group": 0,
+                "account_type": "Fixed Asset"
+            },
+            "生产性生物资产累计折旧": {
+                "account_number": "1622_fj",
+                "is_group": 0,
+                "account_type": "Accumulated Depreciation"
+            },
+            "无形资产": {
+                "account_number": "1701_fj",
+                "is_group": 0,
+                "account_type": "Fixed Asset"
+            },
+            "累计摊销": {
+                "account_number": "1702_fj",
+                "is_group": 0,
+                "account_type": "Accumulated Depreciation"
+            },
+            "长期待摊费用": {
+                "account_number": "1801_fj",
+                "is_group": 0,
+                "account_type": "Current Asset"
+            },
+            "待处理财产损溢": {
+                "account_number": "1901_fj",
+                "is_group": 0,
+                "account_type": "Temporary"
+            }
+        },
+        "负债类-负债": {
+            "account_number": "2000_fj",
+            "is_group": 1,
+            "root_type": "Liability",
+            "短期借款": {
+                "account_number": "2001_fj",
+                "is_group": 0,
+                "account_type": "Liability"
+            },
+            "应付票据": {
+                "account_number": "2201_fj",
+                "is_group": 0,
+                "account_type": "Payable"
+            },
+            "应付账款": {
+                "account_number": "2202_fj",
+                "is_group": 0,
+                "account_type": "Payable"
+            },
+            "预收账款": {
+                "account_number": "2203_fj",
+                "is_group": 0,
+                "account_type": "Payable"
+            },
+            "暂估库存(已收货,未开票)": {
+                "account_number": "2210_fj",
+                "is_group": 0,
+                "account_type": "Stock Received But Not Billed"
+            },
+            "应付职工薪酬": {
+                "account_number": "2211_fj",
+                "is_group": 1,
+                "account_type": "Current Liability",
+                "工资【应付职工薪酬】": {
+                    "account_number": "221101_fj",
+                    "is_group": 0,
+                    "account_type": "Liability"
+                },
+                "奖金【应付职工薪酬】": {
+                    "account_number": "221102_fj",
+                    "is_group": 0,
+                    "account_type": "Liability"
+                },
+                "津贴补贴【应付职工薪酬】": {
+                    "account_number": "221103_fj",
+                    "is_group": 0,
+                    "account_type": "Liability"
+                },
+                "职工福利费【应付职工薪酬】": {
+                    "account_number": "221104_fj",
+                    "is_group": 0,
+                    "account_type": "Liability"
+                },
+                "社会保险费【应付职工薪酬】": {
+                    "account_number": "221105_fj",
+                    "is_group": 0,
+                    "account_type": "Liability"
+                },
+                "住房公积金【应付职工薪酬】": {
+                    "account_number": "221106_fj",
+                    "is_group": 0,
+                    "account_type": "Liability"
+                },
+                "工会经费【应付职工薪酬】": {
+                    "account_number": "221107_fj",
+                    "is_group": 0,
+                    "account_type": "Liability"
+                },
+                "职工教育经费【应付职工薪酬】": {
+                    "account_number": "221108_fj",
+                    "is_group": 0,
+                    "account_type": "Liability"
+                },
+                "非货币性福利【应付职工薪酬】": {
+                    "account_number": "221109_fj",
+                    "is_group": 0,
+                    "account_type": "Liability"
+                },
+                "辞退福利【应付职工薪酬】": {
+                    "account_number": "221110_fj",
+                    "is_group": 0,
+                    "account_type": "Liability"
+                },
+                "其他应付职工薪酬【应付职工薪酬】": {
+                    "account_number": "221199_fj",
+                    "is_group": 0,
+                    "account_type": "Liability"
+                }
+            },
+            "应交税费": {
+                "account_number": "2221_fj",
+                "is_group": 1,
+                "account_type": "Tax",
+                "应交增值税【应交税费】": {
+                    "account_number": "222101_fj",
+                    "is_group": 0,
+                    "account_type": "Tax"
+                },
+                "应交企业所得税【应交税费】": {
+                    "account_number": "222102_fj",
+                    "is_group": 0,
+                    "account_type": "Tax"
+                },
+                "应交个人所得税【应交税费】": {
+                    "account_number": "222103_fj",
+                    "is_group": 0,
+                    "account_type": "Tax"
+                },
+                "应交城建税及附加【应交税费】": {
+                    "account_number": "222104_fj",
+                    "is_group": 0,
+                    "account_type": "Tax"
+                },
+                "其他应交税费【应交税费】": {
+                    "account_number": "222199_fj",
+                    "is_group": 0,
+                    "account_type": "Tax"
+                }
+            },
+            "应付利息": {
+                "account_number": "2231_fj",
+                "is_group": 0,
+                "account_type": "Liability"
+            },
+            "应付利润": {
+                "account_number": "2232_fj",
+                "is_group": 0,
+                "account_type": "Liability"
+            },
+            "其他应付款": {
+                "account_number": "2241_fj",
+                "is_group": 0,
+                "account_type": "Payable"
+            },
+            "期初四舍五入": {
+                "account_number": "2242_fj",
+                "is_group": 0,
+                "account_type": "Round Off for Opening"
+            },
+            "递延收益": {
+                "account_number": "2401_fj",
+                "is_group": 0,
+                "account_type": "Liability"
+            },
+            "长期借款": {
+                "account_number": "2501_fj",
+                "is_group": 0,
+                "account_type": "Liability"
+            },
+            "长期应付款": {
+                "account_number": "2701_fj",
+                "is_group": 0,
+                "account_type": "Liability"
+            }
+        },
+        "所有者权益类-权益": {
+            "account_number": "3000_fj",
+            "is_group": 1,
+            "root_type": "Equity",
+            "实收资本": {
+                "account_number": "3001_fj",
+                "is_group": 0,
+                "account_type": "Equity"
+            },
+            "资本公积": {
+                "account_number": "3002_fj",
+                "is_group": 0,
+                "account_type": "Equity"
+            },
+            "盈余公积": {
+                "account_number": "3101_fj",
+                "is_group": 0,
+                "account_type": "Equity"
+            },
+            "本年利润": {
+                "account_number": "3103_fj",
+                "is_group": 0,
+                "account_type": "Equity"
+            },
+            "利润分配": {
+                "account_number": "3104_fj",
+                "is_group": 0,
+                "account_type": "Equity"
+            }
+        },
+        "成本类-费用": {
+            "account_number": "4000_fj",
+            "is_group": 1,
+            "root_type": "Expense",
+            "生产成本": {
+                "account_number": "4001_fj",
+                "is_group": 0,
+                "account_type": "Cost of Goods Sold"
+            },
+            "制造费用": {
+                "account_number": "4101_fj",
+                "is_group": 0,
+                "account_type": "Direct Expense"
+            },
+            "研发支出": {
+                "account_number": "4301_fj",
+                "is_group": 0,
+                "account_type": "Direct Expense"
+            },
+            "工程施工": {
+                "account_number": "4401_fj",
+                "is_group": 0,
+                "account_type": "Cost of Goods Sold"
+            },
+            "机械作业": {
+                "account_number": "4403_fj",
+                "is_group": 0,
+                "account_type": "Direct Expense"
+            }
+        },
+        "损益类-收益": {
+            "account_number": "5000_fj",
+            "is_group": 1,
+            "root_type": "Income",
+            "主营业务收入": {
+                "account_number": "5001_fj",
+                "is_group": 0,
+                "account_type": "Income Account"
+            },
+            "其他业务收入": {
+                "account_number": "5051_fj",
+                "is_group": 0,
+                "account_type": "Income Account"
+            },
+            "投资收益": {
+                "account_number": "5111_fj",
+                "is_group": 0,
+                "account_type": "Indirect Income"
+            },
+            "营业外收入": {
+                "account_number": "5301_fj",
+                "is_group": 0,
+                "account_type": "Direct Income"
+            }
+        },
+        "损益类-费用": {
+            "account_number": "5400_fj",
+            "is_group": 1,
+            "root_type": "Expense",
+            "主营业务成本": {
+                "account_number": "5401_fj",
+                "is_group": 1,
+                "account_type": "Cost of Goods Sold",
+                "货值成本【主营业务成本】": {
+                    "account_number": "540101_fj",
+                    "is_group": 0,
+                    "account_type": "Cost of Goods Sold"
+                },
+                "国内物流【主营业务成本】": {
+                    "account_number": "540102_fj",
+                    "is_group": 0,
+                    "account_type": "Expenses Included In Valuation"
+                },
+                "海运费用【主营业务成本】": {
+                    "account_number": "540103_fj",
+                    "is_group": 0,
+                    "account_type": "Expenses Included In Valuation"
+                },
+                "平台尾程【主营业务成本】": {
+                    "account_number": "540104_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "主营业务成本【主营业务成本】": {
+                    "account_number": "540199_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                }
+            },
+            "其他业务成本": {
+                "account_number": "5402_fj",
+                "is_group": 0,
+                "account_type": "Cost of Goods Sold"
+            },
+            "营业税金及附加": {
+                "account_number": "5403_fj",
+                "is_group": 0,
+                "account_type": "Tax"
+            },
+            "销售费用": {
+                "account_number": "5601_fj",
+                "is_group": 1,
+                "account_type": "Expense Account",
+                "国内快递【销售费用】": {
+                    "account_number": "560101_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "包装和耗材费【销售费用】": {
+                    "account_number": "560102_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "退货及损失费【销售费用】": {
+                    "account_number": "560103_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "平台服务费【销售费用】": {
+                    "account_number": "560104_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "平台仓储费【销售费用】": {
+                    "account_number": "560105_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "平台广告费【销售费用】": {
+                    "account_number": "560106_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "平台其他费【销售费用】": {
+                    "account_number": "560107_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "内部销账【销售费用】(系统保留)": {
+                    "account_number": "560198_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "其他销售费用【销售费用】": {
+                    "account_number": "560199_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                }
+            },
+            "管理费用": {
+                "account_number": "5602_fj",
+                "is_group": 1,
+                "account_type": "Indirect Expense",
+                "个人薪酬【管理费用】": {
+                    "account_number": "560201_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "社保公积金【管理费用】": {
+                    "account_number": "560202_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "办公费用【管理费用】": {
+                    "account_number": "560203_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "软件服务费【管理费用】": {
+                    "account_number": "560204_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "差旅费【管理费用】": {
+                    "account_number": "560205_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "员工福利费【管理费用】": {
+                    "account_number": "560206_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "通讯费【管理费用】": {
+                    "account_number": "560207_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "折旧费用【管理费用】": {
+                    "account_number": "560208_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "老板个人【管理费用】": {
+                    "account_number": "560299_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                }
+            },
+            "财务费用": {
+                "account_number": "5603_fj",
+                "is_group": 1,
+                "account_type": "Indirect Expense",
+                "汇兑损益【财务费用】": {
+                    "account_number": "560301_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "小数精度尾差【财务费用】": {
+                    "account_number": "560302_fj",
+                    "is_group": 0,
+                    "account_type": "Round Off"
+                },
+                "付款折扣【财务费用】": {
+                    "account_number": "560303_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "未实现损益【财务费用】": {
+                    "account_number": "560304_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                }
+            },
+            "库存调整损益": {
+                "account_number": "5604_fj",
+                "is_group": 0,
+                "account_type": "Stock Adjustment"
+            },
+            "营业外支出": {
+                "account_number": "5711_fj",
+                "is_group": 0,
+                "account_type": "Direct Expense"
+            },
+            "所得税费用": {
+                "account_number": "5801_fj",
+                "is_group": 0,
+                "account_type": "Tax"
+            }
+        }
+    }
+}

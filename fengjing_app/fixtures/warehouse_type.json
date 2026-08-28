@@ -1,0 +1,30 @@
+[
+ {
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Warehouse Type",
+  "modified": "2026-04-08 15:55:20.243854",
+  "name": "FBA"
+ },
+ {
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Warehouse Type",
+  "modified": "2026-04-08 15:55:29.631621",
+  "name": "AWD"
+ },
+ {
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Warehouse Type",
+  "modified": "2026-04-08 15:55:34.836594",
+  "name": "FBT"
+ },
+ {
+  "description": null,
+  "docstatus": 0,
+  "doctype": "Warehouse Type",
+  "modified": "2026-04-08 15:56:45.146886",
+  "name": "其它第三方仓库"
+ }
+]

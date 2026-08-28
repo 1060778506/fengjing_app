@@ -1,0 +1,118 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "naming_series:",
+ "creation": "2026-04-08 15:33:44.017693",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "\u603b\u884c\u6570",
+  "\u6821\u5bf9\u9884\u8ba1\u7bb1\u6570",
+  "column_break_dkxd",
+  "naming_series",
+  "section_break_jgig",
+  "\u5f00\u59cb\u65f6\u95f4",
+  "\u9009\u62e9\u5e97\u94fa",
+  "\u6dfb\u52a0\u6587\u4ef6",
+  "column_break_zsrp",
+  "\u7ed3\u675f\u65f6\u95f4",
+  "\u56fd\u5bb6",
+  "\u6253\u5f00\u5bfc\u5165\u9875"
+ ],
+ "fields": [
+  {
+   "fieldname": "\u603b\u884c\u6570",
+   "fieldtype": "Autocomplete",
+   "label": "\u603b\u884c\u6570"
+  },
+  {
+   "fieldname": "\u6821\u5bf9\u9884\u8ba1\u7bb1\u6570",
+   "fieldtype": "Autocomplete",
+   "label": "\u6821\u5bf9\u9884\u8ba1\u7bb1\u6570"
+  },
+  {
+   "fieldname": "column_break_dkxd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "\u7f16\u53f7\u89c4\u5219",
+   "options": "\u4e9a\u9a6c\u900aAWD\u8ba2\u5355-.YY.\u5e74.MM.\u6708.DD.\u65e5.####"
+  },
+  {
+   "fieldname": "section_break_jgig",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "\u5f00\u59cb\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "\u5f00\u59cb\u65f6\u95f4",
+   "reqd": 1
+  },
+  {
+   "fieldname": "\u9009\u62e9\u5e97\u94fa",
+   "fieldtype": "Link",
+   "label": "\u9009\u62e9\u5e97\u94fa",
+   "options": "Project"
+  },
+  {
+   "fieldname": "column_break_zsrp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "\u7ed3\u675f\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "\u7ed3\u675f\u65f6\u95f4",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "\u9009\u62e9\u5e97\u94fa.custom_\u56fd\u5bb6",
+   "fieldname": "\u56fd\u5bb6",
+   "fieldtype": "Autocomplete",
+   "label": "\u56fd\u5bb6",
+   "reqd": 1
+  },
+  {
+   "fieldname": "\u6dfb\u52a0\u6587\u4ef6",
+   "fieldtype": "Attach",
+   "label": "\u6dfb\u52a0\u6587\u4ef6",
+   "reqd": 1
+  },
+  {
+   "fieldname": "\u6253\u5f00\u5bfc\u5165\u9875",
+   "fieldtype": "Button",
+   "label": "\u6253\u5f00\u5bfc\u5165\u9875"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-04-08 15:44:22.907930",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon AWD Import List",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

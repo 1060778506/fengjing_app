@@ -1,0 +1,42 @@
+{
+ "cards": [
+  {
+   "card": "\u5168\u90e8\u7ed3\u7b97\u8ba2\u5355"
+  },
+  {
+   "card": "\u5168\u90e8\u5df2\u7ecf\u7ed1\u5b9a"
+  },
+  {
+   "card": "\u5df2\u7ed1\u5b9a(\u7ed3\u7b97\u6210\u529f)"
+  },
+  {
+   "card": "\u5df2\u7ed1\u5b9a(\u9000\u6b3e\u6210\u529f)"
+  },
+  {
+   "card": "\u5f03\u7f6e\u8ba2\u5355"
+  },
+  {
+   "card": "\u6ca1\u6709\u57fa\u7840\u8ba2\u5355"
+  },
+  {
+   "card": "\u4e0d\u77e5\u9053\u56e0\u4e3a\u4ec0\u4e48\u672a\u7ed1\u5b9a"
+  }
+ ],
+ "charts": [
+  {
+   "width": "Half"
+  }
+ ],
+ "creation": "2026-04-04 19:30:29.694237",
+ "dashboard_name": "\u4e9a\u9a6c\u900a\u7ed3\u7b97\u8ba2\u5355\u6570\u636e\u9762\u677f",
+ "docstatus": 0,
+ "doctype": "Dashboard",
+ "idx": 0,
+ "is_default": 0,
+ "is_standard": 1,
+ "modified": "2026-04-04 19:30:29.694237",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "\u4e9a\u9a6c\u900a\u7ed3\u7b97\u8ba2\u5355\u6570\u636e\u9762\u677f",
+ "owner": "Administrator"
+}

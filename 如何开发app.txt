@@ -1,0 +1,157 @@
+
+
+1.下载镜像
+​	docker pull fengmaode/16-neizhang:latest
+	没有梯子用阿里云
+	docker pull crpi-0bhfwgabexqd04h9.cn-hangzhou.personal.cr.aliyuncs.com/fengmaode/16-neizhang:latest
+	docker tag crpi-0bhfwgabexqd04h9.cn-hangzhou.personal.cr.aliyuncs.com/fengmaode/16-neizhang:latest fengmaode/16-neizhang:latest
+
+2.下载构建文件
+​	https://github.com/frappe/frappe_docker/blob/main/devcontainer-example/docker-compose.yml
+​	docker-compose.yml
+​	更改以下内容
+
+	#第13行附近,改数据卷名字
+    	volumes:
+		- mariadb-data_v16:/var/lib/mysql
+
+	#第45行附近改镜像名字
+	frappe:
+		image: fengmaode/16-neizhang:latest
+
+	#第51行附近添加
+	environment:
+		- SHELL=/bin/bash
+		- DEVELOPER_MODE=1		添加
+	volumes:
+	
+	#第57行附近改端口
+	ports:
+		- 18800:8000
+		- 19800:9000
+	
+	#第87行附近改镜像数据卷名字
+	volumes:
+		mariadb-data_v16:
+
+
+
+3.cmd运行
+​	docker compose -f docker-compose_v16.yml up -d
+
+4.进入容器
+	docker compose -f docker-compose_v16.yml exec frappe bash
+
+5.修正站点的 Redis 配置
+	cd ~/frappe-bench
+	bench set-config -g redis_cache redis://redis-cache:6379
+	bench set-config -g redis_queue redis://redis-queue:6379
+	bench set-config -g redis_socketio redis://redis-queue:6379
+
+6.安装app,和安装环境
+  cd ~/frappe-bench/apps/fengjing_app && \
+  yarn install --frozen-lockfile && \
+  cd ~/frappe-bench && \
+  bench new-site fjnb \
+    --db-host mariadb \
+    --db-root-password 123 \
+    --admin-password Aa123456789 \
+    --mariadb-user-host-login-scope='%' && \
+  bench --site fjnb install-app \
+    erpnext \
+    hrms \
+    crm \
+    erpnext_china \
+    insights \
+    beam \
+    builder \
+    wiki \
+    print_designer \
+    crispy_print \
+    fengjing_app && \
+  bench build --app fengjing_app --force && \
+  bench --site fjnb clear-cache
+
+7.锁定唯一站点模式，它就不管域名是谁，统统直接扔进 fjnb 站点		和 		确保开发者模式开启（为了后续改代码方便）
+	bench --site fjnb set-config disable_multitenancy 1 && bench --site fjnb set-config developer_mode 1
+
+8.打开vs加载容器
+
+9.在vs内启动服务
+	cd ~/frappe-bench && bench --site fjnb serve --port 8000
+
+	# 进入 Frappe bench 目录
+	cd ~/frappe-bench
+	# 开启当前站点的定时任务功能
+	bench --site fjnb enable-scheduler
+	# 同步数据库结构
+	bench --site fjnb migrate
+	# 清理后台缓存
+	bench --site fjnb clear-cache
+	# 清理网站页面缓存
+	bench --site fjnb clear-website-cache
+
+	# 启动后台工人
+	bench --site fjnb worker &
+	# 启动定时任务调度器
+	bench --site fjnb schedule &
+
+	# 查看站点、队列、worker、scheduler 等运行状态
+	cd ~/frappe-bench && bench --site fjnb doctor
+
+10.访问
+​	http://localhost:18800/
+​	Administrator
+​	Aa123456789
+	临沂市丰境电子商务有限责任公司
+
+11.已经提交过代码,仅需要一句命令
+cd ~/frappe-bench/apps/fengjing_app && git add . && git commit -m "准备继续开发" && git push
+
+			#测试代码
+			bench --site fjnb console
+			# 删除站点
+			bench drop-site fjnb --force
+			# 安装app
+			bench --site fjnb install-app fengjing_app
+			# 卸载app
+			bench --site fjnb uninstall-app erpnext_china
+			# 更新   刷新   重启所有服务  仅编译我的app
+			bench --site fjnb migrate && bench --site fjnb clear-cache && bench restart && bench build --app fengjing_app --force
+			# 字段导入到自己的app内
+			bench --site fjnb export-fixtures
+
+			# 如果单据是只读需要解锁
+			nano ~/frappe-bench/sites/fjnb/site_config.json
+			# 加入 
+			"developer_mode": 1
+			# 清缓存
+			bench --site fjnb clear-cache
+			# 重启
+			bench restart
+
+			# 更新jsx文件,关系图谱,Three.js + React 19 + ECharts
+			cd /home/frappe/frappe-bench
+			bench build --app fengjing_app --force
+			bench restart
+
+
+以下内容是第一次提交所需要的操作 
+# 全局配置，只需要执行一次
+git config --global --add safe.directory '*'
+git config --global --unset http.proxy 2>/dev/null || true
+git config --global --unset https.proxy 2>/dev/null || true
+git config --global user.email "1060778506@qq.com"
+git config --global user.name "fengmaode"
+git config --global core.quotepath false
+
+
+# 上传 fengjing_app 到 develop
+cd ~/frappe-bench/apps/fengjing_app
+[ -d ".git" ] || git init
+git remote remove origin 2>/dev/null || true
+git remote add origin https://github.com/1060778506/fengjing_app.git
+git add .
+git commit -m "准备开发新功能" || echo "fengjing_app 没有可提交的内容"
+git branch -M develop
+git push -u origin develop --force

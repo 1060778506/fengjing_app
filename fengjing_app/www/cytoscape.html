@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>店铺商品节点分布图 (本地演示版)</title>
+
+    <!-- 引入外部开源 CDN 资源，确保脱离 ERP 环境也能运行 -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+
+    <style>
+        #cy {
+            width: 100%;
+            height: calc(100vh - 64px);
+            background: #f8fafc;
+        }
+
+        :focus {
+            outline: none;
+        }
+
+        .side-panel {
+            transition: all 0.25s ease;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .field-row {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 8px 0;
+        }
+
+        .field-label {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .field-value {
+            font-size: 13px;
+            color: #0f172a;
+            word-break: break-word;
+        }
+    </style>
+</head>
+
+<body class="bg-base-200 overflow-hidden text-slate-800">
+    <!-- 顶部导航栏 -->
+    <nav class="navbar bg-white shadow-sm px-6 border-b border-base-300 z-20 h-16">
+        <div class="flex-1">
+            <div class="text-xl font-bold text-primary italic tracking-tight">Fengjing Nodes Demo</div>
+            <div id="loadStatus" class="text-xs text-slate-400 mt-1">正在加载本地商品数据...</div>
+        </div>
+
+        <div class="flex-none gap-2 flex items-center">
+            <input id="searchInput" class="input input-bordered input-sm w-64" placeholder="搜索商品名称 / SKU / 标签"
+                oninput="applySearch()" />
+            <button class="btn btn-ghost btn-sm" onclick="clearSearch()">清空</button>
+
+            <button id="selectModeBtn" class="btn btn-ghost btn-sm" onclick="toggleSelectMode()">模式: 拖动画布</button>
+
+            <label class="flex items-center gap-2 text-xs text-slate-500 ml-2">
+                缩放速度
+                <input id="zoomSpeed" type="range" min="0.1" max="1.5" step="0.05" value="0.55"
+                    class="range range-primary range-xs w-32" oninput="updateZoomSpeed()" />
+                <span id="zoomSpeedText" class="w-8 text-right">0.55</span>
+            </label>
+
+            <button class="btn btn-primary btn-sm px-6" onclick="reLayout()">自动对齐</button>
+        </div>
+    </nav>
+
+    <!-- 主体内容区 -->
+    <div class="flex">
+        <!-- 左侧画布 -->
+        <div class="flex-1 relative">
+            <div id="cy"></div>
+        </div>
+
+        <!-- 右侧详情面板 -->
+        <aside id="sidePanel"
+            class="w-96 h-[calc(100vh-64px)] bg-white shadow-2xl z-10 border-l border-base-300 side-panel flex flex-col">
+            <div id="emptyState"
+                class="flex-1 flex flex-col items-center justify-center p-10 text-center opacity-40 italic text-sm">
+                点击分类大框或商品小球查看数据
+            </div>
+
+            <div id="detailState" class="hidden flex-1 p-6 no-scrollbar overflow-y-auto">
+                <div class="flex items-center gap-3 mb-5">
+                    <span id="nodeIcon" class="w-4 h-4 rounded-full"></span>
+                    <div>
+                        <h3 id="detailTitle" class="text-lg font-black">业务详情</h3>
+                        <p id="detailSubTitle" class="text-xs text-slate-400"></p>
+                    </div>
+                </div>
+
+                <div id="fieldList"></div>
+            </div>
+        </aside>
+    </div>
+
+    <script>
+        // --- 1. 本地静态模拟数据（不需要走 API 接口） ---
+        const LOCAL_DATA = [
+            { id: "P1001", name: "iPhone 15 Pro", sku: "IPH15P-256G", category: "数码电子", price: 7999, stock: 45, tag: "热卖" },
+            { id: "P1002", name: "无线蓝牙耳机", sku: "EAR-PODS-V2", category: "数码电子", price: 1299, stock: 120, tag: "爆款" },
+            { id: "P1003", name: "4K 游戏显示器", sku: "MON-4K-32", category: "数码电子", price: 3499, stock: 15, tag: "高利润" },
+            { id: "P1004", name: "机械键盘", sku: "KB-MECH-87", category: "数码电子", price: 599, stock: 88, tag: "新品" },
+
+            { id: "P2001", name: "重磅纯棉纯色短袖", sku: "TEE-COT-XL", category: "服装服饰", price: 99, stock: 500, tag: "清仓" },
+            { id: "P2002", name: "防水户外冲锋衣", sku: "JKT-OUT-01", category: "服装服饰", price: 499, stock: 65, tag: "季节性" },
+            { id: "P2003", name: "透气网面跑步鞋", sku: "SHO-RUN-42", category: "服装服饰", price: 299, stock: 140, tag: "热卖" },
+
+            { id: "P3001", name: "人体工学电脑椅", sku: "CHAIR-ERG-01", category: "居家办公", price: 1280, stock: 23, tag: "大件" },
+            { id: "P3002", name: "智能LED台灯", sku: "LAMP-SMART", category: "居家办公", price: 199, stock: 210, tag: "平价" },
+
+            { id: "P4001", name: "未知来源孤品", sku: "UNKNOWN-SKU", category: "未归类", price: 0, stock: 1, tag: "待核对" }
+        ];
+
+        // 配置画布常数
+        const FRAME_W = 300;
+        const FRAME_H = 220;
+        const FRAME_GAP_X = 380;
+        const FRAME_GAP_Y = 300;
+        const FRAME_COLS = 3;
+
+        let cy;
+        let allRows = [];
+        let categorySummary = {};
+
+        // 分类颜色映射
+        function categoryColor(category) {
+            const colors = {
+                "数码电子": "#2563eb", // 蓝色
+                "服装服饰": "#7c3aed", // 紫色
+                "居家办公": "#16a34a", // 绿色
+                "未归类": "#64748b"    // 灰色
+            };
+            return colors[category] || "#0f766e";
+        }
+
+        // 处理数据结构
+        function prepareRows(data) {
+            return data.map((item, index) => {
+                return {
+                    ...item,
+                    __index: index,
+                    __category: item.category || "未归类",
+                    __total: Number(item.price * item.stock) // 额外算个库存总值
+                };
+            });
+        }
+
+        // 统计各分类的数据
+        function buildSummary(rows) {
+            const summary = {};
+            rows.forEach(row => {
+                if (!summary[row.__category]) {
+                    summary[row.__category] = { count: 0, totalStockValue: 0, rows: [] };
+                }
+                summary[row.__category].count += 1;
+                summary[row.__category].totalStockValue += row.__total;
+                summary[row.__category].rows.push(row);
+            });
+            return summary;
+        }
+
+        // 计算小球框在框内的堆叠位置
+        function pilePosition(frameX, frameY, index) {
+            const slots = 12;
+            const slot = index % slots;
+            const positions = [
+                [0, 20], [25, 20], [-25, 20],
+                [0, 45], [25, 45], [-25, 45],
+                [50, 30], [-50, 30],
+                [0, 70], [30, 70], [-30, 70],
+                [0, 95]
+            ];
+
+            const p = positions[slot] || [0, 0];
+            const tinyOffset = (Math.floor(index / slots) % 4) * 2; // 错位层叠
+
+            let x = frameX + p[0] + tinyOffset;
+            let y = frameY + p[1] + tinyOffset;
+
+            return { x, y };
+        }
+
+        // 生成 Cytoscape 所需的节点元素
+        function buildElements(rows) {
+            categorySummary = buildSummary(rows);
+            const categories = Object.keys(categorySummary).sort((a, b) => categorySummary[b].count - categorySummary[a].count);
+            const elements = [];
+
+            categories.forEach((category, categoryIndex) => {
+                const summary = categorySummary[category];
+                const gridX = categoryIndex % FRAME_COLS;
+                const gridY = Math.floor(categoryIndex / FRAME_COLS);
+
+                const x = gridX * FRAME_GAP_X;
+                const y = gridY * FRAME_GAP_Y;
+                const frameId = `cat_${categoryIndex}`;
+
+                // 1. 推入大分类大框
+                elements.push({
+                    group: "nodes",
+                    data: {
+                        id: frameId,
+                        label: `${category}\n${summary.count} 款商品 | 库存总值: ￥${summary.totalStockValue}`,
+                        type: "category",
+                        category: category
+                    },
+                    position: { x, y }
+                });
+
+                // 2. 推入该分类下的商品小球
+                summary.rows.forEach((row, rowIndex) => {
+                    const pos = pilePosition(x, y, rowIndex);
+                    elements.push({
+                        group: "nodes",
+                        data: {
+                            id: `row_${row.__index}`,
+                            label: row.name,
+                            type: "record",
+                            category: category,
+                            frameId,
+                            rowIndex: row.__index
+                        },
+                        position: pos
+                    });
+                });
+            });
+
+            return elements;
+        }
+
+        // 初始化关系图图表
+        function initCy(elements) {
+            cy = cytoscape({
+                container: document.getElementById("cy"),
+                elements,
+                boxSelectionEnabled: false,
+                autounselectify: false,
+                wheelSensitivity: Number(document.getElementById("zoomSpeed")?.value || 0.55),
+                style: [
+                    {
+                        selector: "node",
+                        style: {
+                            "overlay-opacity": 0,
+                            "label": "data(label)",
+                            "font-family": "sans-serif"
+                        }
+                    },
+                    {
+                        selector: 'node[type="category"]',
+                        style: {
+                            "shape": "round-rectangle",
+                            "width": FRAME_W,
+                            "height": FRAME_H,
+                            "background-color": "#ffffff",
+                            "background-opacity": 1,
+                            "border-width": 3,
+                            "border-color": ele => categoryColor(ele.data("category")),
+                            "color": "#0f172a",
+                            "font-size": "13px",
+                            "font-weight": "800",
+                            "text-wrap": "wrap",
+                            "text-max-width": "260px",
+                            "text-valign": "top",
+                            "text-margin-y": -12,
+                            "z-index": 1
+                        }
+                    },
+                    {
+                        selector: 'node[type="record"]',
+                        style: {
+                            "shape": "ellipse",
+                            "width": 24,
+                            "height": 24,
+                            "background-color": ele => categoryColor(ele.data("category")),
+                            "background-opacity": 0.9,
+                            "border-width": 2,
+                            "border-color": "#ffffff",
+                            "color": "#334155",
+                            "font-size": "8px",
+                            "font-weight": "700",
+                            "text-wrap": "wrap",
+                            "text-max-width": "60px",
+                            "text-valign": "bottom",
+                            "text-margin-y": 4,
+                            "z-index": 20
+                        }
+                    },
+                    {
+                        selector: "node:selected",
+                        style: {
+                            "border-width": 4,
+                            "border-color": "#f59e0b", // 选中时高亮金黄色边框
+                            "z-index": 999
+                        }
+                    },
+                    {
+                        selector: ".hidden-by-search",
+                        style: {
+                            "display": "none"
+                        }
+                    }
+                ]
+            });
+
+            // 锁定大框不让乱拖拽，小球允许拖拽
+            cy.nodes('[type="category"]').ungrabify();
+            cy.nodes('[type="record"]').grabify();
+
+            // 拖拽释放后边缘吸附约束
+            cy.on("dragfree", 'node[type="record"]', evt => {
+                clampRecordInsideFrame(evt.target);
+            });
+
+            // 节点点击事件
+            cy.on("tap", "node", evt => {
+                const node = evt.target;
+                if (node.data("type") === "category") {
+                    showCategory(node.data("category"));
+                } else {
+                    showRecord(node.data("rowIndex"));
+                }
+            });
+
+            // 点击空白处关闭面板
+            cy.on("tap", evt => {
+                if (evt.target === cy) closePanel();
+            });
+
+            reLayout();
+        }
+
+        // 防止小球被拖出大框的逻辑
+        function clampRecordInsideFrame(node) {
+            const frame = cy.getElementById(node.data("frameId"));
+            if (!frame.length) return;
+
+            const fp = frame.position();
+            const p = node.position();
+
+            const minX = fp.x - FRAME_W / 2 + 20;
+            const maxX = fp.x + FRAME_W / 2 - 20;
+            const minY = fp.y - FRAME_H / 2 + 50;
+            const maxY = fp.y + FRAME_H / 2 - 20;
+
+            node.position({
+                x: Math.max(minX, Math.min(maxX, p.x)),
+                y: Math.max(minY, Math.min(maxY, p.y))
+            });
+        }
+
+        // 自动重排居中视图
+        function reLayout() {
+            if (!cy) return;
+            cy.layout({ name: "preset" }).run();
+            cy.fit(cy.elements(":visible"), 60);
+        }
+
+        function updateZoomSpeed() {
+            if (!cy) return;
+            const value = Number(document.getElementById("zoomSpeed").value || 0.55);
+            document.getElementById("zoomSpeedText").innerText = value.toFixed(2);
+            cy.wheelSensitivity(value);
+        }
+
+        // 切换拖拽画布/滑动多选模式
+        function toggleSelectMode() {
+            if (!cy) return;
+            const enabled = !cy.boxSelectionEnabled();
+            const btn = document.getElementById("selectModeBtn");
+
+            cy.boxSelectionEnabled(enabled);
+            cy.userPanningEnabled(!enabled);
+
+            if (enabled) {
+                btn.innerText = "模式: 滑动多选";
+                btn.classList.remove("btn-ghost");
+                btn.classList.add("btn-secondary");
+            } else {
+                btn.innerText = "模式: 拖动画布";
+                btn.classList.remove("btn-secondary");
+                btn.classList.add("btn-ghost");
+            }
+        }
+
+        // 显示分类详情
+        function showCategory(category) {
+            const summary = categorySummary[category];
+            openPanel({
+                title: category,
+                subTitle: "商品大类汇总",
+                color: categoryColor(category),
+                fields: {
+                    "分类名称": category,
+                    "包含商品款数": summary.count,
+                    "总资产估值": `￥${summary.totalStockValue}`,
+                    "备注说明": "此分类下所有明细商品已自动在内部生成节点。"
+                }
+            });
+        }
+
+        // 显示明细商品详情
+        function showRecord(rowIndex) {
+            const row = allRows.find(r => r.__index === rowIndex);
+            if (!row) return;
+
+            openPanel({
+                title: row.name,
+                subTitle: `商品编码: ${row.id}`,
+                color: categoryColor(row.__category),
+                fields: {
+                    "商品名称": row.name,
+                    "条码/SKU": row.sku,
+                    "所属分类": row.__category,
+                    "单价(元)": `￥${row.price}`,
+                    "库存数量": row.stock,
+                    "库存总额": `￥${row.__total}`,
+                    "商品标签": row.tag
+                }
+            });
+        }
+
+        // 打开面板通用方法
+        function openPanel({ title, subTitle, color, fields }) {
+            document.getElementById("emptyState").addClass = "hidden";
+            document.getElementById("emptyState").classList.add("hidden");
+            document.getElementById("detailState").classList.remove("hidden");
+            document.getElementById("detailTitle").innerText = title;
+            document.getElementById("detailSubTitle").innerText = subTitle || "";
+            document.getElementById("nodeIcon").style.backgroundColor = color;
+
+            const fieldList = document.getElementById("fieldList");
+            fieldList.innerHTML = "";
+
+            Object.entries(fields).forEach(([key, value]) => {
+                const div = document.createElement("div");
+                div.className = "field-row";
+                div.innerHTML = `
+                <div class="field-label">${escapeHtml(key)}</div>
+                <div class="field-value">${escapeHtml(value)}</div>
+            `;
+                fieldList.appendChild(div);
+            });
+        }
+
+        function closePanel() {
+            document.getElementById("emptyState").classList.remove("hidden");
+            document.getElementById("detailState").classList.add("hidden");
+            if (cy) cy.elements().unselect();
+        }
+
+        // 纯前端本地关键词实时搜索
+        function applySearch() {
+            if (!cy) return;
+            const q = String(document.getElementById("searchInput").value).trim().toLowerCase();
+            cy.elements().removeClass("hidden-by-search");
+
+            if (!q) return;
+
+            // 过滤小球
+            cy.nodes('[type="record"]').forEach(node => {
+                const row = allRows.find(r => r.__index === node.data("rowIndex"));
+                const textBlob = [row.name, row.sku, row.tag, row.category, row.id].join(" ").toLowerCase();
+
+                if (!textBlob.includes(q)) {
+                    node.addClass("hidden-by-search");
+                }
+            });
+
+            // 过滤无关联结果的大框
+            cy.nodes('[type="category"]').forEach(node => {
+                const category = node.data("category");
+                const visibleCount = cy.nodes(`[type="record"][category="${category}"]:visible`).length;
+
+                if (visibleCount === 0 && !String(category).toLowerCase().includes(q)) {
+                    node.addClass("hidden-by-search");
+                }
+            });
+        }
+
+        function clearSearch() {
+            document.getElementById("searchInput").value = "";
+            applySearch();
+        }
+
+        function escapeHtml(value) {
+            return String(value || "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+        // 初始化程序
+        function boot() {
+            const status = document.getElementById("loadStatus");
+            try {
+                // 装载本地预设的静态商品数据
+                allRows = prepareRows(LOCAL_DATA);
+
+                // 构建 Cytoscape 节点图
+                initCy(buildElements(allRows));
+
+                status.innerText = `加载成功！共捕获商品分类 ${Object.keys(categorySummary).length} 个，商品明细 ${allRows.length} 项`;
+            } catch (e) {
+                console.error(e);
+                status.innerText = "数据结构渲染失败";
+            }
+        }
+
+        // 启动运行
+        boot();
+    </script>
+</body>
+
+</html>

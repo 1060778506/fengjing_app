@@ -1,0 +1,22 @@
+{
+ "app": "fengjing_app",
+ "bg_color": "gray",
+ "creation": "2026-08-27 20:00:00",
+ "docstatus": 0,
+ "doctype": "Desktop Icon",
+ "hidden": 0,
+ "icon_type": "Link",
+ "idx": 0,
+ "label": "\u4e30\u5883\u4e1a\u52a1APP",
+ "link_to": "Fengjing Business",
+ "link_type": "Workspace Sidebar",
+ "logo_url": "/assets/fengjing_app/images/fengjing-logo.svg",
+ "modified": "2026-08-27 22:10:14.100745",
+ "modified_by": "Administrator",
+ "name": "\u4e30\u5883\u4e1a\u52a1APP",
+ "owner": "Administrator",
+ "restrict_removal": 0,
+ "roles": [],
+ "sidebar": "Fengjing Business",
+ "standard": 1
+}
