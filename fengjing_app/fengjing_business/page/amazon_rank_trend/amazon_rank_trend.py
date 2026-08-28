@@ -4,6 +4,15 @@ from frappe.utils import add_days, cint, nowdate
 
 DOCTYPE = "Amazon Rank SKU Log"
 
+MARKETPLACE_COUNTRIES = {
+    "ATVPDKIKX0DER": "美国",
+    "A2EUQ1WTGCTBG2": "加拿大",
+    "A1AM78C64UM0Y8": "墨西哥",
+    "A1F83G8C2ARO7P": "英国",
+    "A1PA6795UKMFR9": "德国",
+    "A1VC38T7YXB528": "日本",
+}
+
 
 @frappe.whitelist()
 def get_rank_dashboard_data(filters=None):
@@ -21,7 +30,6 @@ def get_rank_dashboard_data(filters=None):
         "marketplace": "商品列表api_站点id",
         "asin": "商品列表api_asin",
         "sku": "商品列表api_sku",
-        "item": "绑定的物料",
     }
     for key, fieldname in mapping.items():
         if filters.get(key):
@@ -42,27 +50,69 @@ def get_rank_dashboard_data(filters=None):
     )
 
     store_map = _get_store_map()
+    asin_item_map, active_asins = _get_asin_item_map()
+    skus = {str(row.get("商品列表api_sku")) for row in rows if row.get("商品列表api_sku")}
+    sku_item_map = {}
+    if skus:
+        for mapping_row in frappe.get_all(
+            "Fengjing - Product Corresponding Platform - Main Table",
+            filters={"平台sku": ["in", list(skus)]},
+            fields=["平台sku", "物料id"],
+            limit_page_length=10000,
+        ):
+            if mapping_row.get("平台sku") and mapping_row.get("物料id"):
+                sku_item_map[str(mapping_row.get("平台sku"))] = str(mapping_row.get("物料id"))
+
+    effective_item_codes = {
+        str(row.get("绑定的物料") or
+            asin_item_map.get(str(row.get("商品列表api_asin") or "")) or
+            sku_item_map.get(str(row.get("商品列表api_sku") or "")))
+        for row in rows
+        if (row.get("绑定的物料") or
+            asin_item_map.get(str(row.get("商品列表api_asin") or "")) or
+            sku_item_map.get(str(row.get("商品列表api_sku") or "")))
+    }
+    item_details = {}
+    if effective_item_codes:
+        item_details = {
+            item.name: item
+            for item in frappe.get_all(
+                "Item",
+                filters={"name": ["in", list(effective_item_codes)]},
+                fields=["name", "item_name", "image"],
+                limit_page_length=10000,
+            )
+        }
+
     store_filter = filters.get("store")
+    item_filter = filters.get("item")
     result = []
-    item_names = {}
     for row in rows:
         data = dict(row)
         marketplace = data.get("商品列表api_站点id") or ""
         data["店铺"] = store_map.get(marketplace, "")
         if store_filter and data["店铺"] != store_filter:
             continue
-        item = data.get("绑定的物料") or ""
-        if item and not data.get("物料名称"):
-            if item not in item_names:
-                item_names[item] = frappe.db.get_value("Item", item, "item_name") or ""
-            data["物料名称"] = item_names[item]
+        asin = str(data.get("商品列表api_asin") or "")
+        sku = str(data.get("商品列表api_sku") or "")
+        item = data.get("绑定的物料") or asin_item_map.get(asin) or sku_item_map.get(sku) or ""
+        data["绑定的物料"] = item
+        details = item_details.get(item)
+        if details:
+            data["物料名称"] = details.item_name or ""
+            data["物料图片"] = details.image or ""
+        else:
+            data["物料图片"] = ""
+        data["亚马逊商品已删除"] = bool(asin and asin not in active_asins)
+        if item_filter and item != item_filter:
+            continue
         data["排名api_主类目排名"] = cint(data.get("排名api_主类目排名")) or None
         data["排名api_细分类目排名"] = cint(data.get("排名api_细分类目排名")) or None
         result.append(data)
 
     return {
         "rows": result,
-        "options": _get_options(store_map),
+        "options": _get_options(store_map, effective_item_codes),
         "range": {"date_from": date_from, "date_to": date_to},
     }
 
@@ -75,6 +125,8 @@ def _get_store_map():
         for row in parent.get("亚马逊api") or []:
             marketplace = row.get("站点id") or row.get("marketplace_id")
             store = row.get("店铺选项") or row.get("卖家记号")
+            if row.get("店铺选项"):
+                store = frappe.db.get_value("Project", row.get("店铺选项"), "project_name") or store
             if marketplace and store:
                 result[str(marketplace)] = str(store)
     except Exception:
@@ -82,15 +134,43 @@ def _get_store_map():
     return result
 
 
-def _get_options(store_map):
+def _get_asin_item_map():
+    """Return current ASIN-to-item bindings and the current Amazon ASIN set."""
+    mapping = {}
+    active_asins = set()
+    try:
+        parent = frappe.get_single("Fengjing - Product Corresponding Platform - Configuration")
+        for row in parent.get("抓取asin配置的子表") or []:
+            asin = str(row.get("需要抓取数据的asin") or "")
+            item = str(row.get("asin对应物料") or "")
+            if asin:
+                active_asins.add(asin)
+                if item:
+                    mapping[asin] = item
+    except Exception:
+        pass
+    return mapping, active_asins
+
+
+def _get_options(store_map, effective_item_codes=None):
     fields = ["商品列表api_站点id", "商品列表api_asin", "商品列表api_sku", "绑定的物料"]
     rows = frappe.get_all(DOCTYPE, fields=fields, limit_page_length=10000)
     def unique(field):
         return sorted({str(row.get(field)) for row in rows if row.get(field)})
     return {
         "stores": sorted(set(store_map.values())),
-        "marketplaces": unique("商品列表api_站点id"),
+        "marketplaces": [
+            {
+                "value": marketplace,
+                "label": " | ".join(filter(None, [
+                    store_map.get(marketplace, "未匹配店铺"),
+                    MARKETPLACE_COUNTRIES.get(marketplace, "未知国家"),
+                    marketplace,
+                ])),
+            }
+            for marketplace in unique("商品列表api_站点id")
+        ],
         "asins": unique("商品列表api_asin"),
         "skus": unique("商品列表api_sku"),
-        "items": unique("绑定的物料"),
+        "items": sorted(set(effective_item_codes or unique("绑定的物料"))),
     }

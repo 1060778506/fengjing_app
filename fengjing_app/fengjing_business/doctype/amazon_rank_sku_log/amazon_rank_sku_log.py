@@ -81,6 +81,10 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
 
     # 2. 获取 API 子表
     api_table = main_doc.get("亚马逊api") or []
+    # 只有所有店铺、站点的商品列表全部分页抓取成功后，
+    # 才允许根据 Amazon 当前 ASIN 集合清理本地子表，避免接口失败时误删。
+    亚马逊当前全部ASIN = set()
+    所有商品列表均完整成功 = bool(api_table)
     for i, row in enumerate(api_table, 1):
         # 3. 提取基础信息
 
@@ -102,19 +106,44 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
         }
         
         # 关键参数：通过 marketplaceIds 过滤
-        params = {
+        基础参数 = {
             "marketplaceIds": 站点id,
-            "includedData": "summaries" # 只要概要信息，包含 SKU 和 ASIN
+            "includedData": "summaries", # 只要概要信息，包含 SKU 和 ASIN
+            "pageSize": 20
         }
-        
-        返回值 = requests.get(endpoint, headers=headers, params=params)
-        print(endpoint)
-        print(headers)
-        print(params)
+
         # 1. 创建一个空列表作为“篮子”
         结果列表 = []
-        if 返回值.status_code == 200:
-            全部产品 = 返回值.json().get("items", [])
+        当前页令牌 = None
+        当前商品列表完整成功 = True
+
+        while True:
+            params = dict(基础参数)
+            if 当前页令牌:
+                params["pageToken"] = 当前页令牌
+
+            try:
+                返回值 = requests.get(
+                    endpoint,
+                    headers=headers,
+                    params=params,
+                    timeout=30
+                )
+            except requests.RequestException as 列表请求错误:
+                当前商品列表完整成功 = False
+                print(f"查询失败-网络异常: {列表请求错误}")
+                break
+
+            print(endpoint)
+            print(params)
+
+            if 返回值.status_code != 200:
+                当前商品列表完整成功 = False
+                print(f"查询失败-可能秘钥错误: {返回值.text}")
+                break
+
+            返回数据 = 返回值.json()
+            全部产品 = 返回数据.get("items", [])
 
             for 单个产品_原始 in 全部产品:
                 SKU = 单个产品_原始.get("sku")
@@ -156,16 +185,21 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
 
                     # 4. 把字典装进篮子里
                     结果列表.append(产品字典)
+                    if ASIN:
+                        亚马逊当前全部ASIN.add(ASIN)
                     
                     # 依然可以保留打印，方便调试
                     print(f"已装载 SKU: {SKU}")
 
-            # 5. 循环结束后，你可以根据需要处理这个结果列表
-            print(f"\n成功装载了 {len(结果列表)} 个产品数据")
+            当前页令牌 = (返回数据.get("pagination") or {}).get("nextToken")
+            if not 当前页令牌:
+                break
 
-        else:
-            # 注意：这里的 res 要改成你定义的 返回值
-            print(f"查询失败-可能秘钥错误: {返回值.text}")
+        if not 当前商品列表完整成功:
+            所有商品列表均完整成功 = False
+
+        # 5. 循环结束后，你可以根据需要处理这个结果列表
+        print(f"\n成功装载了 {len(结果列表)} 个产品数据")
 
 
         for item in 结果列表:
@@ -359,6 +393,20 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                 )
 			#然后从这里吧以上信息写入到表内
 
+
+    # 只有 Amazon 的所有商品列表均完整返回时，才同步删除已不存在的 ASIN。
+    # 这里只删除配置子表行，不删除历史排名日志。
+    if 所有商品列表均完整成功:
+        原有ASIN数量 = len(main_doc.抓取asin配置的子表)
+        保留的ASIN行 = [
+            row for row in main_doc.抓取asin配置的子表
+            if row.需要抓取数据的asin in 亚马逊当前全部ASIN
+        ]
+        main_doc.set("抓取asin配置的子表", 保留的ASIN行)
+        已删除ASIN数量 = 原有ASIN数量 - len(保留的ASIN行)
+        print(f"ASIN 配置同步完成，删除了 {已删除ASIN数量} 条 Amazon 已不存在的配置。")
+    else:
+        print("Amazon 商品列表未完整抓取，为避免误删，本次不同步删除 ASIN 配置。")
 
     #全部循环完成，开始记录抓取的总时间
     main_doc.上次抓取时间 = 启动程序时间

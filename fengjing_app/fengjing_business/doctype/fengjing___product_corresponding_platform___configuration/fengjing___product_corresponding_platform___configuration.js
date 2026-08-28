@@ -80,27 +80,7 @@ frappe.ui.form.on('Fengjing - Product Corresponding Platform - Configuration', {
     },
 
     查看走势: function (frm) {
-        frappe.call({
-            method: "fengjing_app.fengjing_business.doctype.fengjing___product_corresponding_platform___configuration.fengjing___product_corresponding_platform___configuration.查看排名仪表盘",
-            callback: function (r) {
-                if (r.message) {
-                    let final_url = "";
-                    const path = r.message.path;
-
-                    if (r.message.port) {
-                        // 如果系统配置里抓到了端口，就用它
-                        final_url = `${window.location.protocol}//${window.location.hostname}:${r.message.port}${path}`;
-                    } else {
-                        // 如果系统没配置，且你在开发环境 (localhost) 
-                        // 我们假设 Insights 运行在标准的 18800 (或者你当前的端口)
-                        // 如果是生产环境，window.location.origin 会自动处理 Nginx 转发
-                        final_url = window.location.origin + path;
-                    }
-
-                    window.open(final_url, "_blank");
-                }
-            }
-        });
+        frappe.set_route("amazon-rank-trend");
     }
 
 
