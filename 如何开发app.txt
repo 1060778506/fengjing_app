@@ -106,7 +106,12 @@
 	临沂市丰境电子商务有限责任公司
 
 11.已经提交过代码,仅需要一句命令
-cd ~/frappe-bench/apps/fengjing_app && git add . && git commit -m "重新开始" && git push
+cd ~/frappe-bench/apps/fengjing_app && git add . && git commit -m "准备继续开发" && git push
+# 在docker外部推送
+cd "/root/桌面/erpnext-os-py/fengjing_app" && git add -A
+git commit -m "准备开发新功能"
+git push -u origin develop --force
+
 
 			#测试代码
 			bench --site fjnb console
@@ -118,28 +123,31 @@ cd ~/frappe-bench/apps/fengjing_app && git add . && git commit -m "重新开始"
 			bench --site fjnb uninstall-app erpnext_china
 			# 更新   刷新   重启所有服务  仅编译我的app
 			bench --site fjnb migrate && bench --site fjnb clear-cache && bench restart && bench build --app fengjing_app --force
-
-				1. 修改 Python 后端代码
-					docker restart neizhang-backend-1
-				2.后台任务、定时任务调用
-					docker restart neizhang-queue-short-1 neizhang-queue-long-1 neizhang-scheduler-1 neizhang-websocket-1
-				3. 修改 JS 或 CSS
-				docker exec neizhang-backend-1 bench build --app fengjing_app --force && docker restart neizhang-frontend-1
-				4. 修改页面数据、Workspace 或普通配置
-					docker exec neizhang-backend-1 bench --site fjnb clear-cache
-				5. 修改 DocType 字段结构
-					docker exec neizhang-backend-1 bench --site fjnb migrate
-					docker exec neizhang-backend-1 bench --site fjnb clear-cache
-					docker restart neizhang-backend-1
-				6.终极刷新
-				docker exec neizhang-backend-1 bench --site fjnb migrate && \
-				docker exec neizhang-backend-1 bench --site fjnb clear-cache && \
-				docker exec neizhang-backend-1 bench build --app fengjing_app --force && \
-				docker restart neizhang-backend-1 neizhang-queue-short-1 neizhang-queue-long-1 \
-				neizhang-scheduler-1 neizhang-websocket-1 neizhang-frontend-1
-
 			# 字段导入到自己的app内
 			bench --site fjnb export-fixtures
+
+			# 登录docker内部
+			docker exec -it neizhang-backend-1 bash
+
+			# 查看日志
+			docker logs -f --tail 100 neizhang-backend-1
+
+			# 修改 Python 后端代码：
+			docker restart neizhang-backend-1
+			# 修改 JS / CSS：
+			docker exec neizhang-backend-1 bench build --app fengjing_app --force && docker restart neizhang-frontend-1
+			#修改页面数据、Workspace 或普通配置：
+			docker exec neizhang-backend-1 bench --site fjnb clear-cache
+			# 修改 DocType 字段结构：
+			docker exec neizhang-backend-1 bench --site fjnb migrate
+			docker exec neizhang-backend-1 bench --site fjnb clear-cache
+			docker restart neizhang-backend-1
+			# 终极命令
+			docker exec neizhang-backend-1 bench --site fjnb migrate && \
+			docker exec neizhang-backend-1 bench --site fjnb clear-cache && \
+			docker exec neizhang-backend-1 bench build --app fengjing_app --force && \
+			docker restart neizhang-backend-1 neizhang-queue-short-1 neizhang-queue-long-1 \
+			neizhang-scheduler-1 neizhang-websocket-1 neizhang-frontend-1
 
 			# 如果单据是只读需要解锁
 			nano ~/frappe-bench/sites/fjnb/site_config.json
@@ -156,37 +164,7 @@ cd ~/frappe-bench/apps/fengjing_app && git add . && git commit -m "重新开始"
 			bench restart
 
 
-以下内容是第一次提交所需要的操作
-cd /home/frappe/frappe-bench/apps/fengjing_app
-# 初始化 Git
-git init
-# origin 不存在时才添加
-git remote get-url origin >/dev/null 2>&1 || \
-git remote add origin https://github.com/1060778506/fengjing_app.git
-# 只下载 develop 分支最新一次提交
-git fetch --depth=1 --no-tags origin develop
-# 建立 develop 分支的对比基准，不覆盖当前代码
-git symbolic-ref HEAD refs/heads/develop
-git reset --mixed FETCH_HEAD
-# 配置提交者身份
-git config --global user.name "liunx内部的erpnext内部"
-git config --global user.email "1060778506@qq.com"
-git config --global core.quotepath false
-
-
-
-
-
-
-
-
-
-下面应该可以无脑删除
-下面应该可以无脑删除
-下面应该可以无脑删除
-下面应该可以无脑删除
-
-
+以下内容是第一次提交所需要的操作 
 # 全局配置，只需要执行一次
 git config --global --add safe.directory '*'
 git config --global --unset http.proxy 2>/dev/null || true
@@ -195,17 +173,24 @@ git config --global user.email "1060778506@qq.com"
 git config --global user.name "fengmaode"
 git config --global core.quotepath false
 
-# 上传 fengjing_app 到 develop
+
+# 上传 fengjing_app 到 develop	在docker外部推送
+# 如果你在 Docker 容器内：
 cd ~/frappe-bench/apps/fengjing_app
 [ -d ".git" ] || git init
-git remote remove origin 2>/dev/null || true
+git remote set-url origin https://github.com/1060778506/fengjing_app.git 2>/dev/null || \
 git remote add origin https://github.com/1060778506/fengjing_app.git
-git add .
-git commit -m "重新开始" || echo "fengjing_app 重新开始"
-git branch -M develop
-git push -u origin develop --force
+git fetch --depth=1 --no-tags origin develop
+git symbolic-ref HEAD refs/heads/develop
+git reset --mixed FETCH_HEAD
+git status
 
-上面应该可以无脑删除
-上面应该可以无脑删除
-上面应该可以无脑删除
-上面应该可以无脑删除
+# 如果你在 Docker 外部服务器主机：
+cd "/root/桌面/erpnext-os-py/fengjing_app"
+[ -d ".git" ] || git init
+git remote set-url origin https://github.com/1060778506/fengjing_app.git 2>/dev/null || \
+git remote add origin https://github.com/1060778506/fengjing_app.git
+git fetch --depth=1 --no-tags origin develop
+git symbolic-ref HEAD refs/heads/develop
+git reset --mixed FETCH_HEAD
+git status

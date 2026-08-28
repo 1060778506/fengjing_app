@@ -121,14 +121,35 @@ frappe.ui.form.on('Item', {
                     // 由程序直接生成六位序列号
                     let 六位序列号 = String(总数).padStart(6, '0');
 
+                    // 读取最多 500 个已有物料名称，帮助 AI 参考现有命名风格。
+                    // 参考数据不是当前物料的事实，不能替代当前输入或被强制照抄。
+                    let 参考物料名称 = '（暂无可用的历史物料名称参考）';
+                    try {
+                        const 历史物料 = await frappe.db.get_list('Item', {
+                            fields: ['item_name'],
+                            filters: { disabled: 0 },
+                            order_by: 'modified desc',
+                            limit_page_length: 500
+                        });
+                        const 名称列表 = (历史物料 || [])
+                            .map(item => String(item.item_name || '').trim())
+                            .filter(Boolean);
+                        if (名称列表.length) {
+                            参考物料名称 = 名称列表.join('\n');
+                        }
+                    } catch (参考错误) {
+                        console.warn('读取历史物料名称参考失败，将继续执行 AI 命名：', 参考错误);
+                    }
 
                     // 组合最终提示词
                     let 最终提示词 =
                         `${提示词模板}\n\n` +
+                        `已有物料名称参考（最多500个，仅用于参考命名风格，不得替代当前输入）：\n` +
+                        `${参考物料名称}\n\n` +
                         `物料自然语言输入：${物料描述}\n` +
                         `本次固定序列号：${六位序列号}\n` +
                         `所有10组结果必须原样使用序列号“${六位序列号}”，禁止自行计算或修改。`;
-
+                    alert("最终提示词已生成，正在发送给 AI 进行命名，请耐心等待。");
                     console.log('丰境AI命名脚本版本：20260828-2');
                     console.log('最终提示词：', 最终提示词);
                     // 开启 UI 冻结：显示加载动画，提升交互体验，防止重复点击
