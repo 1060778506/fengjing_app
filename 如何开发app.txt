@@ -106,10 +106,10 @@
 	临沂市丰境电子商务有限责任公司
 
 11.已经提交过代码,仅需要一句命令
-cd ~/frappe-bench/apps/fengjing_app && git add . && git commit -m "准备继续开发" && git push
+cd ~/frappe-bench/apps/fengjing_app && git add . && git commit -m "新的" && git push
 # 在docker外部推送
 cd "/root/桌面/erpnext-os-py/fengjing_app" && git add -A
-git commit -m "准备开发新功能"
+git commit -m "新的"
 git push -u origin develop --force
 
 

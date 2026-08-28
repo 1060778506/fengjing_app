@@ -50,7 +50,7 @@ frappe.ui.form.on('Item', {
         let config_doc = await frappe.db.get_doc(
             'Fengjing - Product Corresponding Platform - Configuration'
         );
-
+        
         if (config_doc && config_doc.物料命名模版) {
             frm.set_value(
                 'custom_丰境ai物料描述',
@@ -150,7 +150,6 @@ frappe.ui.form.on('Item', {
                         `本次固定序列号：${六位序列号}\n` +
                         `所有10组结果必须原样使用序列号“${六位序列号}”，禁止自行计算或修改。`;
                     alert("最终提示词已生成，正在发送给 AI 进行命名，请耐心等待。");
-                    console.log('丰境AI命名脚本版本：20260828-2');
                     console.log('最终提示词：', 最终提示词);
                     // 开启 UI 冻结：显示加载动画，提升交互体验，防止重复点击
                     frappe.dom.freeze(__('AI 正在按照规范计算物料名称...'));
@@ -187,10 +186,6 @@ frappe.ui.form.on('Item', {
                             .split(/\r?\n/)
                             .map(line => line.trim())
                             .find(line => /^fj-/i.test(line));
-
-                        console.log('AI原始回答：', ai原始回答);
-                        console.log('程序规范化回答：', 规范化回答);
-                        console.log('准备写入的物料号：', AI物料号);
 
                         if (!AI物料号) {
                             frappe.msgprint({
