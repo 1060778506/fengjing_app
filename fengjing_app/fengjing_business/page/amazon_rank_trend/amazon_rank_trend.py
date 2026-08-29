@@ -126,7 +126,9 @@ def _get_store_map():
             marketplace = row.get("站点id") or row.get("marketplace_id")
             store = row.get("店铺选项") or row.get("卖家记号")
             if row.get("店铺选项"):
-                store = frappe.db.get_value("Project", row.get("店铺选项"), "project_name") or store
+                store = frappe.db.get_value(
+                    "Cost Center", row.get("店铺选项"), "cost_center_name"
+                ) or store
             if marketplace and store:
                 result[str(marketplace)] = str(store)
     except Exception:
