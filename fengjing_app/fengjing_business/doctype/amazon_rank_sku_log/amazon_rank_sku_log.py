@@ -61,8 +61,48 @@ def 获取SP_API区域地址(站点id):
     return SP_API区域地址.get(区域)
 
 
+def _当前排名抓取统计():
+    return getattr(frappe.local, "amazon_rank_stats", None)
+
+
+def _记录排名抓取汇总(统计, 状态="完成", 异常=None):
+    """写入站点普通文件日志，不创建 Error Log 或业务单据。"""
+    if not 统计 or 统计.get("已写汇总"):
+        return
+    统计["已写汇总"] = True
+    汇总 = {
+        "任务状态": 状态,
+        "触发方式": 统计["触发方式"],
+        "开始时间": 统计["开始时间"],
+        "结束时间": datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d %H:%M:%S"),
+        "总耗时秒": round(time.monotonic() - 统计["开始计时"], 2),
+        "启用店铺数": 统计["启用店铺数"],
+        "成功店铺": sorted(统计["成功店铺"]),
+        "失败店铺": 统计["失败店铺"],
+        "成功ASIN数": 统计["成功ASIN数"],
+        "失败ASIN": 统计["失败ASIN"],
+        "HTTP请求数": 统计["HTTP请求数"],
+        "重试次数": 统计["重试次数"],
+        "发生重试的ASIN": sorted(统计["发生重试的ASIN"]),
+        "重试明细": 统计["重试明细"],
+    }
+    if 异常:
+        汇总["未处理异常"] = str(异常)
+    日志内容 = "Amazon 排名抓取任务汇总\n" + json.dumps(汇总, ensure_ascii=False, indent=2)
+    日志器 = frappe.logger("amazon_rank", allow_site=True)
+    if 状态 == "完成" and not 统计["失败店铺"] and not 统计["失败ASIN"]:
+        日志器.info(日志内容)
+    elif 状态 == "异常终止":
+        日志器.error(日志内容)
+    else:
+        日志器.warning(日志内容)
+
+
 def 亚马逊请求(method, url, *, timeout=30, retries=3, **kwargs):
     """带超时和有限重试的 Amazon HTTP 请求。"""
+    统计 = _当前排名抓取统计()
+    if 统计 is not None:
+        统计["HTTP请求数"] += 1
     last_error = None
     for attempt in range(1, retries + 1):
         try:
@@ -74,6 +114,16 @@ def 亚马逊请求(method, url, *, timeout=30, retries=3, **kwargs):
                 delay = min(float(retry_after), 30) if retry_after else min(2 ** attempt, 10)
             except (TypeError, ValueError):
                 delay = min(2 ** attempt, 10)
+            if 统计 is not None:
+                统计["重试次数"] += 1
+                路径后缀 = url.split("/catalog/2022-04-01/items/", 1)
+                if len(路径后缀) == 2:
+                    统计["发生重试的ASIN"].add(路径后缀[1].split("?", 1)[0])
+                统计["重试明细"].append({
+                    "店铺": 统计.get("当前店铺") or "认证请求",
+                    "状态码": response.status_code,
+                    "下一次尝试": attempt + 1,
+                })
             print(f"Amazon API 返回 {response.status_code}，{delay} 秒后进行第 {attempt + 1} 次请求。")
             time.sleep(delay)
         except requests.RequestException as exc:
@@ -81,6 +131,16 @@ def 亚马逊请求(method, url, *, timeout=30, retries=3, **kwargs):
             if attempt == retries:
                 raise
             delay = min(2 ** attempt, 10)
+            if 统计 is not None:
+                统计["重试次数"] += 1
+                路径后缀 = url.split("/catalog/2022-04-01/items/", 1)
+                if len(路径后缀) == 2:
+                    统计["发生重试的ASIN"].add(路径后缀[1].split("?", 1)[0])
+                统计["重试明细"].append({
+                    "店铺": 统计.get("当前店铺") or "认证请求",
+                    "网络异常": str(exc),
+                    "下一次尝试": attempt + 1,
+                })
             print(f"Amazon API 网络异常：{exc}，{delay} 秒后进行第 {attempt + 1} 次请求。")
             time.sleep(delay)
     if last_error:
@@ -106,7 +166,11 @@ def 排名抓取运行锁(func):
             }
         try:
             return func(*args, **kwargs)
+        except Exception as exc:
+            _记录排名抓取汇总(_当前排名抓取统计(), 状态="异常终止", 异常=exc)
+            raise
         finally:
+            frappe.local.amazon_rank_stats = None
             try:
                 lock.release()
             except Exception:
@@ -182,6 +246,23 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
         print(f"手动点击触发（启动时间：{启动程序时间}），无视定时开关，准备执行...")
 
     # --- 后续抓取逻辑 ---
+    抓取统计 = {
+        "开始计时": time.monotonic(),
+        "开始时间": 启动程序时间,
+        "触发方式": "定时抓取" if frappe.utils.cint(忽视定时抓取) == 0 else "手动抓取",
+        "启用店铺数": 0,
+        "成功店铺": set(),
+        "失败店铺": {},
+        "成功ASIN数": 0,
+        "失败ASIN": [],
+        "HTTP请求数": 0,
+        "重试次数": 0,
+        "发生重试的ASIN": set(),
+        "重试明细": [],
+        "当前店铺": None,
+        "已写汇总": False,
+    }
+    frappe.local.amazon_rank_stats = 抓取统计
 
 
     # 2. 获取 API 子表
@@ -198,6 +279,8 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
             print(f"第 {i} 个亚马逊 API 配置未开启排名抓取，已跳过。")
             continue
 
+        抓取统计["启用店铺数"] += 1
+
         # 3. 提取基础信息
 
         # 4. 提取三个核心加密密钥
@@ -207,7 +290,9 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
         站点id = api_row.站点id
         卖家记号 = api_row.卖家记号
         当前店铺 = api_row.店铺选项
+        抓取统计["当前店铺"] = 当前店铺 or f"第 {i} 行（未选择店铺）"
         if not 当前店铺:
+            抓取统计["失败店铺"][抓取统计["当前店铺"]] = "没有选择店铺"
             print(f"第 {i} 个亚马逊 API 配置没有选择店铺，已跳过排名抓取。")
             continue
         当前SP_API地址 = 获取SP_API区域地址(站点id)
@@ -217,10 +302,12 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                 "已跳过本店铺，未默认使用北美接口。"
             )
             print(错误说明)
+            抓取统计["失败店铺"][当前店铺] = f"无法识别站点ID：{站点id or '空'}"
             frappe.log_error(title="Amazon SP-API 站点区域无法识别", message=错误说明)
             continue
         临时秘钥 = 去获取临时秘钥(客户端编码, 客户端密钥, 刷新令牌)
         if not 临时秘钥:
+            抓取统计["失败店铺"][当前店铺] = "获取临时秘钥失败"
             print(f"店铺 {当前店铺} 获取临时秘钥失败，已跳过本店铺。")
             continue
 
@@ -261,6 +348,7 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                 )
             except requests.RequestException as 列表请求错误:
                 当前商品列表完整成功 = False
+                抓取统计["失败店铺"][当前店铺] = f"Listings API 网络异常：{列表请求错误}"
                 print(f"查询失败-网络异常: {列表请求错误}")
                 break
 
@@ -269,6 +357,7 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
 
             if 返回值.status_code != 200:
                 当前商品列表完整成功 = False
+                抓取统计["失败店铺"][当前店铺] = f"Listings API 返回 {返回值.status_code}"
                 print(f"查询失败-可能秘钥错误: {返回值.text}")
                 break
 
@@ -328,6 +417,7 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
 
         if 当前商品列表完整成功:
             成功完整抓取的店铺.add(当前店铺)
+            抓取统计["成功店铺"].add(当前店铺)
 
         # 5. 循环结束后，你可以根据需要处理这个结果列表
         print(f"\n成功装载了 {len(结果列表)} 个产品数据")
@@ -446,6 +536,11 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
 
             # 排名接口请求失败或没有返回可用数据时，不写入一条伪造的空日志。
             if not rank_data:
+                抓取统计["失败ASIN"].append({
+                    "店铺": 当前店铺,
+                    "ASIN": 商品列表api_ASIN,
+                    "原因": "Catalog API 未返回可用排名数据",
+                })
                 print(f"ASIN {商品列表api_ASIN} 未取得排名数据，已跳过写入。")
                 continue
 
@@ -580,6 +675,7 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
 
                 # 执行插入数据库操作
                 log_doc.insert(ignore_permissions=True)
+                抓取统计["成功ASIN数"] += 1
                 
                 # 如果是在循环中执行，建议在循环结束后统一 commit，或者每条 commit 保证实时保存
                 frappe.db.commit()
@@ -604,6 +700,11 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
 
 
             except Exception as save_error:
+                抓取统计["失败ASIN"].append({
+                    "店铺": 当前店铺,
+                    "ASIN": 商品列表api_ASIN,
+                    "原因": f"写入排名日志失败：{save_error}",
+                })
                 # 如果写入数据库失败，记录详细日志
                 frappe.log_error(
                     title="Amazon Rank SKU Log 写入失败",
@@ -643,6 +744,10 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
     main_doc.下次允许抓取的时间 = add_to_date(启动程序时间, minutes=间隔分钟)
     main_doc.save(ignore_permissions=True)
     frappe.db.commit()
+
+    抓取统计["成功店铺"] = set(成功完整抓取的店铺)
+    抓取统计["当前店铺"] = None
+    _记录排名抓取汇总(抓取统计)
 
     return None
 
