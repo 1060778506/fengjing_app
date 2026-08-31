@@ -40,37 +40,37 @@ class FengjingProductCorrespondingPlatformConfiguration(Document):
 
     接下来请你处理以下自然语言：
     """
-    亚马逊站点对应表 = """
-美国	Amazon.com	ATVPDKIKX0DER
-加拿大	Amazon.ca	A2EUQ1WTGCTBG2
-墨西哥	Amazon.com.mx	A1AM78C64UM0Y8
-巴西	Amazon.com.br	A2Q3Y263D00KWC
-爱尔兰	Amazon.ie	A28R8C7NBKEWEA
-西班牙	Amazon.es	A1RKKUPIHCS9HS
-英国	Amazon.co.uk	A1F83G8C2ARO7P
-法国	Amazon.fr	A13V1IB3VIYZZH
-比利时	Amazon.com.be	AMEN7PMS3EDWL
-荷兰	Amazon.nl	A1805IZSGTT6HS
-德国	Amazon.de	A1PA6795UKMFR9
-意大利	Amazon.it	APJ6JRA9NG5V4
-瑞典	Amazon.se	A2NODRKZP88ZB9
-南非	Amazon.co.za	AE08WJ6YKNBMC
-波兰	Amazon.pl	A1C3SOZRARQ6R3
-埃及	Amazon.eg	ARBP9OOSHTCHU
-土耳其	Amazon.com.tr	A33AVAJ2PDY3EV
-沙特阿拉伯	Amazon.sa	A17E79C6D8DWNP
-阿联酋	Amazon.ae	A2VIGQ35RCS4UG
-印度	Amazon.in	A21TJRUUN4KGV
-新加坡	Amazon.sg	A19VAU5U5O7RUS
-澳大利亚	Amazon.com.au	A39IBJ37TRP1C6
-日本	Amazon.co.jp	A1VC38T7YXB528
-"""
+    #亚马逊站点对应表 = """
+    #美国	Amazon.com	ATVPDKIKX0DER
+    #加拿大	Amazon.ca	A2EUQ1WTGCTBG2
+    #墨西哥	Amazon.com.mx	A1AM78C64UM0Y8
+    #巴西	Amazon.com.br	A2Q3Y263D00KWC
+    #爱尔兰	Amazon.ie	A28R8C7NBKEWEA
+    #西班牙	Amazon.es	A1RKKUPIHCS9HS
+    #英国	Amazon.co.uk	A1F83G8C2ARO7P
+    #法国	Amazon.fr	A13V1IB3VIYZZH
+    #比利时	Amazon.com.be	AMEN7PMS3EDWL
+    #荷兰	Amazon.nl	A1805IZSGTT6HS
+    #德国	Amazon.de	A1PA6795UKMFR9
+    #意大利	Amazon.it	APJ6JRA9NG5V4
+    #瑞典	Amazon.se	A2NODRKZP88ZB9
+    #南非	Amazon.co.za	AE08WJ6YKNBMC
+    #波兰	Amazon.pl	A1C3SOZRARQ6R3
+    #埃及	Amazon.eg	ARBP9OOSHTCHU
+    #土耳其	Amazon.com.tr	A33AVAJ2PDY3EV
+    #沙特阿拉伯	Amazon.sa	A17E79C6D8DWNP
+    #阿联酋	Amazon.ae	A2VIGQ35RCS4UG
+    #印度	Amazon.in	A21TJRUUN4KGV
+    #新加坡	Amazon.sg	A19VAU5U5O7RUS
+    #澳大利亚	Amazon.com.au	A39IBJ37TRP1C6
+    #日本	Amazon.co.jp	A1VC38T7YXB528
+    #"""
     def onload(self):
         # 2. Python 内部调用
         if not self.丰境_ai生成物料提示词:
             self.丰境_ai生成物料提示词 = self.STANDARD_PROMPT
-        if not self.站点id对应表:
-            self.站点id对应表 = self.亚马逊站点对应表
+        #if not self.站点id对应表:
+        #    self.站点id对应表 = self.亚马逊站点对应表
         if not self.物料命名模版:
             self.物料命名模版 = self.默认物料命名模版
     # 3. 暴露给前端 JS 调用的接口

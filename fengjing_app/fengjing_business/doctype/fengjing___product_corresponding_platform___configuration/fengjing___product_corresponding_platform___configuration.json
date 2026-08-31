@@ -52,6 +52,7 @@
    "options": "Amazon API configuration"
   },
   {
+   "default": "\u7f8e\u56fd\tAmazon.com\tATVPDKIKX0DER\n\u52a0\u62ff\u5927\tAmazon.ca\tA2EUQ1WTGCTBG2\n\u58a8\u897f\u54e5\tAmazon.com.mx\tA1AM78C64UM0Y8\n\u5df4\u897f\tAmazon.com.br\tA2Q3Y263D00KWC\n\u7231\u5c14\u5170\tAmazon.ie\tA28R8C7NBKEWEA\n\u897f\u73ed\u7259\tAmazon.es\tA1RKKUPIHCS9HS\n\u82f1\u56fd\tAmazon.co.uk\tA1F83G8C2ARO7P\n\u6cd5\u56fd\tAmazon.fr\tA13V1IB3VIYZZH\n\u6bd4\u5229\u65f6\tAmazon.com.be\tAMEN7PMS3EDWL\n\u8377\u5170\tAmazon.nl\tA1805IZSGTT6HS\n\u5fb7\u56fd\tAmazon.de\tA1PA6795UKMFR9\n\u610f\u5927\u5229\tAmazon.it\tAPJ6JRA9NG5V4\n\u745e\u5178\tAmazon.se\tA2NODRKZP88ZB9\n\u5357\u975e\tAmazon.co.za\tAE08WJ6YKNBMC\n\u6ce2\u5170\tAmazon.pl\tA1C3SOZRARQ6R3\n\u57c3\u53ca\tAmazon.eg\tARBP9OOSHTCHU\n\u571f\u8033\u5176\tAmazon.com.tr\tA33AVAJ2PDY3EV\n\u6c99\u7279\u963f\u62c9\u4f2f\tAmazon.sa\tA17E79C6D8DWNP\n\u963f\u8054\u914b\tAmazon.ae\tA2VIGQ35RCS4UG\n\u5370\u5ea6\tAmazon.in\tA21TJRUUN4KGV\n\u65b0\u52a0\u5761\tAmazon.sg\tA19VAU5U5O7RUS\n\u6fb3\u5927\u5229\u4e9a\tAmazon.com.au\tA39IBJ37TRP1C6\n\u65e5\u672c\tAmazon.co.jp\tA1VC38T7YXB528",
    "fieldname": "\u7ad9\u70b9id\u5bf9\u5e94\u8868",
    "fieldtype": "Small Text",
    "in_list_view": 1,
@@ -148,7 +149,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-31 12:24:51.105600",
+ "modified": "2026-08-31 14:48:52.719397",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "Fengjing - Product Corresponding Platform - Configuration",
