@@ -16,42 +16,49 @@ class AmazonRankSKULog(Document):
 
 
 def 清理过期排名日志():
-    """每天删除超过配置保留年限的 Amazon 排名记录；未配置或为 0 时保留 5 年。"""
+    """每天删除超过配置保留天数的Amazon排名记录；未配置或为0时保留1825天。"""
     配置单据 = "Fengjing - Product Corresponding Platform - Configuration"
+    # 为兼容现有数据库保留原内部字段名，页面标签和实际含义已经改为“天”。
     配置字段 = "超过多少年会删除日志"
 
     try:
-        保留年数 = frappe.utils.cint(
+        保留天数 = frappe.utils.cint(
             frappe.db.get_single_value(配置单据, 配置字段)
         )
     except Exception:
-        保留年数 = 0
-    if 保留年数 <= 0:
-        保留年数 = 5
+        保留天数 = 0
+    if 保留天数 <= 0:
+        保留天数 = 1825
 
-    截止时间 = add_to_date(frappe.utils.now_datetime(), years=-保留年数)
+    截止时间 = add_to_date(frappe.utils.now_datetime(), days=-保留天数)
     删除总数 = 0
     批量数量 = 5000
 
-    # 分批提交，避免一次删除大量历史数据时长时间锁表或形成超大事务。
-    while True:
-        frappe.db.sql(
-            """
-            DELETE FROM `tabAmazon Rank SKU Log`
-            WHERE COALESCE(`抓取数据的时间`, `creation`) < %s
-            LIMIT %s
-            """,
-            (截止时间, 批量数量),
-        )
-        本批数量 = frappe.db.sql("SELECT ROW_COUNT()")[0][0]
-        if not 本批数量:
-            break
-        删除总数 += 本批数量
-        frappe.db.commit()
+    # 分开处理新旧记录，避免COALESCE导致数据库无法使用时间索引。
+    # 新记录使用“抓取数据的时间”索引；没有抓取时间的旧记录使用creation索引。
+    删除条件列表 = (
+        "`抓取数据的时间` IS NOT NULL AND `抓取数据的时间` < %s",
+        "`抓取数据的时间` IS NULL AND `creation` < %s",
+    )
+    for 删除条件 in 删除条件列表:
+        while True:
+            frappe.db.sql(
+                f"""
+                DELETE FROM `tabAmazon Rank SKU Log`
+                WHERE {删除条件}
+                LIMIT %s
+                """,
+                (截止时间, 批量数量),
+            )
+            本批数量 = frappe.db.sql("SELECT ROW_COUNT()")[0][0]
+            if not 本批数量:
+                break
+            删除总数 += 本批数量
+            frappe.db.commit()
 
     frappe.logger("amazon_rank", allow_site=True).info(
-        "Amazon 排名日志定期清理：保留 %s 年，截止时间 %s，本次删除 %s 条",
-        保留年数,
+        "Amazon 排名日志定期清理：保留 %s 天，截止时间 %s，本次删除 %s 条",
+        保留天数,
         截止时间,
         删除总数,
     )
@@ -371,6 +378,7 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
     # 关闭抓取或接口失败的店铺完全不动，避免误删。
     # 使用“ASIN + 店铺”作为唯一标识。同一个 ASIN 可以同时存在于多个国家站点。
     亚马逊当前全部ASIN = set()
+    成功获取商品列表的店铺 = set()
     成功完整抓取的店铺 = set()
     for i, api_row in enumerate(api_table, 1):
         # 每一行 API 配置代表一个店铺/站点。未开启排名抓取时，
@@ -516,8 +524,9 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                 break
 
         if 当前商品列表完整成功:
-            成功完整抓取的店铺.add(当前店铺)
-            抓取统计["成功店铺"].add(当前店铺)
+            # Listings完整成功只表示可以安全同步/清理自有ASIN，
+            # 不能代表Catalog排名也抓取成功。
+            成功获取商品列表的店铺.add(当前店铺)
 
         # 5. 循环结束后，你可以根据需要处理这个结果列表
         print(f"\n成功装载了 {len(结果列表)} 个产品数据")
@@ -544,6 +553,8 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                 })
 
 
+        本店铺成功ASIN起点 = 抓取统计["成功ASIN数"]
+        本店铺失败ASIN起点 = len(抓取统计["失败ASIN"])
         for item in 结果列表:
             # 1. 提取当前产品的 ASIN
             商品列表api_ASIN = item.get('商品列表api_ASIN') # 拿着 SKU 是为了后面存日志时知道是谁的排名
@@ -816,23 +827,38 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                 )
 			#然后从这里吧以上信息写入到表内
 
+        本店铺成功ASIN数 = 抓取统计["成功ASIN数"] - 本店铺成功ASIN起点
+        本店铺失败ASIN数 = len(抓取统计["失败ASIN"]) - 本店铺失败ASIN起点
+        if 当前商品列表完整成功 and (
+            本店铺成功ASIN数 > 0
+            or (not 结果列表)
+            or 本店铺失败ASIN数 == 0
+        ):
+            # 至少写入一条排名日志；或者店铺确实没有待抓商品/全部主动关闭监听。
+            成功完整抓取的店铺.add(当前店铺)
+            抓取统计["成功店铺"].add(当前店铺)
+        elif 当前商品列表完整成功:
+            抓取统计["失败店铺"][当前店铺] = (
+                f"商品列表读取成功，但排名日志写入0条，失败{本店铺失败ASIN数}条"
+            )
+
 
     # 按店铺独立清理：同行始终保留；关闭或失败店铺始终保留；
-    # 仅删除“完整抓取成功店铺”中已不在 Amazon 商品列表里的自有ASIN。
-    if 成功完整抓取的店铺:
+    # 仅根据Listings完整成功的店铺清理失效自有ASIN；Catalog排名失败不影响此判断。
+    if 成功获取商品列表的店铺:
         原有ASIN数量 = len(main_doc.抓取asin配置的子表)
         保留的ASIN行 = [
             row for row in main_doc.抓取asin配置的子表
             if (
                 frappe.utils.cint(row.是否同行 or 0)
-                or row.属于哪个店铺 not in 成功完整抓取的店铺
+                or row.属于哪个店铺 not in 成功获取商品列表的店铺
                 or (row.需要抓取数据的asin, row.属于哪个店铺) in 亚马逊当前全部ASIN
             )
         ]
         main_doc.set("抓取asin配置的子表", 保留的ASIN行)
         已删除ASIN数量 = 原有ASIN数量 - len(保留的ASIN行)
         print(
-            f"ASIN 配置按店铺同步完成：成功店铺 {len(成功完整抓取的店铺)} 个，"
+            f"ASIN 配置按店铺同步完成：Listings成功店铺 {len(成功获取商品列表的店铺)} 个，"
             f"删除失效自有ASIN {已删除ASIN数量} 条。"
         )
     else:

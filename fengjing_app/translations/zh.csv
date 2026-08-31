@@ -20,7 +20,7 @@
 Import Amazon order settlement details,导入亚马逊订单结算明细
 "Fengjing - Product Corresponding Platform - Main Table","丰境-产品对应平台-主表"
 "Amazon SKU Ranking Configuration Table","亚马逊sku排名配置-子表"
-"Amazon Rank SKU Log","亚马逊sku销量排名"
+"Amazon Rank SKU Log","亚马逊sku产品排名"
 "Amazon Settlement Detail","亚马逊结算明细表"
 Amazon API configuration,配置亚马逊api-子表
 Marketplace Store,店铺列表

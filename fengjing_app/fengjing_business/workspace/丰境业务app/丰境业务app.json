@@ -47,7 +47,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "\u4e9a\u9a6c\u900a\u5176\u4ed6\u529f\u80fd",
-   "link_count": 4,
+   "link_count": 5,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -91,9 +91,19 @@
    "link_type": "Page",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u4e9a\u9a6c\u900a\u8ba2\u5355",
+   "link_count": 0,
+   "link_to": "Amazon order synchronization",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-08-31 22:27:17.583155",
+ "modified": "2026-08-31 23:23:26.814816",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "\u4e30\u5883\u4e1a\u52a1APP",

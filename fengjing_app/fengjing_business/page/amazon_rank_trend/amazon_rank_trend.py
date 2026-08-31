@@ -206,6 +206,7 @@ def _get_sampled_rank_rows(date_from, date_to, filters, fields):
     ]
     values = [f"{date_from} 00:00:00", f"{date_to} 23:59:59"]
     mapping = {
+        "store": "属于哪个店铺",
         "marketplace": "商品列表api_站点id",
         "asin": "商品列表api_asin",
         "sku": "商品列表api_sku",
@@ -216,18 +217,42 @@ def _get_sampled_rank_rows(date_from, date_to, filters, fields):
             values.append(filters[key])
 
     selected_fields = ", ".join(f"`{fieldname}`" for fieldname in fields)
+    product_partition = """
+        COALESCE(`属于哪个店铺`, ''),
+        COALESCE(`商品列表api_站点id`, ''),
+        COALESCE(NULLIF(`商品列表api_asin`, ''), NULLIF(`商品列表api_sku`, ''), `name`)
+    """
     bucket_seconds = bucket_hours * 60 * 60
     rows = frappe.db.sql(
         f"""
-        SELECT {selected_fields}
+        SELECT
+            {selected_fields},
+            `_group_record_count`, `_group_best_rank`,
+            `_latest_rank`, `_previous_rank`, `_latest_row_number`
         FROM (
             SELECT
                 {selected_fields},
+                COUNT(*) OVER (
+                    PARTITION BY {product_partition}
+                ) AS `_group_record_count`,
+                MIN(NULLIF(`排名api_主类目排名`, 0)) OVER (
+                    PARTITION BY {product_partition}
+                ) AS `_group_best_rank`,
+                FIRST_VALUE(NULLIF(`排名api_主类目排名`, 0)) OVER (
+                    PARTITION BY {product_partition}
+                    ORDER BY `抓取数据的时间` DESC, `name` DESC
+                ) AS `_latest_rank`,
+                LEAD(NULLIF(`排名api_主类目排名`, 0), 1) OVER (
+                    PARTITION BY {product_partition}
+                    ORDER BY `抓取数据的时间` DESC, `name` DESC
+                ) AS `_previous_rank`,
+                ROW_NUMBER() OVER (
+                    PARTITION BY {product_partition}
+                    ORDER BY `抓取数据的时间` DESC, `name` DESC
+                ) AS `_latest_row_number`,
                 ROW_NUMBER() OVER (
                     PARTITION BY
-                        COALESCE(`属于哪个店铺`, ''),
-                        COALESCE(`商品列表api_站点id`, ''),
-                        COALESCE(NULLIF(`商品列表api_asin`, ''), NULLIF(`商品列表api_sku`, ''), `name`),
+                        {product_partition},
                         FLOOR(UNIX_TIMESTAMP(`抓取数据的时间`) / %s)
                     ORDER BY `抓取数据的时间` DESC, `name` DESC
                 ) AS `_sample_row`

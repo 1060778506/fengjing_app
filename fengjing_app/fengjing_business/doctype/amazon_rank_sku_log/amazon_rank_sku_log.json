@@ -264,7 +264,8 @@
    "fieldtype": "Datetime",
    "in_global_search": 1,
    "in_list_view": 1,
-   "label": "\u6293\u53d6\u6570\u636e\u7684\u65f6\u95f4"
+   "label": "\u6293\u53d6\u6570\u636e\u7684\u65f6\u95f4",
+   "search_index": 1
   },
   {
    "fieldname": "\u5c5e\u4e8e\u54ea\u4e2a\u5e97\u94fa",
