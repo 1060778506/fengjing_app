@@ -67,7 +67,7 @@ class FengjingProductCorrespondingPlatformConfiguration(Document):
     """
 
     def validate(self):
-        """同一店铺内，同一个 ASIN 只允许配置一次。"""
+        """阻止排名ASIN配置和Amazon API配置出现重复组合。"""
         已有组合 = set()
         for row in self.get("抓取asin配置的子表") or []:
             asin = str(row.get("需要抓取数据的asin") or "").strip().upper()
@@ -82,6 +82,21 @@ class FengjingProductCorrespondingPlatformConfiguration(Document):
                     )
                 )
             已有组合.add(组合)
+
+        已有API组合 = set()
+        for row in self.get("亚马逊api") or []:
+            店铺 = str(row.get("店铺选项") or "").strip()
+            站点id = str(row.get("站点id") or "").strip().upper()
+            if not 店铺 or not 站点id:
+                continue
+            组合 = (店铺, 站点id)
+            if 组合 in 已有API组合:
+                frappe.throw(
+                    _("店铺 {0} 与站点ID {1} 的Amazon API配置重复，请只保留一行。").format(
+                        frappe.bold(店铺), frappe.bold(站点id)
+                    )
+                )
+            已有API组合.add(组合)
 
     def onload(self):
         #不管是不是空的都去写入

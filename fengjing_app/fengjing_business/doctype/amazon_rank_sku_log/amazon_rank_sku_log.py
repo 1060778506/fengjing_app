@@ -17,6 +17,49 @@ class AmazonRankSKULog(Document):
 
 可重试状态码 = {429, 500, 502, 503, 504}
 
+SP_API区域地址 = {
+    "北美": "https://sellingpartnerapi-na.amazon.com",
+    "欧洲": "https://sellingpartnerapi-eu.amazon.com",
+    "远东": "https://sellingpartnerapi-fe.amazon.com",
+}
+
+# Amazon SP-API 的访问地址由 Marketplace ID 所属销售区域决定，不能一律使用北美地址。
+SP_API站点区域 = {
+    # 北美
+    "ATVPDKIKX0DER": "北美",   # 美国
+    "A2EUQ1WTGCTBG2": "北美",  # 加拿大
+    "A1AM78C64UM0Y8": "北美",  # 墨西哥
+    "A2Q3Y263D00KWC": "北美",  # 巴西
+    # 欧洲（包括 Amazon 归入欧洲 SP-API 区域的中东、印度和南非站点）
+    "A28R8C7NBKEWEA": "欧洲",  # 爱尔兰
+    "A1RKKUPIHCS9HS": "欧洲",  # 西班牙
+    "A1F83G8C2ARO7P": "欧洲",  # 英国
+    "A13V1IB3VIYZZH": "欧洲",  # 法国
+    "AMEN7PMS3EDWL": "欧洲",   # 比利时
+    "A1805IZSGTT6HS": "欧洲",  # 荷兰
+    "A1PA6795UKMFR9": "欧洲",  # 德国
+    "APJ6JRA9NG5V4": "欧洲",   # 意大利
+    "A2NODRKZP88ZB9": "欧洲",  # 瑞典
+    "AE08WJ6YKNBMC": "欧洲",   # 南非
+    "A1C3SOZRARQ6R3": "欧洲",  # 波兰
+    "ARBP9OOSHTCHU": "欧洲",   # 埃及
+    "A33AVAJ2PDY3EV": "欧洲",  # 土耳其
+    "A17E79C6D8DWNP": "欧洲",  # 沙特阿拉伯
+    "A2VIGQ35RCS4UG": "欧洲",  # 阿联酋
+    "A21TJRUUN4KGV": "欧洲",   # 印度
+    # 远东
+    "A19VAU5U5O7RUS": "远东",  # 新加坡
+    "A39IBJ37TRP1C6": "远东",  # 澳大利亚
+    "A1VC38T7YXB528": "远东",  # 日本
+}
+
+
+def 获取SP_API区域地址(站点id):
+    """根据 Marketplace ID 返回对应的 Amazon SP-API 生产环境地址。"""
+    标准站点id = str(站点id or "").strip().upper()
+    区域 = SP_API站点区域.get(标准站点id)
+    return SP_API区域地址.get(区域)
+
 
 def 亚马逊请求(method, url, *, timeout=30, retries=3, **kwargs):
     """带超时和有限重试的 Amazon HTTP 请求。"""
@@ -143,15 +186,11 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
 
     # 2. 获取 API 子表
     api_table = main_doc.get("亚马逊api") or []
-    # 只有所有店铺、站点的商品列表全部分页抓取成功后，
-    # 才允许根据 Amazon 当前 ASIN 集合清理本地子表，避免接口失败时误删。
+    # 每个店铺独立判断是否完整抓取成功。只有成功店铺才清理自身失效ASIN；
+    # 关闭抓取或接口失败的店铺完全不动，避免误删。
     # 使用“ASIN + 店铺”作为唯一标识。同一个 ASIN 可以同时存在于多个国家站点。
     亚马逊当前全部ASIN = set()
-    所有商品列表均完整成功 = bool(api_table)
-    存在未开启排名抓取的配置 = any(
-        not frappe.utils.cint(api_row.开启排名抓取 or 0)
-        for api_row in api_table
-    )
+    成功完整抓取的店铺 = set()
     for i, api_row in enumerate(api_table, 1):
         # 每一行 API 配置代表一个店铺/站点。未开启排名抓取时，
         # 不申请临时秘钥，也不请求该店铺的商品和排名数据。
@@ -169,18 +208,25 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
         卖家记号 = api_row.卖家记号
         当前店铺 = api_row.店铺选项
         if not 当前店铺:
-            所有商品列表均完整成功 = False
             print(f"第 {i} 个亚马逊 API 配置没有选择店铺，已跳过排名抓取。")
+            continue
+        当前SP_API地址 = 获取SP_API区域地址(站点id)
+        if not 当前SP_API地址:
+            错误说明 = (
+                f"店铺 {当前店铺} 的站点 ID“{站点id or '空'}”无法识别所属 SP-API 区域，"
+                "已跳过本店铺，未默认使用北美接口。"
+            )
+            print(错误说明)
+            frappe.log_error(title="Amazon SP-API 站点区域无法识别", message=错误说明)
             continue
         临时秘钥 = 去获取临时秘钥(客户端编码, 客户端密钥, 刷新令牌)
         if not 临时秘钥:
-            所有商品列表均完整成功 = False
             print(f"店铺 {当前店铺} 获取临时秘钥失败，已跳过本店铺。")
             continue
 
         # 注意：这个接口需要 sellerId (也叫 Merchant ID)
         # 你可以从 api_row 里的某个字段获取，或者在获取 Token 时拿到的数据里找
-        endpoint = f"https://sellingpartnerapi-na.amazon.com/listings/2021-08-01/items/{卖家记号}"
+        endpoint = f"{当前SP_API地址}/listings/2021-08-01/items/{卖家记号}"
         
         headers = {
             "X-Amz-Access-Token": 临时秘钥,
@@ -280,8 +326,8 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
             if not 当前页令牌:
                 break
 
-        if not 当前商品列表完整成功:
-            所有商品列表均完整成功 = False
+        if 当前商品列表完整成功:
+            成功完整抓取的店铺.add(当前店铺)
 
         # 5. 循环结束后，你可以根据需要处理这个结果列表
         print(f"\n成功装载了 {len(结果列表)} 个产品数据")
@@ -352,7 +398,12 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                     if frappe.utils.cint(config_row.是否监听排名 or 0) == 1:
                         print(f"ASIN {商品列表api_ASIN} 已存在且已勾选，继续执行。")
                         # 这里执行你后续的抓取和写入 Log 的逻辑
-                        rank_data = 获取亚马逊商品销售排名(商品列表api_ASIN, 临时秘钥, 站点id)
+                        rank_data = 获取亚马逊商品销售排名(
+                            商品列表api_ASIN,
+                            临时秘钥,
+                            站点id,
+                            当前SP_API地址,
+                        )
                     else:
                         print(f"ASIN {商品列表api_ASIN} 已存在但未勾选，跳过。")
                         should_skip = True 
@@ -385,7 +436,12 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                 # 添加完后，这里可以继续执行你获取数据的逻辑
                 print("添加成功，开始获取该 ASIN 的数据...")
 
-                rank_data = 获取亚马逊商品销售排名(商品列表api_ASIN, 临时秘钥, 站点id)
+                rank_data = 获取亚马逊商品销售排名(
+                    商品列表api_ASIN,
+                    临时秘钥,
+                    站点id,
+                    当前SP_API地址,
+                )
 
 
             # 排名接口请求失败或没有返回可用数据时，不写入一条伪造的空日志。
@@ -457,6 +513,7 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                             "店铺": 当前店铺,
                             "是否同行": bool(当前是否同行),
                             "站点ID": 站点id,
+                            "SP-API区域地址": 当前SP_API地址,
                             "ASIN": 商品列表api_ASIN,
                             "触发方式": (
                                 "定时抓取"
@@ -555,22 +612,26 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
 			#然后从这里吧以上信息写入到表内
 
 
-    # 只有 Amazon 的所有商品列表均完整返回时，才同步删除已不存在的 ASIN。
-    # 这里只删除配置子表行，不删除历史排名日志。
-    if 所有商品列表均完整成功 and not 存在未开启排名抓取的配置:
+    # 按店铺独立清理：同行始终保留；关闭或失败店铺始终保留；
+    # 仅删除“完整抓取成功店铺”中已不在 Amazon 商品列表里的自有ASIN。
+    if 成功完整抓取的店铺:
         原有ASIN数量 = len(main_doc.抓取asin配置的子表)
         保留的ASIN行 = [
             row for row in main_doc.抓取asin配置的子表
             if (
                 frappe.utils.cint(row.是否同行 or 0)
+                or row.属于哪个店铺 not in 成功完整抓取的店铺
                 or (row.需要抓取数据的asin, row.属于哪个店铺) in 亚马逊当前全部ASIN
             )
         ]
         main_doc.set("抓取asin配置的子表", 保留的ASIN行)
         已删除ASIN数量 = 原有ASIN数量 - len(保留的ASIN行)
-        print(f"ASIN 配置同步完成，删除了 {已删除ASIN数量} 条 Amazon 已不存在的配置。")
+        print(
+            f"ASIN 配置按店铺同步完成：成功店铺 {len(成功完整抓取的店铺)} 个，"
+            f"删除失效自有ASIN {已删除ASIN数量} 条。"
+        )
     else:
-        print("Amazon 商品列表未全部完整抓取，或存在未开启排名抓取的店铺；为避免误删，本次不同步删除 ASIN 配置。")
+        print("本次没有任何店铺完整抓取成功，为避免误删，不清理ASIN配置。")
 
     #全部循环完成，开始记录抓取的总时间
     main_doc.上次抓取时间 = 启动程序时间
@@ -607,9 +668,15 @@ def 去获取临时秘钥(客户端编码, 客户端密钥, 刷新令牌):
     return None
 
 
-def 获取亚马逊商品销售排名(asin, 临时秘钥, 站点id):
+def 获取亚马逊商品销售排名(asin, 临时秘钥, 站点id, sp_api地址=None):
     # 必须包含 salesRanks 才能看到排名
-    api_url = f"https://sellingpartnerapi-na.amazon.com/catalog/2022-04-01/items/{asin}"
+    sp_api地址 = sp_api地址 or 获取SP_API区域地址(站点id)
+    if not sp_api地址:
+        错误说明 = f"ASIN {asin} 的站点 ID“{站点id or '空'}”无法识别所属 SP-API 区域。"
+        print(错误说明)
+        frappe.log_error(title="Amazon Catalog API 站点区域无法识别", message=错误说明)
+        return None
+    api_url = f"{sp_api地址}/catalog/2022-04-01/items/{asin}"
     params = {
         "marketplaceIds": 站点id,
         "includedData": "summaries,salesRanks"

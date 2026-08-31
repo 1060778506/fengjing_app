@@ -9,8 +9,24 @@ MARKETPLACE_COUNTRIES = {
     "A2EUQ1WTGCTBG2": "加拿大",
     "A1AM78C64UM0Y8": "墨西哥",
     "A2Q3Y263D00KWC": "巴西",
+    "A28R8C7NBKEWEA": "爱尔兰",
+    "A1RKKUPIHCS9HS": "西班牙",
     "A1F83G8C2ARO7P": "英国",
+    "A13V1IB3VIYZZH": "法国",
+    "AMEN7PMS3EDWL": "比利时",
+    "A1805IZSGTT6HS": "荷兰",
     "A1PA6795UKMFR9": "德国",
+    "APJ6JRA9NG5V4": "意大利",
+    "A2NODRKZP88ZB9": "瑞典",
+    "AE08WJ6YKNBMC": "南非",
+    "A1C3SOZRARQ6R3": "波兰",
+    "ARBP9OOSHTCHU": "埃及",
+    "A33AVAJ2PDY3EV": "土耳其",
+    "A17E79C6D8DWNP": "沙特阿拉伯",
+    "A2VIGQ35RCS4UG": "阿联酋",
+    "A21TJRUUN4KGV": "印度",
+    "A19VAU5U5O7RUS": "新加坡",
+    "A39IBJ37TRP1C6": "澳大利亚",
     "A1VC38T7YXB528": "日本",
 }
 
@@ -37,7 +53,8 @@ def get_rank_dashboard_data(filters=None):
             query_filters.append([fieldname, "=", filters[key]])
 
     fields = [
-        "name", "抓取数据的时间", "商品列表api_asin", "商品列表api_sku",
+        "name", "抓取数据的时间", "属于哪个店铺", "是否同行",
+        "商品列表api_asin", "商品列表api_sku",
         "绑定的物料", "物料名称", "商品列表api_站点id", "商品列表api_商品标题",
         "商品列表api_产品类型", "商品列表api_状态", "商品列表api_主图链接",
         "商品列表api_最后更新时间", "排名api_主类目排名", "排名api_主类目名称",
@@ -49,6 +66,18 @@ def get_rank_dashboard_data(filters=None):
 
     store_map, marketplace_store_map = _get_store_maps()
     asin_item_map, active_asins = _get_asin_item_map()
+    stored_store_ids = {str(row.get("属于哪个店铺")) for row in rows if row.get("属于哪个店铺")}
+    stored_store_labels = {}
+    if stored_store_ids:
+        stored_store_labels = {
+            str(row.name): str(row.cost_center_name or row.name)
+            for row in frappe.get_all(
+                "Cost Center",
+                filters={"name": ["in", list(stored_store_ids)]},
+                fields=["name", "cost_center_name"],
+                limit_page_length=0,
+            )
+        }
     skus = {str(row.get("商品列表api_sku")) for row in rows if row.get("商品列表api_sku")}
     sku_item_map = {}
     if skus:
@@ -65,14 +94,16 @@ def get_rank_dashboard_data(filters=None):
         str(row.get("绑定的物料") or
             asin_item_map.get((
                 str(row.get("商品列表api_asin") or ""),
-                marketplace_store_map.get(str(row.get("商品列表api_站点id") or ""), ""),
+                str(row.get("属于哪个店铺") or "")
+                or marketplace_store_map.get(str(row.get("商品列表api_站点id") or ""), ""),
             )) or
             sku_item_map.get(str(row.get("商品列表api_sku") or "")))
         for row in rows
         if (row.get("绑定的物料") or
             asin_item_map.get((
                 str(row.get("商品列表api_asin") or ""),
-                marketplace_store_map.get(str(row.get("商品列表api_站点id") or ""), ""),
+                str(row.get("属于哪个店铺") or "")
+                or marketplace_store_map.get(str(row.get("商品列表api_站点id") or ""), ""),
             )) or
             sku_item_map.get(str(row.get("商品列表api_sku") or "")))
     }
@@ -94,12 +125,12 @@ def get_rank_dashboard_data(filters=None):
     for row in rows:
         data = dict(row)
         marketplace = data.get("商品列表api_站点id") or ""
-        data["店铺"] = store_map.get(marketplace, "")
+        store_id = str(data.get("属于哪个店铺") or "") or marketplace_store_map.get(str(marketplace), "")
+        data["店铺"] = stored_store_labels.get(store_id) or store_map.get(marketplace, "")
         if store_filter and data["店铺"] != store_filter:
             continue
         asin = str(data.get("商品列表api_asin") or "")
         sku = str(data.get("商品列表api_sku") or "")
-        store_id = marketplace_store_map.get(str(marketplace), "")
         item = data.get("绑定的物料") or asin_item_map.get((asin, store_id)) or sku_item_map.get(sku) or ""
         data["绑定的物料"] = item
         details = item_details.get(item)
