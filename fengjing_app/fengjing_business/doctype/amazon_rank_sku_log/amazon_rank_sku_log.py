@@ -61,6 +61,29 @@ def 获取SP_API区域地址(站点id):
     return SP_API区域地址.get(区域)
 
 
+def 提取Catalog主图(images, 站点id):
+    """从 Catalog Items API 图片集合中提取指定站点的 MAIN 主图。"""
+    标准站点id = str(站点id or "").strip()
+    站点图片组 = next(
+        (
+            group for group in (images or [])
+            if str(group.get("marketplaceId") or "").strip() == 标准站点id
+        ),
+        None,
+    )
+    if not 站点图片组:
+        return {}
+    图片列表 = 站点图片组.get("images") or []
+    主图列表 = [image for image in 图片列表 if image.get("variant") == "MAIN"]
+    候选图片 = 主图列表 or 图片列表
+    if not 候选图片:
+        return {}
+    return max(
+        候选图片,
+        key=lambda image: frappe.utils.cint(image.get("width")) * frappe.utils.cint(image.get("height")),
+    )
+
+
 def _当前排名抓取统计():
     return getattr(frappe.local, "amazon_rank_stats", None)
 
@@ -544,6 +567,13 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                 print(f"ASIN {商品列表api_ASIN} 未取得排名数据，已跳过写入。")
                 continue
 
+            # 同行 ASIN 没有 Listings 图片时，使用 Catalog API 返回的主图补齐；
+            # 自有商品如果 Listings 未返回图片，也使用相同的回退逻辑。
+            if not 商品列表api_主图链接:
+                商品列表api_主图链接 = rank_data.get("排名api_主图链接")
+                商品列表api_图片宽 = rank_data.get("排名api_图片宽")
+                商品列表api_图片高 = rank_data.get("排名api_图片高")
+
 
             排名api_asin = rank_data.get('排名api_asin')
             排名api_站点ID = rank_data.get('排名api_站点ID')
@@ -784,7 +814,7 @@ def 获取亚马逊商品销售排名(asin, 临时秘钥, 站点id, sp_api地址
     api_url = f"{sp_api地址}/catalog/2022-04-01/items/{asin}"
     params = {
         "marketplaceIds": 站点id,
-        "includedData": "summaries,salesRanks"
+        "includedData": "summaries,salesRanks,images"
     }
     headers = {
         "X-Amz-Access-Token": 临时秘钥,
@@ -819,6 +849,7 @@ def 获取亚马逊商品销售排名(asin, 临时秘钥, 站点id, sp_api地址
             d_ranks = sales_ranks.get("displayGroupRanks", [{}])[0] if sales_ranks.get("displayGroupRanks") else {}
 
             browse = summary.get("browseClassification", {})
+            catalog主图 = 提取Catalog主图(your_raw_json.get("images"), 站点id)
 
             # --- 构建结果字典 ---
             result = {
@@ -859,6 +890,10 @@ def 获取亚马逊商品销售排名(asin, 临时秘钥, 站点id, sp_api地址
                 "排名api_支持以旧换新": ("是" if summary.get("tradeInEligible") else "否") if "tradeInEligible" in summary else None,
                 "排名api_包装数量": summary.get("packageQuantity"),
                 "排名api_发布日期": summary.get("releaseDate"),
+                # Catalog 图片用于同行商品，以及 Listings 未返回图片时的回退。
+                "排名api_主图链接": catalog主图.get("link"),
+                "排名api_图片宽": catalog主图.get("width"),
+                "排名api_图片高": catalog主图.get("height"),
                 # 保留原始响应，写日志时再序列化到「原始json」字段。
                 "_raw_json": your_raw_json,
             }
