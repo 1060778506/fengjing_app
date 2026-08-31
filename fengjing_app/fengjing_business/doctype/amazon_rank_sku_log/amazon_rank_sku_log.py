@@ -85,7 +85,17 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
     # 才允许根据 Amazon 当前 ASIN 集合清理本地子表，避免接口失败时误删。
     亚马逊当前全部ASIN = set()
     所有商品列表均完整成功 = bool(api_table)
+    存在未开启排名抓取的配置 = any(
+        not frappe.utils.cint(api_row.开启排名抓取 or 0)
+        for api_row in api_table
+    )
     for i, row in enumerate(api_table, 1):
+        # 每一行 API 配置代表一个店铺/站点。未开启排名抓取时，
+        # 不申请临时秘钥，也不请求该店铺的商品和排名数据。
+        if not frappe.utils.cint(row.开启排名抓取 or 0):
+            print(f"第 {i} 个亚马逊 API 配置未开启排名抓取，已跳过。")
+            continue
+
         # 3. 提取基础信息
 
         # 4. 提取三个核心加密密钥
@@ -164,8 +174,8 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                     
                     图片信息 = s.get("mainImage", {})
                     主图链接 = 图片信息.get("link")
-                    图片宽 = 图片信息.get("width", "未提及")
-                    图片高 = 图片信息.get("height", "未提及")
+                    图片宽 = 图片信息.get("width")
+                    图片高 = 图片信息.get("height")
 
                     # 3. 把这些信息打包成一个“字典”
                     产品字典 = {
@@ -262,6 +272,12 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                 rank_data = 获取亚马逊商品销售排名(商品列表api_ASIN, 临时秘钥, 站点id)
 
 
+            # 排名接口请求失败或没有返回可用数据时，不写入一条伪造的空日志。
+            if not rank_data:
+                print(f"ASIN {商品列表api_ASIN} 未取得排名数据，已跳过写入。")
+                continue
+
+
             排名api_asin = rank_data.get('排名api_asin')
             排名api_站点ID = rank_data.get('排名api_站点ID')
             排名api_商品名称 = rank_data.get('排名api_商品名称')
@@ -307,11 +323,17 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                 )
             print(matched_material_id)
             try:
-                # 创建新文档对象
-                log_doc = frappe.get_doc({
+                # 只写入当前 DocType 真实存在的字段，并保留 Amazon
+                # Catalog Items API 的完整原始 JSON，便于以后重新解析。
+                日志数据 = {
                     "doctype": "Amazon Rank SKU Log",
                     "绑定的物料": matched_material_id,
                     "抓取数据的时间": 启动程序时间,
+                    "原始json": json.dumps(
+                        rank_data.get("_raw_json") or {},
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
                     # --- 商品列表 API 字段映射 ---
                     "商品列表api_asin": 商品列表api_ASIN,
                     "商品列表api_sku": 商品列表api_SKU,
@@ -323,8 +345,8 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                     "商品列表api_创建时间": 商品列表api_创建时间,
                     "商品列表api_最后更新时间": 商品列表api_最后更新时间,
                     "商品列表api_主图链接": 商品列表api_主图链接,
-                    "商品列表api_图片宽": frappe.utils.cint(商品列表api_图片宽),  # 强制转整数
-                    "商品列表api_图片高": frappe.utils.cint(商品列表api_图片高),  # 强制转整数
+                    "商品列表api_图片宽": frappe.utils.cint(商品列表api_图片宽) if 商品列表api_图片宽 is not None else None,
+                    "商品列表api_图片高": frappe.utils.cint(商品列表api_图片高) if 商品列表api_图片高 is not None else None,
                     
                     # --- 排名 API 字段映射 ---
                     "排名api_asin": 排名api_asin,
@@ -337,10 +359,10 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                     "排名api_颜色": 排名api_颜色,
                     "排名api_尺寸": 排名api_尺寸,
                     "排名api_样式": 排名api_样式,
-                    "排名api_主类目排名": frappe.utils.cint(排名api_主类目排名) if 排名api_主类目排名 else 0,
+                    "排名api_主类目排名": frappe.utils.cint(排名api_主类目排名) if 排名api_主类目排名 is not None else None,
                     "排名api_主类目名称": 排名api_主类目名称,
                     "排名api_主类目链接": 排名api_主类目链接,
-                    "排名api_细分类目排名": frappe.utils.cint(排名api_细分类目排名) if 排名api_细分类目排名 else 0,
+                    "排名api_细分类目排名": frappe.utils.cint(排名api_细分类目排名) if 排名api_细分类目排名 is not None else None,
                     "排名api_细分类目名称": 排名api_细分类目名称,
                     "排名api_细分类目链接": 排名api_细分类目链接,
                     "排名api_分类id": 排名api_分类ID,
@@ -353,9 +375,17 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                     "排名api_亲笔签名": 排名api_亲笔签名,
                     "排名api_纪念品": 排名api_纪念品,
                     "排名api_支持以旧换新": 排名api_支持以旧换新,
-                    "排名api_包装数量": frappe.utils.cint(排名api_包装数量) if 排名api_包装数量 else 0,
+                    "排名api_包装数量": frappe.utils.cint(排名api_包装数量) if 排名api_包装数量 is not None else None,
                     "排名api_发布日期": 排名api_发布日期
-                })
+                }
+
+                有效字段 = set(frappe.get_meta("Amazon Rank SKU Log").get_valid_columns())
+                日志数据 = {
+                    字段名: 字段值
+                    for 字段名, 字段值 in 日志数据.items()
+                    if 字段名 == "doctype" or (字段名 in 有效字段 and 字段值 is not None)
+                }
+                log_doc = frappe.get_doc(日志数据)
 
                 # 执行插入数据库操作
                 log_doc.insert(ignore_permissions=True)
@@ -396,7 +426,7 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
 
     # 只有 Amazon 的所有商品列表均完整返回时，才同步删除已不存在的 ASIN。
     # 这里只删除配置子表行，不删除历史排名日志。
-    if 所有商品列表均完整成功:
+    if 所有商品列表均完整成功 and not 存在未开启排名抓取的配置:
         原有ASIN数量 = len(main_doc.抓取asin配置的子表)
         保留的ASIN行 = [
             row for row in main_doc.抓取asin配置的子表
@@ -406,7 +436,7 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
         已删除ASIN数量 = 原有ASIN数量 - len(保留的ASIN行)
         print(f"ASIN 配置同步完成，删除了 {已删除ASIN数量} 条 Amazon 已不存在的配置。")
     else:
-        print("Amazon 商品列表未完整抓取，为避免误删，本次不同步删除 ASIN 配置。")
+        print("Amazon 商品列表未全部完整抓取，或存在未开启排名抓取的店铺；为避免误删，本次不同步删除 ASIN 配置。")
 
     #全部循环完成，开始记录抓取的总时间
     main_doc.上次抓取时间 = 启动程序时间
@@ -488,10 +518,10 @@ def 获取亚马逊商品销售排名(asin, 临时秘钥, 站点id):
                 "排名api_品牌": summary.get("brand"),
                 "排名api_制造商": summary.get("manufacturer"),
                 "排名api_型号": summary.get("modelNumber"),
-                "排名api_零件编号": summary.get("partNumber", "未提及"), 
-                "排名api_颜色": summary.get("color", "未提及"), 
-                "排名api_尺寸": summary.get("size", "未提及"), 
-                "排名api_样式": summary.get("style", "未提及"), 
+                "排名api_零件编号": summary.get("partNumber"),
+                "排名api_颜色": summary.get("color"),
+                "排名api_尺寸": summary.get("size"),
+                "排名api_样式": summary.get("style"),
 
                 # --- 排名数据 ---
                 "排名api_主类目排名": d_ranks.get("rank"), 
@@ -510,12 +540,14 @@ def 获取亚马逊商品销售排名(asin, 临时秘钥, 站点id):
                 "排名api_商品分类类型": summary.get("itemClassification"),
 
                 # --- 状态与标志 ---
-                "排名api_成人用品": "是" if summary.get("adultProduct") else "否",
-                "排名api_亲笔签名": "是" if summary.get("autographed") else "否",
-                "排名api_纪念品": "是" if summary.get("memorabilia") else "否",
-                "排名api_支持以旧换新": "是" if summary.get("tradeInEligible") else "否",
+                "排名api_成人用品": ("是" if summary.get("adultProduct") else "否") if "adultProduct" in summary else None,
+                "排名api_亲笔签名": ("是" if summary.get("autographed") else "否") if "autographed" in summary else None,
+                "排名api_纪念品": ("是" if summary.get("memorabilia") else "否") if "memorabilia" in summary else None,
+                "排名api_支持以旧换新": ("是" if summary.get("tradeInEligible") else "否") if "tradeInEligible" in summary else None,
                 "排名api_包装数量": summary.get("packageQuantity"),
-                "排名api_发布日期": summary.get("releaseDate", "未提及")
+                "排名api_发布日期": summary.get("releaseDate"),
+                # 保留原始响应，写日志时再序列化到「原始json」字段。
+                "_raw_json": your_raw_json,
             }
             return result
         else:
