@@ -128,6 +128,9 @@ scheduler_events = {
     "all": [
         # 指向刚才创建的那个入口函数
         "fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log.定时执行亚马逊抓取排名的函数"
+    ],
+    "daily": [
+        "fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log.清理过期排名日志"
     ]
 }
 

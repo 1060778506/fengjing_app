@@ -15,6 +15,49 @@ class AmazonRankSKULog(Document):
     pass
 
 
+def 清理过期排名日志():
+    """每天删除超过配置保留年限的 Amazon 排名记录；未配置或为 0 时保留 5 年。"""
+    配置单据 = "Fengjing - Product Corresponding Platform - Configuration"
+    配置字段 = "超过多少年会删除日志"
+
+    try:
+        保留年数 = frappe.utils.cint(
+            frappe.db.get_single_value(配置单据, 配置字段)
+        )
+    except Exception:
+        保留年数 = 0
+    if 保留年数 <= 0:
+        保留年数 = 5
+
+    截止时间 = add_to_date(frappe.utils.now_datetime(), years=-保留年数)
+    删除总数 = 0
+    批量数量 = 5000
+
+    # 分批提交，避免一次删除大量历史数据时长时间锁表或形成超大事务。
+    while True:
+        frappe.db.sql(
+            """
+            DELETE FROM `tabAmazon Rank SKU Log`
+            WHERE COALESCE(`抓取数据的时间`, `creation`) < %s
+            LIMIT %s
+            """,
+            (截止时间, 批量数量),
+        )
+        本批数量 = frappe.db.sql("SELECT ROW_COUNT()")[0][0]
+        if not 本批数量:
+            break
+        删除总数 += 本批数量
+        frappe.db.commit()
+
+    frappe.logger("amazon_rank", allow_site=True).info(
+        "Amazon 排名日志定期清理：保留 %s 年，截止时间 %s，本次删除 %s 条",
+        保留年数,
+        截止时间,
+        删除总数,
+    )
+    return 删除总数
+
+
 可重试状态码 = {429, 500, 502, 503, 504}
 
 SP_API区域地址 = {
