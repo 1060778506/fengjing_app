@@ -35,18 +35,6 @@
    "icon": "list",
    "indent": 0,
    "keep_closed": 0,
-   "label": "TEMU\u5168\u6258\u5b8c\u7ed3\u5355",
-   "link_to": "TEMU - Full Custody - Completion Document",
-   "link_type": "DocType",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 0,
-   "collapsible": 1,
-   "icon": "list",
-   "indent": 0,
-   "keep_closed": 0,
    "label": "\u914d\u7f6e\u4e30\u5883app",
    "link_to": "Fengjing - Product Corresponding Platform - Configuration",
    "link_type": "DocType",
@@ -65,7 +53,7 @@
    "type": "Section Break"
   }
  ],
- "modified": "2026-08-31 15:41:34.934986",
+ "modified": "2026-08-31 16:28:01.315612",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "Fengjing Business",
