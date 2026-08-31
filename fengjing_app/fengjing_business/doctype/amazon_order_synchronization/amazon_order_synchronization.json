@@ -15,9 +15,10 @@
   }
  ],
  "grid_page_length": 50,
+ "in_create": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-31 11:10:51.430211",
+ "modified": "2026-09-01 00:07:09.768015",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "Amazon order synchronization",
