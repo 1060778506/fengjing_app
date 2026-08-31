@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import add_days, cint, nowdate
+from frappe.utils import add_days, cint, getdate, nowdate
 
 
 DOCTYPE = "Amazon Rank SKU Log"
@@ -39,19 +39,6 @@ def get_rank_dashboard_data(filters=None):
     date_from = filters.get("date_from") or add_days(nowdate(), -30)
     date_to = filters.get("date_to") or nowdate()
 
-    query_filters = [
-        ["抓取数据的时间", ">=", f"{date_from} 00:00:00"],
-        ["抓取数据的时间", "<=", f"{date_to} 23:59:59"],
-    ]
-    mapping = {
-        "marketplace": "商品列表api_站点id",
-        "asin": "商品列表api_asin",
-        "sku": "商品列表api_sku",
-    }
-    for key, fieldname in mapping.items():
-        if filters.get(key):
-            query_filters.append([fieldname, "=", filters[key]])
-
     fields = [
         "name", "抓取数据的时间", "属于哪个店铺", "是否同行",
         "商品列表api_asin", "商品列表api_sku",
@@ -62,7 +49,7 @@ def get_rank_dashboard_data(filters=None):
         "排名api_细分类目链接", "排名api_商品名称", "排名api_品牌", "排名api_制造商", "排名api_型号",
         "排名api_颜色", "排名api_尺寸", "排名api_浏览节点id",
     ]
-    rows = _get_sampled_rank_rows(query_filters, fields)
+    rows, sampling = _get_sampled_rank_rows(date_from, date_to, filters, fields)
 
     store_map, marketplace_store_map = _get_store_maps()
     asin_item_map, active_asins = _get_asin_item_map()
@@ -159,6 +146,7 @@ def get_rank_dashboard_data(filters=None):
             ],
         ),
         "range": {"date_from": date_from, "date_to": date_to},
+        "sampling": sampling,
     }
 
 
@@ -185,44 +173,66 @@ def _get_store_maps():
     return labels, store_ids
 
 
-def _get_sampled_rank_rows(query_filters, fields, batch_size=2000, max_points=600):
-    """
-    分批读取完整日期范围，不再把全部商品合计截断为5000条。
-    每个“店铺 + 站点 + ASIN/SKU”最多保留约 max_points 个历史点，
-    并保留最早和最新记录，避免多年数据一次塞进浏览器。
-    """
-    groups = {}
-    start = 0
-    while True:
-        batch = frappe.get_list(
-            DOCTYPE,
-            filters=query_filters,
-            fields=fields,
-            order_by="抓取数据的时间 asc, name asc",
-            limit_start=start,
-            limit_page_length=batch_size,
-        )
-        if not batch:
-            break
-        for row in batch:
-            store_id = str(row.get("属于哪个店铺") or "")
-            marketplace = str(row.get("商品列表api_站点id") or "")
-            product = str(
-                row.get("商品列表api_asin")
-                or row.get("商品列表api_sku")
-                or row.get("name")
-            )
-            points = groups.setdefault((store_id, marketplace, product), [])
-            points.append(row)
-            if len(points) > max_points:
-                points[:] = [points[0], *points[1:-1:2], points[-1]]
-        start += len(batch)
-        if len(batch) < batch_size:
-            break
+def _get_sampled_rank_rows(date_from, date_to, filters, fields):
+    """在数据库中按商品和时间桶取最新点，避免把完整历史范围读入 Python。"""
+    days = max((getdate(date_to) - getdate(date_from)).days + 1, 1)
+    if days <= 31:
+        bucket_hours, label = 1, "逐小时"
+    elif days <= 90:
+        bucket_hours, label = 3, "每3小时"
+    elif days <= 366:
+        bucket_hours, label = 24, "按天"
+    elif days <= 730:
+        bucket_hours, label = 48, "每2天"
+    else:
+        bucket_hours, label = 168, "按周"
 
-    rows = [row for points in groups.values() for row in points]
-    rows.sort(key=lambda row: (row.get("抓取数据的时间"), row.get("name")))
-    return rows
+    conditions = [
+        "`抓取数据的时间` >= %s",
+        "`抓取数据的时间` <= %s",
+    ]
+    values = [f"{date_from} 00:00:00", f"{date_to} 23:59:59"]
+    mapping = {
+        "marketplace": "商品列表api_站点id",
+        "asin": "商品列表api_asin",
+        "sku": "商品列表api_sku",
+    }
+    for key, fieldname in mapping.items():
+        if filters.get(key):
+            conditions.append(f"`{fieldname}` = %s")
+            values.append(filters[key])
+
+    selected_fields = ", ".join(f"`{fieldname}`" for fieldname in fields)
+    bucket_seconds = bucket_hours * 60 * 60
+    rows = frappe.db.sql(
+        f"""
+        SELECT {selected_fields}
+        FROM (
+            SELECT
+                {selected_fields},
+                ROW_NUMBER() OVER (
+                    PARTITION BY
+                        COALESCE(`属于哪个店铺`, ''),
+                        COALESCE(`商品列表api_站点id`, ''),
+                        COALESCE(NULLIF(`商品列表api_asin`, ''), NULLIF(`商品列表api_sku`, ''), `name`),
+                        FLOOR(UNIX_TIMESTAMP(`抓取数据的时间`) / %s)
+                    ORDER BY `抓取数据的时间` DESC, `name` DESC
+                ) AS `_sample_row`
+            FROM `tabAmazon Rank SKU Log`
+            WHERE {' AND '.join(conditions)}
+        ) AS sampled
+        WHERE `_sample_row` = 1
+        ORDER BY `抓取数据的时间` ASC, `name` ASC
+        """,
+        [bucket_seconds, *values],
+        as_dict=True,
+    )
+    return rows, {
+        "label": label,
+        "bucket_hours": bucket_hours,
+        "days": days,
+        "returned_points": len(rows),
+    }
 
 
 def _get_asin_item_map():

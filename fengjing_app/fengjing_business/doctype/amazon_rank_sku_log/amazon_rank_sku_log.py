@@ -286,25 +286,23 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
             raw_interval = frappe.utils.cint(main_doc.间隔分钟)
             间隔分钟 = 60 if raw_interval < 60 else raw_interval
 
-            上次抓取时间 = main_doc.上次抓取时间
+            # 优先使用已经保存的下次执行时间。失败任务会把它设为10分钟后，
+            # 因而不能再由“最后成功时间”覆盖，否则会每分钟重复请求Amazon。
+            下次允许抓取的时间 = main_doc.下次允许抓取的时间
+            if not 下次允许抓取的时间 and main_doc.上次抓取时间:
+                下次允许抓取的时间 = add_to_date(
+                    main_doc.上次抓取时间, minutes=间隔分钟
+                )
 
-            if 上次抓取时间:
-                # 2. 计算下一次允许抓取的临界点
-                下次允许抓取的时间 = add_to_date(上次抓取时间, minutes=间隔分钟)
-                
-                # 3. 写入字段：更新计算出的“临界点”到主表
-                main_doc.下次允许抓取的时间 = 下次允许抓取的时间
-                main_doc.save(ignore_permissions=True)
-                frappe.db.commit()
-
-                # 4. 对比你定义的“启动程序时间”
-                # 使用 get_datetime 确保“启动程序时间”从字符串转为可对比的时间对象
-                if get_datetime(启动程序时间) < get_datetime(下次允许抓取的时间):
-                    print(f"时间未到。启动时间是: {启动程序时间}，下次抓取应在: {下次允许抓取的时间}")
-                    return {
-                        "status": "too_early",
-                        "message": f"未到间隔时间。下次抓取时间：{下次允许抓取的时间}"
-                    }
+            if (
+                下次允许抓取的时间
+                and get_datetime(启动程序时间) < get_datetime(下次允许抓取的时间)
+            ):
+                print(f"时间未到。启动时间是: {启动程序时间}，下次抓取应在: {下次允许抓取的时间}")
+                return {
+                    "status": "too_early",
+                    "message": f"未到间隔时间。下次抓取时间：{下次允许抓取的时间}"
+                }
             
             print(f"校验通过（启动时间：{启动程序时间}），开始执行定时抓取...")
     else:
@@ -807,14 +805,36 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
     else:
         print("本次没有任何店铺完整抓取成功，为避免误删，不清理ASIN配置。")
 
-    #全部循环完成，开始记录抓取的总时间
-    main_doc.上次抓取时间 = 启动程序时间
     # 获取纠正后的间隔分钟（确保保底 60 分钟）
     raw_interval = frappe.utils.cint(main_doc.间隔分钟)
     间隔分钟 = 60 if raw_interval < 60 else raw_interval
-    
-    # 重新计算临界点
-    main_doc.下次允许抓取的时间 = add_to_date(启动程序时间, minutes=间隔分钟)
+
+    if 抓取统计["启用店铺数"] == 0:
+        # 没有启用任何店铺属于主动跳过，不是成功也不是失败，两个时间均不修改。
+        抓取统计["当前店铺"] = None
+        _记录排名抓取汇总(抓取统计, 状态="跳过")
+        return {
+            "status": "ignored",
+            "message": "没有开启排名抓取的Amazon店铺，本次任务已跳过。",
+        }
+
+    if 成功完整抓取的店铺:
+        # 至少一个店铺完整成功，才把它记录成最后一次成功抓取。
+        main_doc.上次抓取时间 = 启动程序时间
+        main_doc.下次允许抓取的时间 = add_to_date(
+            启动程序时间, minutes=间隔分钟
+        )
+        返回状态 = "success"
+        返回消息 = (
+            f"抓取完成：成功店铺 {len(成功完整抓取的店铺)} 个，"
+            f"失败店铺 {len(抓取统计['失败店铺'])} 个。"
+        )
+    else:
+        # 全部失败时保留原来的“上次抓取时间”，只安排10分钟后的失败重试。
+        main_doc.下次允许抓取的时间 = add_to_date(启动程序时间, minutes=10)
+        返回状态 = "error"
+        返回消息 = "全部Amazon店铺抓取失败，上次成功时间未改变，系统将在10分钟后重试。"
+
     main_doc.save(ignore_permissions=True)
     frappe.db.commit()
 
@@ -822,7 +842,13 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
     抓取统计["当前店铺"] = None
     _记录排名抓取汇总(抓取统计)
 
-    return None
+    return {
+        "status": 返回状态,
+        "message": 返回消息,
+        "成功店铺数": len(成功完整抓取的店铺),
+        "失败店铺数": len(抓取统计["失败店铺"]),
+        "下次允许抓取的时间": main_doc.下次允许抓取的时间,
+    }
 
 
 def 去获取临时秘钥(客户端编码, 客户端密钥, 刷新令牌):

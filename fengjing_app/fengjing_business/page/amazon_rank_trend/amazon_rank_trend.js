@@ -5,7 +5,7 @@ frappe.pages["amazon-rank-trend"].on_page_load = function (wrapper) {
 
 class AmazonRankDashboard {
 	constructor(page, wrapper) {
-		this.page = page; this.wrapper = wrapper; this.rows = []; this.filtered = []; this.pageNo = 1; this.pageSize = 20;
+		this.page = page; this.wrapper = wrapper; this.rows = []; this.filtered = []; this.sampling = null; this.pageNo = 1; this.pageSize = 20;
 		this.hideDeleted = true; this.tableSortKey = "main_rank"; this.tableSortDirection = "asc"; this.trendLegendPage = 1; this.trendLegendPageSize = 18; this.trendSeries = []; this.charts = []; wrapper.__amazon_rank_dashboard = this; this.render(); this.bind(); this.setDates(30); this.load();
 	}
 	render() {
@@ -20,7 +20,7 @@ class AmazonRankDashboard {
 		  <div class="art-actions"><div class="art-ranges"><button data-days="7">7天</button><button data-days="30" class="active">30天</button><button data-days="90">90天</button><button data-days="365">1年</button></div><button id="art-reset">重置</button><button id="art-search" class="primary">查询数据</button><button id="art-export">导出 CSV</button></div>
 		 </section>
 		 <section class="art-kpis" id="art-kpis"></section>
-		 <section class="art-chart-grid"><article class="art-card wide"><header><h3>排名走势</h3><span>数值越小，排名越好</span></header><div id="art-trend" class="art-chart"></div><div id="art-trend-legend" class="art-trend-legend"></div></article><article class="art-card"><header><h3>最新排名变化</h3><span>与上次记录相比 · 向下滚动查看更多</span></header><div class="art-chart-scroll"><div id="art-change" class="art-chart"></div></div></article><article class="art-card wide"><header><h3>商品排名概览</h3><span>最新排名与历史最佳 · 向下滚动查看更多</span></header><div class="art-chart-scroll"><div id="art-overview" class="art-chart"></div></div></article><article class="art-card"><header><h3>主类目分布</h3><span>按最新商品记录</span></header><div id="art-category" class="art-chart"></div></article></section>
+		 <section class="art-chart-grid"><article class="art-card wide"><header><h3>排名走势</h3><span id="art-sampling">数值越小，排名越好</span></header><div id="art-trend" class="art-chart"></div><div id="art-trend-legend" class="art-trend-legend"></div></article><article class="art-card"><header><h3>最新排名变化</h3><span>与上次记录相比 · 向下滚动查看更多</span></header><div class="art-chart-scroll"><div id="art-change" class="art-chart"></div></div></article><article class="art-card wide"><header><h3>商品排名概览</h3><span>最新排名与历史最佳 · 向下滚动查看更多</span></header><div class="art-chart-scroll"><div id="art-overview" class="art-chart"></div></div></article><article class="art-card"><header><h3>主类目分布</h3><span>按最新商品记录</span></header><div id="art-category" class="art-chart"></div></article></section>
 		 <section class="art-card art-table-card"><header><div><h3>商品明细</h3><span id="art-count"></span></div><div class="art-table-tools"><button id="art-hide-deleted" class="active">显示已删除产品</button><input id="art-table-search" placeholder="搜索标题、ASIN、SKU、物料…"></div></header><div class="art-table-wrap"><table><thead><tr><th>Amazon / ERPNext 图片</th><th>商品</th><th>ASIN / SKU</th><th><button class="art-sort" data-sort="item">对应物料 <i></i></button></th><th><button class="art-sort" data-sort="main_rank">主类目排名 <i>↑</i></button></th><th><button class="art-sort" data-sort="detail_rank">细分类目排名 <i></i></button></th><th>变化</th><th>站点 / 店铺</th><th>抓取时间</th></tr></thead><tbody id="art-tbody"></tbody></table></div><footer><span id="art-page-info"></span><div><button id="art-prev">上一页</button><button id="art-next">下一页</button></div></footer></section>
 		 <div class="art-loading"><div class="art-spinner"></div><span>正在整理排名数据…</span></div>
 		</div>`);
@@ -40,7 +40,7 @@ class AmazonRankDashboard {
 	setDates(days){const to=frappe.datetime.get_today(),from=frappe.datetime.add_days(to,-days);$(this.wrapper).find("#art-from").val(from).end().find("#art-to").val(to);}
 	async load(){
 		const root=$(this.wrapper), filters={}; ["store","marketplace","asin","sku","item"].forEach(k=>filters[k]=root.find(`#art-${k}`).val()); filters.date_from=root.find("#art-from").val();filters.date_to=root.find("#art-to").val();root.find(".art-loading").addClass("show");
-		try {const r=await frappe.call({method:"fengjing_app.fengjing_business.page.amazon_rank_trend.amazon_rank_trend.get_rank_dashboard_data",args:{filters}});this.rows=(r.message&&r.message.rows)||[];this.fillOptions((r.message&&r.message.options)||{});this.draw();}
+		try {const r=await frappe.call({method:"fengjing_app.fengjing_business.page.amazon_rank_trend.amazon_rank_trend.get_rank_dashboard_data",args:{filters}}),message=r.message||{};this.rows=message.rows||[];this.sampling=message.sampling||null;this.fillOptions(message.options||{});root.find("#art-sampling").text(this.sampling?`数值越小，排名越好 · ${this.sampling.label}展示 · ${this.sampling.returned_points} 个数据点`:"数值越小，排名越好");this.draw();}
 		catch(e){frappe.msgprint({title:"读取失败",message:"无法读取 Amazon 排名数据，请查看错误日志。",indicator:"red"});}
 		finally{root.find(".art-loading").removeClass("show");}
 	}
