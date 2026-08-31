@@ -17,6 +17,7 @@
   "section_break_aviq",
   "\u7acb\u5373\u6293\u53d6",
   "\u67e5\u770b\u8d70\u52bf",
+  "\u8d85\u8fc7\u591a\u5c11\u5e74\u4f1a\u5220\u9664\u65e5\u5fd7",
   "column_break_uvzj",
   "\u95f4\u9694\u5206\u949f",
   "\u5f00\u542f\u4efb\u52a1\u8c03\u5ea6\u5668",
@@ -142,13 +143,19 @@
    "fieldtype": "Table",
    "label": "\u4e9a\u9a6c\u900a\u6293\u53d6\u8ba2\u5355\u914d\u7f6e\u8868",
    "options": "Amazon retrieves order configuration - sub-table"
+  },
+  {
+   "description": "\u8d85\u8fc7\u591a\u5c11\u5e74\u4f1a\u5220\u9664\u3010amazon-rank-sku-log\u3011\u65e5\u5fd7/\u5355\u4f4d/\u5929\n\u30025 \u5e74/60\u5206\u949f/50\u4e2a\u4ea7\u54c1\u9884\u8ba1\u5360\u7528\u7ea6 16\uff5e22 GB",
+   "fieldname": "\u8d85\u8fc7\u591a\u5c11\u5e74\u4f1a\u5220\u9664\u65e5\u5fd7",
+   "fieldtype": "Int",
+   "label": "\u8d85\u8fc7\u591a\u5c11\u5e74\u4f1a\u5220\u9664\u65e5\u5fd7"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-31 14:52:33.311514",
+ "modified": "2026-08-31 21:58:19.050352",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "Fengjing - Product Corresponding Platform - Configuration",

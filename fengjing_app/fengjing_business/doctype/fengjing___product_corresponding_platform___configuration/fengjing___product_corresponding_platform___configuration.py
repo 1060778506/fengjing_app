@@ -71,6 +71,8 @@ class FengjingProductCorrespondingPlatformConfiguration(Document):
         已有组合 = set()
         for row in self.get("抓取asin配置的子表") or []:
             asin = str(row.get("需要抓取数据的asin") or "").strip().upper()
+            # 不只用于比较，也把规范化结果真正保存回子表。
+            row.需要抓取数据的asin = asin
             店铺 = str(row.get("属于哪个店铺") or "").strip()
             if not asin or not 店铺:
                 continue
@@ -87,6 +89,10 @@ class FengjingProductCorrespondingPlatformConfiguration(Document):
         for row in self.get("亚马逊api") or []:
             店铺 = str(row.get("店铺选项") or "").strip()
             站点id = str(row.get("站点id") or "").strip().upper()
+            卖家记号 = str(row.get("卖家记号") or "").strip()
+            # Marketplace ID 统一大写；Seller ID 只清理误输入的首尾空格。
+            row.站点id = 站点id
+            row.卖家记号 = 卖家记号
             if not 店铺 or not 站点id:
                 continue
             组合 = (店铺, 站点id)
