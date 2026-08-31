@@ -127,7 +127,7 @@ def get_rank_dashboard_data(filters=None):
         marketplace = data.get("商品列表api_站点id") or ""
         store_id = str(data.get("属于哪个店铺") or "") or marketplace_store_map.get(str(marketplace), "")
         data["店铺"] = stored_store_labels.get(store_id) or store_map.get(marketplace, "")
-        if store_filter and data["店铺"] != store_filter:
+        if store_filter and store_id != store_filter:
             continue
         asin = str(data.get("商品列表api_asin") or "")
         sku = str(data.get("商品列表api_sku") or "")
@@ -148,7 +148,16 @@ def get_rank_dashboard_data(filters=None):
 
     return {
         "rows": result,
-        "options": _get_options(store_map, effective_item_codes),
+        "options": _get_options(
+            store_map,
+            effective_item_codes,
+            [
+                {"value": store_id, "label": label}
+                for store_id, label in sorted(
+                    stored_store_labels.items(), key=lambda item: item[1]
+                )
+            ],
+        ),
         "range": {"date_from": date_from, "date_to": date_to},
     }
 
@@ -179,7 +188,7 @@ def _get_store_maps():
 def _get_sampled_rank_rows(query_filters, fields, batch_size=2000, max_points=600):
     """
     分批读取完整日期范围，不再把全部商品合计截断为5000条。
-    每个“站点 + ASIN/SKU”最多保留约 max_points 个历史点，
+    每个“店铺 + 站点 + ASIN/SKU”最多保留约 max_points 个历史点，
     并保留最早和最新记录，避免多年数据一次塞进浏览器。
     """
     groups = {}
@@ -196,13 +205,14 @@ def _get_sampled_rank_rows(query_filters, fields, batch_size=2000, max_points=60
         if not batch:
             break
         for row in batch:
+            store_id = str(row.get("属于哪个店铺") or "")
             marketplace = str(row.get("商品列表api_站点id") or "")
             product = str(
                 row.get("商品列表api_asin")
                 or row.get("商品列表api_sku")
                 or row.get("name")
             )
-            points = groups.setdefault((marketplace, product), [])
+            points = groups.setdefault((store_id, marketplace, product), [])
             points.append(row)
             if len(points) > max_points:
                 points[:] = [points[0], *points[1:-1:2], points[-1]]
@@ -235,7 +245,7 @@ def _get_asin_item_map():
     return mapping, active_asins
 
 
-def _get_options(store_map, effective_item_codes=None):
+def _get_options(store_map, effective_item_codes=None, store_options=None):
     def unique(field):
         return [
             str(value) for value in frappe.get_all(
@@ -249,7 +259,7 @@ def _get_options(store_map, effective_item_codes=None):
             if value
         ]
     return {
-        "stores": sorted(set(store_map.values())),
+        "stores": store_options or sorted(set(store_map.values())),
         "marketplaces": [
             {
                 "value": marketplace,

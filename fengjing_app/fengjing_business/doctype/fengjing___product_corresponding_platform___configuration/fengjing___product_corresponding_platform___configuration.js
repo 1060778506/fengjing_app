@@ -441,7 +441,12 @@ frappe.ui.form.on('Amazon API configuration', {
             freeze: true,
             callback: function (r) {
                 if (r.message) {
-                    frappe.msgprint(r.message);
+                    const result = r.message;
+                    frappe.msgprint({
+                        title: result.status === 'success' ? __('Amazon API 测试成功') : __('Amazon API 测试失败'),
+                        message: result.message || __('没有返回测试结果'),
+                        indicator: result.status === 'success' ? 'green' : 'red'
+                    });
                 }
             }
         });
