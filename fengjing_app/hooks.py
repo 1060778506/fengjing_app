@@ -62,17 +62,17 @@ fixtures = [
         "filters": [["module", "=", "Fengjing Business"]]
     },
     # 2. 导出仪表盘配置 (新增：这一步决定了卡片显示在哪个页面)
-    {
-        "dt": "Dashboard",
-        "filters": [["module", "=", "Fengjing Business"]]
-    },
+    #{
+    #    "dt": "Dashboard",
+    #    "filters": [["module", "=", "Fengjing Business"]]
+    #},
     #数字卡
-    {
-        "dt": "Number Card", 
-        "filters": [["module", "=", "Fengjing Business"]]
-    },
+    #{
+    #    "dt": "Number Card", 
+    #    "filters": [["module", "=", "Fengjing Business"]]
+    #},
     # 3. 核心：导出你那 81 行对照表的所有数据
-    "Amazon internal form binding table title",
+    #"Amazon internal form binding table title",
 
 
     # 1. 导出 v3 版本的查询 (注意加了 v3)

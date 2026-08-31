@@ -30,30 +30,6 @@
    "type": "Section Break"
   },
   {
-   "child": 1,
-   "collapsible": 1,
-   "icon": "list",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "\u57fa\u7840\u8ba2\u5355\u6570\u636e\u9762\u677f",
-   "link_to": "\u57fa\u7840\u8ba2\u5355\u6570\u636e\u9762\u677f",
-   "link_type": "Dashboard",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 1,
-   "collapsible": 1,
-   "icon": "list",
-   "indent": 0,
-   "keep_closed": 0,
-   "label": "\u4e9a\u9a6c\u900a\u7ed3\u7b97\u8ba2\u5355\u6570\u636e\u9762\u677f",
-   "link_to": "\u4e9a\u9a6c\u900a\u7ed3\u7b97\u8ba2\u5355\u6570\u636e\u9762\u677f",
-   "link_type": "Dashboard",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
    "child": 0,
    "collapsible": 1,
    "icon": "list",
@@ -83,25 +59,13 @@
    "icon": "list",
    "indent": 0,
    "keep_closed": 0,
-   "label": "\u4e9a\u9a6c\u900a\u8ba2\u5355\u8be6\u60c5",
-   "link_to": "Amazon Order Summary",
-   "link_type": "DocType",
-   "show_arrow": 0,
-   "type": "Link"
-  },
-  {
-   "child": 0,
-   "collapsible": 1,
-   "icon": "list",
-   "indent": 0,
-   "keep_closed": 0,
    "label": "\u62a5\u8868",
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Section Break"
   }
  ],
- "modified": "2026-08-27 22:52:56.801141",
+ "modified": "2026-08-31 15:41:34.934986",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "Fengjing Business",

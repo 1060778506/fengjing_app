@@ -17,46 +17,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "\u5bfc\u5165\u4e9a\u9a6c\u900a\u8ba2\u5355",
-   "link_count": 0,
-   "link_to": "Amazon Order Import Session",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "\u57fa\u7840\u8ba2\u5355\u660e\u7ec6",
-   "link_count": 0,
-   "link_to": "Amazon Order Summary",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "\u79fb\u9664\u8ba2\u5355\u660e\u7ec6",
-   "link_count": 0,
-   "link_to": "Amazon removes order details",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "\u7ed3\u7b97\u8ba2\u5355\u660e\u7ec6",
-   "link_count": 0,
-   "link_to": "Amazon Settlement Detail",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "\u4e9a\u9a6c\u900a\u5176\u4ed6\u529f\u80fd",
    "link_count": 4,
    "link_type": "DocType",
@@ -154,93 +114,14 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "\u4e9a\u9a6c\u900ax",
-   "link_count": 4,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "1.\u5bfc\u5165\u4e9a\u9a6c\u900a\u57fa\u7840\u8ba2\u5355\u660e\u7ec6\u2192",
-   "link_count": 0,
-   "link_to": "Amazon Order Import Session",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "2.\u5bfc\u5165\u4e9a\u9a6c\u900a\u79fb\u9664\u8ba2\u5355\u660e\u7ec6\u2192",
-   "link_count": 0,
-   "link_to": "Import Amazon and remove orders",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "3\u5bfc\u5165\u4e9a\u9a6c\u900aAWD\u8ba2\u5355\u660e\u7ec6\u2192",
-   "link_count": 0,
-   "link_to": "Amazon AWD Import List",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "4.\u5bfc\u5165\u4e9a\u9a6c\u900a\u7ed3\u7b97\u8ba2\u5355\u660e\u7ec6\u2192",
-   "link_count": 0,
-   "link_to": "Import Amazon order settlement details",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "\u4e9a\u9a6c\u900a\u4fe1\u606fx",
    "link_count": 3,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "\u57fa\u7840\u8ba2\u5355\u660e\u7ec6",
-   "link_count": 0,
-   "link_to": "Amazon Order Summary",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "\u79fb\u9664\u8ba2\u5355\u660e\u7ec6",
-   "link_count": 0,
-   "link_to": "Amazon removes order details",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "\u7ed3\u7b97\u8ba2\u5355\u660e\u7ec6",
-   "link_count": 0,
-   "link_to": "Amazon Settlement Detail",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
   }
  ],
- "modified": "2026-08-31 14:19:53.864556",
+ "modified": "2026-08-31 15:39:00.990193",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "\u4e30\u5883\u4e1a\u52a1APP",
