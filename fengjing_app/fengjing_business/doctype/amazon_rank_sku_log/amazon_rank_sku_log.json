@@ -47,7 +47,8 @@
   "\u6392\u540dapi_\u7eaa\u5ff5\u54c1",
   "\u6392\u540dapi_\u652f\u6301\u4ee5\u65e7\u6362\u65b0",
   "\u6392\u540dapi_\u5305\u88c5\u6570\u91cf",
-  "\u6392\u540dapi_\u53d1\u5e03\u65e5\u671f"
+  "\u6392\u540dapi_\u53d1\u5e03\u65e5\u671f",
+  "\u539f\u59cbjson"
  ],
  "fields": [
   {
@@ -272,12 +273,18 @@
    "fieldname": "\u7269\u6599\u540d\u79f0",
    "fieldtype": "Autocomplete",
    "label": "\u7269\u6599\u540d\u79f0"
+  },
+  {
+   "fieldname": "\u539f\u59cbjson",
+   "fieldtype": "Code",
+   "label": "\u539f\u59cbjson",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-03-14 16:59:03.914856",
+ "modified": "2026-08-31 16:46:02.187519",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "Amazon Rank SKU Log",
