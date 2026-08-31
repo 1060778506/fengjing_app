@@ -104,6 +104,42 @@ def 获取SP_API区域地址(站点id):
     return SP_API区域地址.get(区域)
 
 
+def 获取平台映射物料(店铺, 站点id=None, asin=None, sku=None):
+    """依次按ASIN+SKU、ASIN、SKU匹配店铺的平台物料。"""
+    基础条件 = {
+        "启用": 1,
+        "店铺": str(店铺 or "").strip(),
+        "站点id": str(站点id or "").strip().upper(),
+    }
+    标准asin = str(asin or "").strip().upper()
+    标准sku = str(sku or "").strip()
+    if not 基础条件["店铺"]:
+        return None
+    if 标准asin and 标准sku:
+        物料 = frappe.db.get_value(
+            "Fengjing - Product Corresponding Platform - Main Table",
+            {**基础条件, "平台asin": 标准asin, "平台sku": 标准sku},
+            "物料id",
+        )
+        if 物料:
+            return 物料
+    if 标准asin:
+        物料 = frappe.db.get_value(
+            "Fengjing - Product Corresponding Platform - Main Table",
+            {**基础条件, "平台asin": 标准asin, "平台sku": ["in", ["", None]]},
+            "物料id",
+        )
+        if 物料:
+            return 物料
+    if 标准sku:
+        return frappe.db.get_value(
+            "Fengjing - Product Corresponding Platform - Main Table",
+            {**基础条件, "平台sku": 标准sku},
+            "物料id",
+        )
+    return None
+
+
 def 提取Catalog主图(images, 站点id):
     """从 Catalog Items API 图片集合中提取指定站点的 MAIN 主图。"""
     标准站点id = str(站点id or "").strip()
@@ -647,18 +683,15 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
 
             # --- 开始写入 Frappe 数据库 ---
 
-            # 1. 初始化物料变量（防止匹配失败报错）
-            matched_material_id = None
-
-            # 2. 去“对应平台主表”匹配 SKU
-            if 商品列表api_SKU:
-                print(商品列表api_SKU)
-                # 获取“物料id”字段的内容
-                matched_material_id = frappe.db.get_value(
-                    "Fengjing - Product Corresponding Platform - Main Table", 
-                    {"平台sku": 商品列表api_SKU}, 
-                    "物料id"
-                )
+            # 先使用独立平台映射表；找不到时才回退到ASIN抓取配置子表。
+            matched_material_id = 获取平台映射物料(
+                当前店铺,
+                商品列表api_站点id or 站点id,
+                asin=商品列表api_ASIN,
+                sku=商品列表api_SKU,
+            )
+            if not matched_material_id and matched_config_row:
+                matched_material_id = matched_config_row.get("asin对应物料")
             print(matched_material_id)
             try:
                 # 只写入当前 DocType 真实存在的字段，并保留 Amazon

@@ -65,34 +65,47 @@ def get_rank_dashboard_data(filters=None):
                 limit_page_length=0,
             )
         }
-    skus = {str(row.get("商品列表api_sku")) for row in rows if row.get("商品列表api_sku")}
-    sku_item_map = {}
-    if skus:
-        for mapping_row in frappe.get_all(
-            "Fengjing - Product Corresponding Platform - Main Table",
-            filters={"平台sku": ["in", list(skus)]},
-            fields=["平台sku", "物料id"],
-            limit_page_length=10000,
-        ):
-            if mapping_row.get("平台sku") and mapping_row.get("物料id"):
-                sku_item_map[str(mapping_row.get("平台sku"))] = str(mapping_row.get("物料id"))
+    # 平台映射表优先，ASIN抓取配置子表作为回退。两者都使用店铺成本中心区分。
+    platform_asin_sku_item_map = {}
+    platform_asin_item_map = {}
+    platform_sku_item_map = {}
+    for mapping_row in frappe.get_all(
+        "Fengjing - Product Corresponding Platform - Main Table",
+        filters={"启用": 1},
+        fields=["店铺", "站点id", "平台asin", "平台sku", "物料id"],
+        limit_page_length=0,
+    ):
+        store_id = str(mapping_row.get("店铺") or "")
+        marketplace = str(mapping_row.get("站点id") or "").upper()
+        item = str(mapping_row.get("物料id") or "")
+        asin = str(mapping_row.get("平台asin") or "").upper()
+        sku = str(mapping_row.get("平台sku") or "")
+        if store_id and asin and sku and item:
+            platform_asin_sku_item_map[(store_id, marketplace, asin, sku)] = item
+        if store_id and asin and not sku and item:
+            platform_asin_item_map[(store_id, marketplace, asin)] = item
+        if store_id and sku and item:
+            platform_sku_item_map[(store_id, marketplace, sku)] = item
+
+    def resolve_item(row):
+        marketplace = str(row.get("商品列表api_站点id") or "").upper()
+        store_id = (
+            str(row.get("属于哪个店铺") or "")
+            or marketplace_store_map.get(marketplace, "")
+        )
+        asin = str(row.get("商品列表api_asin") or "").upper()
+        sku = str(row.get("商品列表api_sku") or "")
+        return (
+            platform_asin_sku_item_map.get((store_id, marketplace, asin, sku))
+            or platform_asin_item_map.get((store_id, marketplace, asin))
+            or platform_sku_item_map.get((store_id, marketplace, sku))
+            or asin_item_map.get((asin, store_id))
+            or row.get("绑定的物料")
+            or ""
+        )
 
     effective_item_codes = {
-        str(row.get("绑定的物料") or
-            asin_item_map.get((
-                str(row.get("商品列表api_asin") or ""),
-                str(row.get("属于哪个店铺") or "")
-                or marketplace_store_map.get(str(row.get("商品列表api_站点id") or ""), ""),
-            )) or
-            sku_item_map.get(str(row.get("商品列表api_sku") or "")))
-        for row in rows
-        if (row.get("绑定的物料") or
-            asin_item_map.get((
-                str(row.get("商品列表api_asin") or ""),
-                str(row.get("属于哪个店铺") or "")
-                or marketplace_store_map.get(str(row.get("商品列表api_站点id") or ""), ""),
-            )) or
-            sku_item_map.get(str(row.get("商品列表api_sku") or "")))
+        str(item) for item in (resolve_item(row) for row in rows) if item
     }
     item_details = {}
     if effective_item_codes:
@@ -118,7 +131,7 @@ def get_rank_dashboard_data(filters=None):
             continue
         asin = str(data.get("商品列表api_asin") or "")
         sku = str(data.get("商品列表api_sku") or "")
-        item = data.get("绑定的物料") or asin_item_map.get((asin, store_id)) or sku_item_map.get(sku) or ""
+        item = resolve_item(data)
         data["绑定的物料"] = item
         details = item_details.get(item)
         if details:
@@ -242,7 +255,7 @@ def _get_asin_item_map():
     try:
         parent = frappe.get_single("Fengjing - Product Corresponding Platform - Configuration")
         for row in parent.get("抓取asin配置的子表") or []:
-            asin = str(row.get("需要抓取数据的asin") or "")
+            asin = str(row.get("需要抓取数据的asin") or "").upper()
             store_id = str(row.get("属于哪个店铺") or "")
             item = str(row.get("asin对应物料") or "")
             if asin and store_id:
