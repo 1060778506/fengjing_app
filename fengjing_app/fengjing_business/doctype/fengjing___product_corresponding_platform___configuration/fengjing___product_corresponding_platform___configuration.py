@@ -161,19 +161,6 @@ class FengjingProductCorrespondingPlatformConfiguration(Document):
             return {"status": "error", "message": f"连接错误: {str(e)}"}
 
 
-@frappe.whitelist()
-def 查看排名仪表盘():
-    # 1. 尝试从当前站点的配置中获取 Insights 的配置 (如果存在)
-    # 很多 Frappe App 会把端口写在 site_config 里
-    insights_config = frappe.conf.get("insights_config") or {}
-    port = insights_config.get("port")
-    
-    # 2. 如果配置里没写，我们返回一个标记，让前端去处理
-    return {
-        "port": port,
-        "path": "/insights/dashboards"
-    }
-
 # 不要缩进
 @frappe.whitelist()
 def 开启任务调度器():
