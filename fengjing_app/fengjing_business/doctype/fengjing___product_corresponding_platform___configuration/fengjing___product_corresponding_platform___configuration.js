@@ -8,6 +8,7 @@ frappe.ui.form.on('Fengjing - Product Corresponding Platform - Configuration', {
         // 在控制台打印刷新日志，方便调试
         console.log("--- 页面已刷新 ---");
         setTimeout(() => 刷新全部中转站模型状态(frm), 0);
+        setTimeout(() => 刷新全部ASIN配置行状态(frm), 0);
     },
 
     // 点击“恢复物料提示词”按钮时的逻辑
@@ -86,6 +87,58 @@ frappe.ui.form.on('Fengjing - Product Corresponding Platform - Configuration', {
 
 
 });
+
+// --- 子表逻辑：Amazon ASIN 排名配置 ---
+// 页面手工新增的行默认视为同行；程序在后端新增的自有商品行会明确写入“是否同行 = 0”。
+frappe.ui.form.on('Amazon SKU Ranking Configuration Table', {
+    抓取asin配置的子表_add: function (frm, cdt, cdn) {
+        frappe.model.set_value(cdt, cdn, '是否同行', 1).then(() => {
+            设置ASIN配置行状态(frm, cdt, cdn);
+        });
+    },
+
+    是否同行: function (frm, cdt, cdn) {
+        设置ASIN配置行状态(frm, cdt, cdn);
+    },
+
+    form_render: function (frm, cdt, cdn) {
+        设置ASIN配置行状态(frm, cdt, cdn);
+    }
+});
+
+function 设置ASIN配置行状态(frm, cdt, cdn) {
+    const row = locals[cdt] && locals[cdt][cdn];
+    const table = frm.fields_dict['抓取asin配置的子表'];
+    const grid_row = table && table.grid && table.grid.get_row(cdn);
+    if (!row || !grid_row) return;
+
+    const 是同行 = Number(row.是否同行 || 0) === 1;
+    // 自有 ASIN 只能由程序创建；页面手工新增的行一定是同行。
+    // 因此无论哪种来源，“是否同行”都只用于显示，不允许手工切换。
+    grid_row.toggle_editable('是否同行', false);
+    grid_row.toggle_editable('属于哪个店铺', 是同行);
+
+    ['是否同行', '属于哪个店铺'].forEach((fieldname) => {
+        const controls = [
+            grid_row.grid_form && grid_row.grid_form.fields_dict[fieldname],
+            grid_row.on_grid_fields_dict && grid_row.on_grid_fields_dict[fieldname]
+        ].filter(Boolean);
+        controls.forEach((control) => {
+            if (control.$input) {
+                const 禁止编辑 = fieldname === '是否同行' || !是同行;
+                control.$input.prop('disabled', 禁止编辑);
+            }
+        });
+    });
+}
+
+function 刷新全部ASIN配置行状态(frm) {
+    const table = frm.fields_dict['抓取asin配置的子表'];
+    if (!table || !table.grid) return;
+    table.grid.grid_rows.forEach((grid_row) => {
+        设置ASIN配置行状态(frm, grid_row.doc.doctype, grid_row.doc.name);
+    });
+}
 
 // --- 子表逻辑：AI 配置项 (Fengjing - AI Configuration) ---
 window.fengjingTeamorouterModels = window.fengjingTeamorouterModels || [];

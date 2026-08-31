@@ -83,27 +83,33 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
     api_table = main_doc.get("亚马逊api") or []
     # 只有所有店铺、站点的商品列表全部分页抓取成功后，
     # 才允许根据 Amazon 当前 ASIN 集合清理本地子表，避免接口失败时误删。
+    # 使用“ASIN + 店铺”作为唯一标识。同一个 ASIN 可以同时存在于多个国家站点。
     亚马逊当前全部ASIN = set()
     所有商品列表均完整成功 = bool(api_table)
     存在未开启排名抓取的配置 = any(
         not frappe.utils.cint(api_row.开启排名抓取 or 0)
         for api_row in api_table
     )
-    for i, row in enumerate(api_table, 1):
+    for i, api_row in enumerate(api_table, 1):
         # 每一行 API 配置代表一个店铺/站点。未开启排名抓取时，
         # 不申请临时秘钥，也不请求该店铺的商品和排名数据。
-        if not frappe.utils.cint(row.开启排名抓取 or 0):
+        if not frappe.utils.cint(api_row.开启排名抓取 or 0):
             print(f"第 {i} 个亚马逊 API 配置未开启排名抓取，已跳过。")
             continue
 
         # 3. 提取基础信息
 
         # 4. 提取三个核心加密密钥
-        客户端编码 = row.get_password("客户端编码")
-        客户端密钥 = row.get_password("客户端密钥")
-        刷新令牌 = row.get_password("刷新令牌")
-        站点id = row.站点id
-        卖家记号 = row.卖家记号
+        客户端编码 = api_row.get_password("客户端编码")
+        客户端密钥 = api_row.get_password("客户端密钥")
+        刷新令牌 = api_row.get_password("刷新令牌")
+        站点id = api_row.站点id
+        卖家记号 = api_row.卖家记号
+        当前店铺 = api_row.店铺选项
+        if not 当前店铺:
+            所有商品列表均完整成功 = False
+            print(f"第 {i} 个亚马逊 API 配置没有选择店铺，已跳过排名抓取。")
+            continue
         临时秘钥 = 去获取临时秘钥(客户端编码, 客户端密钥, 刷新令牌)
 
         # 注意：这个接口需要 sellerId (也叫 Merchant ID)
@@ -179,6 +185,7 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
 
                     # 3. 把这些信息打包成一个“字典”
                     产品字典 = {
+                        "_是否同行": 0,
                         "商品列表api_ASIN": ASIN,
                         "商品列表api_SKU": SKU,
                         "商品列表api_站点id": 站点id,
@@ -196,7 +203,7 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                     # 4. 把字典装进篮子里
                     结果列表.append(产品字典)
                     if ASIN:
-                        亚马逊当前全部ASIN.add(ASIN)
+                        亚马逊当前全部ASIN.add((ASIN, 当前店铺))
                     
                     # 依然可以保留打印，方便调试
                     print(f"已装载 SKU: {SKU}")
@@ -210,6 +217,27 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
 
         # 5. 循环结束后，你可以根据需要处理这个结果列表
         print(f"\n成功装载了 {len(结果列表)} 个产品数据")
+
+        # 同行 ASIN 不会出现在卖家自己的 Listings Items 列表中。
+        # 将当前店铺手工配置、且已开启监听的同行 ASIN 加入本次排名抓取队列。
+        本店铺自有ASIN = {
+            item.get("商品列表api_ASIN") for item in 结果列表
+            if item.get("商品列表api_ASIN")
+        }
+        for config_row in main_doc.抓取asin配置的子表:
+            同行ASIN = config_row.需要抓取数据的asin
+            if (
+                frappe.utils.cint(config_row.是否同行 or 0)
+                and config_row.属于哪个店铺 == 当前店铺
+                and frappe.utils.cint(config_row.是否监听排名 or 0)
+                and 同行ASIN
+                and 同行ASIN not in 本店铺自有ASIN
+            ):
+                结果列表.append({
+                    "_是否同行": 1,
+                    "商品列表api_ASIN": 同行ASIN,
+                    "商品列表api_站点id": 站点id,
+                })
 
 
         for item in 结果列表:
@@ -226,17 +254,34 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
             商品列表api_主图链接 = item.get('商品列表api_主图链接')
             商品列表api_图片宽 = item.get('商品列表api_图片宽')
             商品列表api_图片高 = item.get('商品列表api_图片高')
+            当前是否同行 = frappe.utils.cint(item.get('_是否同行') or 0)
+            rank_data = None
+            matched_config_row = None
 
             # 标记变量：默认没找到
             asin_found = False
             should_skip = False
             # --- 2. 遍历子表进行比对 ---
             # 请确保 '抓取asin配置的子表' 是你在主表里设置的字段名 (Field Name)
-            for row in main_doc.抓取asin配置的子表: 
-                if row.需要抓取数据的asin == 商品列表api_ASIN:
+            for config_row in main_doc.抓取asin配置的子表:
+                # 兼容此前程序创建但尚未写入店铺的自有商品行：首次遇到时自动补齐店铺。
+                if (
+                    not 当前是否同行
+                    and config_row.需要抓取数据的asin == 商品列表api_ASIN
+                    and not frappe.utils.cint(config_row.是否同行 or 0)
+                    and not config_row.属于哪个店铺
+                ):
+                    config_row.属于哪个店铺 = 当前店铺
+
+                if (
+                    config_row.需要抓取数据的asin == 商品列表api_ASIN
+                    and config_row.属于哪个店铺 == 当前店铺
+                    and frappe.utils.cint(config_row.是否同行 or 0) == 当前是否同行
+                ):
                     asin_found = True
+                    matched_config_row = config_row
                     # 如果找到了，检查勾选状态
-                    if int(row.是否监听排名 or 0) == 1:
+                    if frappe.utils.cint(config_row.是否监听排名 or 0) == 1:
                         print(f"ASIN {商品列表api_ASIN} 已存在且已勾选，继续执行。")
                         # 这里执行你后续的抓取和写入 Log 的逻辑
                         rank_data = 获取亚马逊商品销售排名(商品列表api_ASIN, 临时秘钥, 站点id)
@@ -259,8 +304,11 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                 # 向子表添加新行
                 main_doc.append("抓取asin配置的子表", {
                     "需要抓取数据的asin": 商品列表api_ASIN,
-                    "是否监听排名": 1  # 直接打开勾选
+                    "属于哪个店铺": 当前店铺,
+                    "是否同行": 0,
+                    "是否监听排名": 1,
                 })
+                matched_config_row = main_doc.抓取asin配置的子表[-1]
                 
                 # 保存主表修改
                 main_doc.save(ignore_permissions=True)
@@ -402,12 +450,9 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
 
                 # 3. 遍历子表，寻找匹配的行
                 updated = False
-                for row in main_doc.抓取asin配置的子表:
-                    if row.需要抓取数据的asin == target_asin:
-                        # 找到了对应的行，只更新这一行的时间
-                        row.上次抓取的时间 = 启动程序时间
-                        updated = True
-                        break  # 找到后跳出循环，节省性能
+                if matched_config_row:
+                    matched_config_row.上次抓取的时间 = 启动程序时间
+                    updated = True
 
                 # 4. 只有在找到并修改了内容的情况下才保存
                 if updated:
@@ -430,7 +475,10 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
         原有ASIN数量 = len(main_doc.抓取asin配置的子表)
         保留的ASIN行 = [
             row for row in main_doc.抓取asin配置的子表
-            if row.需要抓取数据的asin in 亚马逊当前全部ASIN
+            if (
+                frappe.utils.cint(row.是否同行 or 0)
+                or (row.需要抓取数据的asin, row.属于哪个店铺) in 亚马逊当前全部ASIN
+            )
         ]
         main_doc.set("抓取asin配置的子表", 保留的ASIN行)
         已删除ASIN数量 = 原有ASIN数量 - len(保留的ASIN行)
