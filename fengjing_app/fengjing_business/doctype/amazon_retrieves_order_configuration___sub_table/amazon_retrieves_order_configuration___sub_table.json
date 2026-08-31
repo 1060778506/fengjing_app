@@ -7,85 +7,70 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "\u5e97\u94fa",
-  "\u5386\u53f2\u540c\u6b65\u5f00\u59cb\u65f6\u95f4",
-  "\u5386\u53f2\u540c\u6b65\u7ed3\u675f\u65f6\u95f4",
-  "\u5386\u53f2\u6293\u53d6\u65e5\u5fd7",
-  "\u540c\u6b65\u5386\u53f2\u8ba2\u5355",
-  "\u542f\u7528\u81ea\u52a8\u6293\u53d6",
-  "\u9996\u6b21\u81ea\u52a8\u65f6\u95f4",
-  "\u65b0\u8ba2\u5355\u95f4\u9694\u5206\u949f",
-  "\u81ea\u52a8\u6293\u53d6\u65e5\u5fd7"
+  "basic_section", "店铺", "marketplace_id", "basic_column", "启用自动抓取", "新订单间隔分钟",
+  "history_section", "历史同步开始时间", "历史同步结束时间", "history_column", "同步历史订单", "历史已完整同步到", "历史抓取日志",
+  "incremental_section", "新订单最后完整同步时间", "incremental_column", "新订单下次同步时间", "自动抓取日志",
+  "recheck_30_section", "启用30天核对", "30天核对间隔天数", "recheck_30_column", "30天最后核对时间", "30天下次核对时间",
+  "recheck_90_section", "启用90天核对", "90天核对间隔天数", "recheck_90_column", "90天最后核对时间", "90天下次核对时间",
+  "recheck_180_section", "启用180天核对", "180天核对间隔天数", "recheck_180_column", "180天最后核对时间", "180天下次核对时间",
+  "status_section", "同步状态", "当前执行类型", "status_column", "最近执行时间", "最近完成时间", "最近错误"
  ],
  "fields": [
-  {
-   "fieldname": "\u5e97\u94fa",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "\u5e97\u94fa",
-   "options": "Cost Center"
-  },
-  {
-   "description": "*\u8ddd\u79bb\u5f53\u524d\u65f6\u95f4\u665a1\u5e74\u96f611\u4e2a\u6708",
-   "fieldname": "\u5386\u53f2\u540c\u6b65\u5f00\u59cb\u65f6\u95f4",
-   "fieldtype": "Datetime",
-   "in_list_view": 1,
-   "label": "\u5386\u53f2\u540c\u6b65\u5f00\u59cb\u65f6\u95f4"
-  },
-  {
-   "description": "*\u8ddd\u79bb\u5f53\u524d\u65f6\u95f4\u665a1\u4e2a\u6708",
-   "fieldname": "\u5386\u53f2\u540c\u6b65\u7ed3\u675f\u65f6\u95f4",
-   "fieldtype": "Datetime",
-   "in_list_view": 1,
-   "label": "\u5386\u53f2\u540c\u6b65\u7ed3\u675f\u65f6\u95f4"
-  },
-  {
-   "description": "*\u53ea\u80fd\u8fd0\u884c\u4e00\u6b21",
-   "fieldname": "\u540c\u6b65\u5386\u53f2\u8ba2\u5355",
-   "fieldtype": "Button",
-   "in_list_view": 1,
-   "label": "\u540c\u6b65\u5386\u53f2\u8ba2\u5355"
-  },
-  {
-   "fieldname": "\u5386\u53f2\u6293\u53d6\u65e5\u5fd7",
-   "fieldtype": "Small Text",
-   "in_list_view": 1,
-   "label": "\u5386\u53f2\u6293\u53d6\u65e5\u5fd7",
-   "read_only": 1
-  },
-  {
-   "default": "0",
-   "fieldname": "\u542f\u7528\u81ea\u52a8\u6293\u53d6",
-   "fieldtype": "Check",
-   "in_list_view": 1,
-   "label": "\u542f\u7528\u81ea\u52a8\u6293\u53d6"
-  },
-  {
-   "description": "*\u5927\u4e8e\u5386\u53f2\u540c\u6b65\u7ed3\u675f\u65f6\u95f4",
-   "fieldname": "\u9996\u6b21\u81ea\u52a8\u65f6\u95f4",
-   "fieldtype": "Datetime",
-   "in_list_view": 1,
-   "label": "\u9996\u6b21\u81ea\u52a8\u65f6\u95f4"
-  },
-  {
-   "fieldname": "\u81ea\u52a8\u6293\u53d6\u65e5\u5fd7",
-   "fieldtype": "Small Text",
-   "in_list_view": 1,
-   "label": "\u81ea\u52a8\u6293\u53d6\u65e5\u5fd7",
-   "read_only": 1
-  },
-  {
-   "fieldname": "\u65b0\u8ba2\u5355\u95f4\u9694\u5206\u949f",
-   "fieldtype": "Int",
-   "in_list_view": 1,
-   "label": "\u65b0\u8ba2\u5355\u95f4\u9694\u5206\u949f"
-  }
+  {"fieldname":"basic_section","fieldtype":"Section Break","label":"基础配置"},
+  {"fieldname":"店铺","fieldtype":"Link","in_list_view":1,"label":"店铺","options":"Cost Center","reqd":1},
+  {"description":"Amazon站点标识，例如美国站为ATVPDKIKX0DER。","fieldname":"marketplace_id","fieldtype":"Data","in_list_view":1,"label":"Marketplace ID","reqd":1},
+  {"fieldname":"basic_column","fieldtype":"Column Break"},
+  {"default":"0","description":"打开后允许该店铺执行日常增量同步和定期核对；关闭不会删除已存订单。","fieldname":"启用自动抓取","fieldtype":"Check","in_list_view":1,"label":"启用订单自动同步"},
+  {"default":"15","description":"日常增量同步的间隔，建议15分钟。","fieldname":"新订单间隔分钟","fieldtype":"Int","in_list_view":1,"label":"新订单间隔分钟","non_negative":1},
+
+  {"fieldname":"history_section","fieldtype":"Section Break","label":"首次历史订单同步"},
+  {"description":"首次导入历史订单的起点，例如2025-05-01 00:00:00。","fieldname":"历史同步开始时间","fieldtype":"Datetime","label":"历史同步开始时间"},
+  {"description":"此时间既是历史订单同步的结束边界，也是日常增量同步第一次运行的开始时间。例如需要历史数据完整包含2026-07-30，填写2026-07-31 00:00:00。","fieldname":"历史同步结束时间","fieldtype":"Datetime","label":"历史结束／日常增量开始时间"},
+  {"fieldname":"history_column","fieldtype":"Column Break"},
+  {"description":"开始或继续历史订单同步；执行逻辑后续开发。","fieldname":"同步历史订单","fieldtype":"Button","label":"同步历史订单"},
+  {"description":"仅在一个历史区间完整成功后推进，用于中断后继续。","fieldname":"历史已完整同步到","fieldtype":"Datetime","label":"历史已完整同步到","read_only":1},
+  {"fieldname":"历史抓取日志","fieldtype":"Small Text","label":"历史同步摘要","read_only":1},
+
+  {"fieldname":"incremental_section","fieldtype":"Section Break","label":"日常增量同步"},
+  {"description":"只有本次查询的全部分页均成功保存后才能更新。","fieldname":"新订单最后完整同步时间","fieldtype":"Datetime","label":"新订单最后完整同步时间","read_only":1},
+  {"fieldname":"incremental_column","fieldtype":"Column Break"},
+  {"fieldname":"新订单下次同步时间","fieldtype":"Datetime","label":"新订单下次同步时间","read_only":1},
+  {"fieldname":"自动抓取日志","fieldtype":"Small Text","label":"增量同步摘要","read_only":1},
+
+  {"fieldname":"recheck_30_section","fieldtype":"Section Break","label":"最近30天订单核对"},
+  {"default":"1","fieldname":"启用30天核对","fieldtype":"Check","label":"启用30天核对"},
+  {"default":"1","description":"建议每天核对一次最近30天内发生变化的订单。","fieldname":"30天核对间隔天数","fieldtype":"Int","label":"30天核对间隔天数","non_negative":1},
+  {"fieldname":"recheck_30_column","fieldtype":"Column Break"},
+  {"fieldname":"30天最后核对时间","fieldtype":"Datetime","label":"30天最后核对时间","read_only":1},
+  {"fieldname":"30天下次核对时间","fieldtype":"Datetime","label":"30天下次核对时间","read_only":1},
+
+  {"fieldname":"recheck_90_section","fieldtype":"Section Break","label":"最近90天订单核对"},
+  {"default":"1","fieldname":"启用90天核对","fieldtype":"Check","label":"启用90天核对"},
+  {"default":"7","description":"建议每7天核对一次最近90天内发生变化的订单。","fieldname":"90天核对间隔天数","fieldtype":"Int","label":"90天核对间隔天数","non_negative":1},
+  {"fieldname":"recheck_90_column","fieldtype":"Column Break"},
+  {"fieldname":"90天最后核对时间","fieldtype":"Datetime","label":"90天最后核对时间","read_only":1},
+  {"fieldname":"90天下次核对时间","fieldtype":"Datetime","label":"90天下次核对时间","read_only":1},
+
+  {"fieldname":"recheck_180_section","fieldtype":"Section Break","label":"最近180天订单核对"},
+  {"default":"1","fieldname":"启用180天核对","fieldtype":"Check","label":"启用180天核对"},
+  {"default":"30","description":"建议每30天核对一次最近180天内发生变化的订单。","fieldname":"180天核对间隔天数","fieldtype":"Int","label":"180天核对间隔天数","non_negative":1},
+  {"fieldname":"recheck_180_column","fieldtype":"Column Break"},
+  {"fieldname":"180天最后核对时间","fieldtype":"Datetime","label":"180天最后核对时间","read_only":1},
+  {"fieldname":"180天下次核对时间","fieldtype":"Datetime","label":"180天下次核对时间","read_only":1},
+
+  {"fieldname":"status_section","fieldtype":"Section Break","label":"运行状态"},
+  {"fieldname":"同步状态","fieldtype":"Select","label":"同步状态","options":"未开始\n等待执行\n同步中\n成功\n失败","read_only":1},
+  {"fieldname":"当前执行类型","fieldtype":"Select","label":"当前执行类型","options":"\n历史订单\n新订单增量\n30天核对\n90天核对\n180天核对","read_only":1},
+  {"fieldname":"status_column","fieldtype":"Column Break"},
+  {"fieldname":"最近执行时间","fieldtype":"Datetime","label":"最近执行时间","read_only":1},
+  {"fieldname":"最近完成时间","fieldtype":"Datetime","label":"最近完成时间","read_only":1},
+  {"fieldname":"最近错误","fieldtype":"Small Text","label":"最近错误","read_only":1}
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-31 12:40:16.640326",
+ "modified": "2026-08-31 12:25:23.239089",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "Amazon retrieves order configuration - sub-table",
