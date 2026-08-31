@@ -8,6 +8,7 @@ MARKETPLACE_COUNTRIES = {
     "ATVPDKIKX0DER": "美国",
     "A2EUQ1WTGCTBG2": "加拿大",
     "A1AM78C64UM0Y8": "墨西哥",
+    "A2Q3Y263D00KWC": "巴西",
     "A1F83G8C2ARO7P": "英国",
     "A1PA6795UKMFR9": "德国",
     "A1VC38T7YXB528": "日本",
@@ -41,7 +42,7 @@ def get_rank_dashboard_data(filters=None):
         "商品列表api_产品类型", "商品列表api_状态", "商品列表api_主图链接",
         "商品列表api_最后更新时间", "排名api_主类目排名", "排名api_主类目名称",
         "排名api_主类目链接", "排名api_细分类目排名", "排名api_细分类目名称",
-        "排名api_细分类目链接", "排名api_品牌", "排名api_制造商", "排名api_型号",
+        "排名api_细分类目链接", "排名api_商品名称", "排名api_品牌", "排名api_制造商", "排名api_型号",
         "排名api_颜色", "排名api_尺寸", "排名api_浏览节点id",
     ]
     rows = frappe.get_list(
@@ -49,7 +50,7 @@ def get_rank_dashboard_data(filters=None):
         order_by="抓取数据的时间 asc", limit_page_length=5000,
     )
 
-    store_map = _get_store_map()
+    store_map, marketplace_store_map = _get_store_maps()
     asin_item_map, active_asins = _get_asin_item_map()
     skus = {str(row.get("商品列表api_sku")) for row in rows if row.get("商品列表api_sku")}
     sku_item_map = {}
@@ -65,11 +66,17 @@ def get_rank_dashboard_data(filters=None):
 
     effective_item_codes = {
         str(row.get("绑定的物料") or
-            asin_item_map.get(str(row.get("商品列表api_asin") or "")) or
+            asin_item_map.get((
+                str(row.get("商品列表api_asin") or ""),
+                marketplace_store_map.get(str(row.get("商品列表api_站点id") or ""), ""),
+            )) or
             sku_item_map.get(str(row.get("商品列表api_sku") or "")))
         for row in rows
         if (row.get("绑定的物料") or
-            asin_item_map.get(str(row.get("商品列表api_asin") or "")) or
+            asin_item_map.get((
+                str(row.get("商品列表api_asin") or ""),
+                marketplace_store_map.get(str(row.get("商品列表api_站点id") or ""), ""),
+            )) or
             sku_item_map.get(str(row.get("商品列表api_sku") or "")))
     }
     item_details = {}
@@ -95,7 +102,8 @@ def get_rank_dashboard_data(filters=None):
             continue
         asin = str(data.get("商品列表api_asin") or "")
         sku = str(data.get("商品列表api_sku") or "")
-        item = data.get("绑定的物料") or asin_item_map.get(asin) or sku_item_map.get(sku) or ""
+        store_id = marketplace_store_map.get(str(marketplace), "")
+        item = data.get("绑定的物料") or asin_item_map.get((asin, store_id)) or sku_item_map.get(sku) or ""
         data["绑定的物料"] = item
         details = item_details.get(item)
         if details:
@@ -103,7 +111,7 @@ def get_rank_dashboard_data(filters=None):
             data["物料图片"] = details.image or ""
         else:
             data["物料图片"] = ""
-        data["亚马逊商品已删除"] = bool(asin and asin not in active_asins)
+        data["亚马逊商品已删除"] = bool(asin and (asin, store_id) not in active_asins)
         if item_filter and item != item_filter:
             continue
         data["排名api_主类目排名"] = cint(data.get("排名api_主类目排名")) or None
@@ -117,38 +125,44 @@ def get_rank_dashboard_data(filters=None):
     }
 
 
-def _get_store_map():
-    """Map marketplace ID to store name without exposing credentials."""
-    result = {}
+def _get_store_maps():
+    """Map marketplace IDs to store labels and Cost Center document names."""
+    labels = {}
+    store_ids = {}
     try:
         parent = frappe.get_single("Fengjing - Product Corresponding Platform - Configuration")
         for row in parent.get("亚马逊api") or []:
             marketplace = row.get("站点id") or row.get("marketplace_id")
-            store = row.get("店铺选项") or row.get("卖家记号")
-            if row.get("店铺选项"):
-                store = frappe.db.get_value(
-                    "Cost Center", row.get("店铺选项"), "cost_center_name"
-                ) or store
-            if marketplace and store:
-                result[str(marketplace)] = str(store)
+            store_id = row.get("店铺选项") or ""
+            store_label = store_id or row.get("卖家记号")
+            if store_id:
+                store_label = frappe.db.get_value(
+                    "Cost Center", store_id, "cost_center_name"
+                ) or store_label
+            if marketplace and store_label:
+                labels[str(marketplace)] = str(store_label)
+            if marketplace and store_id:
+                store_ids[str(marketplace)] = str(store_id)
     except Exception:
         pass
-    return result
+    return labels, store_ids
 
 
 def _get_asin_item_map():
-    """Return current ASIN-to-item bindings and the current Amazon ASIN set."""
+    """Return bindings and active products keyed by (ASIN, Cost Center)."""
     mapping = {}
     active_asins = set()
     try:
         parent = frappe.get_single("Fengjing - Product Corresponding Platform - Configuration")
         for row in parent.get("抓取asin配置的子表") or []:
             asin = str(row.get("需要抓取数据的asin") or "")
+            store_id = str(row.get("属于哪个店铺") or "")
             item = str(row.get("asin对应物料") or "")
-            if asin:
-                active_asins.add(asin)
+            if asin and store_id:
+                key = (asin, store_id)
+                active_asins.add(key)
                 if item:
-                    mapping[asin] = item
+                    mapping[key] = item
     except Exception:
         pass
     return mapping, active_asins
