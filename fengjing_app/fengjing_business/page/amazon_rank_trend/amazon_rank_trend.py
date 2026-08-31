@@ -45,10 +45,7 @@ def get_rank_dashboard_data(filters=None):
         "排名api_细分类目链接", "排名api_商品名称", "排名api_品牌", "排名api_制造商", "排名api_型号",
         "排名api_颜色", "排名api_尺寸", "排名api_浏览节点id",
     ]
-    rows = frappe.get_list(
-        DOCTYPE, filters=query_filters, fields=fields,
-        order_by="抓取数据的时间 asc", limit_page_length=5000,
-    )
+    rows = _get_sampled_rank_rows(query_filters, fields)
 
     store_map, marketplace_store_map = _get_store_maps()
     asin_item_map, active_asins = _get_asin_item_map()
@@ -148,6 +145,45 @@ def _get_store_maps():
     return labels, store_ids
 
 
+def _get_sampled_rank_rows(query_filters, fields, batch_size=2000, max_points=600):
+    """
+    分批读取完整日期范围，不再把全部商品合计截断为5000条。
+    每个“站点 + ASIN/SKU”最多保留约 max_points 个历史点，
+    并保留最早和最新记录，避免多年数据一次塞进浏览器。
+    """
+    groups = {}
+    start = 0
+    while True:
+        batch = frappe.get_list(
+            DOCTYPE,
+            filters=query_filters,
+            fields=fields,
+            order_by="抓取数据的时间 asc, name asc",
+            limit_start=start,
+            limit_page_length=batch_size,
+        )
+        if not batch:
+            break
+        for row in batch:
+            marketplace = str(row.get("商品列表api_站点id") or "")
+            product = str(
+                row.get("商品列表api_asin")
+                or row.get("商品列表api_sku")
+                or row.get("name")
+            )
+            points = groups.setdefault((marketplace, product), [])
+            points.append(row)
+            if len(points) > max_points:
+                points[:] = [points[0], *points[1:-1:2], points[-1]]
+        start += len(batch)
+        if len(batch) < batch_size:
+            break
+
+    rows = [row for points in groups.values() for row in points]
+    rows.sort(key=lambda row: (row.get("抓取数据的时间"), row.get("name")))
+    return rows
+
+
 def _get_asin_item_map():
     """Return bindings and active products keyed by (ASIN, Cost Center)."""
     mapping = {}
@@ -169,10 +205,18 @@ def _get_asin_item_map():
 
 
 def _get_options(store_map, effective_item_codes=None):
-    fields = ["商品列表api_站点id", "商品列表api_asin", "商品列表api_sku", "绑定的物料"]
-    rows = frappe.get_all(DOCTYPE, fields=fields, limit_page_length=10000)
     def unique(field):
-        return sorted({str(row.get(field)) for row in rows if row.get(field)})
+        return [
+            str(value) for value in frappe.get_all(
+                DOCTYPE,
+                filters=[[field, "is", "set"]],
+                pluck=field,
+                group_by=field,
+                order_by=field,
+                limit_page_length=0,
+            )
+            if value
+        ]
     return {
         "stores": sorted(set(store_map.values())),
         "marketplaces": [

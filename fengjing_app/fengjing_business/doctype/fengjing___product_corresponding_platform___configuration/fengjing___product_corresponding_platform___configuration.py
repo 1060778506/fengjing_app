@@ -66,6 +66,23 @@ class FengjingProductCorrespondingPlatformConfiguration(Document):
     日本	Amazon.co.jp	A1VC38T7YXB528
     """
 
+    def validate(self):
+        """同一店铺内，同一个 ASIN 只允许配置一次。"""
+        已有组合 = set()
+        for row in self.get("抓取asin配置的子表") or []:
+            asin = str(row.get("需要抓取数据的asin") or "").strip().upper()
+            店铺 = str(row.get("属于哪个店铺") or "").strip()
+            if not asin or not 店铺:
+                continue
+            组合 = (asin, 店铺)
+            if 组合 in 已有组合:
+                frappe.throw(
+                    _("ASIN {0} 在店铺 {1} 中重复，请只保留一行。").format(
+                        frappe.bold(asin), frappe.bold(店铺)
+                    )
+                )
+            已有组合.add(组合)
+
     def onload(self):
         #不管是不是空的都去写入
         self.站点id对应表 = self.亚马逊站点对应表

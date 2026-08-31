@@ -4,6 +4,8 @@
 import frappe
 import requests
 import json
+import time
+from functools import wraps
 from frappe.model.document import Document
 from frappe.utils import now
 from datetime import datetime, timedelta, timezone
@@ -11,6 +13,65 @@ from frappe.utils import get_datetime, add_to_date
 
 class AmazonRankSKULog(Document):
     pass
+
+
+可重试状态码 = {429, 500, 502, 503, 504}
+
+
+def 亚马逊请求(method, url, *, timeout=30, retries=3, **kwargs):
+    """带超时和有限重试的 Amazon HTTP 请求。"""
+    last_error = None
+    for attempt in range(1, retries + 1):
+        try:
+            response = requests.request(method, url, timeout=timeout, **kwargs)
+            if response.status_code not in 可重试状态码 or attempt == retries:
+                return response
+            retry_after = response.headers.get("Retry-After")
+            try:
+                delay = min(float(retry_after), 30) if retry_after else min(2 ** attempt, 10)
+            except (TypeError, ValueError):
+                delay = min(2 ** attempt, 10)
+            print(f"Amazon API 返回 {response.status_code}，{delay} 秒后进行第 {attempt + 1} 次请求。")
+            time.sleep(delay)
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt == retries:
+                raise
+            delay = min(2 ** attempt, 10)
+            print(f"Amazon API 网络异常：{exc}，{delay} 秒后进行第 {attempt + 1} 次请求。")
+            time.sleep(delay)
+    if last_error:
+        raise last_error
+    return None
+
+
+def 排名抓取运行锁(func):
+    """防止手动抓取与定时抓取同时执行。"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        cache = frappe.cache()
+        lock = cache.lock(
+            cache.make_key("fengjing:amazon-rank-fetch"),
+            timeout=60 * 60,
+            blocking_timeout=0,
+        )
+        if not lock.acquire(blocking=False):
+            print("Amazon 排名抓取任务正在运行，本次触发已跳过。")
+            return {
+                "status": "busy",
+                "message": "排名抓取任务正在运行，请勿重复启动。",
+            }
+        try:
+            return func(*args, **kwargs)
+        finally:
+            try:
+                lock.release()
+            except Exception:
+                frappe.log_error(
+                    title="Amazon 排名抓取锁释放提示",
+                    message=frappe.get_traceback(),
+                )
+    return wrapper
 
 
 
@@ -25,6 +86,7 @@ def 定时执行亚马逊抓取排名的函数():
 
 #忽视定时抓取=1  只是一个默认值是1
 @frappe.whitelist()
+@排名抓取运行锁
 def 获取sku排名(docname=None,忽视定时抓取=1):
 
     # --- 你原本定义好的部分 ---
@@ -111,6 +173,10 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
             print(f"第 {i} 个亚马逊 API 配置没有选择店铺，已跳过排名抓取。")
             continue
         临时秘钥 = 去获取临时秘钥(客户端编码, 客户端密钥, 刷新令牌)
+        if not 临时秘钥:
+            所有商品列表均完整成功 = False
+            print(f"店铺 {当前店铺} 获取临时秘钥失败，已跳过本店铺。")
+            continue
 
         # 注意：这个接口需要 sellerId (也叫 Merchant ID)
         # 你可以从 api_row 里的某个字段获取，或者在获取 Token 时拿到的数据里找
@@ -139,11 +205,13 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                 params["pageToken"] = 当前页令牌
 
             try:
-                返回值 = requests.get(
+                返回值 = 亚马逊请求(
+                    "GET",
                     endpoint,
                     headers=headers,
                     params=params,
-                    timeout=30
+                    timeout=30,
+                    retries=3,
                 )
             except requests.RequestException as 列表请求错误:
                 当前商品列表完整成功 = False
@@ -528,7 +596,7 @@ def 去获取临时秘钥(客户端编码, 客户端密钥, 刷新令牌):
         "refresh_token": 刷新令牌
     }
     try:
-        res = requests.post(url, data=payload, timeout=10)
+        res = 亚马逊请求("POST", url, data=payload, timeout=15, retries=3)
         if res.status_code == 200:
             # 获取成功就返回临时秘钥
             return res.json().get("access_token")
@@ -552,7 +620,14 @@ def 获取亚马逊商品销售排名(asin, 临时秘钥, 站点id):
         "User-Agent": "TestApp/1.0"
     }
     try:
-        response = requests.get(api_url, headers=headers, params=params)
+        response = 亚马逊请求(
+            "GET",
+            api_url,
+            headers=headers,
+            params=params,
+            timeout=30,
+            retries=3,
+        )
         if response.status_code == 200:
 
             # 直接获取字典对象，不要用 json.dumps 转换成字符串
