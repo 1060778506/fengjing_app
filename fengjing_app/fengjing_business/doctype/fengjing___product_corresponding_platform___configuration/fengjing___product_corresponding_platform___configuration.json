@@ -22,7 +22,9 @@
   "\u5f00\u542f\u4efb\u52a1\u8c03\u5ea6\u5668",
   "\u5f00\u542f\u5b9a\u65f6\u6293\u53d6",
   "\u4e0a\u6b21\u6293\u53d6\u65f6\u95f4",
-  "\u4e0b\u6b21\u5141\u8bb8\u6293\u53d6\u7684\u65f6\u95f4"
+  "\u4e0b\u6b21\u5141\u8bb8\u6293\u53d6\u7684\u65f6\u95f4",
+  "\u4e9a\u9a6c\u900a\u8ba2\u5355\u6293\u53d6\u914d\u7f6e_tab",
+  "\u4e9a\u9a6c\u900a\u6293\u53d6\u8ba2\u5355\u914d\u7f6e\u8868"
  ],
  "fields": [
   {
@@ -129,13 +131,24 @@
    "fieldtype": "Autocomplete",
    "in_list_view": 1,
    "label": "\u7269\u6599\u547d\u540d\u6a21\u7248"
+  },
+  {
+   "fieldname": "\u4e9a\u9a6c\u900a\u8ba2\u5355\u6293\u53d6\u914d\u7f6e_tab",
+   "fieldtype": "Tab Break",
+   "label": "\u4e9a\u9a6c\u900a\u8ba2\u5355\u6293\u53d6\u914d\u7f6e"
+  },
+  {
+   "fieldname": "\u4e9a\u9a6c\u900a\u6293\u53d6\u8ba2\u5355\u914d\u7f6e\u8868",
+   "fieldtype": "Table",
+   "label": "\u4e9a\u9a6c\u900a\u6293\u53d6\u8ba2\u5355\u914d\u7f6e\u8868",
+   "options": "Amazon retrieves order configuration - sub-table"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-05-19 21:37:18.470524",
+ "modified": "2026-08-31 12:24:51.105600",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "Fengjing - Product Corresponding Platform - Configuration",
