@@ -7,6 +7,8 @@
  "field_order": [
   "\u5546\u54c1\u5217\u8868api_asin",
   "\u6293\u53d6\u6570\u636e\u7684\u65f6\u95f4",
+  "\u5c5e\u4e8e\u54ea\u4e2a\u5e97\u94fa",
+  "\u662f\u5426\u540c\u884c",
   "\u5546\u54c1\u5217\u8868api_sku",
   "\u7ed1\u5b9a\u7684\u7269\u6599",
   "\u7269\u6599\u540d\u79f0",
@@ -48,7 +50,8 @@
   "\u6392\u540dapi_\u652f\u6301\u4ee5\u65e7\u6362\u65b0",
   "\u6392\u540dapi_\u5305\u88c5\u6570\u91cf",
   "\u6392\u540dapi_\u53d1\u5e03\u65e5\u671f",
-  "\u539f\u59cbjson"
+  "\u539f\u59cbjson",
+  "\u6293\u53d6\u4e0a\u4e0b\u6587json"
  ],
  "fields": [
   {
@@ -263,6 +266,22 @@
    "label": "\u6293\u53d6\u6570\u636e\u7684\u65f6\u95f4"
   },
   {
+   "fieldname": "\u5c5e\u4e8e\u54ea\u4e2a\u5e97\u94fa",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u5e97\u94fa",
+   "options": "Cost Center",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "\u662f\u5426\u540c\u884c",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "\u662f\u5426\u540c\u884c",
+   "read_only": 1
+  },
+  {
    "fieldname": "\u7ed1\u5b9a\u7684\u7269\u6599",
    "fieldtype": "Link",
    "label": "\u7ed1\u5b9a\u7684\u7269\u6599",
@@ -278,6 +297,14 @@
    "fieldname": "\u539f\u59cbjson",
    "fieldtype": "Code",
    "label": "\u539f\u59cbjson",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "\u6293\u53d6\u4e0a\u4e0b\u6587json",
+   "fieldtype": "Code",
+   "label": "\u6293\u53d6\u4e0a\u4e0b\u6587JSON",
+   "options": "JSON",
    "read_only": 1
   }
  ],

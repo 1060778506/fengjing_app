@@ -377,8 +377,26 @@ def 获取sku排名(docname=None,忽视定时抓取=1):
                     "doctype": "Amazon Rank SKU Log",
                     "绑定的物料": matched_material_id,
                     "抓取数据的时间": 启动程序时间,
+                    "属于哪个店铺": 当前店铺,
+                    "是否同行": 当前是否同行,
                     "原始json": json.dumps(
                         rank_data.get("_raw_json") or {},
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
+                    "抓取上下文json": json.dumps(
+                        {
+                            "店铺": 当前店铺,
+                            "是否同行": bool(当前是否同行),
+                            "站点ID": 站点id,
+                            "ASIN": 商品列表api_ASIN,
+                            "触发方式": (
+                                "定时抓取"
+                                if frappe.utils.cint(忽视定时抓取) == 0
+                                else "手动抓取"
+                            ),
+                            "抓取时间": 启动程序时间,
+                        },
                         ensure_ascii=False,
                         indent=2,
                     ),
