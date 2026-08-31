@@ -95,15 +95,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "temu\u5168\u6258\u7ba1x",
-   "link_count": 1,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "temu\u5b8c\u7ed3\u5355",
    "link_count": 0,
    "link_to": "TEMU - Full Custody - Completion Document",
@@ -121,7 +112,7 @@
    "type": "Card Break"
   }
  ],
- "modified": "2026-08-31 15:39:00.990193",
+ "modified": "2026-08-31 16:15:26.302362",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "\u4e30\u5883\u4e1a\u52a1APP",
@@ -132,15 +123,7 @@
  "quick_lists": [],
  "roles": [],
  "sequence_id": 39.0,
- "shortcuts": [
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "\u4e9a\u9a6c\u900a\u8282\u70b9\u56fex",
-   "type": "URL",
-   "url": "/thought_map.html"
-  }
- ],
+ "shortcuts": [],
  "title": "\u4e30\u5883\u4e1a\u52a1APP",
  "type": "Workspace"
 }
