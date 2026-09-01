@@ -1,7 +1,9 @@
 # Copyright (c) 2026, Fengjing E-Commerce and contributors
 # For license information, please see license.txt
 
+import hashlib
 import json
+import time
 
 import frappe
 import requests
@@ -15,7 +17,9 @@ from frappe import _
 
 亚马逊订单安全延迟分钟 = 5
 亚马逊订单续跑重叠分钟 = 10
-亚马逊历史订单单次窗口小时 = 24
+亚马逊历史订单单次窗口小时 = 30 * 24
+亚马逊订单突发请求上限 = 15
+亚马逊订单令牌恢复秒数 = 180
 
 
 def _系统时间转utc(时间值):
@@ -471,11 +475,109 @@ def _获取订单访问令牌(api行):
     return 令牌
 
 
+def _订单api额度键(api行):
+    """同一套Amazon授权的所有国家共享Orders API请求额度。"""
+    授权标识 = "|".join((
+        str(api行.get("客户端编码") or "").strip(),
+        str(api行.get("刷新令牌") or "").strip(),
+    ))
+    摘要 = hashlib.sha256(授权标识.encode("utf-8")).hexdigest()[:24]
+    return f"fengjing:amazon-orders-quota:{摘要}"
+
+
+def _等待订单api额度(api行):
+    """Redis共享令牌桶：允许有限突发，随后按Amazon默认速率逐步恢复。"""
+    cache = frappe.cache()
+    状态键 = _订单api额度键(api行)
+    锁键 = f"{状态键}:lock"
+    while True:
+        等待秒数 = 0
+        with cache.lock(cache.make_key(锁键), timeout=30, blocking_timeout=30):
+            当前秒 = time.time()
+            状态 = cache.get_value(状态键) or {}
+            try:
+                令牌 = float(状态.get("tokens", 亚马逊订单突发请求上限))
+                更新时间 = float(状态.get("updated_at", 当前秒))
+            except (TypeError, ValueError, AttributeError):
+                令牌 = float(亚马逊订单突发请求上限)
+                更新时间 = 当前秒
+
+            令牌 = min(
+                float(亚马逊订单突发请求上限),
+                令牌 + max(当前秒 - 更新时间, 0) / 亚马逊订单令牌恢复秒数,
+            )
+            if 令牌 >= 1:
+                cache.set_value(
+                    状态键,
+                    {"tokens": 令牌 - 1, "updated_at": 当前秒},
+                    expires_in_sec=24 * 60 * 60,
+                )
+                return
+
+            等待秒数 = max((1 - 令牌) * 亚马逊订单令牌恢复秒数, 1)
+            cache.set_value(
+                状态键,
+                {"tokens": 令牌, "updated_at": 当前秒},
+                expires_in_sec=24 * 60 * 60,
+            )
+        time.sleep(等待秒数)
+
+
+def _标记订单api已经限流(api行):
+    cache = frappe.cache()
+    状态键 = _订单api额度键(api行)
+    with cache.lock(cache.make_key(f"{状态键}:lock"), timeout=30, blocking_timeout=30):
+        cache.set_value(
+            状态键,
+            {"tokens": 0, "updated_at": time.time()},
+            expires_in_sec=24 * 60 * 60,
+        )
+
+
+def _发送订单api请求(api行, method, url, **kwargs):
+    """Orders API专用请求：共享节流，并对429执行分钟级等待。"""
+    from fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log import 亚马逊请求
+
+    限流等待序列 = (60, 120, 180, 300, 300, 300)
+    暂时错误等待序列 = (5, 15, 30, 60, 120, 180)
+    最后响应 = None
+    for 尝试序号 in range(len(限流等待序列)):
+        _等待订单api额度(api行)
+        try:
+            响应 = 亚马逊请求(
+                method,
+                url,
+                retries=1,
+                **kwargs,
+            )
+        except requests.RequestException:
+            if 尝试序号 == len(限流等待序列) - 1:
+                raise
+            time.sleep(暂时错误等待序列[尝试序号])
+            continue
+
+        最后响应 = 响应
+        if 响应.status_code == 429:
+            _标记订单api已经限流(api行)
+            retry_after = 响应.headers.get("Retry-After")
+            try:
+                等待秒数 = float(retry_after) if retry_after else 限流等待序列[尝试序号]
+            except (TypeError, ValueError):
+                等待秒数 = 限流等待序列[尝试序号]
+            time.sleep(max(等待秒数, 限流等待序列[尝试序号]))
+            continue
+        if 响应.status_code in {500, 502, 503, 504}:
+            if 尝试序号 < len(暂时错误等待序列) - 1:
+                time.sleep(暂时错误等待序列[尝试序号])
+                continue
+        return 响应
+    return 最后响应
+
+
 def _同步订单查询窗口(配置行, api行, 同步类型, 开始utc, 结束utc, 按更新时间=False):
     from fengjing_app.fengjing_business.doctype.amazon_order_synchronization.amazon_order_synchronization import 保存亚马逊订单
     from fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log import (
         SP_API站点区域,
-        亚马逊请求,
         获取SP_API区域地址,
     )
 
@@ -501,7 +603,8 @@ def _同步订单查询窗口(配置行, api行, 同步类型, 开始utc, 结束
     }
     新建数量 = 更新数量 = 页面数量 = 0
     while True:
-        响应 = 亚马逊请求(
+        响应 = _发送订单api请求(
+            api行,
             "GET",
             地址,
             headers={
@@ -511,7 +614,6 @@ def _同步订单查询窗口(配置行, api行, 同步类型, 开始utc, 结束
             },
             params=参数,
             timeout=45,
-            retries=4,
         )
         if 响应.status_code != 200:
             raise RuntimeError(

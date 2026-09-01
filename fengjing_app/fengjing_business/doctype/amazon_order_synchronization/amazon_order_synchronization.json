@@ -22,7 +22,7 @@
   {"fieldname":"identity_column","fieldtype":"Column Break"},
   {"fieldname":"country","fieldtype":"Data","label":"国家／站点","read_only":1,"search_index":1},
   {"fieldname":"api_region","fieldtype":"Select","label":"API区域","options":"\n北美\n欧洲\n远东","read_only":1},
-  {"fieldname":"sync_type","fieldtype":"Select","label":"同步类型","options":"\n历史订单\n新订单增量\n30天核对\n90天核对\n180天核对","read_only":1},
+  {"fieldname":"sync_type","fieldtype":"Select","label":"同步类型","options":"\n历史订单\n新订单增量\n7天核对\n14天核对\n30天核对\n90天核对\n180天核对","read_only":1},
 
   {"fieldname":"status_section","fieldtype":"Section Break","label":"订单状态"},
   {"fieldname":"order_status","fieldtype":"Data","in_list_view":1,"label":"订单状态","read_only":1,"search_index":1},

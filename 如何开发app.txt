@@ -110,7 +110,6 @@ cd ~/frappe-bench/apps/fengjing_app && git add . && git commit -m "新的" && gi
 # 在docker外部推送
 cd "/root/桌面/erpnext-os-py/fengjing_app" && git add -A && git commit -m "2026-8-31-1" && git push -u origin develop --force
 
-
 			#测试代码
 			bench --site fjnb console
 			# 删除站点

@@ -517,8 +517,23 @@
                     "is_group": 0,
                     "account_type": "Expense Account"
                 },
-                "平台其他费【销售费用】": {
+                "平台运费【销售费用】": {
                     "account_number": "560107_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "平台售后费【销售费用】": {
+                    "account_number": "560108_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "平台合规费【销售费用】": {
+                    "account_number": "560109_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
+                },
+                "平台其他费【销售费用】": {
+                    "account_number": "560197_fj",
                     "is_group": 0,
                     "account_type": "Expense Account"
                 },
