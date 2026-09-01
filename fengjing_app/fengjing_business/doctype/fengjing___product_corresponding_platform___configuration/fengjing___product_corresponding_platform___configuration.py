@@ -419,6 +419,21 @@ def _更新订单配置状态(行名称, **字段):
         frappe.db.commit()
 
 
+def _计算订单整体下次运行时间(配置行, 覆盖字段=None, 当前时间=None):
+    """返回该店铺所有自动任务中最早的下次运行时间。"""
+    覆盖字段 = 覆盖字段 or {}
+    当前时间 = 当前时间 or frappe.utils.now_datetime()
+
+    def 取值(fieldname):
+        return 覆盖字段.get(fieldname, 配置行.get(fieldname))
+
+    候选时间 = [取值("新订单下次同步时间") or 当前时间]
+    for 前缀 in ("7天", "14天", "30天", "90天", "180天"):
+        if frappe.utils.cint(取值(f"启用{前缀}核对")):
+            候选时间.append(取值(f"{前缀}下次核对时间") or 当前时间)
+    return min(get_datetime(value) for value in 候选时间)
+
+
 def _匹配订单api配置(主表, 配置行):
     店铺 = str(配置行.get("店铺") or "").strip()
     站点id = str(配置行.get("marketplace_id") or "").strip().upper()
@@ -562,6 +577,7 @@ def 执行亚马逊订单同步任务(配置行名称, 同步类型):
             同步状态="同步中",
             当前执行类型=同步类型,
             最近执行时间=开始时间,
+            上次运行时间=开始时间,
             最近错误="",
         )
         主表, 行 = _取得订单配置行(配置行名称)
@@ -582,6 +598,12 @@ def 执行亚马逊订单同步任务(配置行名称, 同步类型):
                         同步状态=最终状态,
                         当前执行类型="",
                         最近完成时间=frappe.utils.now_datetime(),
+                        上次运行结果=json.dumps({"状态": 最终状态, **汇总}, ensure_ascii=False),
+                        下次运行时间=(
+                            frappe.utils.add_to_date(frappe.utils.now_datetime(), minutes=15)
+                            if 计划["status"] == "waiting"
+                            else frappe.utils.now_datetime()
+                        ),
                         历史抓取日志=json.dumps({**汇总, "时间计划": 计划}, ensure_ascii=False),
                     )
                     return {"status": 计划["status"], "summary": 汇总, "plan": 计划}
@@ -612,7 +634,13 @@ def 执行亚马逊订单同步任务(配置行名称, 同步类型):
             结束utc = 安全结束utc
             日志字段 = "自动抓取日志"
         else:
-            天数 = {"30天核对": 30, "90天核对": 90, "180天核对": 180}[同步类型]
+            天数 = {
+                "7天核对": 7,
+                "14天核对": 14,
+                "30天核对": 30,
+                "90天核对": 90,
+                "180天核对": 180,
+            }[同步类型]
             开始utc = 安全结束utc - timedelta(days=天数)
             结束utc = 安全结束utc
             日志字段 = "自动抓取日志"
@@ -628,15 +656,23 @@ def 执行亚马逊订单同步任务(配置行名称, 同步类型):
         }
         if 同步类型 == "新订单增量":
             间隔 = max(frappe.utils.cint(行.get("新订单间隔分钟")), 1)
+            下次运行时间 = frappe.utils.add_to_date(当前系统时间, minutes=间隔)
             更新字段.update({
                 "新订单最后完整同步时间": _utc转系统时间字符串(结束utc),
-                "新订单下次同步时间": frappe.utils.add_to_date(当前系统时间, minutes=间隔),
+                "新订单下次同步时间": 下次运行时间,
             })
         else:
             前缀 = 同步类型.replace("核对", "")
             间隔天数 = max(frappe.utils.cint(行.get(f"{前缀}核对间隔天数")), 1)
+            下次运行时间 = frappe.utils.add_to_date(当前系统时间, days=间隔天数)
             更新字段[f"{前缀}最后核对时间"] = 当前系统时间
-            更新字段[f"{前缀}下次核对时间"] = frappe.utils.add_to_date(当前系统时间, days=间隔天数)
+            更新字段[f"{前缀}下次核对时间"] = 下次运行时间
+        更新字段.update({
+            "上次运行结果": json.dumps({"状态": "成功", **汇总}, ensure_ascii=False),
+        })
+        更新字段["下次运行时间"] = _计算订单整体下次运行时间(
+            行, 更新字段, 当前系统时间
+        )
         _更新订单配置状态(配置行名称, **更新字段)
         return {"status": "success", "summary": 汇总}
     except Exception as exc:
@@ -646,6 +682,8 @@ def 执行亚马逊订单同步任务(配置行名称, 同步类型):
             当前执行类型="",
             最近完成时间=frappe.utils.now_datetime(),
             最近错误=str(exc)[:2000],
+            上次运行结果=f"失败：{str(exc)[:1800]}",
+            下次运行时间=frappe.utils.add_to_date(frappe.utils.now_datetime(), minutes=15),
         )
         frappe.logger("amazon_orders", allow_site=True).exception(
             "Amazon订单同步失败：配置行=%s，类型=%s", 配置行名称, 同步类型
@@ -679,6 +717,13 @@ def 定时执行亚马逊订单同步():
         if not frappe.utils.cint(行.get("启用自动抓取")):
             continue
         try:
+            # 失败后至少等待15分钟再重试，避免每分钟连续打满Amazon接口。
+            if (
+                行.get("同步状态") == "失败"
+                and 行.get("下次运行时间")
+                and get_datetime(行.get("下次运行时间")) > 当前时间
+            ):
+                continue
             _匹配订单api配置(主表, 行)
             # 手工启动但因未来边界暂停的历史任务，由调度器继续推进。
             if 行.get("同步状态") == "等待执行" and 行.get("历史同步开始时间") and 行.get("历史同步结束时间"):
@@ -687,7 +732,7 @@ def 定时执行亚马逊订单同步():
             if not 行.get("新订单下次同步时间") or get_datetime(行.get("新订单下次同步时间")) <= 当前时间:
                 _订单任务入队(行.name, "新订单增量")
                 continue
-            for 前缀 in ("30天", "90天", "180天"):
+            for 前缀 in ("7天", "14天", "30天", "90天", "180天"):
                 if not frappe.utils.cint(行.get(f"启用{前缀}核对")):
                     continue
                 下次 = 行.get(f"{前缀}下次核对时间")

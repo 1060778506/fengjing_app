@@ -44,6 +44,39 @@ def _amazon_time_to_system(value):
     return parsed.astimezone(ZoneInfo(get_system_timezone())).replace(tzinfo=None)
 
 
+def _追加旧订单json到历史(doc, 新校验值):
+    """Amazon原始JSON变化时，把覆盖前的旧版本追加到历史JSON数组。"""
+    旧json文本 = str(doc.get("raw_json") or "").strip()
+    旧校验值 = str(doc.get("raw_json_hash") or "").strip()
+    if not 旧json文本 or not 旧校验值 or 旧校验值 == 新校验值:
+        return
+
+    try:
+        历史数组 = json.loads(doc.get("raw_json_history") or "[]")
+        if not isinstance(历史数组, list):
+            历史数组 = []
+    except (TypeError, ValueError, json.JSONDecodeError):
+        # 历史字段即使曾被写入异常文本，也不能阻断最新订单同步。
+        历史数组 = []
+
+    try:
+        旧json内容 = json.loads(旧json文本)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        旧json内容 = 旧json文本
+
+    历史数组.append({
+        "archived_at": str(now_datetime()),
+        "order_status": doc.get("order_status"),
+        "source_updated_at": str(doc.get("source_updated_at") or ""),
+        "sync_type": doc.get("sync_type"),
+        "raw_json_hash": 旧校验值,
+        "raw_json": 旧json内容,
+    })
+    doc.raw_json_history = json.dumps(
+        历史数组, ensure_ascii=False, sort_keys=True, indent=2
+    )
+
+
 def 保存亚马逊订单(订单, 店铺, 站点id, api区域, 同步类型):
     """Create or update one order by AmazonOrderId and preserve its raw JSON."""
     if not isinstance(订单, dict):
@@ -131,6 +164,7 @@ def 保存亚马逊订单(订单, 店铺, 站点id, api区域, 同步类型):
 
     if frappe.db.exists("Amazon order synchronization", 订单号):
         doc = frappe.get_doc("Amazon order synchronization", 订单号)
+        _追加旧订单json到历史(doc, 原始校验值)
         doc.update(数据)
         doc.save(ignore_permissions=True)
         return "updated", doc.name

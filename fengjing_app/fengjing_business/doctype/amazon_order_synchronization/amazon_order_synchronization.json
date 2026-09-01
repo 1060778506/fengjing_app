@@ -12,7 +12,7 @@
   "amount_section", "currency_code", "order_total", "amount_column", "number_of_items_shipped", "number_of_items_unshipped",
   "address_section", "ship_service_level", "shipping_country_code", "shipping_state_or_region", "address_column", "shipping_city", "shipping_postal_code",
   "sync_section", "fetched_at", "source_updated_at", "raw_json_hash", "sync_column", "sync_status", "last_error",
-  "raw_section", "raw_json"
+  "raw_section", "raw_json", "raw_json_history"
  ],
  "fields": [
   {"fieldname":"identity_section","fieldtype":"Section Break","label":"订单标识"},
@@ -67,7 +67,8 @@
   {"fieldname":"last_error","fieldtype":"Small Text","label":"最近错误","read_only":1},
 
   {"fieldname":"raw_section","fieldtype":"Section Break","label":"Amazon原始数据"},
-  {"description":"完整保存Amazon Orders API返回的单条订单对象。即使Amazon以后增加或调整字段，原始数据仍然保留。","fieldname":"raw_json","fieldtype":"Code","label":"订单原始JSON","options":"JSON","read_only":1,"reqd":1}
+  {"description":"完整保存Amazon Orders API返回的单条订单对象。即使Amazon以后增加或调整字段，原始数据仍然保留。","fieldname":"raw_json","fieldtype":"Code","label":"订单原始JSON","options":"JSON","read_only":1,"reqd":1},
+  {"description":"仅当Amazon返回的订单JSON发生变化时，自动追加变化前的旧版本。","fieldname":"raw_json_history","fieldtype":"Long Text","label":"历史原始JSON","read_only":1}
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 0,
