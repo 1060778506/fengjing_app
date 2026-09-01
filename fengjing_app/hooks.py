@@ -127,7 +127,8 @@ app_include_js = "/assets/fengjing_app/js/fengjing_init_check.js"
 scheduler_events = {
     "all": [
         # 指向刚才创建的那个入口函数
-        "fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log.定时执行亚马逊抓取排名的函数"
+        "fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log.定时执行亚马逊抓取排名的函数",
+        "fengjing_app.fengjing_business.doctype.fengjing___product_corresponding_platform___configuration.fengjing___product_corresponding_platform___configuration.定时执行亚马逊订单同步"
     ],
     "daily": [
         "fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log.清理过期排名日志"

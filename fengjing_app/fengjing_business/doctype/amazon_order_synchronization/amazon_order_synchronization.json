@@ -1,45 +1,89 @@
 {
  "actions": [],
- "allow_bulk_edit": 1,
- "allow_rename": 1,
+ "allow_rename": 0,
+ "autoname": "field:amazon_order_id",
  "creation": "2026-08-31 11:10:51.430211",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_w6nx"
+  "identity_section", "amazon_order_id", "marketplace_id", "store", "identity_column", "country", "api_region", "sync_type",
+  "status_section", "order_status", "fulfillment_channel", "sales_channel", "status_column", "order_type", "is_prime", "is_business_order", "is_replacement_order",
+  "time_section", "purchase_date", "last_update_date", "time_column", "earliest_ship_date", "latest_ship_date", "earliest_delivery_date", "latest_delivery_date",
+  "amount_section", "currency_code", "order_total", "amount_column", "number_of_items_shipped", "number_of_items_unshipped",
+  "address_section", "ship_service_level", "shipping_country_code", "shipping_state_or_region", "address_column", "shipping_city", "shipping_postal_code",
+  "sync_section", "fetched_at", "source_updated_at", "raw_json_hash", "sync_column", "sync_status", "last_error",
+  "raw_section", "raw_json"
  ],
  "fields": [
-  {
-   "fieldname": "section_break_w6nx",
-   "fieldtype": "Section Break"
-  }
+  {"fieldname":"identity_section","fieldtype":"Section Break","label":"订单标识"},
+  {"fieldname":"amazon_order_id","fieldtype":"Data","in_list_view":1,"label":"Amazon订单号","read_only":1,"reqd":1,"search_index":1,"unique":1},
+  {"fieldname":"marketplace_id","fieldtype":"Data","in_list_view":1,"label":"Marketplace ID","read_only":1,"reqd":1,"search_index":1},
+  {"fieldname":"store","fieldtype":"Link","in_list_view":1,"label":"店铺","options":"Cost Center","read_only":1,"reqd":1,"search_index":1},
+  {"fieldname":"identity_column","fieldtype":"Column Break"},
+  {"fieldname":"country","fieldtype":"Data","label":"国家／站点","read_only":1,"search_index":1},
+  {"fieldname":"api_region","fieldtype":"Select","label":"API区域","options":"\n北美\n欧洲\n远东","read_only":1},
+  {"fieldname":"sync_type","fieldtype":"Select","label":"同步类型","options":"\n历史订单\n新订单增量\n30天核对\n90天核对\n180天核对","read_only":1},
+
+  {"fieldname":"status_section","fieldtype":"Section Break","label":"订单状态"},
+  {"fieldname":"order_status","fieldtype":"Data","in_list_view":1,"label":"订单状态","read_only":1,"search_index":1},
+  {"fieldname":"fulfillment_channel","fieldtype":"Data","label":"配送渠道","read_only":1},
+  {"fieldname":"sales_channel","fieldtype":"Data","label":"销售渠道","read_only":1},
+  {"fieldname":"status_column","fieldtype":"Column Break"},
+  {"fieldname":"order_type","fieldtype":"Data","label":"订单类型","read_only":1},
+  {"fieldname":"is_prime","fieldtype":"Check","label":"Prime订单","read_only":1},
+  {"fieldname":"is_business_order","fieldtype":"Check","label":"企业订单","read_only":1},
+  {"fieldname":"is_replacement_order","fieldtype":"Check","label":"替换订单","read_only":1},
+
+  {"fieldname":"time_section","fieldtype":"Section Break","label":"订单时间"},
+  {"fieldname":"purchase_date","fieldtype":"Datetime","in_list_view":1,"label":"购买时间","read_only":1,"search_index":1},
+  {"fieldname":"last_update_date","fieldtype":"Datetime","label":"Amazon最后更新时间","read_only":1,"search_index":1},
+  {"fieldname":"time_column","fieldtype":"Column Break"},
+  {"fieldname":"earliest_ship_date","fieldtype":"Datetime","label":"最早发货时间","read_only":1},
+  {"fieldname":"latest_ship_date","fieldtype":"Datetime","label":"最晚发货时间","read_only":1},
+  {"fieldname":"earliest_delivery_date","fieldtype":"Datetime","label":"最早送达时间","read_only":1},
+  {"fieldname":"latest_delivery_date","fieldtype":"Datetime","label":"最晚送达时间","read_only":1},
+
+  {"fieldname":"amount_section","fieldtype":"Section Break","label":"金额与数量"},
+  {"fieldname":"currency_code","fieldtype":"Link","label":"币种","options":"Currency","read_only":1},
+  {"fieldname":"order_total","fieldtype":"Currency","label":"订单总额","options":"currency_code","read_only":1},
+  {"fieldname":"amount_column","fieldtype":"Column Break"},
+  {"fieldname":"number_of_items_shipped","fieldtype":"Int","label":"已发货商品数量","read_only":1},
+  {"fieldname":"number_of_items_unshipped","fieldtype":"Int","label":"未发货商品数量","read_only":1},
+
+  {"fieldname":"address_section","fieldtype":"Section Break","label":"配送摘要"},
+  {"fieldname":"ship_service_level","fieldtype":"Data","label":"配送服务级别","read_only":1},
+  {"fieldname":"shipping_country_code","fieldtype":"Data","label":"收货国家代码","read_only":1},
+  {"fieldname":"shipping_state_or_region","fieldtype":"Data","label":"收货州／地区","read_only":1},
+  {"fieldname":"address_column","fieldtype":"Column Break"},
+  {"fieldname":"shipping_city","fieldtype":"Data","label":"收货城市","read_only":1},
+  {"fieldname":"shipping_postal_code","fieldtype":"Data","label":"收货邮编","read_only":1},
+
+  {"fieldname":"sync_section","fieldtype":"Section Break","label":"同步信息"},
+  {"fieldname":"fetched_at","fieldtype":"Datetime","label":"抓取时间","read_only":1,"search_index":1},
+  {"fieldname":"source_updated_at","fieldtype":"Datetime","label":"本次来源更新时间","read_only":1},
+  {"fieldname":"raw_json_hash","fieldtype":"Data","label":"原始JSON校验值","read_only":1},
+  {"fieldname":"sync_column","fieldtype":"Column Break"},
+  {"fieldname":"sync_status","fieldtype":"Select","label":"同步状态","options":"成功\n失败","read_only":1},
+  {"fieldname":"last_error","fieldtype":"Small Text","label":"最近错误","read_only":1},
+
+  {"fieldname":"raw_section","fieldtype":"Section Break","label":"Amazon原始数据"},
+  {"description":"完整保存Amazon Orders API返回的单条订单对象。即使Amazon以后增加或调整字段，原始数据仍然保留。","fieldname":"raw_json","fieldtype":"Code","label":"订单原始JSON","options":"JSON","read_only":1,"reqd":1}
  ],
  "grid_page_length": 50,
- "in_create": 1,
- "index_web_pages_for_search": 1,
+ "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-09-01 00:07:09.768015",
+ "modified": "2026-09-01 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "Amazon order synchronization",
  "owner": "Administrator",
  "permissions": [
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "System Manager",
-   "share": 1,
-   "write": 1
-  }
+  {"create":1,"delete":1,"email":1,"export":1,"print":1,"read":1,"report":1,"role":"System Manager","share":1,"write":1}
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "sort_field": "creation",
+ "sort_field": "purchase_date",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

@@ -1,11 +1,138 @@
 # Copyright (c) 2026, Fengjing E-Commerce and contributors
 # For license information, please see license.txt
 
+import json
+
 import frappe
 import requests
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from frappe.model.document import Document
+from frappe.utils import get_datetime, get_system_timezone
 from frappe.utils.scheduler import enable_scheduler, is_scheduler_disabled
 from frappe import _
+
+
+亚马逊订单安全延迟分钟 = 5
+亚马逊订单续跑重叠分钟 = 10
+亚马逊历史订单单次窗口小时 = 24
+
+
+def _系统时间转utc(时间值):
+    """把ERPNext界面填写的系统本地时间转换成带时区的UTC时间。"""
+    if not 时间值:
+        return None
+    时间 = get_datetime(时间值)
+    if 时间.tzinfo is None:
+        时间 = 时间.replace(tzinfo=ZoneInfo(get_system_timezone()))
+    return 时间.astimezone(timezone.utc)
+
+
+def _utc转系统时间字符串(时间值):
+    if not 时间值:
+        return None
+    return 时间值.astimezone(ZoneInfo(get_system_timezone())).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+
+def _亚马逊utc字符串(时间值):
+    """Orders API使用的RFC3339 UTC格式。"""
+    return 时间值.astimezone(timezone.utc).isoformat(
+        timespec="milliseconds"
+    ).replace("+00:00", "Z")
+
+
+def 规划亚马逊历史订单时间窗口(
+    历史同步开始时间,
+    历史同步结束时间,
+    历史已完整同步到=None,
+    当前utc=None,
+    安全延迟分钟=亚马逊订单安全延迟分钟,
+    重叠分钟=亚马逊订单续跑重叠分钟,
+    单次窗口小时=亚马逊历史订单单次窗口小时,
+):
+    """只规划下一段历史订单查询时间，不请求API，也不推进同步断点。
+
+    配置页面中的时间按ERPNext系统时区理解；发给Amazon前统一转为UTC。
+    请求结束边界不会超过“当前UTC-安全延迟”，因此不会把未来时间误记为完成。
+    已有断点时向前重叠少量时间，后续写入程序以Amazon订单号更新去重。
+    """
+    if not 历史同步开始时间 or not 历史同步结束时间:
+        raise ValueError("必须同时填写历史同步开始时间和历史同步结束时间")
+
+    配置开始utc = _系统时间转utc(历史同步开始时间)
+    配置结束utc = _系统时间转utc(历史同步结束时间)
+    if 配置结束utc <= 配置开始utc:
+        raise ValueError("历史同步结束时间必须晚于历史同步开始时间")
+
+    if 当前utc:
+        当前utc值 = get_datetime(当前utc)
+        if 当前utc值.tzinfo is None:
+            当前utc值 = 当前utc值.replace(tzinfo=timezone.utc)
+        当前utc值 = 当前utc值.astimezone(timezone.utc)
+    else:
+        当前utc值 = datetime.now(timezone.utc)
+
+    安全截止utc = 当前utc值 - timedelta(minutes=max(int(安全延迟分钟), 0))
+    本次可用结束utc = min(配置结束utc, 安全截止utc)
+    已完成utc = _系统时间转utc(历史已完整同步到)
+
+    # 断点已经到达当前安全边界时不能再向前重叠，否则会反复抓取同一小段时间。
+    if 已完成utc and 已完成utc >= 本次可用结束utc:
+        return {
+            "status": "waiting" if 配置结束utc > 安全截止utc else "complete",
+            "message": (
+                "已经同步到当前安全边界，等待结束时间到达"
+                if 配置结束utc > 安全截止utc
+                else "历史订单区间已经完整同步"
+            ),
+            "配置结束时间": _utc转系统时间字符串(配置结束utc),
+            "安全可抓取到": _utc转系统时间字符串(安全截止utc),
+            "历史已完整同步到": _utc转系统时间字符串(已完成utc),
+            "配置结束时间是否尚未到达": 配置结束utc > 安全截止utc,
+        }
+
+    if 已完成utc:
+        本次开始utc = max(
+            配置开始utc,
+            已完成utc - timedelta(minutes=max(int(重叠分钟), 0)),
+        )
+    else:
+        本次开始utc = 配置开始utc
+
+    if 本次开始utc >= 本次可用结束utc:
+        return {
+            "status": "waiting" if 配置结束utc > 安全截止utc else "complete",
+            "message": (
+                "结束边界尚未到达安全抓取时间，等待后续继续"
+                if 配置结束utc > 安全截止utc
+                else "历史订单区间已经完整同步"
+            ),
+            "配置结束时间": _utc转系统时间字符串(配置结束utc),
+            "安全可抓取到": _utc转系统时间字符串(安全截止utc),
+            "历史已完整同步到": (
+                _utc转系统时间字符串(已完成utc) if 已完成utc else None
+            ),
+            "配置结束时间是否尚未到达": 配置结束utc > 安全截止utc,
+        }
+
+    本次结束utc = min(
+        本次可用结束utc,
+        本次开始utc + timedelta(hours=max(int(单次窗口小时), 1)),
+    )
+    return {
+        "status": "ready",
+        "created_after": _亚马逊utc字符串(本次开始utc),
+        "created_before": _亚马逊utc字符串(本次结束utc),
+        "本次开始时间": _utc转系统时间字符串(本次开始utc),
+        "本次结束时间": _utc转系统时间字符串(本次结束utc),
+        "安全可抓取到": _utc转系统时间字符串(安全截止utc),
+        "配置结束时间": _utc转系统时间字符串(配置结束utc),
+        "配置结束时间是否尚未到达": 配置结束utc > 安全截止utc,
+        "本窗口完整成功后可推进到": _utc转系统时间字符串(本次结束utc),
+        "说明": "只有本窗口全部分页成功并写入后，才能推进历史同步断点",
+    }
 
 # 如果是新系统就自动填充提示词
 class FengjingProductCorrespondingPlatformConfiguration(Document):
@@ -267,6 +394,310 @@ class FengjingProductCorrespondingPlatformConfiguration(Document):
 
         except Exception as e:
             return {"status": "error", "message": f"连接错误: {str(e)}"}
+
+
+订单配置子表 = "Amazon retrieves order configuration - sub-table"
+订单配置主表 = "Fengjing - Product Corresponding Platform - Configuration"
+
+
+def _取得订单配置行(行名称):
+    主表 = frappe.get_single(订单配置主表)
+    行 = next(
+        (row for row in (主表.get("亚马逊抓取订单配置表") or []) if row.name == 行名称),
+        None,
+    )
+    if not 行:
+        raise ValueError(f"找不到Amazon订单抓取配置行：{行名称}")
+    return 主表, 行
+
+
+def _更新订单配置状态(行名称, **字段):
+    有效字段 = set(frappe.get_meta(订单配置子表).get_valid_columns())
+    字段 = {key: value for key, value in 字段.items() if key in 有效字段}
+    if 字段:
+        frappe.db.set_value(订单配置子表, 行名称, 字段, update_modified=False)
+        frappe.db.commit()
+
+
+def _匹配订单api配置(主表, 配置行):
+    店铺 = str(配置行.get("店铺") or "").strip()
+    站点id = str(配置行.get("marketplace_id") or "").strip().upper()
+    for api行 in 主表.get("亚马逊api") or []:
+        if (
+            str(api行.get("店铺选项") or "").strip() == 店铺
+            and str(api行.get("站点id") or "").strip().upper() == 站点id
+        ):
+            if not frappe.utils.cint(api行.get("开启订单下载")):
+                raise ValueError(f"店铺 {店铺} 的Amazon API没有开启订单下载")
+            return api行
+    raise ValueError(f"找不到店铺 {店铺}、站点 {站点id} 对应的Amazon API配置")
+
+
+def _获取订单访问令牌(api行):
+    from fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log import 亚马逊请求
+
+    响应 = 亚马逊请求(
+        "POST",
+        "https://api.amazon.com/auth/o2/token",
+        data={
+            "grant_type": "refresh_token",
+            "refresh_token": str(api行.get("刷新令牌") or "").strip(),
+            "client_id": str(api行.get("客户端编码") or "").strip(),
+            "client_secret": str(api行.get("客户端密钥") or "").strip(),
+        },
+        timeout=20,
+        retries=3,
+    )
+    if 响应.status_code != 200:
+        raise RuntimeError(f"Amazon授权失败（HTTP {响应.status_code}）：{响应.text[:500]}")
+    令牌 = (响应.json() or {}).get("access_token")
+    if not 令牌:
+        raise RuntimeError("Amazon授权成功但没有返回Access Token")
+    return 令牌
+
+
+def _同步订单查询窗口(配置行, api行, 同步类型, 开始utc, 结束utc, 按更新时间=False):
+    from fengjing_app.fengjing_business.doctype.amazon_order_synchronization.amazon_order_synchronization import 保存亚马逊订单
+    from fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log import (
+        SP_API站点区域,
+        亚马逊请求,
+        获取SP_API区域地址,
+    )
+
+    站点id = str(配置行.get("marketplace_id") or "").strip().upper()
+    店铺 = str(配置行.get("店铺") or "").strip()
+    api地址 = 获取SP_API区域地址(站点id)
+    if not api地址:
+        raise ValueError(f"无法识别Marketplace ID {站点id} 所属的SP-API区域")
+    令牌 = _获取订单访问令牌(api行)
+    地址 = f"{api地址}/orders/2026-01-01/orders"
+    时间前缀 = "lastUpdated" if 按更新时间 else "created"
+    参数 = {
+        "marketplaceIds": 站点id,
+        f"{时间前缀}After": _亚马逊utc字符串(开始utc),
+        f"{时间前缀}Before": _亚马逊utc字符串(结束utc),
+        "maxResultsPerPage": 100,
+        # 新版Orders API可在一次请求中返回订单明细和履约、金额等资料。
+        # 原始响应会完整保存，今后增加字段时无需重新抓取历史订单。
+        "includedData": (
+            "BUYER,RECIPIENT,PROCEEDS,EXPENSE,PROMOTION,CANCELLATION,"
+            "FULFILLMENT,PACKAGES,TAX,PAYMENT,FULFILLMENT_ORDERS"
+        ),
+    }
+    新建数量 = 更新数量 = 页面数量 = 0
+    while True:
+        响应 = 亚马逊请求(
+            "GET",
+            地址,
+            headers={
+                "X-Amz-Access-Token": 令牌,
+                "Accept": "application/json",
+                "User-Agent": "FengjingAmazonOrders/1.0",
+            },
+            params=参数,
+            timeout=45,
+            retries=4,
+        )
+        if 响应.status_code != 200:
+            raise RuntimeError(
+                f"Orders API失败（HTTP {响应.status_code}）：{响应.text[:1000]}"
+            )
+        payload = 响应.json() or {}
+        for 订单 in payload.get("orders") or []:
+            动作, _ = 保存亚马逊订单(
+                订单,
+                店铺,
+                站点id,
+                SP_API站点区域.get(站点id, ""),
+                同步类型,
+            )
+            if 动作 == "created":
+                新建数量 += 1
+            else:
+                更新数量 += 1
+        frappe.db.commit()
+        页面数量 += 1
+        next_token = (payload.get("pagination") or {}).get("nextToken")
+        if not next_token:
+            break
+        # v2026-01-01翻页时保留完全相同的查询条件，只增加分页令牌。
+        参数["paginationToken"] = next_token
+    return {"新建": 新建数量, "更新": 更新数量, "分页": 页面数量}
+
+
+def _订单任务锁(行名称):
+    cache = frappe.cache()
+    return cache.lock(
+        cache.make_key(f"fengjing:amazon-orders:{行名称}"),
+        timeout=6 * 60 * 60,
+        blocking_timeout=0,
+    )
+
+
+@frappe.whitelist()
+def 启动亚马逊历史订单同步(配置行名称):
+    """Queue the selected child-row history import and return immediately."""
+    _, 行 = _取得订单配置行(配置行名称)
+    if not 行.get("历史同步开始时间") or not 行.get("历史同步结束时间"):
+        frappe.throw("请先填写历史同步开始时间和历史同步结束时间")
+    _更新订单配置状态(
+        配置行名称,
+        同步状态="等待执行",
+        当前执行类型="历史订单",
+        最近错误="",
+    )
+    _订单任务入队(配置行名称, "历史订单")
+    return {"status": "queued", "message": "历史订单同步已经进入后台队列"}
+
+
+def 执行亚马逊订单同步任务(配置行名称, 同步类型):
+    lock = _订单任务锁(配置行名称)
+    if not lock.acquire(blocking=False):
+        return {"status": "busy", "message": "该店铺已有订单同步任务运行"}
+    开始时间 = frappe.utils.now_datetime()
+    汇总 = {"新建": 0, "更新": 0, "分页": 0, "窗口": 0}
+    try:
+        _更新订单配置状态(
+            配置行名称,
+            同步状态="同步中",
+            当前执行类型=同步类型,
+            最近执行时间=开始时间,
+            最近错误="",
+        )
+        主表, 行 = _取得订单配置行(配置行名称)
+        api行 = _匹配订单api配置(主表, 行)
+
+        if 同步类型 == "历史订单":
+            while True:
+                主表, 行 = _取得订单配置行(配置行名称)
+                计划 = 规划亚马逊历史订单时间窗口(
+                    行.get("历史同步开始时间"),
+                    行.get("历史同步结束时间"),
+                    行.get("历史已完整同步到"),
+                )
+                if 计划["status"] != "ready":
+                    最终状态 = "成功" if 计划["status"] == "complete" else "等待执行"
+                    _更新订单配置状态(
+                        配置行名称,
+                        同步状态=最终状态,
+                        当前执行类型="",
+                        最近完成时间=frappe.utils.now_datetime(),
+                        历史抓取日志=json.dumps({**汇总, "时间计划": 计划}, ensure_ascii=False),
+                    )
+                    return {"status": 计划["status"], "summary": 汇总, "plan": 计划}
+                开始utc = get_datetime(计划["created_after"].replace("Z", "+00:00"))
+                结束utc = get_datetime(计划["created_before"].replace("Z", "+00:00"))
+                本段 = _同步订单查询窗口(行, api行, 同步类型, 开始utc, 结束utc)
+                for key in ("新建", "更新", "分页"):
+                    汇总[key] += 本段[key]
+                汇总["窗口"] += 1
+                _更新订单配置状态(
+                    配置行名称,
+                    历史已完整同步到=计划["本窗口完整成功后可推进到"],
+                    历史抓取日志=json.dumps(汇总, ensure_ascii=False),
+                )
+
+        主表, 行 = _取得订单配置行(配置行名称)
+        现在utc = datetime.now(timezone.utc)
+        安全结束utc = 现在utc - timedelta(minutes=亚马逊订单安全延迟分钟)
+        if 同步类型 == "新订单增量":
+            基准 = (
+                行.get("新订单最后完整同步时间")
+                or 行.get("历史同步结束时间")
+                or 行.get("历史同步开始时间")
+            )
+            if not 基准:
+                基准 = _utc转系统时间字符串(安全结束utc - timedelta(days=1))
+            开始utc = _系统时间转utc(基准) - timedelta(minutes=亚马逊订单续跑重叠分钟)
+            结束utc = 安全结束utc
+            日志字段 = "自动抓取日志"
+        else:
+            天数 = {"30天核对": 30, "90天核对": 90, "180天核对": 180}[同步类型]
+            开始utc = 安全结束utc - timedelta(days=天数)
+            结束utc = 安全结束utc
+            日志字段 = "自动抓取日志"
+
+        本段 = _同步订单查询窗口(行, api行, 同步类型, 开始utc, 结束utc, 按更新时间=True)
+        汇总.update(本段)
+        当前系统时间 = frappe.utils.now_datetime()
+        更新字段 = {
+            "同步状态": "成功",
+            "当前执行类型": "",
+            "最近完成时间": 当前系统时间,
+            日志字段: json.dumps(汇总, ensure_ascii=False),
+        }
+        if 同步类型 == "新订单增量":
+            间隔 = max(frappe.utils.cint(行.get("新订单间隔分钟")), 1)
+            更新字段.update({
+                "新订单最后完整同步时间": _utc转系统时间字符串(结束utc),
+                "新订单下次同步时间": frappe.utils.add_to_date(当前系统时间, minutes=间隔),
+            })
+        else:
+            前缀 = 同步类型.replace("核对", "")
+            间隔天数 = max(frappe.utils.cint(行.get(f"{前缀}核对间隔天数")), 1)
+            更新字段[f"{前缀}最后核对时间"] = 当前系统时间
+            更新字段[f"{前缀}下次核对时间"] = frappe.utils.add_to_date(当前系统时间, days=间隔天数)
+        _更新订单配置状态(配置行名称, **更新字段)
+        return {"status": "success", "summary": 汇总}
+    except Exception as exc:
+        _更新订单配置状态(
+            配置行名称,
+            同步状态="失败",
+            当前执行类型="",
+            最近完成时间=frappe.utils.now_datetime(),
+            最近错误=str(exc)[:2000],
+        )
+        frappe.logger("amazon_orders", allow_site=True).exception(
+            "Amazon订单同步失败：配置行=%s，类型=%s", 配置行名称, 同步类型
+        )
+        raise
+    finally:
+        try:
+            lock.release()
+        except Exception:
+            pass
+
+
+def _订单任务入队(行名称, 同步类型):
+    frappe.enqueue(
+        执行亚马逊订单同步任务,
+        queue="long",
+        timeout=6 * 60 * 60,
+        enqueue_after_commit=True,
+        job_id=f"amazon-orders-{行名称}-{同步类型}",
+        deduplicate=True,
+        配置行名称=行名称,
+        同步类型=同步类型,
+    )
+
+
+def 定时执行亚马逊订单同步():
+    """Called by scheduler; enqueue at most one due task for each configured store."""
+    主表 = frappe.get_single(订单配置主表)
+    当前时间 = frappe.utils.now_datetime()
+    for 行 in 主表.get("亚马逊抓取订单配置表") or []:
+        if not frappe.utils.cint(行.get("启用自动抓取")):
+            continue
+        try:
+            _匹配订单api配置(主表, 行)
+            # 手工启动但因未来边界暂停的历史任务，由调度器继续推进。
+            if 行.get("同步状态") == "等待执行" and 行.get("历史同步开始时间") and 行.get("历史同步结束时间"):
+                _订单任务入队(行.name, "历史订单")
+                continue
+            if not 行.get("新订单下次同步时间") or get_datetime(行.get("新订单下次同步时间")) <= 当前时间:
+                _订单任务入队(行.name, "新订单增量")
+                continue
+            for 前缀 in ("30天", "90天", "180天"):
+                if not frappe.utils.cint(行.get(f"启用{前缀}核对")):
+                    continue
+                下次 = 行.get(f"{前缀}下次核对时间")
+                if not 下次 or get_datetime(下次) <= 当前时间:
+                    _订单任务入队(行.name, f"{前缀}核对")
+                    break
+        except Exception:
+            frappe.logger("amazon_orders", allow_site=True).exception(
+                "Amazon订单定时任务入队失败：配置行=%s", 行.name
+            )
 
 
 # 不要缩进

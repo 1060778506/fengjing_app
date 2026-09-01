@@ -140,6 +140,37 @@ function 刷新全部ASIN配置行状态(frm) {
     });
 }
 
+// --- 子表逻辑：Amazon订单同步配置 ---
+frappe.ui.form.on('Amazon retrieves order configuration - sub-table', {
+    同步历史订单: function (frm, cdt, cdn) {
+        const row = locals[cdt] && locals[cdt][cdn];
+        if (!row) return;
+        if (frm.is_dirty()) {
+            frappe.msgprint(__('请先保存配置，再启动历史订单同步。'));
+            return;
+        }
+        if (!row.历史同步开始时间 || !row.历史同步结束时间) {
+            frappe.msgprint(__('请先填写历史同步开始时间和历史同步结束时间。'));
+            return;
+        }
+        frappe.confirm(
+            __('确定开始同步店铺 {0} 的历史订单吗？任务将在后台运行。', [row.店铺]),
+            () => frappe.call({
+                method: 'fengjing_app.fengjing_business.doctype.fengjing___product_corresponding_platform___configuration.fengjing___product_corresponding_platform___configuration.启动亚马逊历史订单同步',
+                args: { 配置行名称: row.name },
+                freeze: true,
+                freeze_message: __('正在提交历史订单同步任务...'),
+                callback: function (r) {
+                    if (r.message) {
+                        frappe.show_alert({ message: r.message.message, indicator: 'green' });
+                        frm.reload_doc();
+                    }
+                }
+            })
+        );
+    }
+});
+
 // --- 子表逻辑：AI 配置项 (Fengjing - AI Configuration) ---
 window.fengjingTeamorouterModels = window.fengjingTeamorouterModels || [];
 

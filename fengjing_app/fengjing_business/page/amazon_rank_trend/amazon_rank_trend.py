@@ -306,6 +306,16 @@ def _get_options(store_map, effective_item_codes=None, store_options=None):
             )
             if value
         ]
+    item_codes = sorted(set(effective_item_codes or unique("绑定的物料")))
+    item_names = {
+        row.name: row.item_name or row.name
+        for row in frappe.get_all(
+            "Item",
+            filters={"name": ["in", item_codes]},
+            fields=["name", "item_name"],
+            limit_page_length=0,
+        )
+    } if item_codes else {}
     return {
         "stores": store_options or sorted(set(store_map.values())),
         "marketplaces": [
@@ -321,5 +331,8 @@ def _get_options(store_map, effective_item_codes=None, store_options=None):
         ],
         "asins": unique("商品列表api_asin"),
         "skus": unique("商品列表api_sku"),
-        "items": sorted(set(effective_item_codes or unique("绑定的物料"))),
+        "items": [
+            {"value": item_code, "label": item_names.get(item_code, item_code)}
+            for item_code in item_codes
+        ],
     }
