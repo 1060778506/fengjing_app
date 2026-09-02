@@ -37,8 +37,13 @@
                 "account_number": "1012_fj",
                 "is_group": 1,
                 "account_type": "Bank",
-                "temu_全托管_平台【其他货币资金】": {
+                "temu_全托管_平台(可提现)【其他货币资金】": {
                     "account_number": "101201_fj",
+                    "is_group": 0,
+                    "account_type": "Bank"
+                },
+                "temu_全托管_平台(冻结)【其他货币资金】": {
+                    "account_number": "101202_fj",
                     "is_group": 0,
                     "account_type": "Bank"
                 },

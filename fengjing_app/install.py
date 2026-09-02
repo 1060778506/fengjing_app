@@ -474,11 +474,11 @@ def sync_new_accounts(company_name):
     新建仓库()
 
     # 开启：物料可使用序列号 / 批号
-    frappe.db.set_single_value(
-        "Stock Settings",
-        "enable_serial_and_batch_no_for_item",
-        1
-    )
+    #frappe.db.set_single_value(
+    #    "Stock Settings",
+    #    "enable_serial_and_batch_no_for_item",
+    #    1
+    #)
 
     # 查询默认物料组
     def 查询物料组名称(item_group_name):
