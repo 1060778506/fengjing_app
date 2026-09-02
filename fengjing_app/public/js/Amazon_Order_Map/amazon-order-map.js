@@ -126,10 +126,10 @@
 			this.chart = echarts.init(dom);
 			const night = /夜|night/i.test(texture.name);
 			const maxOrders = Math.max(1, ...this.points.map(point => Number(point.orders) || 0));
-			const heightFor = orders => 0.72 + (Math.log1p(Number(orders) || 0) / Math.log1p(maxOrders)) * 0.88;
+			const heightFor = orders => 0.08 + (Math.log1p(Number(orders) || 0) / Math.log1p(maxOrders)) * 0.48;
 			const data = this.points.map(point => [point.longitude, point.latitude, heightFor(point.orders), point.orders, point]);
 			this.offlineData = data;
-			const warehouseData = this.warehouses.map(point => [point.longitude, point.latitude, 1.8, 1, { ...point, _kind: "warehouse" }]);
+			const warehouseData = this.warehouses.map(point => [point.longitude, point.latitude, 0, 1, { ...point, _kind: "warehouse" }]);
 			this.offlinePointData = this.points.map(point => [point.longitude, point.latitude, 1, point.orders, point]);
 			this.offlineWarehouseData = warehouseData;
 			const ordersVisible = this.root.querySelector("[data-orders]").checked;
@@ -144,7 +144,7 @@
 					{ id: "amazon-warehouses", name: "亚马逊仓库", type: "scatter3D", coordinateSystem: "globe", data: warehousesVisible ? warehouseData : [], symbol: "circle", symbolSize: 11, itemStyle: { color: "#ffb020", opacity: .98, borderColor: "#fff", borderWidth: 2 }, emphasis: { itemStyle: { color: "#ffe16a" }, label: { show: true, formatter: p => p.value[4].name || "Amazon 仓库", textStyle: { color: "#fff", backgroundColor: "rgba(27,19,4,.88)", padding: [5,8], borderRadius: 5 } } } },
 				],
 			}, true);
-			this.chart.on("click", params => { const point=params.value&&params.value[4];if(point?._kind === "warehouse")this.showWarehouseDetails(point);else if(point)this.showPointDetails(point); });
+			this.chart.on("click", params => { const point=params.value&&params.value[4];if(!point)return;const pointKey=`${point._kind||"order"}|${point.longitude}|${point.latitude}|${point.orders||0}`;if(this.openPointKey===pointKey&&this.root.querySelector("[data-map-popup]")?.classList.contains("is-open")){this.hideMapPopup();this.openPointKey="";return;}this.openPointKey=pointKey;if(point._kind === "warehouse")this.showWarehouseDetails(point);else this.showPointDetails(point); });
 			this.root.querySelector("[data-texture]").value = String(this.textureIndex);
 			this.setStatus(`离线地球 · ${texture.name}`);
 			this.preloadAdjacentTextures();
@@ -363,7 +363,7 @@
 			this.orderEntities = [];
 			this.points.forEach(point => {
 				const height = 85000 + Math.log2(point.orders + 1) * 110000;
-				const groundGap = 45000;
+				const groundGap = 5000;
 				const entity = this.viewer.entities.add({
 					name: `${point.country} · ${point.orders} 单`,
 					description: this.pointDetailsHTML(point),
@@ -421,8 +421,8 @@
 				const entity = this.viewer.entities.add({
 					name: point.name || "Amazon 仓库",
 					description: this.warehouseDetailsHTML(point),
-					position: Cesium.Cartesian3.fromDegrees(point.longitude, point.latitude, 45000),
-					point: { pixelSize: 13, color: Cesium.Color.fromCssColorString("#ffb020"), outlineColor: Cesium.Color.WHITE, outlineWidth: 2 },
+					position: Cesium.Cartesian3.fromDegrees(point.longitude, point.latitude, 0),
+					point: { pixelSize: 13, color: Cesium.Color.fromCssColorString("#ffb020"), outlineColor: Cesium.Color.WHITE, outlineWidth: 2, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND },
 					label: { text: point.reference || "AMZ", font: "bold 10px sans-serif", fillColor: Cesium.Color.fromCssColorString("#ffe08a"), outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.TOP, pixelOffset: new Cesium.Cartesian2(0, 8), distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 3000000) },
 				});
 				entity.show = this.root.querySelector("[data-warehouses]").checked;
