@@ -32,8 +32,8 @@ frappe.ui.form.on('Item', {
         setTimeout(() => {
             //成本价计算方法
             frm.set_value('valuation_method', 'FIFO');
-            //开启启用批号管理
-            frm.set_value('has_batch_no', 1);
+            //开启启用批号管理,不要开启,千万不要开启
+            //frm.set_value('has_batch_no', 1);
 
             if (frm.fields_dict['custom_ai生成物料名称']) {
                 frm.fields_dict['custom_ai生成物料名称'].$wrapper
