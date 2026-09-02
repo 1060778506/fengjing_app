@@ -473,7 +473,7 @@ def sync_new_accounts(company_name):
     #追加科目表前先追加仓库
     新建仓库()
 
-    # 开启：物料可使用序列号 / 批号
+    # 开启：物料可使用序列号 / 批号，千万不要开启
     #frappe.db.set_single_value(
     #    "Stock Settings",
     #    "enable_serial_and_batch_no_for_item",
