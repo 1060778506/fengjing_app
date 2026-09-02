@@ -1,25 +1,30 @@
 {
  "actions": [],
  "allow_rename": 0,
- "autoname": "field:amazon_order_id",
+ "autoname": "hash",
  "creation": "2026-08-31 11:10:51.430211",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "identity_section", "amazon_order_id", "marketplace_id", "store", "identity_column", "country", "api_region", "sync_type",
+  "identity_section", "order_sku_key", "amazon_order_id", "sku", "asin", "marketplace_id", "store", "identity_column", "product_name", "amazon_order_item_id", "country", "api_region", "sync_type",
   "status_section", "order_status", "fulfillment_channel", "sales_channel", "status_column", "order_type", "is_prime", "is_business_order", "is_replacement_order",
   "time_section", "purchase_date", "last_update_date", "time_column", "earliest_ship_date", "latest_ship_date", "earliest_delivery_date", "latest_delivery_date",
-  "amount_section", "currency_code", "order_total", "amount_column", "number_of_items_shipped", "number_of_items_unshipped",
+  "amount_section", "currency_code", "order_total", "item_total", "amount_column", "quantity_ordered", "number_of_items_shipped", "number_of_items_unshipped",
   "address_section", "ship_service_level", "shipping_country_code", "shipping_state_or_region", "address_column", "shipping_city", "shipping_postal_code",
   "sync_section", "fetched_at", "source_updated_at", "raw_json_hash", "sync_column", "sync_status", "last_error",
   "raw_section", "raw_json", "raw_json_history"
  ],
  "fields": [
   {"fieldname":"identity_section","fieldtype":"Section Break","label":"订单标识"},
-  {"fieldname":"amazon_order_id","fieldtype":"Data","in_list_view":1,"label":"Amazon订单号","read_only":1,"reqd":1,"search_index":1,"unique":1},
+  {"description":"程序自动生成：Amazon订单号 + SKU。","fieldname":"order_sku_key","fieldtype":"Data","hidden":1,"label":"订单SKU唯一键","read_only":1,"unique":1},
+  {"fieldname":"amazon_order_id","fieldtype":"Data","in_list_view":1,"label":"Amazon订单号","read_only":1,"reqd":1,"search_index":1},
+  {"fieldname":"sku","fieldtype":"Data","in_list_view":1,"label":"SKU","read_only":1,"search_index":1},
+  {"fieldname":"asin","fieldtype":"Data","in_list_view":1,"label":"ASIN","read_only":1,"search_index":1},
   {"fieldname":"marketplace_id","fieldtype":"Data","in_list_view":1,"label":"Marketplace ID","read_only":1,"reqd":1,"search_index":1},
   {"fieldname":"store","fieldtype":"Link","in_list_view":1,"label":"店铺","options":"Cost Center","read_only":1,"reqd":1,"search_index":1},
   {"fieldname":"identity_column","fieldtype":"Column Break"},
+  {"fieldname":"product_name","fieldtype":"Small Text","label":"商品名称","read_only":1},
+  {"fieldname":"amazon_order_item_id","fieldtype":"Data","label":"Amazon订单商品ID","read_only":1,"search_index":1},
   {"fieldname":"country","fieldtype":"Data","label":"国家／站点","read_only":1,"search_index":1},
   {"fieldname":"api_region","fieldtype":"Select","label":"API区域","options":"\n北美\n欧洲\n远东","read_only":1},
   {"fieldname":"sync_type","fieldtype":"Select","label":"同步类型","options":"\n历史订单\n新订单增量\n7天核对\n14天核对\n30天核对\n90天核对\n180天核对","read_only":1},
@@ -46,7 +51,9 @@
   {"fieldname":"amount_section","fieldtype":"Section Break","label":"金额与数量"},
   {"fieldname":"currency_code","fieldtype":"Link","label":"币种","options":"Currency","read_only":1},
   {"fieldname":"order_total","fieldtype":"Currency","label":"订单总额","options":"currency_code","read_only":1},
+  {"fieldname":"item_total","fieldtype":"Currency","label":"本SKU金额","options":"currency_code","read_only":1},
   {"fieldname":"amount_column","fieldtype":"Column Break"},
+  {"fieldname":"quantity_ordered","fieldtype":"Int","label":"本SKU订购数量","read_only":1},
   {"fieldname":"number_of_items_shipped","fieldtype":"Int","label":"已发货商品数量","read_only":1},
   {"fieldname":"number_of_items_unshipped","fieldtype":"Int","label":"未发货商品数量","read_only":1},
 
@@ -67,7 +74,7 @@
   {"fieldname":"last_error","fieldtype":"Small Text","label":"最近错误","read_only":1},
 
   {"fieldname":"raw_section","fieldtype":"Section Break","label":"Amazon原始数据"},
-  {"description":"完整保存Amazon Orders API返回的单条订单对象。即使Amazon以后增加或调整字段，原始数据仍然保留。","fieldname":"raw_json","fieldtype":"Code","label":"订单原始JSON","options":"JSON","read_only":1,"reqd":1},
+  {"description":"完整保存Amazon Orders API返回的单条订单对象。同一订单的不同SKU记录会各自保留这份原始JSON。","fieldname":"raw_json","fieldtype":"Code","label":"订单原始JSON","options":"JSON","read_only":1,"reqd":1},
   {"description":"仅当Amazon返回的订单JSON发生变化时，自动追加变化前的旧版本。","fieldname":"raw_json_history","fieldtype":"Long Text","label":"历史原始JSON","read_only":1}
  ],
  "grid_page_length": 50,

@@ -22,8 +22,8 @@
   {"fieldname":"店铺","fieldtype":"Link","in_list_view":1,"label":"店铺","options":"Cost Center","reqd":1},
   {"description":"Amazon站点标识，例如美国站为ATVPDKIKX0DER。","fieldname":"marketplace_id","fieldtype":"Data","in_list_view":1,"label":"Marketplace ID","reqd":1},
   {"fieldname":"basic_column","fieldtype":"Column Break"},
-  {"default":"0","description":"打开后允许该店铺执行日常增量同步和定期核对；关闭不会删除已存订单。","fieldname":"启用自动抓取","fieldtype":"Check","in_list_view":1,"label":"启用订单自动同步"},
-  {"default":"15","description":"日常增量同步的间隔，建议15分钟。","fieldname":"新订单间隔分钟","fieldtype":"Int","in_list_view":1,"label":"新订单间隔分钟","non_negative":1},
+  {"default":"0","description":"打开后允许该店铺执行日常增量同步和定期核对；关闭不会删除已存订单。15分钟增量仅在北京时间06:00至24:00运行，夜间保留给定期核对任务。","fieldname":"启用自动抓取","fieldtype":"Check","in_list_view":1,"label":"启用订单自动同步"},
+  {"default":"15","description":"北京时间06:00至24:00按此间隔同步；00:00至06:00暂停。早上06:00第一次会从上次完整同步断点继续，自动补齐夜间未请求的订单和状态变化。","fieldname":"新订单间隔分钟","fieldtype":"Int","in_list_view":1,"label":"新订单间隔分钟","non_negative":1},
 
   {"fieldname":"history_section","fieldtype":"Section Break","label":"首次历史订单同步"},
   {"description":"首次导入历史订单的起点，例如2025-05-01 00:00:00。","fieldname":"历史同步开始时间","fieldtype":"Datetime","label":"历史同步开始时间"},
@@ -33,10 +33,10 @@
   {"description":"仅在一个历史区间完整成功后推进，用于中断后继续。","fieldname":"历史已完整同步到","fieldtype":"Datetime","label":"历史已完整同步到","read_only":1},
   {"fieldname":"历史抓取日志","fieldtype":"Small Text","label":"历史同步摘要","read_only":1},
 
-  {"fieldname":"incremental_section","fieldtype":"Section Break","label":"日常增量同步"},
+  {"description":"仅在北京时间06:00至24:00运行。夜间暂停不会漏单，06:00首次同步会从上次成功断点继续并包含夜间时间段。","fieldname":"incremental_section","fieldtype":"Section Break","label":"日常增量同步"},
   {"description":"只有本次查询的全部分页均成功保存后才能更新。","fieldname":"新订单最后完整同步时间","fieldtype":"Datetime","label":"新订单最后完整同步时间","read_only":1},
   {"fieldname":"incremental_column","fieldtype":"Column Break"},
-  {"fieldname":"新订单下次同步时间","fieldtype":"Datetime","label":"新订单下次同步时间","read_only":1},
+  {"description":"若计算出的时间落在北京时间00:00至06:00，将自动顺延到06:00。","fieldname":"新订单下次同步时间","fieldtype":"Datetime","label":"新订单下次同步时间","read_only":1},
   {"fieldname":"自动抓取日志","fieldtype":"Small Text","label":"增量同步摘要","read_only":1},
 
   {"fieldname":"recheck_7_section","fieldtype":"Section Break","label":"最近7天订单核对"},

@@ -20,6 +20,7 @@ from frappe import _
 亚马逊历史订单单次窗口小时 = 30 * 24
 亚马逊订单突发请求上限 = 15
 亚马逊订单令牌恢复秒数 = 180
+亚马逊订单增量开始小时 = 6
 
 
 def _系统时间转utc(时间值):
@@ -405,6 +406,7 @@ class FengjingProductCorrespondingPlatformConfiguration(Document):
 
 
 def _取得订单配置行(行名称):
+    _确保数据库连接()
     主表 = frappe.get_single(订单配置主表)
     行 = next(
         (row for row in (主表.get("亚马逊抓取订单配置表") or []) if row.name == 行名称),
@@ -415,12 +417,57 @@ def _取得订单配置行(行名称):
     return 主表, 行
 
 
+def _确保数据库连接():
+    """Amazon限流可能等待数分钟；继续写入前自动恢复失效的MariaDB连接。"""
+    try:
+        frappe.db.sql("select 1")
+    except Exception:
+        try:
+            frappe.db.close()
+        except Exception:
+            pass
+        frappe.connect()
+
+
 def _更新订单配置状态(行名称, **字段):
+    _确保数据库连接()
     有效字段 = set(frappe.get_meta(订单配置子表).get_valid_columns())
     字段 = {key: value for key, value in 字段.items() if key in 有效字段}
     if 字段:
         frappe.db.set_value(订单配置子表, 行名称, 字段, update_modified=False)
         frappe.db.commit()
+
+
+def _计算下次增量运行时间(当前时间, 间隔分钟):
+    """15分钟增量仅在北京时间06:00至24:00运行。"""
+    北京时间 = get_datetime(当前时间)
+    if 北京时间.hour < 亚马逊订单增量开始小时:
+        return 北京时间.replace(
+            hour=亚马逊订单增量开始小时,
+            minute=0,
+            second=0,
+            microsecond=0,
+        )
+    候选时间 = frappe.utils.add_to_date(
+        北京时间, minutes=max(int(间隔分钟), 1)
+    )
+    if 候选时间.hour < 亚马逊订单增量开始小时:
+        候选时间 = 候选时间.replace(
+            hour=亚马逊订单增量开始小时,
+            minute=0,
+            second=0,
+            microsecond=0,
+        )
+    return 候选时间
+
+
+def _当前允许订单增量同步(当前时间=None):
+    北京时间 = (
+        get_datetime(当前时间)
+        if 当前时间
+        else datetime.now(ZoneInfo("Asia/Shanghai"))
+    )
+    return 北京时间.hour >= 亚马逊订单增量开始小时
 
 
 def _计算订单整体下次运行时间(配置行, 覆盖字段=None, 当前时间=None):
@@ -431,11 +478,32 @@ def _计算订单整体下次运行时间(配置行, 覆盖字段=None, 当前�
     def 取值(fieldname):
         return 覆盖字段.get(fieldname, 配置行.get(fieldname))
 
-    候选时间 = [取值("新订单下次同步时间") or 当前时间]
+    增量下次 = 取值("新订单下次同步时间")
+    if not 增量下次:
+        增量下次 = (
+            当前时间
+            if _当前允许订单增量同步(当前时间)
+            else get_datetime(当前时间).replace(
+                hour=亚马逊订单增量开始小时,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+        )
+    候选时间 = [增量下次]
     for 前缀 in ("7天", "14天", "30天", "90天", "180天"):
         if frappe.utils.cint(取值(f"启用{前缀}核对")):
             候选时间.append(取值(f"{前缀}下次核对时间") or 当前时间)
     return min(get_datetime(value) for value in 候选时间)
+
+
+def _计算固定凌晨核对时间(当前时间, 间隔天数):
+    """定期核对统一安排在ERPNext系统时区的02:59。"""
+    当前时间 = get_datetime(当前时间)
+    return (
+        当前时间.replace(hour=2, minute=59, second=0, microsecond=0)
+        + timedelta(days=max(int(间隔天数), 1))
+    )
 
 
 def _匹配订单api配置(主表, 配置行):
@@ -615,6 +683,7 @@ def _同步订单查询窗口(配置行, api行, 同步类型, 开始utc, 结束
             params=参数,
             timeout=45,
         )
+        _确保数据库连接()
         if 响应.status_code != 200:
             raise RuntimeError(
                 f"Orders API失败（HTTP {响应.status_code}）：{响应.text[:1000]}"
@@ -758,7 +827,7 @@ def 执行亚马逊订单同步任务(配置行名称, 同步类型):
         }
         if 同步类型 == "新订单增量":
             间隔 = max(frappe.utils.cint(行.get("新订单间隔分钟")), 1)
-            下次运行时间 = frappe.utils.add_to_date(当前系统时间, minutes=间隔)
+            下次运行时间 = _计算下次增量运行时间(当前系统时间, 间隔)
             更新字段.update({
                 "新订单最后完整同步时间": _utc转系统时间字符串(结束utc),
                 "新订单下次同步时间": 下次运行时间,
@@ -766,7 +835,7 @@ def 执行亚马逊订单同步任务(配置行名称, 同步类型):
         else:
             前缀 = 同步类型.replace("核对", "")
             间隔天数 = max(frappe.utils.cint(行.get(f"{前缀}核对间隔天数")), 1)
-            下次运行时间 = frappe.utils.add_to_date(当前系统时间, days=间隔天数)
+            下次运行时间 = _计算固定凌晨核对时间(当前系统时间, 间隔天数)
             更新字段[f"{前缀}最后核对时间"] = 当前系统时间
             更新字段[f"{前缀}下次核对时间"] = 下次运行时间
         更新字段.update({
@@ -778,6 +847,11 @@ def 执行亚马逊订单同步任务(配置行名称, 同步类型):
         _更新订单配置状态(配置行名称, **更新字段)
         return {"status": "success", "summary": 汇总}
     except Exception as exc:
+        失败后下次运行时间 = (
+            _计算下次增量运行时间(frappe.utils.now_datetime(), 15)
+            if 同步类型 == "新订单增量"
+            else frappe.utils.add_to_date(frappe.utils.now_datetime(), minutes=15)
+        )
         _更新订单配置状态(
             配置行名称,
             同步状态="失败",
@@ -785,7 +859,7 @@ def 执行亚马逊订单同步任务(配置行名称, 同步类型):
             最近完成时间=frappe.utils.now_datetime(),
             最近错误=str(exc)[:2000],
             上次运行结果=f"失败：{str(exc)[:1800]}",
-            下次运行时间=frappe.utils.add_to_date(frappe.utils.now_datetime(), minutes=15),
+            下次运行时间=失败后下次运行时间,
         )
         frappe.logger("amazon_orders", allow_site=True).exception(
             "Amazon订单同步失败：配置行=%s，类型=%s", 配置行名称, 同步类型
@@ -831,7 +905,13 @@ def 定时执行亚马逊订单同步():
             if 行.get("同步状态") == "等待执行" and 行.get("历史同步开始时间") and 行.get("历史同步结束时间"):
                 _订单任务入队(行.name, "历史订单")
                 continue
-            if not 行.get("新订单下次同步时间") or get_datetime(行.get("新订单下次同步时间")) <= 当前时间:
+            if (
+                _当前允许订单增量同步()
+                and (
+                    not 行.get("新订单下次同步时间")
+                    or get_datetime(行.get("新订单下次同步时间")) <= 当前时间
+                )
+            ):
                 _订单任务入队(行.name, "新订单增量")
                 continue
             for 前缀 in ("7天", "14天", "30天", "90天", "180天"):

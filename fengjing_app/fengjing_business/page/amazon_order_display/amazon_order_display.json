@@ -1,19 +1,19 @@
 {
  "content": null,
- "creation": "2026-03-31 20:09:06.582776",
+ "creation": "2026-09-01 21:45:09.325179",
  "docstatus": 0,
  "doctype": "Page",
- "idx": 1,
- "modified": "2026-08-27 19:33:24.757731",
+ "idx": 0,
+ "modified": "2026-09-01 21:45:09.325179",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
- "name": "\u8c37\u6b4c3d\u5730\u56fe",
+ "name": "amazon-order-display",
  "owner": "Administrator",
- "page_name": "\u8c37\u6b4c3d\u5730\u56fe",
+ "page_name": "amazon-order-display",
  "roles": [],
  "script": null,
  "standard": "Yes",
  "style": null,
  "system_page": 0,
- "title": "\u8c37\u6b4c3d\u5730\u56fe"
+ "title": "Amazon \u8ba2\u5355\u6982\u51b5"
 }

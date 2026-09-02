@@ -78,7 +78,7 @@ def _追加旧订单json到历史(doc, 新校验值):
 
 
 def 保存亚马逊订单(订单, 店铺, 站点id, api区域, 同步类型):
-    """Create or update one order by AmazonOrderId and preserve its raw JSON."""
+    """Store one document per AmazonOrderId + SKU and preserve the order JSON."""
     if not isinstance(订单, dict):
         raise ValueError("Amazon订单数据必须是JSON对象")
     订单号 = str(订单.get("AmazonOrderId") or 订单.get("orderId") or "").strip()
@@ -114,7 +114,7 @@ def 保存亚马逊订单(订单, 店铺, 站点id, api区域, 同步类型):
     程序标记 = set(订单.get("programs") or [])
     关联订单 = 订单.get("associatedOrders") or []
 
-    数据 = {
+    订单数据 = {
         "amazon_order_id": 订单号,
         "marketplace_id": 站点id,
         "store": 店铺,
@@ -160,15 +160,118 @@ def 保存亚马逊订单(订单, 店铺, 站点id, api区域, 同步类型):
         "last_error": None,
         "raw_json": 原始文本,
     }
-    数据 = {key: value for key, value in 数据.items() if value is not None}
+    订单数据 = {key: value for key, value in 订单数据.items() if value is not None}
 
-    if frappe.db.exists("Amazon order synchronization", 订单号):
-        doc = frappe.get_doc("Amazon order synchronization", 订单号)
-        _追加旧订单json到历史(doc, 原始校验值)
-        doc.update(数据)
-        doc.save(ignore_permissions=True)
-        return "updated", doc.name
+    # Orders API偶尔会在待处理阶段暂时不返回商品明细。先保留订单头，
+    # 后续取得SKU时会把该旧记录复用为第一条SKU明细。
+    if not 项目:
+        项目 = [{}]
 
-    doc = frappe.get_doc({"doctype": "Amazon order synchronization", **数据})
-    doc.insert(ignore_permissions=True)
-    return "created", doc.name
+    # 同一订单内同一SKU即使出现多个商品行，也应合并为一条记录。
+    按sku合并 = {}
+    for 项目行 in 项目:
+        产品 = 项目行.get("product") or {}
+        sku = str(
+            产品.get("sellerSku")
+            or 项目行.get("SellerSKU")
+            or 项目行.get("sellerSku")
+            or 项目行.get("sku")
+            or ""
+        ).strip()
+        分组键 = sku
+        if 分组键 not in 按sku合并:
+            按sku合并[分组键] = []
+        按sku合并[分组键].append(项目行)
+
+    至少新建一条 = False
+    最后文档名 = None
+    for sku, sku项目行 in 按sku合并.items():
+        首项 = sku项目行[0]
+        产品 = 首项.get("product") or {}
+        明细金额 = (
+            (首项.get("proceeds") or {}).get("proceedsTotal")
+            or 首项.get("ItemPrice")
+            or 首项.get("itemPrice")
+            or {}
+        )
+        唯一键 = f"{订单号}::{sku}"
+        明细数据 = {
+            **订单数据,
+            "order_sku_key": 唯一键,
+            "sku": sku or None,
+            "asin": 产品.get("asin") or 首项.get("ASIN") or 首项.get("asin"),
+            "product_name": 产品.get("title") or 首项.get("Title") or 首项.get("productName"),
+            "amazon_order_item_id": 首项.get("orderItemId") or 首项.get("OrderItemId"),
+            "quantity_ordered": sum(cint(行.get("quantityOrdered") or 行.get("QuantityOrdered")) for 行 in sku项目行),
+            "number_of_items_shipped": sum(cint((行.get("fulfillment") or {}).get("quantityFulfilled")) for 行 in sku项目行),
+            "number_of_items_unshipped": sum(cint((行.get("fulfillment") or {}).get("quantityUnfulfilled")) for 行 in sku项目行),
+            "item_total": sum(
+                flt(
+                    ((行.get("proceeds") or {}).get("proceedsTotal") or {}).get("amount")
+                    or (行.get("ItemPrice") or {}).get("Amount")
+                    or (行.get("itemPrice") or {}).get("amount")
+                )
+                for 行 in sku项目行
+            ),
+        }
+        if not 明细数据.get("currency_code"):
+            明细数据["currency_code"] = 明细金额.get("currencyCode") or 明细金额.get("CurrencyCode")
+        明细数据 = {key: value for key, value in 明细数据.items() if value is not None}
+
+        现有名 = frappe.db.get_value(
+            "Amazon order synchronization", {"order_sku_key": 唯一键}, "name"
+        )
+        if not 现有名:
+            # 兼容改造前以订单号为文档名的旧记录。
+            if frappe.db.exists("Amazon order synchronization", 订单号):
+                旧记录 = frappe.db.get_value(
+                    "Amazon order synchronization",
+                    订单号,
+                    ["amazon_order_id", "order_sku_key"],
+                    as_dict=True,
+                )
+                if (
+                    旧记录
+                    and 旧记录.amazon_order_id == 订单号
+                    and not 旧记录.order_sku_key
+                ):
+                    现有名 = 订单号
+
+        if 现有名:
+            doc = frappe.get_doc("Amazon order synchronization", 现有名)
+            _追加旧订单json到历史(doc, 原始校验值)
+            doc.update(明细数据)
+            doc.save(ignore_permissions=True)
+        else:
+            doc = frappe.get_doc({"doctype": "Amazon order synchronization", **明细数据})
+            doc.insert(ignore_permissions=True)
+            至少新建一条 = True
+        最后文档名 = doc.name
+
+    return ("created" if 至少新建一条 else "updated"), 最后文档名
+
+
+def migrate_legacy_orders_to_sku_rows():
+    """Backfill legacy order-only rows after the composite-key schema is synced."""
+    旧记录 = frappe.get_all(
+        "Amazon order synchronization",
+        filters=[["order_sku_key", "is", "not set"]],
+        fields=["name", "raw_json", "store", "marketplace_id", "api_region", "sync_type"],
+        order_by="creation asc",
+        limit_page_length=0,
+    )
+    for 记录 in 旧记录:
+        try:
+            订单 = json.loads(记录.raw_json or "{}")
+            保存亚马逊订单(
+                订单,
+                记录.store,
+                记录.marketplace_id,
+                记录.api_region,
+                记录.sync_type,
+            )
+        except Exception:
+            frappe.log_error(
+                title=f"旧Amazon订单SKU迁移失败：{记录.name}",
+                message=frappe.get_traceback(),
+            )
