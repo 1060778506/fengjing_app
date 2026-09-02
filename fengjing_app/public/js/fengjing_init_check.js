@@ -20,242 +20,20 @@ frappe.router.on('change', () => {
     }
 });
 
-//点击了新建物料
-function 丰境_新建物料(frm) {
-    return Boolean(
-        frm &&
-        frm.doc &&
-        (frm.doc.__islocal === 1 || String(frm.doc.name || '').startsWith('new-item-'))
-    );
-}
-
-// 新 Item 的默认值是在表单创建前由 get_new_doc -> set_default_values 写入的。
-// 在这里拦截，避免折叠的“序列号/批次”区域稍后按旧元数据生成勾选状态。
-if (!window.__fengjingItemBatchDefaultGuardBound && frappe.model) {
-    window.__fengjingItemBatchDefaultGuardBound = true;
-    const originalGetDefaultValue = frappe.model.get_default_value;
-    if (typeof originalGetDefaultValue === 'function') {
-        frappe.model.get_default_value = function (df, doc, parent_doc) {
-            if (
-                df &&
-                df.fieldname === 'has_batch_no' &&
-                doc &&
-                doc.doctype === 'Item' &&
-                (doc.__islocal === 1 || String(doc.name || '').startsWith('new-item-'))
-            ) {
-                return 0;
-            }
-            return originalGetDefaultValue.apply(this, arguments);
-        };
-    }
-
-    const originalSetDefaultValues = frappe.model.set_default_values;
-    if (typeof originalSetDefaultValues === 'function') {
-        frappe.model.set_default_values = function (doc, parent_doc) {
-            const updated = originalSetDefaultValues.apply(this, arguments);
-            if (
-                doc &&
-                doc.doctype === 'Item' &&
-                (doc.__islocal === 1 || String(doc.name || '').startsWith('new-item-'))
-            ) {
-                doc.has_batch_no = 0;
-                const field = frappe.meta?.get_docfield?.('Item', 'has_batch_no');
-                if (field) {
-                    field.default = 0;
-                    field.__default_value = 0;
-                }
-            }
-            return updated;
-        };
-    }
-}
-
-function 丰境_清除新建物料批号(frm) {
-    if (!丰境_新建物料(frm)) return;
-
-    const metaField = frm.meta?.fields?.find(field => field.fieldname === 'has_batch_no');
-    if (metaField) metaField.default = '0';
-    if (typeof frm.set_df_property === 'function') frm.set_df_property('has_batch_no', 'default', '0');
-    frm.doc.has_batch_no = 0;
-    if (frm.fields_dict && frm.fields_dict.has_batch_no) {
-        const control = frm.fields_dict.has_batch_no;
-        if (typeof control.set_value === 'function') control.set_value(0);
-    }
-    frm.refresh_field('has_batch_no');
-}
-
-function 丰境_监控新建物料批号(frm) {
-    if (!丰境_新建物料(frm) || frm.__fengjing_batch_monitor_bound) return;
-    frm.__fengjing_batch_monitor_bound = true;
-
-    const apply = () => {
-        if (!丰境_新建物料(frm)) return;
-        丰境_清除新建物料批号(frm);
-
-        const input = frm.fields_dict?.has_batch_no?.$wrapper?.find('input[type="checkbox"]')?.get(0);
-        if (input && input.checked) {
-            input.checked = false;
-            input.removeAttribute('checked');
-        }
-    };
-
-    // Item 的折叠区域展开时可能会重新渲染控件，短时监控可覆盖这次延迟写入。
-    const observer = new MutationObserver(apply);
-    if (frm.wrapper) observer.observe(frm.wrapper, { childList: true, subtree: true });
-    const timer = setInterval(apply, 300);
-    setTimeout(() => {
-        clearInterval(timer);
-        observer.disconnect();
-    }, 12000);
-    apply();
-}
-
-// 兼容字段控件在折叠区域首次展开时才创建的情况。click() 会同时更新
-// Frappe 模型和 checkbox，而不是只改视觉状态；守卫只在新物料初始化的短窗口内运行。
-if (!window.__fengjingBatchDomInitGuardBound) {
-    window.__fengjingBatchDomInitGuardBound = true;
-    window.__fengjingBatchUserTouched = false;
-    window.__fengjingBatchGuardRoute = location.pathname;
-
-    // 记录用户自己的点击，守卫只负责初始化，不覆盖用户后续选择。
-    document.addEventListener('change', event => {
-        const input = event.target;
-        if (
-            input?.matches?.('[data-fieldname="has_batch_no"] input[type="checkbox"]') &&
-            location.pathname.includes('/item/new-item-') &&
-            event.isTrusted
-        ) {
-            window.__fengjingBatchUserTouched = true;
-        }
-    }, true);
-
-    const applyCurrentItem = () => {
-        if (location.pathname !== window.__fengjingBatchGuardRoute) {
-            window.__fengjingBatchGuardRoute = location.pathname;
-            window.__fengjingBatchUserTouched = false;
-        }
-        if (!location.pathname.includes('/item/new-item-') || window.__fengjingBatchUserTouched) return;
-        const frm = window.cur_frm;
-        if (frm?.doc && (frm.doc.__islocal === 1 || String(frm.doc.name || '').startsWith('new-item-'))) {
-            frm.doc.has_batch_no = 0;
-            const control = frm.fields_dict?.has_batch_no;
-            if (control && typeof control.set_value === 'function' && control.value) control.set_value(0);
-        }
-        const input = document.querySelector('[data-fieldname="has_batch_no"] input[type="checkbox"]');
-        if (input && input.checked) input.click();
-    };
-
-    // 该控件位于可折叠区域，可能在页面打开数分钟后才首次创建。
-    window.__fengjingBatchDomInitGuardTimer = setInterval(() => {
-        if (!location.pathname.includes('/item/new-item-')) {
-            clearInterval(window.__fengjingBatchDomInitGuardTimer);
-            return;
-        }
-        applyCurrentItem();
-    }, 1000);
-    applyCurrentItem();
-}
-
-// 某些表单初始化路径会在字段渲染后再次写入 has_batch_no=1。
-// 只在新物料的初始化阶段拦截这一次写入，保存后的物料和用户手动操作不受影响。
-if (!window.__fengjingBatchModelGuardBound) {
-    window.__fengjingBatchModelGuardBound = true;
-    frappe.model.on('Item', 'has_batch_no', (fieldname, value, doc) => {
-        if (!doc || !value || !(doc.__islocal === 1 || String(doc.name || '').startsWith('new-item-'))) return;
-        // 只处理初始化阶段第一次出现的 1；之后用户手动勾选不被拦截。
-        if (doc.__fengjing_batch_initial_value_seen) return;
-        doc.__fengjing_batch_initial_value_seen = true;
-        const frm = window.cur_frm;
-        if (!frm || frm.doc !== doc) return;
-        doc.has_batch_no = 0;
-        const control = frm.fields_dict?.has_batch_no;
-        if (control && typeof control.set_value === 'function') control.set_value(0);
-        frm.refresh_field('has_batch_no');
-    });
-}
-
-if (!window.__fengjingBatchSectionResetBound) {
-    window.__fengjingBatchSectionResetBound = true;
-    $(document).on('click.fengjingBatchReset', '.section-head', function () {
-        const title = String($(this).text() || '');
-        if (!title.includes('序列号') && !title.includes('批次')) return;
-
-        const frm = window.cur_frm;
-        [0, 100, 400].forEach(delay => {
-            setTimeout(() => 丰境_清除新建物料批号(frm), delay);
-        });
-    });
-
-    // Frappe 展开折叠区域后会重新创建 checkbox，直接在 DOM 层再校正一次。
-    document.addEventListener('click', event => {
-        const head = event.target.closest?.('.section-head');
-        if (!head || !String(head.textContent || '').includes('序列号/批次')) return;
-        if (!location.pathname.includes('/item/new-item-')) return;
-        [0, 100, 400, 1000, 2000].forEach(delay => {
-            setTimeout(() => {
-                document.querySelectorAll('[data-fieldname="has_batch_no"] input[type="checkbox"]').forEach(input => {
-                    input.checked = false;
-                    input.removeAttribute('checked');
-                });
-            }, delay);
-        });
-    }, true);
-}
-
 frappe.ui.form.on('Item', {
-    setup(frm) {
-        if (丰境_新建物料(frm)) {
-            frm.__fengjing_batch_initializing = true;
-            const field = frm.meta?.fields?.find(df => df.fieldname === 'has_batch_no');
-            if (field) field.default = '0';
-            setTimeout(() => { frm.__fengjing_batch_initializing = false; }, 5000);
-            frm.doc.has_batch_no = 0;
-        }
-    },
-
-    before_load(frm) {
-        if (丰境_新建物料(frm)) frm.doc.has_batch_no = 0;
-    },
-
     onload(frm) {
-        if (丰境_新建物料(frm)) {
-            丰境_监控新建物料批号(frm);
-            // 新建物料不继承库存设置或旧表单状态中的批号值。
-            丰境_清除新建物料批号(frm);
+        if (
+            frm?.doc &&
+            (frm.doc.__islocal === 1 || String(frm.doc.name || '').startsWith('new-item-'))
+        ) {
             frm.trigger('丰境_同步物料命名模版');
         }
     },
 
-    onload_post_render(frm) {
-        if (丰境_新建物料(frm)) {
-            丰境_监控新建物料批号(frm);
-            丰境_清除新建物料批号(frm);
-        }
-    },
-
     refresh(frm) {
-        if (丰境_新建物料(frm)) {
-            丰境_监控新建物料批号(frm);
-            丰境_清除新建物料批号(frm);
-
-            const section = frm.fields_dict && frm.fields_dict.serial_nos_and_batches;
-            if (section && !section.__fengjing_batch_reset_bound) {
-                section.__fengjing_batch_reset_bound = true;
-                $(section.wrapper).on('click.fengjingBatchReset', '.section-head', () => {
-                    [0, 100, 400].forEach(delay => {
-                        setTimeout(() => 丰境_清除新建物料批号(frm), delay);
-                    });
-                });
-            }
-        }
-
         setTimeout(() => {
             //成本价计算方法
             frm.set_value('valuation_method', 'FIFO');
-            // 新建物料默认不启用批号，避免旧版缓存或旧表单状态带入 1。
-            if (丰境_新建物料(frm)) {
-                丰境_清除新建物料批号(frm);
-            }
 
             if (frm.fields_dict['custom_ai生成物料名称']) {
                 frm.fields_dict['custom_ai生成物料名称'].$wrapper
@@ -266,12 +44,6 @@ frappe.ui.form.on('Item', {
                     });
             }
         }, 300);
-
-        if (丰境_新建物料(frm)) {
-            [1000, 2500].forEach(delay => {
-                setTimeout(() => 丰境_清除新建物料批号(frm), delay);
-            });
-        }
     },
 
     async 丰境_同步物料命名模版(frm) {

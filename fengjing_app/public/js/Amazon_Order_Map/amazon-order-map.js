@@ -33,6 +33,8 @@
 			this.textureImages = new Map();
 			this.textureCacheName = "fengjing-offline-globe-v1";
 			this.destroyed = false;
+			this.openPointKey = "";
+			this.cesiumToolbarObserver = null;
 			this.renderShell();
 		}
 
@@ -89,7 +91,21 @@
 				}
 			};
 			document.addEventListener("keydown", this.keyHandler);
-			this.fullscreenHandler = () => { const button=this.root.querySelector("[data-fullscreen]");if(button)button.textContent=document.fullscreenElement?"⛶ 退出全屏":"⛶ 全屏";setTimeout(() => { if(this.chart)this.chart.resize();if(this.viewer)this.viewer.resize(); }, 120); };
+			this.fullscreenHandler = () => {
+				const button = this.root.querySelector("[data-fullscreen]");
+				if (button) button.textContent = document.fullscreenElement ? "⛶ 退出全屏" : "⛶ 全屏";
+				clearTimeout(this.fullscreenRefreshTimer);
+				this.fullscreenRefreshTimer = setTimeout(async () => {
+					if (this.mode === "offline") {
+						// ECharts GL loses the globe texture when its WebGL canvas is
+						// resized in place. Recreate it after fullscreen layout settles.
+						await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 120))));
+						if (!this.destroyed && this.mode === "offline") await this.drawOffline();
+					} else {
+						this.viewer?.resize();
+					}
+				}, 220);
+			};
 			document.addEventListener("fullscreenchange", this.fullscreenHandler);
 		}
 
@@ -130,7 +146,8 @@
 			const data = this.points.map(point => [point.longitude, point.latitude, heightFor(point.orders), point.orders, point]);
 			this.offlineData = data;
 			const warehouseData = this.warehouses.map(point => [point.longitude, point.latitude, 0, 1, { ...point, _kind: "warehouse" }]);
-			this.offlinePointData = this.points.map(point => [point.longitude, point.latitude, 1, point.orders, point]);
+			this.offlineTextureImage = textureImage;
+			this.offlinePointData = this.points.map(point => [point.longitude, point.latitude, 0, point.orders, point]);
 			this.offlineWarehouseData = warehouseData;
 			const ordersVisible = this.root.querySelector("[data-orders]").checked;
 			const warehousesVisible = this.root.querySelector("[data-warehouses]").checked;
@@ -139,12 +156,23 @@
 				tooltip: { formatter: p => { const d = p.value[4]; return d?._kind === "warehouse" ? this.warehouseDetailsHTML(d) : `<b>${frappe.utils.escape_html(d.country || "")}</b><br>${frappe.utils.escape_html([d.region,d.city].filter(Boolean).join(" · "))}<br>${frappe.utils.escape_html(d.precision || "地图定位")}${d.postal_code?` · 邮编 ${frappe.utils.escape_html(d.postal_code)}`:""}<br>订单：${d.orders}`; } },
 				globe: { baseTexture: textureImage, environment: "/assets/fengjing_app/js/Amazon_Order_Map/images/space-8k.jpg", shading: "realistic", realisticMaterial: { roughness: .58 }, light: { main: { intensity: 1.2, shadow: true }, ambient: { intensity: .72 } }, atmosphere: { show: true, color: night ? "#071b4b" : "#4aa5d8" }, viewControl: { autoRotate: this.root.querySelector("[data-rotate]").checked, distance: 195, minDistance: 70, maxDistance: 460 } },
 				series: [
-					{ id: "orders-bars", name: "订单光柱", type: "bar3D", coordinateSystem: "globe", data: ordersVisible ? data : [], barSize: .34, bevelSize: .06, bevelSmoothness: 4, shading: "realistic", realisticMaterial: { roughness: .25, metalness: .15 }, itemStyle: { color: night ? "#ff4f91" : "#15d6e8", opacity: .84 }, emphasis: { itemStyle: { color: "#ffe66d", opacity: 1 }, label: { show: true } }, label: { show: true, position: "top", formatter: p => `${p.value[3]} 单`, textStyle: { color: "#fff", fontSize: 11, backgroundColor: "rgba(5,12,30,.82)", padding: [4,7], borderRadius: 5 } } },
-					{ id: "orders-points", name: "订单光点", type: "scatter3D", coordinateSystem: "globe", data: ordersVisible ? this.offlinePointData : [], symbol: "circle", symbolSize: value => 7 + Math.min(12, Math.sqrt(value[3] || 1) * 1.8), itemStyle: { color: night ? "#ff80b5" : "#a7fbff", opacity: .96, borderColor: "#fff", borderWidth: 1.5 } },
-					{ id: "amazon-warehouses", name: "亚马逊仓库", type: "scatter3D", coordinateSystem: "globe", data: warehousesVisible ? warehouseData : [], symbol: "circle", symbolSize: 11, itemStyle: { color: "#ffb020", opacity: .98, borderColor: "#fff", borderWidth: 2 }, emphasis: { itemStyle: { color: "#ffe16a" }, label: { show: true, formatter: p => p.value[4].name || "Amazon 仓库", textStyle: { color: "#fff", backgroundColor: "rgba(27,19,4,.88)", padding: [5,8], borderRadius: 5 } } } },
+					{ id: "orders-bars", name: "订单光柱", type: "bar3D", coordinateSystem: "globe", data, silent: !ordersVisible, barSize: .58, bevelSize: .06, bevelSmoothness: 4, shading: "realistic", itemStyle: { color: night ? "#ff4f91" : "#15d6e8", opacity: ordersVisible ? .84 : 0 }, emphasis: { itemStyle: { color: "#ffe66d", opacity: 1 }, label: { show: true } }, label: { show: ordersVisible, position: "top", formatter: p => `${p.value[3]} 单`, textStyle: { color: "#fff", fontSize: 11, backgroundColor: "rgba(5,12,30,.82)", padding: [4,7], borderRadius: 5 } } },
+					{ id: "orders-points", name: "订单光点", type: "scatter3D", coordinateSystem: "globe", data: this.offlinePointData, silent: !ordersVisible, symbol: "circle", symbolSize: ordersVisible ? (value => 7 + Math.min(12, Math.sqrt(value[3] || 1) * 1.8)) : 0, itemStyle: { color: night ? "#ff80b5" : "#a7fbff", opacity: ordersVisible ? .96 : 0, borderColor: "#fff", borderWidth: 1.5 } },
+					{ id: "amazon-warehouses", name: "亚马逊仓库", type: "scatter3D", coordinateSystem: "globe", data: warehouseData, silent: !warehousesVisible, symbol: "circle", symbolSize: warehousesVisible ? 11 : 0, itemStyle: { color: "#ffb020", opacity: warehousesVisible ? .98 : 0, borderColor: "#fff", borderWidth: 2 }, emphasis: { itemStyle: { color: "#ffe16a" }, label: { show: true, formatter: p => p.value[4].name || "Amazon 仓库", textStyle: { color: "#fff", backgroundColor: "rgba(27,19,4,.88)", padding: [5,8], borderRadius: 5 } } } },
 				],
 			}, true);
-			this.chart.on("click", params => { const point=params.value&&params.value[4];if(!point)return;const pointKey=`${point._kind||"order"}|${point.longitude}|${point.latitude}|${point.orders||0}`;if(this.openPointKey===pointKey&&this.root.querySelector("[data-map-popup]")?.classList.contains("is-open")){this.hideMapPopup();this.openPointKey="";return;}this.openPointKey=pointKey;if(point._kind === "warehouse")this.showWarehouseDetails(point);else this.showPointDetails(point); });
+			this.chart.on("click", params => {
+				const point = params.value && params.value[4];
+				if (!point) return;
+				const pointKey = `${point._kind || "order"}|${point.longitude}|${point.latitude}|${point.orders || 0}`;
+				const popup = this.root.querySelector("[data-map-popup]");
+				if (this.openPointKey === pointKey && popup?.classList.contains("is-open")) {
+					this.hideMapPopup();
+					return;
+				}
+				this.openPointKey = pointKey;
+				if (point._kind === "warehouse") this.showWarehouseDetails(point); else this.showPointDetails(point);
+			});
 			this.root.querySelector("[data-texture]").value = String(this.textureIndex);
 			this.setStatus(`离线地球 · ${texture.name}`);
 			this.preloadAdjacentTextures();
@@ -267,11 +295,7 @@
 		}
 
 		showPointDetails(point) {
-			if (this.mode === "offline") {
-				this.showMapPopup(`${point.country || "地图位置"} · ${point.orders || 0} 个订单`, this.pointDetailsHTML(point));
-				return;
-			}
-			frappe.msgprint({ title: `${point.country || "地图位置"} · ${point.orders || 0} 个订单`, message: this.pointDetailsHTML(point), wide: true });
+			this.showMapPopup(`${point.country || "地图位置"} · ${point.orders || 0} 个订单`, this.pointDetailsHTML(point));
 		}
 
 		warehouseDetailsHTML(point) {
@@ -280,11 +304,7 @@
 		}
 
 		showWarehouseDetails(point) {
-			if (this.mode === "offline") {
-				this.showMapPopup(point.name || "Amazon 仓库", this.warehouseDetailsHTML(point));
-				return;
-			}
-			frappe.msgprint({ title: point.name || "Amazon 仓库", message: this.warehouseDetailsHTML(point), wide: true });
+			this.showMapPopup(point.name || "Amazon 仓库", this.warehouseDetailsHTML(point));
 		}
 
 		showMapPopup(title, html) {
@@ -296,6 +316,33 @@
 
 		hideMapPopup() {
 			this.root.querySelector("[data-map-popup]")?.classList.remove("is-open");
+			this.openPointKey = "";
+		}
+
+		installCesiumBaseLayerIcon() {
+			const wrappers = [...this.root.querySelectorAll('[class*="baseLayerPicker"]')];
+			let button = wrappers.map(wrapper => wrapper.matches("button") ? wrapper : wrapper.querySelector("button")).find(Boolean);
+			if (!button) {
+				button = [...this.root.querySelectorAll(".cesium-viewer-toolbar button")].find(candidate => candidate.querySelector("img.cesium-baseLayerPicker-selected") || /ArcGIS|OpenStreetMap|WGS84|Ellipsoid/i.test(candidate.getAttribute("aria-label") || candidate.title || ""));
+			}
+			if (!button) return;
+			button.dataset.fomBaseLayer = "1";
+			button.style.backgroundImage = "none";
+			button.style.padding = "0";
+			button.style.display = "flex";
+			button.style.alignItems = "center";
+			button.style.justifyContent = "center";
+			button.querySelectorAll("img.cesium-baseLayerPicker-selected").forEach(image => image.remove());
+			let icon = button.querySelector(".fom-base-layer-svg");
+			if (!icon) {
+				icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+				icon.classList.add("fom-base-layer-svg");
+				icon.style.cssText = "display:block;width:32px;height:32px;max-width:32px;max-height:32px;margin:0;color:#fff;";
+				icon.setAttribute("viewBox", "0 0 32 32");
+				icon.setAttribute("aria-hidden", "true");
+				icon.innerHTML = '<path d="m4 10 12-6 12 6-12 6L4 10Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="m4 16 12 6 12-6M4 22l12 6 12-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>';
+				button.appendChild(icon);
+			}
 		}
 
 		async showOnline() {
@@ -352,39 +399,72 @@
 				...customImageryModels,
 				...defaultImageryModels.filter(model => !/ArcGIS|Open.?StreetMap/i.test(model.name || "")),
 			];
-			const viewerOptions = { baseLayerPicker: true, imageryProviderViewModels, selectedImageryProviderViewModel: imageryProviderViewModels[0], geocoder: false, timeline: false, animation: false, sceneModePicker: true, homeButton: true, navigationHelpButton: false, fullscreenButton: false, infoBox: true, selectionIndicator: true };
+			const viewerOptions = { baseLayerPicker: true, imageryProviderViewModels, selectedImageryProviderViewModel: imageryProviderViewModels[0], geocoder: false, timeline: false, animation: false, sceneModePicker: true, homeButton: true, navigationHelpButton: false, fullscreenButton: false, infoBox: false, selectionIndicator: true };
 			if (terrainModels.length) {
 				viewerOptions.terrainProviderViewModels = terrainModels;
 				viewerOptions.selectedTerrainProviderViewModel = terrainModels[0];
 			}
 			this.viewer = new Cesium.Viewer(container, viewerOptions);
+			this.installCesiumBaseLayerIcon();
+			this.cesiumToolbarObserver?.disconnect();
+			this.cesiumToolbarObserver = new MutationObserver(() => this.installCesiumBaseLayerIcon());
+			this.cesiumToolbarObserver.observe(container, { childList: true, subtree: true });
 			this.viewer.scene.globe.enableLighting = true;
 			this.viewer.scene.globe.depthTestAgainstTerrain = true;
 			this.orderEntities = [];
 			this.points.forEach(point => {
 				const height = 85000 + Math.log2(point.orders + 1) * 110000;
 				const groundGap = 5000;
-				const entity = this.viewer.entities.add({
+					const entity = this.viewer.entities.add({
 					name: `${point.country} · ${point.orders} 单`,
 					description: this.pointDetailsHTML(point),
 					position: Cesium.Cartesian3.fromDegrees(point.longitude, point.latitude, groundGap + height / 2),
-					cylinder: { length: height, topRadius: 5200, bottomRadius: 9000, material: Cesium.Color.fromCssColorString("#21dbea").withAlpha(.82), outline: true, outlineColor: Cesium.Color.WHITE.withAlpha(.78) },
+					cylinder: { length: height, topRadius: 9500, bottomRadius: 15500, material: Cesium.Color.fromCssColorString("#21dbea").withAlpha(.82), outline: true, outlineColor: Cesium.Color.WHITE.withAlpha(.78) },
 					point: { pixelSize: 9, color: Cesium.Color.YELLOW, outlineColor: Cesium.Color.WHITE, outlineWidth: 2 },
 					label: { text: `${point.orders} 单`, font: "14px sans-serif", fillColor: Cesium.Color.YELLOW, outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -18), distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 9000000) },
 				});
+				entity._fengjingPoint = point;
 				entity.show = this.root.querySelector("[data-orders]").checked;
 				this.orderEntities.push(entity);
 			});
 			if (this.warehousesLoaded) this.createWarehouseEntities();
-			if(this.points.length)this.viewer.camera.flyTo({destination:Cesium.Cartesian3.fromDegrees(this.points[0].longitude,this.points[0].latitude,9000000),duration:1.5});
+			this.cesiumClickHandler?.destroy();
+			this.cesiumClickHandler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
+			this.cesiumClickHandler.setInputAction(movement => {
+				const picked = this.viewer.scene.pick(movement.position);
+				const entity = picked && (picked.id || picked.primitive);
+				const point = entity && entity._fengjingPoint;
+				if (!point) { this.hideMapPopup(); return; }
+				const pointKey = `${point._kind || "order"}|${point.longitude}|${point.latitude}|${point.orders || 0}`;
+				if (this.openPointKey === pointKey && this.root.querySelector("[data-map-popup]")?.classList.contains("is-open")) {
+					this.hideMapPopup();
+					return;
+				}
+				this.openPointKey = pointKey;
+				if (point._kind === "warehouse") this.showWarehouseDetails(point); else this.showPointDetails(point);
+			}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+			const usaPoint = this.points.find(point => /^(美国|US|USA|UNITED STATES)$/i.test(String(point.country || point.country_code || point.shipping_country_code || "")));
+			const focus = usaPoint || { longitude: -98.5795, latitude: 39.8283 };
+			this.viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(focus.longitude, focus.latitude, 9000000), duration: 1.5 });
 		}
 
-		toggleOrders(show) {
-			if (this.mode === "offline" && this.chart) this.chart.setOption({ series: [
-				{ id: "orders-bars", data: show ? (this.offlineData || []) : [] },
-				{ id: "orders-points", data: show ? (this.offlinePointData || []) : [] },
-			] });
+			toggleOrders(show) {
+			if (this.mode === "offline" && this.chart) this.drawOffline();
 			this.orderEntities.forEach(entity => { entity.show = show; });
+		}
+
+		updateOfflineSeriesVisibility() {
+			if (!this.chart) return;
+			const ordersVisible = !!this.root.querySelector("[data-orders]")?.checked;
+			const warehousesVisible = !!this.root.querySelector("[data-warehouses]")?.checked;
+			this.chart.setOption({
+				globe: { show: true, baseTexture: this.offlineTextureImage, environment: "/assets/fengjing_app/js/Amazon_Order_Map/images/space-8k.jpg" },
+				series: [
+					{ id: "orders-bars", type: "bar3D", coordinateSystem: "globe", data: this.offlineData || [], silent: !ordersVisible, itemStyle: { opacity: ordersVisible ? .84 : 0 }, label: { show: ordersVisible } },
+					{ id: "orders-points", type: "scatter3D", coordinateSystem: "globe", data: this.offlinePointData || [], silent: !ordersVisible, symbolSize: ordersVisible ? (value => 7 + Math.min(12, Math.sqrt(value[3] || 1) * 1.8)) : 0, itemStyle: { opacity: ordersVisible ? .96 : 0 } },
+					{ id: "amazon-warehouses", type: "scatter3D", coordinateSystem: "globe", data: this.offlineWarehouseData || [], silent: !warehousesVisible, symbolSize: warehousesVisible ? 11 : 0, itemStyle: { opacity: warehousesVisible ? .98 : 0 } },
+				],
+			}, false);
 		}
 
 		async toggleWarehouses(show) {
@@ -398,7 +478,7 @@
 					});
 					this.warehouses = result.message?.warehouses || [];
 					this.warehousesLoaded = true;
-					this.offlineWarehouseData = this.warehouses.map(point => [point.longitude, point.latitude, 1.8, 1, { ...point, _kind: "warehouse" }]);
+						this.offlineWarehouseData = this.warehouses.map(point => [point.longitude, point.latitude, 0, 1, { ...point, _kind: "warehouse" }]);
 				} catch (error) {
 					input.checked = false;
 					frappe.show_alert({ message: "亚马逊仓库位置读取失败，请稍后再试", indicator: "red" });
@@ -410,7 +490,7 @@
 			}
 			if (this.viewer && this.warehousesLoaded && !this.warehouseEntities.length) this.createWarehouseEntities();
 			this.warehouseEntities.forEach(entity => { entity.show = show; });
-			if (this.mode === "offline" && this.chart) this.chart.setOption({ series: [{ id: "amazon-warehouses", data: show ? (this.offlineWarehouseData || []) : [] }] });
+			if (this.mode === "offline" && this.chart) this.drawOffline();
 			this.setStatus(show ? `已展示 ${this.warehouses.length} 个亚马逊仓库公开位置` : (this.mode === "online" ? "在线卫星地图" : "离线地球"));
 		}
 
@@ -422,10 +502,11 @@
 					name: point.name || "Amazon 仓库",
 					description: this.warehouseDetailsHTML(point),
 					position: Cesium.Cartesian3.fromDegrees(point.longitude, point.latitude, 0),
-					point: { pixelSize: 13, color: Cesium.Color.fromCssColorString("#ffb020"), outlineColor: Cesium.Color.WHITE, outlineWidth: 2, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND },
+					point: { pixelSize: 13, color: Cesium.Color.fromCssColorString("#ffb020"), outlineColor: Cesium.Color.WHITE, outlineWidth: 2, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY },
 					label: { text: point.reference || "AMZ", font: "bold 10px sans-serif", fillColor: Cesium.Color.fromCssColorString("#ffe08a"), outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.TOP, pixelOffset: new Cesium.Cartesian2(0, 8), distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 3000000) },
-				});
-				entity.show = this.root.querySelector("[data-warehouses]").checked;
+					});
+					entity._fengjingPoint = { ...point, _kind: "warehouse" };
+					entity.show = this.root.querySelector("[data-warehouses]").checked;
 				this.warehouseEntities.push(entity);
 			});
 		}
@@ -510,9 +591,11 @@
 		}
 
 		setStatus(text) { const element=this.root.querySelector("[data-map-status]"); if(element) element.textContent=text; }
-		destroy() {
-			this.destroyed = true;
-			if(this.chart)this.chart.dispose();
+			destroy() {
+				this.destroyed = true;
+				clearTimeout(this.fullscreenRefreshTimer);
+				if (this.cesiumToolbarObserver) this.cesiumToolbarObserver.disconnect();
+				if(this.chart)this.chart.dispose();
 			if(this.viewer)this.viewer.destroy();
 			if(this.fullscreenHandler)document.removeEventListener("fullscreenchange",this.fullscreenHandler);
 			if(this.keyHandler)document.removeEventListener("keydown",this.keyHandler);
