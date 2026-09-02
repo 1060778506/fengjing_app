@@ -51,7 +51,7 @@ REGION_CENTROIDS = {
     "PR": {"PUERTO RICO":(-66.5,18.2)},
 }
 
-MAP_ASSET_ROOT = "map"
+MAP_ASSET_ROOT = "Amazon_Order_Map"
 
 AMAZON_WAREHOUSE_QUERY = """
 [out:json][timeout:45];
@@ -205,6 +205,11 @@ def get_order_map_data(filters=None):
                     mapped_item_codes.add(mapping["item_code"])
         order["mapped_item_codes"] = item_codes
 
+    requested_item_code = str(filters.get("item_code") or "").strip()
+    if requested_item_code:
+        orders = [order for order in orders if requested_item_code in (order.get("mapped_item_codes") or [])]
+        total_orders = len({f"{order.store or ''}|{order.amazon_order_id or ''}" for order in orders})
+
     order_line_groups = {}
     for line in order_lines:
         sku = str(line.sku or "").strip().upper()
@@ -264,6 +269,8 @@ def get_order_map_data(filters=None):
             point["stores"].append(order.store)
         product_lines = []
         for line in order_line_groups.get((str(order.store or ""), str(order.amazon_order_id or "")), []):
+            if requested_item_code and line.item_code != requested_item_code:
+                continue
             item = item_details.get(line.item_code)
             product_lines.append({
                 "sku": line.sku or "",
@@ -291,6 +298,7 @@ def get_order_map_data(filters=None):
                     "image": item_details[code].image or "",
                 }
                 for code in order.mapped_item_codes
+                if not requested_item_code or code == requested_item_code
                 if code in item_details
             ],
         })
@@ -529,6 +537,11 @@ def get_dashboard_data(filters=None):
             if marketplace in CURRENCY_BY_MARKETPLACE
         }
     )
+    options["products"] = [
+        {"value": code, "label": (item_details.get(code).item_name if item_details.get(code) else code),
+         "image": (item_details.get(code).image if item_details.get(code) else "")}
+        for code in sorted(item_codes)
+    ]
 
     currencies = sorted({str(row.currency_code) for row in rows if row.currency_code})
     cny_rates = {"CNY": 1.0}

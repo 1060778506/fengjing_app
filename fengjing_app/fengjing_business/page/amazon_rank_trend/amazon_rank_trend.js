@@ -1,6 +1,6 @@
 frappe.pages["amazon-rank-trend"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({ parent: wrapper, title: "Amazon 商品排名走势", single_column: true });
-	frappe.require("assets/fengjing_app/js/主体-echarts.js", () => new AmazonRankDashboard(page, wrapper));
+	frappe.require("assets/fengjing_app/js/Amazon_Order_Map/主体-echarts.js", () => new AmazonRankDashboard(page, wrapper));
 };
 
 class AmazonRankDashboard {

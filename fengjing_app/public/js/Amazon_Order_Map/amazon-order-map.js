@@ -110,7 +110,7 @@
 
 		async ensureEchartsGl() {
 			if (window.__fengjing_echarts_gl_loaded) return;
-			await new Promise(resolve => frappe.require("assets/fengjing_app/js/map/engines/echarts-gl.js", resolve));
+			await new Promise(resolve => frappe.require("assets/fengjing_app/js/Amazon_Order_Map/engines/echarts-gl.js", resolve));
 			window.__fengjing_echarts_gl_loaded = true;
 		}
 
@@ -126,7 +126,7 @@
 			this.chart = echarts.init(dom);
 			const night = /夜|night/i.test(texture.name);
 			const maxOrders = Math.max(1, ...this.points.map(point => Number(point.orders) || 0));
-			const heightFor = orders => 1.35 + (Math.log1p(Number(orders) || 0) / Math.log1p(maxOrders)) * 1.65;
+			const heightFor = orders => 0.72 + (Math.log1p(Number(orders) || 0) / Math.log1p(maxOrders)) * 0.88;
 			const data = this.points.map(point => [point.longitude, point.latitude, heightFor(point.orders), point.orders, point]);
 			this.offlineData = data;
 			const warehouseData = this.warehouses.map(point => [point.longitude, point.latitude, 1.8, 1, { ...point, _kind: "warehouse" }]);
@@ -135,11 +135,11 @@
 			const ordersVisible = this.root.querySelector("[data-orders]").checked;
 			const warehousesVisible = this.root.querySelector("[data-warehouses]").checked;
 			this.chart.setOption({
-				backgroundColor: "/assets/fengjing_app/js/map/images/space-8k.jpg",
+				backgroundColor: "/assets/fengjing_app/js/Amazon_Order_Map/images/space-8k.jpg",
 				tooltip: { formatter: p => { const d = p.value[4]; return d?._kind === "warehouse" ? this.warehouseDetailsHTML(d) : `<b>${frappe.utils.escape_html(d.country || "")}</b><br>${frappe.utils.escape_html([d.region,d.city].filter(Boolean).join(" · "))}<br>${frappe.utils.escape_html(d.precision || "地图定位")}${d.postal_code?` · 邮编 ${frappe.utils.escape_html(d.postal_code)}`:""}<br>订单：${d.orders}`; } },
-				globe: { baseTexture: textureImage, environment: "/assets/fengjing_app/js/map/images/space-8k.jpg", shading: "realistic", realisticMaterial: { roughness: .58 }, light: { main: { intensity: 1.2, shadow: true }, ambient: { intensity: .72 } }, atmosphere: { show: true, color: night ? "#071b4b" : "#4aa5d8" }, viewControl: { autoRotate: this.root.querySelector("[data-rotate]").checked, distance: 195, minDistance: 70, maxDistance: 460 } },
+				globe: { baseTexture: textureImage, environment: "/assets/fengjing_app/js/Amazon_Order_Map/images/space-8k.jpg", shading: "realistic", realisticMaterial: { roughness: .58 }, light: { main: { intensity: 1.2, shadow: true }, ambient: { intensity: .72 } }, atmosphere: { show: true, color: night ? "#071b4b" : "#4aa5d8" }, viewControl: { autoRotate: this.root.querySelector("[data-rotate]").checked, distance: 195, minDistance: 70, maxDistance: 460 } },
 				series: [
-					{ id: "orders-bars", name: "订单光柱", type: "bar3D", coordinateSystem: "globe", data: ordersVisible ? data : [], barSize: .42, bevelSize: .08, bevelSmoothness: 4, shading: "realistic", realisticMaterial: { roughness: .25, metalness: .15 }, itemStyle: { color: night ? "#ff4f91" : "#15d6e8", opacity: .84 }, emphasis: { itemStyle: { color: "#ffe66d", opacity: 1 }, label: { show: true } }, label: { show: false, formatter: p => `${p.value[3]} 单`, textStyle: { color: "#fff", fontSize: 11, backgroundColor: "rgba(5,12,30,.82)", padding: [4,7], borderRadius: 5 } } },
+					{ id: "orders-bars", name: "订单光柱", type: "bar3D", coordinateSystem: "globe", data: ordersVisible ? data : [], barSize: .34, bevelSize: .06, bevelSmoothness: 4, shading: "realistic", realisticMaterial: { roughness: .25, metalness: .15 }, itemStyle: { color: night ? "#ff4f91" : "#15d6e8", opacity: .84 }, emphasis: { itemStyle: { color: "#ffe66d", opacity: 1 }, label: { show: true } }, label: { show: true, position: "top", formatter: p => `${p.value[3]} 单`, textStyle: { color: "#fff", fontSize: 11, backgroundColor: "rgba(5,12,30,.82)", padding: [4,7], borderRadius: 5 } } },
 					{ id: "orders-points", name: "订单光点", type: "scatter3D", coordinateSystem: "globe", data: ordersVisible ? this.offlinePointData : [], symbol: "circle", symbolSize: value => 7 + Math.min(12, Math.sqrt(value[3] || 1) * 1.8), itemStyle: { color: night ? "#ff80b5" : "#a7fbff", opacity: .96, borderColor: "#fff", borderWidth: 1.5 } },
 					{ id: "amazon-warehouses", name: "亚马逊仓库", type: "scatter3D", coordinateSystem: "globe", data: warehousesVisible ? warehouseData : [], symbol: "circle", symbolSize: 11, itemStyle: { color: "#ffb020", opacity: .98, borderColor: "#fff", borderWidth: 2 }, emphasis: { itemStyle: { color: "#ffe16a" }, label: { show: true, formatter: p => p.value[4].name || "Amazon 仓库", textStyle: { color: "#fff", backgroundColor: "rgba(27,19,4,.88)", padding: [5,8], borderRadius: 5 } } } },
 				],
