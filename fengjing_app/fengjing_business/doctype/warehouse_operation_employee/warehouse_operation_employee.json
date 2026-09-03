@@ -1,0 +1,41 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2026-09-03 16:20:00",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "packing_quantity"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u5458\u5de5",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "packing_quantity",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "\u5305\u88c5\u6570\u91cf"
+  }
+ ],
+ "grid_page_length": 50,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-03 17:11:42.465631",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Warehouse Operation Employee",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
