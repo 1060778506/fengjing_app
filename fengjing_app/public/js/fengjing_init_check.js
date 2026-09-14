@@ -595,3 +595,120 @@ $(document).on('app_ready', function () {
         });
     }
 })();
+
+
+
+
+
+// items 子表显示物料图片缩略图
+(() => {
+    const 支持的单据 = [
+        // 库存
+        "Stock Entry",               // 物料移动
+        "Delivery Note",             // 交货单
+
+        // 采购
+        "Material Request",          // 物料需求（若没有图片字段会自动跳过）
+        "Request for Quotation",     // 询价单
+        "Supplier Quotation",        // 供应商报价
+        "Purchase Order",            // 采购订单
+        "Purchase Receipt",          // 采购入库
+        "Purchase Invoice",          // 采购发票
+
+        // 销售
+        "Opportunity",               // 商机
+        "Quotation",                 // 报价单
+        "Sales Order",               // 销售订单
+        "Delivery Note",             // 交货单
+        "Sales Invoice",             // 销售发票
+        "POS Invoice",               // POS 发票
+
+        // 生产
+        "BOM",                       // 物料清单
+
+        // 委外
+        "Subcontracting Order",      // 委外订单
+        "Subcontracting Receipt"     // 委外收货
+    ];
+
+    function 启用物料缩略图(frm) {
+        const grid = frm.fields_dict.items?.grid;
+
+        if (!grid || grid.__fengjing_image_enabled) {
+            return;
+        }
+
+        // ERPNext 原生明细表已经存在 image 和 image_view 字段
+        const 图片字段 = grid.docfields.find(
+            field => field.fieldname === "image_view"
+        );
+
+        if (!图片字段) {
+            console.warn(`${frm.doctype} 的 items 子表没有 image_view 字段`);
+            return;
+        }
+
+        const 图片格式化 = function (value, df, options, row) {
+            const 图片地址 = row?.image;
+
+            if (!图片地址) {
+                return `
+                    <div style="
+                        width:42px;
+                        height:42px;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        color:#999;
+                    ">—</div>
+                `;
+            }
+
+            const 安全地址 = frappe.utils.escape_html(图片地址);
+
+            return `
+                <a href="${安全地址}"
+                   target="_blank"
+                   title="点击查看原图"
+                   style="display:inline-flex;">
+                    <img
+                        src="${安全地址}"
+                        alt="物料图片"
+                        style="
+                            width:42px;
+                            height:42px;
+                            object-fit:cover;
+                            border-radius:6px;
+                            border:1px solid var(--border-color);
+                            background:#fff;
+                        "
+                    >
+                </a>
+            `;
+        };
+
+        grid.update_docfield_property("image_view", "hidden", 0);
+        grid.update_docfield_property("image_view", "in_list_view", 1);
+        grid.update_docfield_property("image_view", "columns", 1);
+        grid.update_docfield_property(
+            "image_view",
+            "formatter",
+            图片格式化
+        );
+
+        grid.__fengjing_image_enabled = true;
+        grid.reset_grid();
+    }
+
+    支持的单据.forEach(单据类型 => {
+        frappe.ui.form.on(单据类型, {
+            setup(frm) {
+                启用物料缩略图(frm);
+            },
+
+            refresh(frm) {
+                启用物料缩略图(frm);
+            }
+        });
+    });
+})();
