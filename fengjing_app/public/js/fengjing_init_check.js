@@ -597,117 +597,131 @@ $(document).on('app_ready', function () {
 })();
 
 
-
-
-
-// items 子表显示物料图片缩略图
+// items 子表：在物料编号左侧显示缩略图
 (() => {
     const 支持的单据 = [
-        // 库存
-        "Stock Entry",               // 物料移动
-        "Delivery Note",             // 交货单
-
-        // 采购
-        "Material Request",          // 物料需求（若没有图片字段会自动跳过）
-        "Request for Quotation",     // 询价单
-        "Supplier Quotation",        // 供应商报价
-        "Purchase Order",            // 采购订单
-        "Purchase Receipt",          // 采购入库
-        "Purchase Invoice",          // 采购发票
-
-        // 销售
-        "Opportunity",               // 商机
-        "Quotation",                 // 报价单
-        "Sales Order",               // 销售订单
-        "Delivery Note",             // 交货单
-        "Sales Invoice",             // 销售发票
-        "POS Invoice",               // POS 发票
-
-        // 生产
-        "BOM",                       // 物料清单
-
-        // 委外
-        "Subcontracting Order",      // 委外订单
-        "Subcontracting Receipt"     // 委外收货
+        "Stock Entry",
+        "Material Request",
+        "Request for Quotation",
+        "Supplier Quotation",
+        "Purchase Order",
+        "Purchase Receipt",
+        "Purchase Invoice",
+        "Opportunity",
+        "Quotation",
+        "Sales Order",
+        "Delivery Note",
+        "Sales Invoice",
+        "POS Invoice",
+        "BOM",
+        "Subcontracting Order",
+        "Subcontracting Receipt"
     ];
 
-    function 启用物料缩略图(frm) {
-        const grid = frm.fields_dict.items?.grid;
+    function 设置物料缩略图(frm) {
+        // 等待表单和items表格渲染完成
+        window.setTimeout(() => {
+            const grid = frm.fields_dict.items?.grid;
 
-        if (!grid || grid.__fengjing_image_enabled) {
-            return;
-        }
-
-        // ERPNext 原生明细表已经存在 image 和 image_view 字段
-        const 图片字段 = grid.docfields.find(
-            field => field.fieldname === "image_view"
-        );
-
-        if (!图片字段) {
-            console.warn(`${frm.doctype} 的 items 子表没有 image_view 字段`);
-            return;
-        }
-
-        const 图片格式化 = function (value, df, options, row) {
-            const 图片地址 = row?.image;
-
-            if (!图片地址) {
-                return `
-                    <div style="
-                        width:42px;
-                        height:42px;
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        color:#999;
-                    ">—</div>
-                `;
+            if (!grid || grid.__fengjing_thumbnail_enabled) {
+                return;
             }
 
-            const 安全地址 = frappe.utils.escape_html(图片地址);
+            const 物料字段 = grid.docfields?.find(
+                field => field.fieldname === "item_code"
+            );
 
-            return `
-                <a href="${安全地址}"
-                   target="_blank"
-                   title="点击查看原图"
-                   style="display:inline-flex;">
-                    <img
-                        src="${安全地址}"
-                        alt="物料图片"
-                        style="
-                            width:42px;
-                            height:42px;
-                            object-fit:cover;
-                            border-radius:6px;
-                            border:1px solid var(--border-color);
-                            background:#fff;
-                        "
-                    >
-                </a>
-            `;
-        };
+            if (!物料字段) {
+                return;
+            }
 
-        grid.update_docfield_property("image_view", "hidden", 0);
-        grid.update_docfield_property("image_view", "in_list_view", 1);
-        grid.update_docfield_property("image_view", "columns", 1);
-        grid.update_docfield_property(
-            "image_view",
-            "formatter",
-            图片格式化
-        );
+            const 物料格式化器 = function (value, df, options, row) {
+                // 使用Frappe原生格式化器生成物料链接
+                const 物料链接 = frappe.form.formatters.Link(
+                    value,
+                    df,
+                    options,
+                    row
+                );
 
-        grid.__fengjing_image_enabled = true;
-        grid.reset_grid();
+                const 图片地址 = row?.image;
+
+                if (!图片地址) {
+                    return 物料链接;
+                }
+
+                const 安全图片地址 = frappe.utils.escape_html(
+                    String(图片地址)
+                );
+
+                return `
+                    <div style="
+                        display:flex;
+                        align-items:center;
+                        gap:8px;
+                        min-height:44px;
+                    ">
+                        <img
+                            src="${安全图片地址}"
+                            alt=""
+                            loading="lazy"
+                            style="
+                                width:40px;
+                                height:40px;
+                                flex:0 0 40px;
+                                object-fit:cover;
+                                border-radius:6px;
+                                border:1px solid var(--border-color);
+                                background:#fff;
+                            "
+                        >
+                        <div style="
+                            min-width:0;
+                            overflow:hidden;
+                            text-overflow:ellipsis;
+                        ">
+                            ${物料链接}
+                        </div>
+                    </div>
+                `;
+            };
+
+            /*
+             * 只修改item_code的显示方式。
+             * 不新增列、不修改表格结构、不调用reset_grid。
+             */
+            物料字段.formatter = 物料格式化器;
+
+            if (grid.fields_map?.item_code) {
+                grid.fields_map.item_code.formatter = 物料格式化器;
+            }
+
+            // 已经生成的行也应用格式化器
+            (grid.grid_rows || []).forEach(gridRow => {
+                const rowField = gridRow.docfields?.find(
+                    field => field.fieldname === "item_code"
+                );
+
+                if (rowField) {
+                    rowField.formatter = 物料格式化器;
+                }
+            });
+
+            grid.__fengjing_thumbnail_enabled = true;
+
+            // 只刷新内容，不销毁重建表格
+            grid.refresh();
+        }, 0);
     }
 
     支持的单据.forEach(单据类型 => {
         frappe.ui.form.on(单据类型, {
-            setup(frm) {
-                启用物料缩略图(frm);
+            onload_post_render(frm) {
+                设置物料缩略图(frm);
             },
 
             refresh(frm) {
-                启用物料缩略图(frm);
+                设置物料缩略图(frm);
             }
         });
     });
