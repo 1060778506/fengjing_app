@@ -597,8 +597,23 @@ $(document).on('app_ready', function () {
 })();
 
 
-// items 子表：在物料编号左侧显示缩略图
+
+
+
+
+// ============================================================
+// 物料图片增强
+// 1. items子表的物料编号左侧显示缩略图
+// 2. 鼠标经过缩略图显示完整大图
+// 3. Item物料下拉菜单显示图片并美化
+// ============================================================
 (() => {
+    if (window.__fengjing_item_image_module_loaded) {
+        return;
+    }
+
+    window.__fengjing_item_image_module_loaded = true;
+
     const 支持的单据 = [
         "Stock Entry",
         "Material Request",
@@ -618,8 +633,313 @@ $(document).on('app_ready', function () {
         "Subcontracting Receipt"
     ];
 
-    function 设置物料缩略图(frm) {
-        // 等待表单和items表格渲染完成
+    // 缓存物料图片，避免重复查询
+    const 物料图片缓存 = new Map();
+
+    // --------------------------------------------------------
+    // 样式
+    // --------------------------------------------------------
+    function 添加样式() {
+        if (document.getElementById("fengjing-item-image-style")) {
+            return;
+        }
+
+        const style = document.createElement("style");
+        style.id = "fengjing-item-image-style";
+
+        style.textContent = `
+            /* items表格中的物料图片 */
+            .fengjing-item-cell {
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                min-height: 28px;
+                max-width: 100%;
+                overflow: hidden;
+            }
+
+            .fengjing-item-thumbnail {
+                width: 26px;
+                height: 26px;
+                flex: 0 0 26px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-sizing: border-box;
+                padding: 2px;
+                overflow: hidden;
+                border: 1px solid #e2e8f0;
+                border-radius: 5px;
+                background: #ffffff;
+                cursor: zoom-in;
+                transition:
+                    border-color 0.15s ease,
+                    box-shadow 0.15s ease,
+                    transform 0.15s ease;
+            }
+
+            .fengjing-item-thumbnail:hover {
+                z-index: 2;
+                border-color: #7c9cff;
+                box-shadow: 0 2px 8px rgba(37, 99, 235, 0.20);
+                transform: translateY(-1px);
+            }
+
+            .fengjing-item-thumbnail img {
+                display: block;
+                width: auto;
+                height: auto;
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+                object-position: center center;
+            }
+
+            .fengjing-item-code {
+                min-width: 0;
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+            }
+
+            /* 鼠标悬停大图 */
+            #fengjing-item-image-preview {
+                position: fixed;
+                z-index: 1000000;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                width: min(360px, calc(100vw - 32px));
+                height: min(360px, calc(100vh - 32px));
+                box-sizing: border-box;
+                padding: 14px;
+                overflow: hidden;
+                pointer-events: none;
+                border: 1px solid rgba(15, 23, 42, 0.12);
+                border-radius: 12px;
+                background:
+                    linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+                box-shadow:
+                    0 22px 55px rgba(15, 23, 42, 0.24),
+                    0 6px 18px rgba(15, 23, 42, 0.12);
+            }
+
+            #fengjing-item-image-preview img {
+                display: block;
+                width: auto;
+                height: auto;
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+                object-position: center center;
+            }
+
+            /* 物料下拉菜单 */
+            .fengjing-item-dropdown {
+                width: min(500px, calc(100vw - 30px)) !important;
+                max-width: min(500px, calc(100vw - 30px)) !important;
+                padding: 6px !important;
+                overflow-x: hidden !important;
+                border: 1px solid #dbe3ef !important;
+                border-radius: 10px !important;
+                background: #ffffff !important;
+                box-shadow:
+                    0 16px 38px rgba(15, 23, 42, 0.16),
+                    0 4px 12px rgba(15, 23, 42, 0.08) !important;
+            }
+
+            .fengjing-item-dropdown [role="option"] {
+                box-sizing: border-box;
+                margin: 2px 0 !important;
+                padding: 0 !important;
+                overflow: hidden;
+                border: 1px solid transparent;
+                border-radius: 8px;
+                transition:
+                    background-color 0.12s ease,
+                    border-color 0.12s ease;
+            }
+
+            .fengjing-item-dropdown [role="option"]:hover,
+            .fengjing-item-dropdown [role="option"][aria-selected="true"] {
+                border-color: #c7d7fe;
+                background: #eff6ff !important;
+            }
+
+            .fengjing-item-dropdown [role="option"] > p {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .fengjing-dropdown-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                min-height: 54px;
+                box-sizing: border-box;
+                padding: 6px 8px;
+            }
+
+            .fengjing-dropdown-thumbnail {
+                width: 42px;
+                height: 42px;
+                flex: 0 0 42px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-sizing: border-box;
+                padding: 3px;
+                overflow: hidden;
+                border: 1px solid #e2e8f0;
+                border-radius: 7px;
+                background: #ffffff;
+                cursor: zoom-in;
+            }
+
+            .fengjing-dropdown-thumbnail img {
+                display: block;
+                width: auto;
+                height: auto;
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+                object-position: center center;
+            }
+
+            .fengjing-dropdown-thumbnail.is-empty {
+                color: #94a3b8;
+                background: #f8fafc;
+                cursor: default;
+            }
+
+            .fengjing-dropdown-placeholder {
+                font-size: 11px;
+                line-height: 1;
+                color: #94a3b8;
+            }
+
+            .fengjing-dropdown-content {
+                min-width: 0;
+                flex: 1;
+                overflow: hidden;
+                line-height: 1.4;
+            }
+
+            .fengjing-dropdown-content strong {
+                display: block;
+                overflow: hidden;
+                color: #172033;
+                font-size: 13px;
+                font-weight: 600;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+            }
+
+            .fengjing-dropdown-content .small {
+                display: block;
+                margin-top: 2px;
+                overflow: hidden;
+                color: #64748b;
+                font-size: 12px;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
+    // --------------------------------------------------------
+    // 悬停大图
+    // --------------------------------------------------------
+    function 初始化大图预览() {
+        if (document.getElementById("fengjing-item-image-preview")) {
+            return;
+        }
+
+        const preview = document.createElement("div");
+        preview.id = "fengjing-item-image-preview";
+
+        const image = document.createElement("img");
+        preview.appendChild(image);
+        document.body.appendChild(preview);
+
+        function 移动预览(event) {
+            const 间距 = 18;
+            const previewWidth = preview.offsetWidth || 360;
+            const previewHeight = preview.offsetHeight || 360;
+
+            let left = event.clientX + 间距;
+            let top = event.clientY + 间距;
+
+            if (left + previewWidth > window.innerWidth - 12) {
+                left = event.clientX - previewWidth - 间距;
+            }
+
+            if (top + previewHeight > window.innerHeight - 12) {
+                top = window.innerHeight - previewHeight - 12;
+            }
+
+            left = Math.max(12, left);
+            top = Math.max(12, top);
+
+            preview.style.left = `${left}px`;
+            preview.style.top = `${top}px`;
+        }
+
+        document.addEventListener("mouseover", event => {
+            if (!(event.target instanceof Element)) {
+                return;
+            }
+
+            const source = event.target.closest(
+                ".fengjing-image-hover-source"
+            );
+
+            if (!source) {
+                return;
+            }
+
+            const imageUrl = source.dataset.imageUrl;
+
+            if (!imageUrl) {
+                return;
+            }
+
+            image.src = imageUrl;
+            preview.style.display = "flex";
+            移动预览(event);
+        });
+
+        document.addEventListener("mousemove", event => {
+            if (preview.style.display === "flex") {
+                移动预览(event);
+            }
+        });
+
+        document.addEventListener("mouseout", event => {
+            if (!(event.target instanceof Element)) {
+                return;
+            }
+
+            const source = event.target.closest(
+                ".fengjing-image-hover-source"
+            );
+
+            if (
+                source &&
+                !source.contains(event.relatedTarget)
+            ) {
+                preview.style.display = "none";
+                image.removeAttribute("src");
+            }
+        });
+    }
+
+    // --------------------------------------------------------
+    // items子表缩略图
+    // --------------------------------------------------------
+    function 设置表格物料缩略图(frm) {
         window.setTimeout(() => {
             const grid = frm.fields_dict.items?.grid;
 
@@ -627,102 +947,353 @@ $(document).on('app_ready', function () {
                 return;
             }
 
-            const 物料字段 = grid.docfields?.find(
+            const itemField = grid.docfields?.find(
                 field => field.fieldname === "item_code"
             );
 
-            if (!物料字段) {
+            if (!itemField) {
                 return;
             }
 
-            const 物料格式化器 = function (value, df, options, row) {
-                // 使用Frappe原生格式化器生成物料链接
-                const 物料链接 = frappe.form.formatters.Link(
+            const itemFormatter = function (value, df, options, row) {
+                const itemLink = frappe.form.formatters.Link(
                     value,
                     df,
                     options,
                     row
                 );
 
-                const 图片地址 = row?.image;
+                const imageUrl = row?.image;
 
-                if (!图片地址) {
-                    return 物料链接;
+                if (!imageUrl) {
+                    return itemLink;
                 }
 
-                const 安全图片地址 = frappe.utils.escape_html(
-                    String(图片地址)
+                const safeImageUrl = frappe.utils.escape_html(
+                    String(imageUrl)
                 );
 
                 return `
-                    <div style="
-                        display:flex;
-                        align-items:center;
-                        gap:8px;
-                        min-height:44px;
-                    ">
-                        <img
-                            src="${安全图片地址}"
-                            alt=""
-                            loading="lazy"
-                            style="
-                                width:40px;
-                                height:40px;
-                                flex:0 0 40px;
-                                object-fit:cover;
-                                border-radius:6px;
-                                border:1px solid var(--border-color);
-                                background:#fff;
+                    <div class="fengjing-item-cell">
+                        <span
+                            class="
+                                fengjing-item-thumbnail
+                                fengjing-image-hover-source
                             "
+                            data-image-url="${safeImageUrl}"
                         >
-                        <div style="
-                            min-width:0;
-                            overflow:hidden;
-                            text-overflow:ellipsis;
-                        ">
-                            ${物料链接}
-                        </div>
+                            <img
+                                src="${safeImageUrl}"
+                                alt=""
+                                loading="lazy"
+                            >
+                        </span>
+
+                        <span class="fengjing-item-code">
+                            ${itemLink}
+                        </span>
                     </div>
                 `;
             };
 
-            /*
-             * 只修改item_code的显示方式。
-             * 不新增列、不修改表格结构、不调用reset_grid。
-             */
-            物料字段.formatter = 物料格式化器;
+            itemField.formatter = itemFormatter;
 
             if (grid.fields_map?.item_code) {
-                grid.fields_map.item_code.formatter = 物料格式化器;
+                grid.fields_map.item_code.formatter = itemFormatter;
             }
 
-            // 已经生成的行也应用格式化器
             (grid.grid_rows || []).forEach(gridRow => {
                 const rowField = gridRow.docfields?.find(
                     field => field.fieldname === "item_code"
                 );
 
                 if (rowField) {
-                    rowField.formatter = 物料格式化器;
+                    rowField.formatter = itemFormatter;
                 }
             });
 
+            /*
+             * 先设置标记，再刷新。
+             * 不调用reset_grid，不修改子表结构。
+             */
             grid.__fengjing_thumbnail_enabled = true;
-
-            // 只刷新内容，不销毁重建表格
             grid.refresh();
         }, 0);
     }
 
-    支持的单据.forEach(单据类型 => {
-        frappe.ui.form.on(单据类型, {
+    支持的单据.forEach(doctype => {
+        frappe.ui.form.on(doctype, {
             onload_post_render(frm) {
-                设置物料缩略图(frm);
+                设置表格物料缩略图(frm);
             },
 
             refresh(frm) {
-                设置物料缩略图(frm);
+                设置表格物料缩略图(frm);
             }
         });
     });
+
+    // --------------------------------------------------------
+    // Item下拉菜单图片
+    // --------------------------------------------------------
+    function 获取下拉选项数据(optionElement) {
+        return window.jQuery
+            ? window.jQuery(optionElement).data("item.autocomplete")
+            : null;
+    }
+
+    async function 查询缺失物料图片(itemCodes) {
+        const missingCodes = itemCodes.filter(
+            itemCode => !物料图片缓存.has(itemCode)
+        );
+
+        if (!missingCodes.length) {
+            return;
+        }
+
+        try {
+            const rows = await frappe.db.get_list("Item", {
+                fields: ["name", "item_name", "image"],
+                filters: {
+                    name: ["in", missingCodes]
+                },
+                limit: missingCodes.length
+            });
+
+            const foundNames = new Set();
+
+            (rows || []).forEach(row => {
+                foundNames.add(row.name);
+
+                物料图片缓存.set(row.name, {
+                    image: row.image || "",
+                    item_name: row.item_name || ""
+                });
+            });
+
+            // 查询不到或没有权限的也做缓存，避免反复请求
+            missingCodes.forEach(itemCode => {
+                if (!foundNames.has(itemCode)) {
+                    物料图片缓存.set(itemCode, {
+                        image: "",
+                        item_name: ""
+                    });
+                }
+            });
+        } catch (error) {
+            console.warn("读取物料下拉图片失败：", error);
+        }
+    }
+
+    function 美化单个下拉选项(optionElement, itemCode) {
+        const paragraph = optionElement.querySelector("p");
+
+        if (!paragraph) {
+            return;
+        }
+
+        const itemData = 物料图片缓存.get(itemCode) || {};
+        const imageUrl = itemData.image || "";
+
+        let wrapper = paragraph.querySelector(
+            ".fengjing-dropdown-item"
+        );
+
+        if (!wrapper) {
+            wrapper = document.createElement("span");
+            wrapper.className = "fengjing-dropdown-item";
+
+            const thumbnail = document.createElement("span");
+            thumbnail.className = "fengjing-dropdown-thumbnail";
+
+            const content = document.createElement("span");
+            content.className = "fengjing-dropdown-content";
+
+            while (paragraph.firstChild) {
+                content.appendChild(paragraph.firstChild);
+            }
+
+            wrapper.appendChild(thumbnail);
+            wrapper.appendChild(content);
+            paragraph.appendChild(wrapper);
+        }
+
+        const thumbnail = wrapper.querySelector(
+            ".fengjing-dropdown-thumbnail"
+        );
+
+        if (!thumbnail) {
+            return;
+        }
+
+        thumbnail.replaceChildren();
+        thumbnail.classList.remove(
+            "is-empty",
+            "fengjing-image-hover-source"
+        );
+        thumbnail.removeAttribute("data-image-url");
+
+        if (imageUrl) {
+            const image = document.createElement("img");
+            image.src = imageUrl;
+            image.alt = "";
+            image.loading = "lazy";
+
+            image.addEventListener("error", () => {
+                thumbnail.classList.add("is-empty");
+                thumbnail.classList.remove(
+                    "fengjing-image-hover-source"
+                );
+                thumbnail.removeAttribute("data-image-url");
+                thumbnail.innerHTML =
+                    '<span class="fengjing-dropdown-placeholder">无图</span>';
+            });
+
+            thumbnail.appendChild(image);
+            thumbnail.classList.add(
+                "fengjing-image-hover-source"
+            );
+            thumbnail.dataset.imageUrl = imageUrl;
+        } else {
+            thumbnail.classList.add("is-empty");
+            thumbnail.innerHTML =
+                '<span class="fengjing-dropdown-placeholder">无图</span>';
+        }
+    }
+
+    async function 美化物料下拉菜单(input) {
+        const awesomplete = input.closest(".awesomplete");
+
+        if (!awesomplete) {
+            return;
+        }
+
+        const dropdown = awesomplete.querySelector("ul");
+
+        if (!dropdown) {
+            return;
+        }
+
+        const options = Array.from(
+            dropdown.querySelectorAll('[role="option"]')
+        );
+
+        const validOptions = [];
+        const itemCodes = [];
+
+        options.forEach(optionElement => {
+            const optionData = 获取下拉选项数据(optionElement);
+            const itemCode = optionData?.value;
+
+            // 排除“高级搜索”等功能选项
+            if (
+                !itemCode ||
+                itemCode === "advanced_search__link_option" ||
+                itemCode === "filter_description__link_option"
+            ) {
+                return;
+            }
+
+            validOptions.push({
+                element: optionElement,
+                itemCode
+            });
+
+            itemCodes.push(itemCode);
+        });
+
+        if (!itemCodes.length) {
+            return;
+        }
+
+        const uniqueCodes = [...new Set(itemCodes)];
+        const currentKey = uniqueCodes.join("|");
+
+        if (
+            dropdown.dataset.fengjingProcessedKey === currentKey &&
+            validOptions.every(item =>
+                item.element.querySelector(
+                    ".fengjing-dropdown-item"
+                )
+            )
+        ) {
+            return;
+        }
+
+        dropdown.dataset.fengjingProcessedKey = currentKey;
+        dropdown.classList.add("fengjing-item-dropdown");
+
+        await 查询缺失物料图片(uniqueCodes);
+
+        // 用户快速输入时，旧的异步请求可能已经失效
+        if (!dropdown.isConnected) {
+            return;
+        }
+
+        validOptions.forEach(item => {
+            美化单个下拉选项(
+                item.element,
+                item.itemCode
+            );
+        });
+    }
+
+    let 扫描计时器 = null;
+
+    function 安排扫描物料下拉菜单() {
+        window.clearTimeout(扫描计时器);
+
+        扫描计时器 = window.setTimeout(() => {
+            document
+                .querySelectorAll(
+                    'input[data-target="Item"]'
+                )
+                .forEach(input => {
+                    const awesomplete = input.closest(
+                        ".awesomplete"
+                    );
+
+                    const dropdown = awesomplete?.querySelector(
+                        "ul"
+                    );
+
+                    if (
+                        dropdown &&
+                        !dropdown.hasAttribute("hidden")
+                    ) {
+                        美化物料下拉菜单(input);
+                    }
+                });
+        }, 60);
+    }
+
+    const dropdownObserver = new MutationObserver(() => {
+        安排扫描物料下拉菜单();
+    });
+
+    function 初始化模块() {
+        添加样式();
+        初始化大图预览();
+
+        dropdownObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: [
+                "hidden",
+                "class",
+                "aria-selected"
+            ]
+        });
+    }
+
+    if (document.body) {
+        初始化模块();
+    } else {
+        document.addEventListener(
+            "DOMContentLoaded",
+            初始化模块,
+            { once: true }
+        );
+    }
 })();
