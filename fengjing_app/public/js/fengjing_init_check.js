@@ -709,8 +709,8 @@ $(document).on('app_ready', function () {
                 display: none;
                 align-items: center;
                 justify-content: center;
-                width: min(360px, calc(100vw - 32px));
-                height: min(360px, calc(100vh - 32px));
+                width: min(480px, calc(100vw - 32px));
+                height: min(480px, calc(100vh - 32px));
                 box-sizing: border-box;
                 padding: 14px;
                 overflow: hidden;
@@ -732,6 +732,47 @@ $(document).on('app_ready', function () {
                 max-height: 100%;
                 object-fit: contain;
                 object-position: center center;
+            }
+
+            /* 点击表格缩略图后显示的沉浸式大图 */
+            #fengjing-item-image-modal {
+                position: fixed;
+                inset: 0;
+                z-index: 1100000;
+                display: none;
+                align-items: center;
+                justify-content: center;
+                box-sizing: border-box;
+                padding: 32px;
+                background: rgba(0, 0, 0, 0.78);
+                backdrop-filter: blur(2px);
+                cursor: zoom-out;
+            }
+
+            #fengjing-item-image-modal.is-open {
+                display: flex;
+            }
+
+            #fengjing-item-image-modal-content {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                max-width: 94vw;
+                max-height: 92vh;
+                cursor: default;
+            }
+
+            #fengjing-item-image-modal-content img {
+                display: block;
+                width: auto;
+                height: auto;
+                max-width: 94vw;
+                max-height: 92vh;
+                object-fit: contain;
+                object-position: center center;
+                border-radius: 10px;
+                background: #ffffff;
+                box-shadow: 0 28px 80px rgba(0, 0, 0, 0.48);
             }
 
             /* 物料下拉菜单 */
@@ -781,9 +822,9 @@ $(document).on('app_ready', function () {
             }
 
             .fengjing-dropdown-thumbnail {
-                width: 42px;
-                height: 42px;
-                flex: 0 0 42px;
+                width: 46px;
+                height: 46px;
+                flex: 0 0 46px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -866,8 +907,8 @@ $(document).on('app_ready', function () {
 
         function 移动预览(event) {
             const 间距 = 18;
-            const previewWidth = preview.offsetWidth || 360;
-            const previewHeight = preview.offsetHeight || 360;
+            const previewWidth = preview.offsetWidth || 480;
+            const previewHeight = preview.offsetHeight || 480;
 
             let left = event.clientX + 间距;
             let top = event.clientY + 间距;
@@ -934,6 +975,69 @@ $(document).on('app_ready', function () {
                 image.removeAttribute("src");
             }
         });
+
+        // 表格缩略图点击后显示遮罩大图；下拉菜单缩略图不会触发。
+        const modal = document.createElement("div");
+        modal.id = "fengjing-item-image-modal";
+
+        const modalContent = document.createElement("div");
+        modalContent.id = "fengjing-item-image-modal-content";
+
+        const modalImage = document.createElement("img");
+        modalContent.appendChild(modalImage);
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+
+        function 关闭点击大图() {
+            modal.classList.remove("is-open");
+            modalImage.removeAttribute("src");
+        }
+
+        document.addEventListener("click", event => {
+            if (!(event.target instanceof Element)) {
+                return;
+            }
+
+            const tableThumbnail = event.target.closest(
+                ".fengjing-table-thumbnail"
+            );
+
+            if (!tableThumbnail) {
+                return;
+            }
+
+            const imageUrl = tableThumbnail.dataset.imageUrl;
+
+            if (!imageUrl) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            preview.style.display = "none";
+            image.removeAttribute("src");
+            modalImage.src = imageUrl;
+            modal.classList.add("is-open");
+        }, true);
+
+        // 只有点击图片外面的黑色透明区域才关闭。
+        modal.addEventListener("click", event => {
+            if (event.target === modal) {
+                关闭点击大图();
+            }
+        });
+
+        // 点击已经放大的图片本身不会关闭。
+        modalContent.addEventListener("click", event => {
+            event.stopPropagation();
+        });
+
+        document.addEventListener("keydown", event => {
+            if (event.key === "Escape" && modal.classList.contains("is-open")) {
+                关闭点击大图();
+            }
+        });
     }
 
     // --------------------------------------------------------
@@ -979,6 +1083,7 @@ $(document).on('app_ready', function () {
                             class="
                                 fengjing-item-thumbnail
                                 fengjing-image-hover-source
+                                fengjing-table-thumbnail
                             "
                             data-image-url="${safeImageUrl}"
                         >
@@ -1037,9 +1142,31 @@ $(document).on('app_ready', function () {
     // Item下拉菜单图片
     // --------------------------------------------------------
     function 获取下拉选项数据(optionElement) {
-        return window.jQuery
-            ? window.jQuery(optionElement).data("item.autocomplete")
-            : null;
+        const domLibrary = window.jQuery || window.$;
+
+        if (!domLibrary) {
+            return null;
+        }
+
+        let optionData = domLibrary(optionElement).data(
+            "item.autocomplete"
+        );
+
+        if (optionData) {
+            return optionData;
+        }
+
+        const innerOption = optionElement.querySelector(
+            '[role="option"]'
+        );
+
+        if (innerOption) {
+            optionData = domLibrary(innerOption).data(
+                "item.autocomplete"
+            );
+        }
+
+        return optionData || null;
     }
 
     async function 查询缺失物料图片(itemCodes) {
@@ -1162,28 +1289,43 @@ $(document).on('app_ready', function () {
     }
 
     async function 美化物料下拉菜单(input) {
-        const awesomplete = input.closest(".awesomplete");
+        // 直接取得Frappe正在使用的Awesomplete实例。下拉选项的
+        // 物料编号优先从instance.suggestions读取，不再依赖DOM数据。
+        const awesompleteInstance = Array.from(
+            window.Awesomplete?.all || []
+        ).find(instance => instance.input === input);
+
+        const awesomplete =
+            awesompleteInstance?.container ||
+            input.closest(".awesomplete");
 
         if (!awesomplete) {
             return;
         }
 
-        const dropdown = awesomplete.querySelector("ul");
+        const dropdown =
+            awesompleteInstance?.ul ||
+            awesomplete.querySelector("ul");
 
         if (!dropdown) {
             return;
         }
 
-        const options = Array.from(
-            dropdown.querySelectorAll('[role="option"]')
-        );
+        // 使用直接子项，兼容不同版本的Awesomplete结构并避免重复。
+        const options = Array.from(dropdown.children);
 
         const validOptions = [];
         const itemCodes = [];
 
-        options.forEach(optionElement => {
+        options.forEach((optionElement, optionIndex) => {
             const optionData = 获取下拉选项数据(optionElement);
-            const itemCode = optionData?.value;
+            const suggestion =
+                awesompleteInstance?.suggestions?.[optionIndex];
+
+            const itemCode =
+                optionData?.value ||
+                suggestion?.value ||
+                "";
 
             // 排除“高级搜索”等功能选项
             if (
@@ -1194,8 +1336,12 @@ $(document).on('app_ready', function () {
                 return;
             }
 
+            const displayElement = optionElement.matches('[role="option"]')
+                ? optionElement
+                : optionElement.querySelector('[role="option"]') || optionElement;
+
             validOptions.push({
-                element: optionElement,
+                element: displayElement,
                 itemCode
             });
 
@@ -1249,17 +1395,28 @@ $(document).on('app_ready', function () {
                     'input[data-target="Item"]'
                 )
                 .forEach(input => {
-                    const awesomplete = input.closest(
-                        ".awesomplete"
-                    );
+                    const awesompleteInstance = Array.from(
+                        window.Awesomplete?.all || []
+                    ).find(instance => instance.input === input);
 
-                    const dropdown = awesomplete?.querySelector(
-                        "ul"
-                    );
+                    const awesomplete =
+                        awesompleteInstance?.container ||
+                        input.closest(".awesomplete");
+
+                    const dropdown =
+                        awesompleteInstance?.ul ||
+                        awesomplete?.querySelector("ul");
+
+                    const isOpen = awesompleteInstance
+                        ? Boolean(awesompleteInstance.isOpened)
+                        : Boolean(
+                            dropdown &&
+                            !dropdown.hasAttribute("hidden")
+                        );
 
                     if (
                         dropdown &&
-                        !dropdown.hasAttribute("hidden")
+                        isOpen
                     ) {
                         美化物料下拉菜单(input);
                     }
@@ -1270,6 +1427,24 @@ $(document).on('app_ready', function () {
     const dropdownObserver = new MutationObserver(() => {
         安排扫描物料下拉菜单();
     });
+
+    // Frappe每次打开或重新计算下拉结果时都会触发该事件。
+    document.addEventListener(
+        "awesomplete-open",
+        event => {
+            const input = event.target;
+
+            if (
+                input instanceof HTMLInputElement &&
+                input.dataset.target === "Item"
+            ) {
+                window.setTimeout(() => {
+                    美化物料下拉菜单(input);
+                }, 0);
+            }
+        },
+        true
+    );
 
     function 初始化模块() {
         添加样式();
