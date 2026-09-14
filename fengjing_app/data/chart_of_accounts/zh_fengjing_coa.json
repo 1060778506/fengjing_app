@@ -47,6 +47,12 @@
                     "is_group": 0,
                     "account_type": "Bank"
                 },
+                "ozon_自营_平台【其他货币资金】": {
+                    "account_number": "101203_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "RUB"
+                },
                 "其他货币资金【其他货币资金】": {
                     "account_number": "101299_fj",
                     "is_group": 0,

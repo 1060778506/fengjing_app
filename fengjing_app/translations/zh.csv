@@ -52,6 +52,7 @@ Data Sources,数据来源
 Enable Handling Units,启用处理单元
 Enable Scanning of Serial Numbers,启用序列号扫描功能
 Barcode Font Size,条形码字体大小
+Purchase Invoice has been submitted successfully,采购发票已成功提交
 QR Scale,QR 量表
 QR Border,QR 边界
 QR Error Correct,二维码错误纠正功能
