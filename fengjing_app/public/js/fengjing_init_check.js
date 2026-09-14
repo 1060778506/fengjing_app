@@ -545,3 +545,53 @@ $(document).on('app_ready', function () {
         }, 5000);
     }
 });
+
+
+
+
+
+
+
+
+// 默认不勾选优化选项
+(() => {
+    const OPTIMIZE_SELECTOR =
+        '#uploader-optimize-checkbox input[type="checkbox"]';
+
+    function disable_default_optimization(root = document) {
+        root.querySelectorAll(OPTIMIZE_SELECTOR).forEach((checkbox) => {
+            // 每个上传项只自动处理一次，之后仍允许用户手动重新勾选
+            if (checkbox.dataset.fengjingDefaultApplied === "1") {
+                return;
+            }
+
+            checkbox.dataset.fengjingDefaultApplied = "1";
+
+            // 必须触发点击事件，才能同时修改 Vue 内部的 file.optimize
+            if (checkbox.checked) {
+                checkbox.click();
+            }
+        });
+    }
+
+    function start_observer() {
+        disable_default_optimization();
+
+        const observer = new MutationObserver(() => {
+            disable_default_optimization();
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
+    if (document.body) {
+        start_observer();
+    } else {
+        document.addEventListener("DOMContentLoaded", start_observer, {
+            once: true
+        });
+    }
+})();
