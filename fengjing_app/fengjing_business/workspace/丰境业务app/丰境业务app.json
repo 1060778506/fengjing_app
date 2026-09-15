@@ -47,7 +47,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "\u6570\u636e",
-   "link_count": 3,
+   "link_count": 4,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -75,6 +75,16 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Ozon\u6392\u540d",
+   "link_count": 0,
+   "link_to": "Ozon ranking storage",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Ozon\u8ba2\u5355",
    "link_count": 0,
    "link_to": "Ozon order storage",
@@ -86,7 +96,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "\u6570\u636e\u5206\u6790",
-   "link_count": 3,
+   "link_count": 4,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -114,6 +124,16 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Ozon\u5546\u54c1\u6392\u540d",
+   "link_count": 0,
+   "link_to": "ozon-ranking-overvie",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "Ozon\u8ba2\u5355\u6982\u51b5",
    "link_count": 0,
    "link_to": "ozon-platform-overvi",
@@ -122,7 +142,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-09-15 20:45:38.243447",
+ "modified": "2026-09-15 21:29:53.869629",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "\u4e30\u5883\u4e1a\u52a1APP",

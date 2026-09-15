@@ -77,6 +77,8 @@ Default Wiki Space,默认知识库空间
 "Services / Consulting","服务/咨询"
 "Wholesale / Distribution","批发/分销"
 "Retail","零售"
+Ozon order storage,Ozon 订单信息
+Ozon ranking storage,Ozon 排名信息
 "Standard with Numbers","标准加数字"
 "Defines the date after which the item can no longer be used in transactions or manufacturing","规定了该物品在交易或生产中不再可使用的日期"
 "After save, please refresh the page to apply the changes.","保存后，请刷新页面以使更改生效。"

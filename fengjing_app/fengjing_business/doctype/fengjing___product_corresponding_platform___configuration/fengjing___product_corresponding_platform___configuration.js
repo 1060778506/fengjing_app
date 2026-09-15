@@ -600,6 +600,69 @@ frappe.ui.form.on('Ozon Store API Sub-table', {
                 }
             }
         });
+    },
+
+    同步历史排名: function (frm, cdt, cdn) {
+        const row = locals[cdt] && locals[cdt][cdn];
+        if (!row) return;
+        if (frm.is_dirty()) {
+            frappe.msgprint(__('请先保存配置，再启动 Ozon 历史排名同步。'));
+            return;
+        }
+        if (!row.开启ozon商品排名同步) {
+            frappe.msgprint(__('请先开启“开启 Ozon 商品排名同步”并保存。'));
+            return;
+        }
+        if (!row.排名历史同步开始日期 || !row.排名历史同步结束日期) {
+            frappe.msgprint(__('请先填写排名历史同步开始日期和结束日期。'));
+            return;
+        }
+        frappe.confirm(
+            __('确定开始同步店铺 {0} 的 Ozon 历史排名吗？任务将在后台运行。', [row.店铺选项]),
+            () => frappe.call({
+                method: 'fengjing_app.fengjing_business.doctype.ozon_ranking_storage.ozon_ranking_storage.启动ozon历史排名同步',
+                args: { 配置行名称: row.name },
+                freeze: true,
+                freeze_message: __('正在提交 Ozon 历史排名同步任务...'),
+                callback: function (r) {
+                    if (r.message) {
+                        frappe.show_alert({
+                            message: r.message.message,
+                            indicator: 'green'
+                        });
+                        frm.reload_doc();
+                    }
+                }
+            })
+        );
+    },
+
+    立即同步最新排名: function (frm, cdt, cdn) {
+        const row = locals[cdt] && locals[cdt][cdn];
+        if (!row) return;
+        if (frm.is_dirty()) {
+            frappe.msgprint(__('请先保存配置，再同步 Ozon 最新排名。'));
+            return;
+        }
+        if (!row.开启ozon商品排名同步) {
+            frappe.msgprint(__('请先开启“开启 Ozon 商品排名同步”并保存。'));
+            return;
+        }
+        frappe.call({
+            method: 'fengjing_app.fengjing_business.doctype.ozon_ranking_storage.ozon_ranking_storage.启动ozon最新排名同步',
+            args: { 配置行名称: row.name },
+            freeze: true,
+            freeze_message: __('正在提交 Ozon 最新排名同步任务...'),
+            callback: function (r) {
+                if (r.message) {
+                    frappe.show_alert({
+                        message: r.message.message,
+                        indicator: 'green'
+                    });
+                    frm.reload_doc();
+                }
+            }
+        });
     }
 });
 
