@@ -8,11 +8,73 @@
  "engine": "InnoDB",
  "field_order": [
   "\u5e97\u94fa\u9009\u9879",
+  "\u63a5\u53e3\u914d\u7f6e_section",
   "ozon_id",
   "ozon_\u79d8\u94a5",
+  "\u63a5\u53e3\u914d\u7f6e_column",
   "performance_client_id",
   "performance_api_\u79d8\u94a5",
-  "\u6d4b\u8bd5api"
+  "\u6d4b\u8bd5api",
+  "\u8ba2\u5355\u6293\u53d6\u8303\u56f4_section",
+  "\u5f00\u542f\u8ba2\u5355\u540c\u6b65",
+  "\u6293\u53d6fbs\u53ca\u8de8\u5883\u8ba2\u5355",
+  "\u6293\u53d6fbo\u8ba2\u5355",
+  "\u5386\u53f2\u8ba2\u5355\u540c\u6b65_section",
+  "\u5386\u53f2\u540c\u6b65\u5f00\u59cb\u65f6\u95f4",
+  "\u5386\u53f2\u540c\u6b65\u7ed3\u675f\u65f6\u95f4",
+  "\u540c\u6b65\u5386\u53f2\u8ba2\u5355",
+  "\u5386\u53f2\u8fd0\u884c\u72b6\u6001_column",
+  "\u5386\u53f2\u540c\u6b65\u72b6\u6001",
+  "\u5386\u53f2\u5df2\u5b8c\u6574\u540c\u6b65\u5230",
+  "\u5386\u53f2\u540c\u6b65\u8fdb\u5ea6",
+  "\u5386\u53f2\u65b0\u589e\u6570\u91cf",
+  "\u5386\u53f2\u66f4\u65b0\u6570\u91cf",
+  "\u5386\u53f2\u540c\u6b65\u6700\u8fd1\u9519\u8bef",
+  "\u81ea\u52a8\u540c\u6b65\u6700\u65b0\u8ba2\u5355_section",
+  "\u5f00\u542f\u81ea\u52a8\u540c\u6b65",
+  "\u6700\u65b0\u8ba2\u5355\u540c\u6b65\u95f4\u9694\u5206\u949f",
+  "\u6700\u65b0\u8ba2\u5355\u56de\u770b\u5206\u949f",
+  "\u7acb\u5373\u540c\u6b65\u6700\u65b0\u8ba2\u5355",
+  "\u81ea\u52a8\u540c\u6b65\u8fd0\u884c\u72b6\u6001_column",
+  "\u81ea\u52a8\u540c\u6b65\u65ad\u70b9",
+  "\u4e0a\u6b21\u81ea\u52a8\u540c\u6b65\u65f6\u95f4",
+  "\u4e0b\u6b21\u81ea\u52a8\u540c\u6b65\u65f6\u95f4",
+  "\u4e0a\u6b21\u81ea\u52a8\u540c\u6b65\u7ed3\u679c",
+  "recheck_7_section",
+  "\u542f\u75287\u5929\u6838\u5bf9",
+  "7\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+  "recheck_7_column",
+  "7\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+  "7\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+  "recheck_14_section",
+  "\u542f\u752814\u5929\u6838\u5bf9",
+  "14\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+  "recheck_14_column",
+  "14\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+  "14\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+  "recheck_30_section",
+  "\u542f\u752830\u5929\u6838\u5bf9",
+  "30\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+  "recheck_30_column",
+  "30\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+  "30\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+  "recheck_90_section",
+  "\u542f\u752890\u5929\u6838\u5bf9",
+  "90\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+  "recheck_90_column",
+  "90\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+  "90\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+  "recheck_180_section",
+  "\u542f\u7528180\u5929\u6838\u5bf9",
+  "180\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+  "recheck_180_column",
+  "180\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+  "180\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+  "\u8fd0\u884c\u4fdd\u62a4_section",
+  "\u5f53\u524d\u4efb\u52a1\u72b6\u6001",
+  "\u5f53\u524d\u6267\u884c\u7c7b\u578b",
+  "\u5f53\u524d\u4efb\u52a1\u5f00\u59cb\u65f6\u95f4",
+  "\u6700\u8fd1\u9519\u8bef"
  ],
  "fields": [
   {
@@ -56,6 +118,374 @@
    "in_list_view": 1,
    "label": "Performance Client ID",
    "reqd": 1
+  },
+  {
+   "fieldname": "\u63a5\u53e3\u914d\u7f6e_section",
+   "fieldtype": "Section Break",
+   "label": "API \u63a5\u53e3\u914d\u7f6e"
+  },
+  {
+   "fieldname": "\u63a5\u53e3\u914d\u7f6e_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "\u603b\u5f00\u5173\u3002\u5173\u95ed\u540e\u4e0d\u8fd0\u884c\u5386\u53f2\u8ba2\u5355\u4e0e\u6700\u65b0\u8ba2\u5355\u81ea\u52a8\u540c\u6b65\u3002",
+   "fieldname": "\u5f00\u542f\u8ba2\u5355\u540c\u6b65",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "\u5f00\u542f\u8ba2\u5355\u540c\u6b65"
+  },
+  {
+   "default": "1",
+   "description": "\u7528\u4e8e FBS\u3001realFBS \u53ca FBP \u7b49\u8de8\u5883\u5c65\u7ea6\u8ba2\u5355\u3002",
+   "fieldname": "\u6293\u53d6fbs\u53ca\u8de8\u5883\u8ba2\u5355",
+   "fieldtype": "Check",
+   "label": "\u6293\u53d6 FBS \u53ca\u8de8\u5883\u8ba2\u5355"
+  },
+  {
+   "default": "0",
+   "description": "\u4ec5\u5e97\u94fa\u5df2\u5f00\u901a Ozon \u81ea\u8425\u4ed3 FBO \u65f6\u542f\u7528\u3002",
+   "fieldname": "\u6293\u53d6fbo\u8ba2\u5355",
+   "fieldtype": "Check",
+   "label": "\u6293\u53d6 FBO \u8ba2\u5355"
+  },
+  {
+   "fieldname": "\u8ba2\u5355\u6293\u53d6\u8303\u56f4_section",
+   "fieldtype": "Section Break",
+   "label": "\u8ba2\u5355\u6293\u53d6\u8303\u56f4"
+  },
+  {
+   "description": "\u6309 ERPNext \u7cfb\u7edf\u65f6\u533a\u586b\u5199\uff0c\u8bf7\u6c42 Ozon \u65f6\u7531\u7a0b\u5e8f\u8f6c\u6362\u4e3a UTC\u3002",
+   "fieldname": "\u5386\u53f2\u540c\u6b65\u5f00\u59cb\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "\u5386\u53f2\u540c\u6b65\u5f00\u59cb\u65f6\u95f4"
+  },
+  {
+   "description": "\u5386\u53f2\u8ba2\u5355\u76ee\u6807\u7ed3\u675f\u8fb9\u754c\uff0c\u5efa\u8bae\u4e0d\u665a\u4e8e\u5f53\u524d\u65f6\u95f4\u3002",
+   "fieldname": "\u5386\u53f2\u540c\u6b65\u7ed3\u675f\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "\u5386\u53f2\u540c\u6b65\u7ed3\u675f\u65f6\u95f4"
+  },
+  {
+   "fieldname": "\u540c\u6b65\u5386\u53f2\u8ba2\u5355",
+   "fieldtype": "Button",
+   "label": "\u540c\u6b65\u5386\u53f2\u8ba2\u5355"
+  },
+  {
+   "fieldname": "\u5386\u53f2\u8ba2\u5355\u540c\u6b65_section",
+   "fieldtype": "Section Break",
+   "label": "\u5386\u53f2\u8ba2\u5355\u540c\u6b65"
+  },
+  {
+   "fieldname": "\u5386\u53f2\u8fd0\u884c\u72b6\u6001_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "\u5386\u53f2\u540c\u6b65\u72b6\u6001",
+   "fieldtype": "Select",
+   "label": "\u5386\u53f2\u540c\u6b65\u72b6\u6001",
+   "options": "\u672a\u5f00\u59cb\n\u7b49\u5f85\u6267\u884c\n\u8fd0\u884c\u4e2d\n\u5df2\u6682\u505c\n\u5df2\u5b8c\u6210\n\u5931\u8d25",
+   "read_only": 1
+  },
+  {
+   "description": "\u53ea\u6709\u5f53\u524d\u65f6\u95f4\u7a97\u53e3\u5168\u90e8\u5206\u9875\u6210\u529f\u540e\u624d\u80fd\u63a8\u8fdb\u3002",
+   "fieldname": "\u5386\u53f2\u5df2\u5b8c\u6574\u540c\u6b65\u5230",
+   "fieldtype": "Datetime",
+   "label": "\u5386\u53f2\u5df2\u5b8c\u6574\u540c\u6b65\u5230",
+   "read_only": 1
+  },
+  {
+   "fieldname": "\u5386\u53f2\u540c\u6b65\u8fdb\u5ea6",
+   "fieldtype": "Percent",
+   "label": "\u5386\u53f2\u540c\u6b65\u8fdb\u5ea6",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "\u5386\u53f2\u65b0\u589e\u6570\u91cf",
+   "fieldtype": "Int",
+   "label": "\u5386\u53f2\u65b0\u589e\u6570\u91cf",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "\u5386\u53f2\u66f4\u65b0\u6570\u91cf",
+   "fieldtype": "Int",
+   "label": "\u5386\u53f2\u66f4\u65b0\u6570\u91cf",
+   "read_only": 1
+  },
+  {
+   "fieldname": "\u5386\u53f2\u540c\u6b65\u6700\u8fd1\u9519\u8bef",
+   "fieldtype": "Small Text",
+   "label": "\u5386\u53f2\u540c\u6b65\u6700\u8fd1\u9519\u8bef",
+   "read_only": 1
+  },
+  {
+   "fieldname": "\u81ea\u52a8\u540c\u6b65\u6700\u65b0\u8ba2\u5355_section",
+   "fieldtype": "Section Break",
+   "label": "\u81ea\u52a8\u540c\u6b65\u6700\u65b0\u8ba2\u5355"
+  },
+  {
+   "default": "0",
+   "fieldname": "\u5f00\u542f\u81ea\u52a8\u540c\u6b65",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "\u5f00\u542f\u81ea\u52a8\u540c\u6b65"
+  },
+  {
+   "default": "15",
+   "description": "\u5b9a\u65f6\u68c0\u67e5\u6700\u65b0\u8ba2\u5355\u7684\u95f4\u9694\uff0c\u9ed8\u8ba4 15 \u5206\u949f\u3002",
+   "fieldname": "\u6700\u65b0\u8ba2\u5355\u540c\u6b65\u95f4\u9694\u5206\u949f",
+   "fieldtype": "Int",
+   "label": "\u6700\u65b0\u8ba2\u5355\u540c\u6b65\u95f4\u9694\u5206\u949f"
+  },
+  {
+   "default": "120",
+   "description": "\u6bcf\u6b21\u5411\u524d\u91cd\u53e0\u6293\u53d6\u7684\u65f6\u95f4\uff0c\u7528\u4e8e\u9632\u6b62\u8fdf\u5ef6\u8ba2\u5355\u548c\u8fb9\u754c\u6f0f\u5355\u3002",
+   "fieldname": "\u6700\u65b0\u8ba2\u5355\u56de\u770b\u5206\u949f",
+   "fieldtype": "Int",
+   "label": "\u6700\u65b0\u8ba2\u5355\u56de\u770b\u5206\u949f"
+  },
+  {
+   "fieldname": "\u7acb\u5373\u540c\u6b65\u6700\u65b0\u8ba2\u5355",
+   "fieldtype": "Button",
+   "label": "\u7acb\u5373\u540c\u6b65\u6700\u65b0\u8ba2\u5355"
+  },
+  {
+   "fieldname": "\u81ea\u52a8\u540c\u6b65\u8fd0\u884c\u72b6\u6001_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "\u5168\u90e8\u5206\u9875\u6210\u529f\u540e\u624d\u7531\u7a0b\u5e8f\u66f4\u65b0\u3002",
+   "fieldname": "\u81ea\u52a8\u540c\u6b65\u65ad\u70b9",
+   "fieldtype": "Datetime",
+   "label": "\u81ea\u52a8\u540c\u6b65\u65ad\u70b9",
+   "read_only": 1
+  },
+  {
+   "fieldname": "\u4e0a\u6b21\u81ea\u52a8\u540c\u6b65\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "\u4e0a\u6b21\u81ea\u52a8\u540c\u6b65\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "\u4e0b\u6b21\u81ea\u52a8\u540c\u6b65\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "\u4e0b\u6b21\u81ea\u52a8\u540c\u6b65\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "\u4e0a\u6b21\u81ea\u52a8\u540c\u6b65\u7ed3\u679c",
+   "fieldtype": "Small Text",
+   "label": "\u4e0a\u6b21\u81ea\u52a8\u540c\u6b65\u7ed3\u679c",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_7_section",
+   "fieldtype": "Section Break",
+   "label": "\u6700\u8fd17\u5929\u8ba2\u5355\u6838\u5bf9"
+  },
+  {
+   "default": "1",
+   "fieldname": "\u542f\u75287\u5929\u6838\u5bf9",
+   "fieldtype": "Check",
+   "label": "\u542f\u75287\u5929\u6838\u5bf9"
+  },
+  {
+   "default": "1",
+   "description": "\u6bcf1\u5929\u91cd\u65b0\u6293\u53d6\u6700\u8fd17\u5929\u8ba2\u5355\uff0c\u9ad8\u9891\u66f4\u65b0\u53d6\u6d88\u3001\u53d1\u8d27\u548c\u7b7e\u6536\u72b6\u6001\u3002",
+   "fieldname": "7\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+   "fieldtype": "Int",
+   "label": "7\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "recheck_7_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "7\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "7\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "7\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "7\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_14_section",
+   "fieldtype": "Section Break",
+   "label": "\u6700\u8fd114\u5929\u8ba2\u5355\u6838\u5bf9"
+  },
+  {
+   "default": "1",
+   "fieldname": "\u542f\u752814\u5929\u6838\u5bf9",
+   "fieldtype": "Check",
+   "label": "\u542f\u752814\u5929\u6838\u5bf9"
+  },
+  {
+   "default": "7",
+   "description": "\u6bcf7\u5929\u91cd\u65b0\u6293\u53d6\u6700\u8fd114\u5929\u8ba2\u5355\uff0c\u8865\u5145\u7a0d\u665a\u53d1\u751f\u7684\u72b6\u6001\u53d8\u5316\u3002",
+   "fieldname": "14\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+   "fieldtype": "Int",
+   "label": "14\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "recheck_14_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "14\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "14\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "14\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "14\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_30_section",
+   "fieldtype": "Section Break",
+   "label": "\u6700\u8fd130\u5929\u8ba2\u5355\u6838\u5bf9"
+  },
+  {
+   "default": "1",
+   "fieldname": "\u542f\u752830\u5929\u6838\u5bf9",
+   "fieldtype": "Check",
+   "label": "\u542f\u752830\u5929\u6838\u5bf9"
+  },
+  {
+   "default": "14",
+   "description": "\u6bcf14\u5929\u91cd\u65b0\u6293\u53d6\u6700\u8fd130\u5929\u8ba2\u5355\uff0c\u68c0\u67e5\u8f83\u665a\u7684\u53d6\u6d88\u3001\u9000\u8d27\u7b49\u53d8\u5316\u3002",
+   "fieldname": "30\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+   "fieldtype": "Int",
+   "label": "30\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "recheck_30_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "30\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "30\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "30\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "30\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_90_section",
+   "fieldtype": "Section Break",
+   "label": "\u6700\u8fd190\u5929\u8ba2\u5355\u6838\u5bf9"
+  },
+  {
+   "default": "1",
+   "fieldname": "\u542f\u752890\u5929\u6838\u5bf9",
+   "fieldtype": "Check",
+   "label": "\u542f\u752890\u5929\u6838\u5bf9"
+  },
+  {
+   "default": "30",
+   "description": "\u6bcf30\u5929\u91cd\u65b0\u6293\u53d6\u6700\u8fd190\u5929\u8ba2\u5355\uff0c\u5bf9\u8f83\u8001\u8ba2\u5355\u8fdb\u884c\u5468\u671f\u590d\u6838\u3002",
+   "fieldname": "90\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+   "fieldtype": "Int",
+   "label": "90\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "recheck_90_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "90\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "90\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "90\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "90\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_180_section",
+   "fieldtype": "Section Break",
+   "label": "\u6700\u8fd1180\u5929\u8ba2\u5355\u6838\u5bf9"
+  },
+  {
+   "default": "1",
+   "fieldname": "\u542f\u7528180\u5929\u6838\u5bf9",
+   "fieldtype": "Check",
+   "label": "\u542f\u7528180\u5929\u6838\u5bf9"
+  },
+  {
+   "default": "60",
+   "description": "\u6bcf60\u5929\u91cd\u65b0\u6293\u53d6\u6700\u8fd1180\u5929\u8ba2\u5355\uff0c\u4f5c\u4e3a\u957f\u671f\u72b6\u6001\u53d8\u5316\u7684\u515c\u5e95\u68c0\u67e5\u3002",
+   "fieldname": "180\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+   "fieldtype": "Int",
+   "label": "180\u5929\u6838\u5bf9\u95f4\u9694\u5929\u6570",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "recheck_180_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "180\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "180\u5929\u6700\u540e\u6838\u5bf9\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "180\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "180\u5929\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "\u8fd0\u884c\u4fdd\u62a4_section",
+   "fieldtype": "Section Break",
+   "label": "\u8fd0\u884c\u4fdd\u62a4\u4e0e\u9519\u8bef"
+  },
+  {
+   "fieldname": "\u5f53\u524d\u4efb\u52a1\u72b6\u6001",
+   "fieldtype": "Select",
+   "label": "\u5f53\u524d\u4efb\u52a1\u72b6\u6001",
+   "options": "\u7a7a\u95f2\n\u7b49\u5f85\u6267\u884c\n\u8fd0\u884c\u4e2d\n\u6210\u529f\n\u5931\u8d25",
+   "read_only": 1
+  },
+  {
+   "fieldname": "\u5f53\u524d\u6267\u884c\u7c7b\u578b",
+   "fieldtype": "Select",
+   "label": "\u5f53\u524d\u6267\u884c\u7c7b\u578b",
+   "options": "\n\u5386\u53f2\u8ba2\u5355\n\u6700\u65b0\u8ba2\u5355\u589e\u91cf\n7\u5929\u6838\u5bf9\n14\u5929\u6838\u5bf9\n30\u5929\u6838\u5bf9\n90\u5929\u6838\u5bf9\n180\u5929\u6838\u5bf9",
+   "read_only": 1
+  },
+  {
+   "fieldname": "\u5f53\u524d\u4efb\u52a1\u5f00\u59cb\u65f6\u95f4",
+   "fieldtype": "Datetime",
+   "label": "\u5f53\u524d\u4efb\u52a1\u5f00\u59cb\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "\u6700\u8fd1\u9519\u8bef",
+   "fieldtype": "Small Text",
+   "label": "\u6700\u8fd1\u9519\u8bef",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
