@@ -87,6 +87,7 @@ Open Frappe Builder,打开 Frappe 构建器
 Enable the data store to store database tables into a duckdb database for faster & cross-database queries.,启用后，系统会将表同步至 DuckDB，极大提升报表查询性能并支持跨数据库联合查询。
 Row Limit,行数限制
 Memory Limit,内存限制
+ozon order storage,Ozon 订单
 "Set the maximum number of rows per table that will be imported into the data store. Default is 10,00,000","设定每次导入到数据存储中的表的最大行数。默认值为 10,000,000。"
 "Set the maximum memory usage while importing tables into the data store. Default is 512MB","在将表导入数据存储时设定最大内存使用量。默认值为 512MB 。"
 Apply User Permissions,应用用户权限
