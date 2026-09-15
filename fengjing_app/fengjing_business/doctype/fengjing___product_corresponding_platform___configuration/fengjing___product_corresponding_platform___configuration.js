@@ -484,3 +484,59 @@ frappe.ui.form.on('Amazon API configuration', {
     }
 });
 
+// 测试 Ozon Seller API 与 Performance API
+frappe.ui.form.on('Ozon Store API Sub-table', {
+    测试api: function (frm, cdt, cdn) {
+        const row = locals[cdt] && locals[cdt][cdn];
+        if (!row) {
+            frappe.msgprint(__('找不到当前 Ozon API 配置行。'));
+            return;
+        }
+
+        frappe.call({
+            method: '测试ozon_api',
+            doc: frm.doc,
+            args: {
+                account_name: row.name
+            },
+            freeze: true,
+            freeze_message: __('正在测试 Ozon Seller API 与 Performance API...'),
+            callback: function (r) {
+                const result = r.message;
+                if (!result) {
+                    frappe.msgprint({
+                        title: __('Ozon API 测试失败'),
+                        indicator: 'red',
+                        message: __('服务器没有返回测试结果。')
+                    });
+                    return;
+                }
+
+                const indicator = result.status === 'success'
+                    ? 'green'
+                    : result.status === 'partial'
+                        ? 'orange'
+                        : 'red';
+                const title = result.status === 'success'
+                    ? __('Ozon API 测试成功')
+                    : result.status === 'partial'
+                        ? __('Ozon API 部分可用')
+                        : __('Ozon API 测试失败');
+                const details = (result.results || []).map((item) => {
+                    const icon = item.success ? '✅' : '❌';
+                    return `<div style="margin: 6px 0;">
+                        ${icon} <strong>${frappe.utils.escape_html(item.name || '')}</strong>：
+                        ${frappe.utils.escape_html(item.message || '')}
+                    </div>`;
+                }).join('');
+
+                frappe.msgprint({
+                    title: title,
+                    indicator: indicator,
+                    message: `${frappe.utils.escape_html(result.message || '')}${details}`
+                });
+            }
+        });
+    }
+});
+

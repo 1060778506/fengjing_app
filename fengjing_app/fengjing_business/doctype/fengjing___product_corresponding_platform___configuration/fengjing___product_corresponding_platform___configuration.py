@@ -400,6 +400,161 @@ class FengjingProductCorrespondingPlatformConfiguration(Document):
         except Exception as e:
             return {"status": "error", "message": f"连接错误: {str(e)}"}
 
+    @frappe.whitelist()
+    def 测试ozon_api(self, account_name=None):
+        """测试当前 Ozon 子表行的 Seller API 与 Performance API 凭证。"""
+        子表行 = next(
+            (
+                row
+                for row in (self.get("table_wckx") or [])
+                if row.name == account_name
+            ),
+            None,
+        )
+        if not 子表行:
+            return {"status": "error", "message": "找不到对应的 Ozon API 配置行。"}
+
+        ozon_id = str(子表行.get("ozon_id") or "").strip()
+        ozon_秘钥 = str(子表行.get("ozon_秘钥") or "").strip()
+        performance客户端id = str(
+            子表行.get("performance_client_id") or ""
+        ).strip()
+        performance_秘钥 = str(
+            子表行.get("performance_api_秘钥") or ""
+        ).strip()
+
+        缺少字段 = [
+            字段名
+            for 字段名, 字段值 in (
+                ("Ozon ID", ozon_id),
+                ("Ozon 秘钥", ozon_秘钥),
+                ("Performance Client ID", performance客户端id),
+                ("Performance API 秘钥", performance_秘钥),
+            )
+            if not 字段值
+        ]
+        if 缺少字段:
+            return {
+                "status": "error",
+                "message": f"无法测试，缺少：{'、'.join(缺少字段)}",
+            }
+
+        def 响应错误摘要(响应):
+            try:
+                数据 = 响应.json()
+                内容 = (
+                    数据.get("message")
+                    or 数据.get("error_description")
+                    or 数据.get("error")
+                    or 数据
+                )
+                if isinstance(内容, (dict, list)):
+                    内容 = json.dumps(内容, ensure_ascii=False)
+                return str(内容)[:500]
+            except (ValueError, TypeError, AttributeError):
+                return str(响应.text or "无响应内容")[:500]
+
+        测试结果 = []
+
+        # Seller API：验证 Client-Id 与 Api-Key，并读取最多一个商品。
+        try:
+            seller响应 = requests.post(
+                "https://api-seller.ozon.ru/v3/product/list",
+                headers={
+                    "Client-Id": ozon_id,
+                    "Api-Key": ozon_秘钥,
+                    "Content-Type": "application/json",
+                },
+                json={"filter": {"visibility": "ALL"}, "limit": 1},
+                timeout=30,
+            )
+            if seller响应.ok:
+                测试结果.append(
+                    {
+                        "name": "Seller API",
+                        "success": True,
+                        "message": "连接成功，商品接口可用。",
+                    }
+                )
+            else:
+                测试结果.append(
+                    {
+                        "name": "Seller API",
+                        "success": False,
+                        "message": (
+                            f"HTTP {seller响应.status_code}："
+                            f"{响应错误摘要(seller响应)}"
+                        ),
+                    }
+                )
+        except requests.RequestException as exc:
+            测试结果.append(
+                {
+                    "name": "Seller API",
+                    "success": False,
+                    "message": f"网络连接失败：{exc}",
+                }
+            )
+
+        try:
+            performance响应 = requests.post(
+                "https://api-performance.ozon.ru/api/client/token",
+                headers={
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "client_id": performance客户端id,
+                    "client_secret": performance_秘钥,
+                    "grant_type": "client_credentials",
+                },
+                timeout=30,
+            )
+            performance数据 = (
+                performance响应.json() if performance响应.content else {}
+            )
+            if performance响应.ok and performance数据.get("access_token"):
+                测试结果.append(
+                    {
+                        "name": "Performance API",
+                        "success": True,
+                        "message": "认证成功，已取得临时访问令牌。",
+                    }
+                )
+            else:
+                测试结果.append(
+                    {
+                        "name": "Performance API",
+                        "success": False,
+                        "message": (
+                            f"HTTP {performance响应.status_code}："
+                            f"{响应错误摘要(performance响应)}"
+                        ),
+                    }
+                )
+        except (requests.RequestException, ValueError) as exc:
+            测试结果.append(
+                {
+                    "name": "Performance API",
+                    "success": False,
+                    "message": f"连接或响应解析失败：{exc}",
+                }
+            )
+
+        成功数量 = sum(1 for 结果 in 测试结果 if 结果["success"])
+        状态 = (
+            "success"
+            if 成功数量 == len(测试结果)
+            else "partial"
+            if 成功数量
+            else "error"
+        )
+        return {
+            "status": 状态,
+            "results": 测试结果,
+            "message": f"已完成测试：{成功数量}/{len(测试结果)} 项成功。",
+        }
+
 
 订单配置子表 = "Amazon retrieves order configuration - sub-table"
 订单配置主表 = "Fengjing - Product Corresponding Platform - Configuration"
