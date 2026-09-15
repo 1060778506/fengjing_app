@@ -7,12 +7,12 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "identity_section", "order_line_key", "store", "fulfillment_type", "posting_number", "order_id", "identity_column", "order_number", "product_id", "sku", "offer_id",
+  "identity_section", "order_line_key", "store", "ozon_id", "fulfillment_type", "posting_number", "parent_posting_number", "order_id", "identity_column", "order_number", "product_id", "sku", "offer_id", "is_multibox", "multi_box_qty",
   "product_section", "product_name", "corresponding_item", "product_column", "corresponding_item_name", "corresponding_item_image",
   "status_section", "ozon_status", "ozon_substatus", "cancellation_reason", "status_column", "is_cancelled", "is_express", "sync_type",
   "time_section", "order_created_at", "in_process_at", "source_updated_at", "time_column", "shipment_date", "delivering_date", "delivery_date",
   "amount_section", "currency_code", "unit_price", "line_amount", "amount_column", "quantity", "commission_amount", "payout_amount",
-  "delivery_section", "warehouse_id", "warehouse_name", "delivery_method_id", "delivery_column", "delivery_method_name", "tracking_number", "shipping_country_code", "shipping_region", "shipping_city", "shipping_postal_code",
+  "delivery_section", "warehouse_id", "warehouse_name", "delivery_method_id", "delivery_type", "delivery_column", "delivery_method_name", "tracking_number", "destination_place_id", "destination_place_name", "shipping_country_code", "shipping_region", "shipping_city", "shipping_postal_code",
   "sync_section", "first_fetched_at", "fetched_at", "raw_json_hash", "sync_column", "sync_status", "last_error",
   "raw_section", "raw_json", "raw_json_history"
  ],
@@ -20,14 +20,18 @@
   {"fieldname":"identity_section","fieldtype":"Section Break","label":"订单与商品标识"},
   {"description":"程序生成：店铺 + 履约方式 + 发货编号 + SKU/商品ID，用于防止同一商品明细重复写入。","fieldname":"order_line_key","fieldtype":"Data","hidden":1,"label":"订单商品唯一键","read_only":1,"unique":1},
   {"fieldname":"store","fieldtype":"Link","in_list_view":1,"label":"店铺","options":"Cost Center","read_only":1,"search_index":1},
+  {"description":"保存抓取时使用的Ozon Client-Id快照，即使以后调整店铺配置仍能追溯数据来源。","fieldname":"ozon_id","fieldtype":"Data","label":"Ozon ID","read_only":1,"search_index":1},
   {"fieldname":"fulfillment_type","fieldtype":"Select","in_list_view":1,"label":"履约方式","options":"\nFBO\nFBP\nFBS\nrealFBS\n未知","read_only":1,"search_index":1},
   {"fieldname":"posting_number","fieldtype":"Data","in_list_view":1,"label":"发货编号","read_only":1,"search_index":1},
+  {"fieldname":"parent_posting_number","fieldtype":"Data","label":"父发货编号","read_only":1,"search_index":1},
   {"fieldname":"order_id","fieldtype":"Data","label":"Ozon订单ID","read_only":1,"search_index":1},
   {"fieldname":"identity_column","fieldtype":"Column Break"},
   {"fieldname":"order_number","fieldtype":"Data","in_list_view":1,"label":"Ozon订单号","read_only":1,"search_index":1},
   {"fieldname":"product_id","fieldtype":"Data","label":"Ozon商品ID","read_only":1,"search_index":1},
   {"fieldname":"sku","fieldtype":"Data","in_list_view":1,"label":"Ozon SKU","read_only":1,"search_index":1},
   {"fieldname":"offer_id","fieldtype":"Data","label":"商家货号","read_only":1,"search_index":1},
+  {"fieldname":"is_multibox","fieldtype":"Check","label":"多箱发货","read_only":1},
+  {"fieldname":"multi_box_qty","fieldtype":"Int","label":"箱数","read_only":1},
 
   {"fieldname":"product_section","fieldtype":"Section Break","label":"商品与ERPNext物料"},
   {"fieldname":"product_name","fieldtype":"Small Text","label":"Ozon商品名称","read_only":1},
@@ -67,9 +71,12 @@
   {"fieldname":"warehouse_id","fieldtype":"Data","label":"Ozon仓库ID","read_only":1,"search_index":1},
   {"fieldname":"warehouse_name","fieldtype":"Data","label":"Ozon仓库名称","read_only":1},
   {"fieldname":"delivery_method_id","fieldtype":"Data","label":"配送方式ID","read_only":1},
+  {"fieldname":"delivery_type","fieldtype":"Data","label":"配送类型","read_only":1},
   {"fieldname":"delivery_column","fieldtype":"Column Break"},
   {"fieldname":"delivery_method_name","fieldtype":"Data","label":"配送方式","read_only":1},
   {"fieldname":"tracking_number","fieldtype":"Data","label":"物流跟踪号","read_only":1,"search_index":1},
+  {"fieldname":"destination_place_id","fieldtype":"Data","label":"目的地ID","read_only":1},
+  {"fieldname":"destination_place_name","fieldtype":"Data","label":"目的地名称","read_only":1},
   {"fieldname":"shipping_country_code","fieldtype":"Data","label":"收货国家代码","read_only":1,"search_index":1},
   {"fieldname":"shipping_region","fieldtype":"Data","label":"收货州／地区","read_only":1},
   {"fieldname":"shipping_city","fieldtype":"Data","label":"收货城市","read_only":1},
@@ -103,5 +110,5 @@
  "sort_field": "order_created_at",
  "sort_order": "DESC",
  "states": [],
- "track_changes": 1
+ "track_changes": 0
 }

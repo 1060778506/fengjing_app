@@ -46,35 +46,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "\u4e9a\u9a6c\u900a\u6570\u636e\u5206\u6790",
-   "link_count": 2,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "\u4e9a\u9a6c\u900a\u5546\u54c1\u6392\u540d",
-   "link_count": 0,
-   "link_to": "amazon-rank-trend",
-   "link_type": "Page",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "\u4e9a\u9a6c\u900a\u8ba2\u5355\u6982\u51b5",
-   "link_count": 0,
-   "link_to": "amazon-order-display",
-   "link_type": "Page",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "\u6570\u636e",
    "link_count": 3,
    "link_type": "DocType",
@@ -115,7 +86,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "\u6570\u636e\u5206\u6790",
-   "link_count": 2,
+   "link_count": 3,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -139,9 +110,19 @@
    "link_type": "Page",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Ozon\u8ba2\u5355\u6982\u51b5",
+   "link_count": 0,
+   "link_to": "ozon-platform-overvi",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-09-15 20:25:10.699884",
+ "modified": "2026-09-15 20:45:38.243447",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "\u4e30\u5883\u4e1a\u52a1APP",
