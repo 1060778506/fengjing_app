@@ -145,3 +145,172 @@
 .ozfc.fc-table-mode .fc-fixed-item .fc-checks{flex-wrap:wrap;padding:0 12px 12px}
 .ozfc.fc-table-mode .fc-fixed-item footer{display:none}
 .ozfc.fc-table-mode .fc-fixed-sale .fc-price-result strong{font-size:28px}
+.ozfc .fc-cost-summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ozfc .fc-summary-margin{grid-column:1}
+.ozfc .fc-cost-summary .fc-api-commission{grid-column:2/span 2}
+.ozfc .fc-cost-summary span{padding:10px;font-size:10px}
+.ozfc .fc-cost-summary b{font-size:13px;margin-top:5px;overflow-wrap:anywhere}
+.ozfc .fc-cost-steps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:0;margin-top:12px}
+.ozfc .fc-cost-steps li{border:1px solid #e8eaf5;border-radius:8px;padding:9px;background:#fafbff}
+.ozfc .fc-cost-steps small{margin-bottom:4px}
+.ozfc .fc-cost-steps b{font-size:11px;line-height:1.6}
+.ozfc .fc-manual-note{padding:0 16px 12px}
+.ozfc .fc-manual-note label,.ozfc .fc-manual-prices label{display:block;font-size:10px;color:#7588a6}
+.ozfc .fc-manual-note input,.ozfc .fc-manual-prices input{display:block;width:100%;padding:7px;border:1px solid #dce4f4;border-radius:7px;color:#344e74;background:#fff;margin-top:4px}
+.ozfc .fc-manual-note small{font-size:9px;color:#8d9bb2}
+.ozfc .fc-manual-prices{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.ozfc.fc-table-mode .fc-editor-row-title{padding:8px 14px;font-size:12px}
+.ozfc.fc-table-mode .fc-editor-row .fc-drag{padding:8px 12px}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-content{padding:10px}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-steps{grid-template-columns:none;grid-template-rows:repeat(2,minmax(90px,auto));grid-auto-columns:210px;gap:8px;margin-top:10px}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-steps li{padding:9px}
+.ozfc.fc-table-mode .fc-editor-row .fc-best{padding:10px 12px}
+.ozfc.fc-table-mode .fc-editor-row .fc-best strong{font-size:24px;margin:3px 0}
+.ozfc.fc-table-mode .fc-editor-row .fc-source{font-size:9px;line-height:1.5}
+.ozfc.fc-table-mode .fc-fixed-item .fc-product{flex-direction:row;padding:10px;gap:8px}
+.ozfc.fc-table-mode .fc-fixed-item .fc-product img{width:46px;height:46px}
+.ozfc.fc-table-mode .fc-fixed-item .fc-product h3{font-size:11px;line-height:1.5}
+.ozfc.fc-table-mode .fc-fixed-item .fc-copy-item{font-size:9px}
+.ozfc.fc-table-mode .fc-fixed-item .fc-item-meta{padding:0 10px 8px}
+.ozfc.fc-table-mode .fc-fixed-item .fc-inputs{gap:6px;padding:0 10px 8px}
+.ozfc.fc-table-mode .fc-fixed-item .fc-inputs input{padding:5px;font-size:11px}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-channel{margin-bottom:7px}
+.ozfc .fc-card>.fc-drag{overflow:hidden;border-radius:17px 17px 0 0;gap:0;border:0}
+.ozfc .fc-card>.fc-drag>div{align-self:stretch;margin:0;border-radius:0}
+.ozfc .fc-card>.fc-drag>div:last-child{border-left:1px solid #dce3f2}
+.ozfc .fc-cost-card{width:1000px}
+.ozfc .fc-cost-layout{display:grid;grid-template-columns:480px 1fr}
+.ozfc .fc-calculation-pane{padding:16px;background:#f8faff;border-right:1px solid #e0e6f3;min-width:0}
+.ozfc .fc-calculation-pane h4{font-size:13px;color:#506285;margin:0 0 12px}
+.ozfc .fc-cost-summary input,.ozfc .fc-node-fees input[type=number]{width:100%;min-width:0;padding:7px;border:1px solid #dce5f3;border-radius:7px;color:#263d60;background:white;margin-top:6px}
+.ozfc .fc-node-fees{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
+.ozfc .fc-node-fees label{padding:10px;border:1px solid #e5eaf4;border-radius:10px;font-size:11px;color:#49607e}
+.ozfc .fc-node-fees label>div{display:flex;align-items:center;gap:6px}
+.ozfc .fc-node-fees small{white-space:nowrap}
+.ozfc .fc-cost-summary button[data-restore-sale]{float:right;padding:2px 5px;border-radius:6px;font-size:10px}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-card{width:auto}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-layout{grid-template-columns:minmax(480px,1fr) 520px}
+.ozfc.fc-table-mode .fc-editor-row .fc-calculation-pane .fc-cost-steps{grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none;width:auto}
+.ozfc .fc-results{flex:none;overflow-y:auto}
+.ozfc .fc-quotes{height:auto;max-height:none}
+.ozfc .fc-card>.fc-drag>div:hover{background:rgba(50,69,105,.16)}
+.ozfc .fc-item .fc-product img{cursor:zoom-in}
+.ozfc .fc-full-image-card{position:absolute;width:440px;max-width:calc(100% - 16px);height:500px;max-height:calc(100% - 16px);z-index:50;display:flex;flex-direction:column;box-shadow:0 16px 50px #1f35503d;overflow:hidden}
+.ozfc .fc-full-image-card header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:#edf3ff;color:#365580;font-size:12px}
+.ozfc .fc-full-image-card header span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ozfc .fc-full-image-card header button{flex-shrink:0;border:0;border-radius:8px;background:#fff;color:#466180;font-size:22px;padding:0 9px}
+.ozfc .fc-full-image-card>div{padding:16px;flex:1;min-height:0;background:white}
+.ozfc .fc-full-image-card img{width:100%;height:100%;object-fit:contain}
+.ozfc .fc-cost-card{width:1500px}
+.ozfc .fc-cost-layout{grid-template-columns:980px 520px}
+.ozfc .fc-calculation-pane .fc-cost-steps,.ozfc.fc-table-mode .fc-editor-row .fc-calculation-pane .fc-cost-steps{display:flex;flex-direction:column;width:auto;gap:8px}
+.ozfc .fc-calculation-pane .fc-cost-steps b,.ozfc .fc-calculation-pane .fc-cost-steps em{white-space:nowrap;overflow-wrap:normal;word-break:normal}
+.ozfc .fc-calculation-pane{overflow-x:auto}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-layout{grid-template-columns:980px 520px}
+.fc-brief-dialog .modal-dialog{width:calc(100vw - 40px);max-width:2400px;margin:20px auto}
+.fc-brief-dialog .fc-brief-head,.fc-brief-dialog .fc-brief-row{grid-template-columns:240px 240px minmax(max-content,1fr) 150px;min-width:max-content}
+.fc-brief-dialog .fc-brief-formula{white-space:nowrap;overflow-wrap:normal}
+.ozfc .fc-cost-card{width:max-content}
+.ozfc .fc-cost-layout,.ozfc.fc-table-mode .fc-editor-row .fc-cost-layout{grid-template-columns:520px max-content}
+.ozfc .fc-cost-layout>.fc-cost-content{order:1;min-width:0;width:520px}
+.ozfc .fc-cost-layout>.fc-calculation-pane{order:2;width:max-content;overflow:visible;border-right:0;border-left:1px solid #e0e6f3}
+.ozfc .fc-node-fees{grid-template-columns:repeat(3,minmax(0,1fr))}
+.fc-brief-dialog .modal-dialog{width:max-content;max-width:calc(100vw - 40px)}
+.fc-brief-dialog .fc-brief-head,.fc-brief-dialog .fc-brief-row{grid-template-columns:210px 220px max-content 150px}
+.fc-brief-dialog .fc-brief{width:max-content;min-width:100%}
+.ozfc .fc-image-link{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:3}
+.ozfc .fc-world .fc-full-image-card{max-width:none;max-height:none}
+.ozfc .fc-world .fc-image-link{width:1px;height:1px}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-card{width:max-content}
+.ozfc .fc-row-content{grid-template-columns:360px max-content;min-width:0;width:max-content}
+.ozfc .fc-moneybar .fc-fee-reset{display:inline-flex;align-items:center;justify-content:center;padding:0;width:21px;height:21px;min-width:21px;border-radius:50%;border:1px solid #dbe3f4;background:#eef3ff;color:#647bc1;font-size:15px;line-height:1}
+.ozfc .fc-moneybar .fc-fee-reset:hover{background:#dfe8ff;color:#3458b6}
+.ozfc button.primary:hover,.ozfc button.primary:focus-visible{background:#4858df;color:#fff;border-color:#4858df;box-shadow:0 4px 12px #5263df33}
+.ozfc .fc-calculation-pane .fc-cost-steps li.fc-step-check{background:#eef8f7;border-color:#cce6e2}
+.ozfc .fc-calculation-pane .fc-step-check small,.ozfc .fc-calculation-pane .fc-step-check b{color:#267c76}
+.ozfc .fc-calculation-pane .fc-cost-steps li.fc-step-profit{background:#eff5ff;border-color:#cadbf7}
+.ozfc .fc-calculation-pane .fc-step-profit small,.ozfc .fc-calculation-pane .fc-step-profit b,.ozfc .fc-calculation-pane .fc-step-profit em{color:#436dab}
+/* Compact inputs support text/decimal fields without sacrificing caret position. */
+.ozfc .fc-cost-layout,.ozfc.fc-table-mode .fc-editor-row .fc-cost-layout{grid-template-columns:420px max-content}
+.ozfc .fc-cost-layout>.fc-cost-content{width:420px;padding:14px}
+.ozfc .fc-inputs input,.ozfc .fc-cost-summary input,.ozfc .fc-node-fees input[type=text],.ozfc .fc-node-fees input[type=number],.ozfc .fc-manual-prices input{box-sizing:border-box;width:100%;min-width:0;height:33px;padding:6px 9px;border:1px solid #dde5f0;border-radius:9px;background:#f8fafc;color:#334d70;font-size:12px;font-weight:500;box-shadow:inset 0 1px 2px #253f5d04;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
+.ozfc .fc-inputs input:focus,.ozfc .fc-cost-summary input:focus,.ozfc .fc-node-fees input:focus,.ozfc .fc-manual-prices input:focus{border-color:#94a8ec;background:#fff;box-shadow:0 0 0 3px #687deb12}
+.ozfc .fc-node-fees label{padding:8px;background:#f9fbfe;border-color:#e8edf5;border-radius:12px;font-size:10px}
+.ozfc .fc-node-fees input[type=text]{margin-top:5px}
+.ozfc .fc-node-fees input[type=checkbox]{accent-color:#7385d5}
+.ozfc .fc-cost-summary>span{border-radius:11px;background:#f6f8fd;padding:8px}
+.ozfc .fc-cost-summary input{margin-top:6px}
+.ozfc .fc-pricing-note{margin-top:10px;border:1px solid #e4eaf4;border-radius:10px;background:#fafbfe;color:#7384a0;font-size:10px}
+.ozfc .fc-pricing-note summary{padding:8px 10px;cursor:pointer;color:#637a9d;font-weight:500}
+.ozfc .fc-pricing-note>div{padding:0 10px 9px;line-height:1.7}
+.ozfc .fc-pricing-note p{margin:0 0 4px}
+.ozfc .fc-pricing-note ul{margin:0;padding-left:15px}
+.fc-original-image-preview{position:fixed;z-index:100000;width:min(560px,calc(100vw - 24px));height:min(560px,calc(100vh - 24px));padding:12px;border:1px solid #dde5f1;border-radius:16px;background:#fff;box-shadow:0 18px 64px #233b5740;pointer-events:none}
+.fc-original-image-preview img{width:100%;height:100%;object-fit:contain}
+.fc-brief-item img{cursor:zoom-in}
+/* Table-only layout: fields and formula steps extend sideways rather than down. */
+.ozfc.fc-table-mode .fc-editor-row{grid-template-columns:220px minmax(0,1fr) 190px}
+.ozfc.fc-table-mode .fc-editor-row-title{padding:5px 10px;font-size:11px}
+.ozfc.fc-table-mode .fc-editor-row .fc-drag{padding:5px 9px;font-size:10px;border-radius:0;min-height:24px}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-layout{grid-template-columns:650px max-content}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-layout>.fc-cost-content{width:650px;padding:8px;display:grid;grid-template-columns:240px 1fr;gap:6px 10px;align-content:start;align-items:start}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-channel{grid-column:1/-1;margin:0;font-size:10px;line-height:1.4}
+.ozfc.fc-table-mode .fc-editor-row .fc-ozon-price,.ozfc.fc-table-mode .fc-editor-row .fc-manual-prices{grid-column:1;grid-row:2;margin:0;padding:7px}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-summary{grid-column:2;grid-row:2;margin:0;gap:5px}
+.ozfc.fc-table-mode .fc-editor-row .fc-commission-label{grid-column:1;grid-row:3;margin:0;font-size:10px}
+.ozfc.fc-table-mode .fc-editor-row .fc-node-fees{grid-column:2;grid-row:3;margin:0;gap:5px}
+.ozfc.fc-table-mode .fc-editor-row .fc-node-fees label{padding:5px}
+.ozfc.fc-table-mode .fc-editor-row .fc-pricing-note{grid-column:1/-1;margin:0}
+.ozfc.fc-table-mode .fc-editor-row .fc-inputs input,.ozfc.fc-table-mode .fc-editor-row .fc-cost-summary input,.ozfc.fc-table-mode .fc-editor-row .fc-node-fees input[type=text]{height:28px;padding:4px 7px;font-size:11px;border-radius:7px}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-summary>span{padding:5px;font-size:9px}
+.ozfc.fc-table-mode .fc-editor-row .fc-calculation-pane{padding:8px}
+.ozfc.fc-table-mode .fc-editor-row .fc-calculation-pane h4{font-size:11px;margin:0 0 6px}
+.ozfc.fc-table-mode .fc-editor-row .fc-calculation-pane .fc-cost-steps{display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,auto);grid-template-columns:none;grid-auto-columns:max-content;gap:6px;margin:0}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-steps li{padding:7px}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-steps small{font-size:9px;margin-bottom:3px}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost-steps b,.ozfc.fc-table-mode .fc-editor-row .fc-cost-steps em{font-size:10px;line-height:1.5}
+.ozfc.fc-table-mode .fc-editor-row .fc-quotes{width:330px}
+.ozfc.fc-table-mode .fc-row-content{grid-template-columns:330px max-content}
+.ozfc.fc-table-mode .fc-editor-row .fc-best{padding:6px 9px}
+.ozfc.fc-table-mode .fc-editor-row .fc-best strong{font-size:20px;margin:2px 0}
+.ozfc.fc-table-mode .fc-editor-row .fc-best p{font-size:10px;margin:0}
+.ozfc.fc-table-mode .fc-editor-row .fc-best small{font-size:9px}
+.ozfc.fc-table-mode .fc-editor-row .fc-logistics-search{padding:5px 9px}
+.ozfc.fc-table-mode .fc-editor-row .fc-logistics-search input{height:28px;padding:4px 7px;font-size:10px}
+.ozfc.fc-table-mode .fc-editor-row .fc-route summary{padding:7px;gap:6px}
+.ozfc.fc-table-mode .fc-editor-row .fc-route summary b{font-size:10px}
+.ozfc.fc-table-mode .fc-editor-row .fc-route li{padding:4px 0;font-size:10px;line-height:1.5}
+.ozfc.fc-table-mode .fc-editor-row .fc-route .fc-source{font-size:9px;margin:4px 0}
+.ozfc.fc-table-mode .fc-editor-row .fc-item-meta{padding:0 8px 6px}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost{padding:6px 8px;margin-bottom:5px}
+.ozfc.fc-table-mode .fc-editor-row .fc-cost span{font-size:14px}
+.ozfc.fc-table-mode .fc-editor-row .fc-bundle-parts{max-height:48px;overflow:auto}
+.ozfc.fc-table-mode .fc-editor-row .fc-inputs{gap:5px;padding:0 8px 6px}
+.ozfc.fc-table-mode .fc-editor-row .fc-fixed-sale .fc-cost-content{padding:8px;display:block;width:auto}
+.ozfc.fc-table-mode .fc-editor-row .fc-fixed-sale .fc-price-result{padding:9px}
+.ozfc.fc-table-mode .fc-editor-row .fc-fixed-sale .fc-price-result strong{font-size:25px}
+.ozfc.fc-table-mode .fc-editor-row .fc-fixed-sale p{font-size:10px;margin:7px 0;line-height:1.5}
+.ozfc .fc-full-image-card{width:max-content}
+.ozfc .fc-full-image-card header{flex-shrink:0;min-width:0;height:42px;box-sizing:border-box}
+.ozfc .fc-override-dot{display:inline-block;width:6px;height:6px;min-width:6px;margin-left:5px;border-radius:50%;background:#ee5a67;box-shadow:0 0 0 2px #ee5a6710;vertical-align:middle}
+.ozfc .fc-node-fees label>span{display:flex;align-items:center;gap:3px;white-space:nowrap}
+.ozfc .fc-node-fees .fc-override-dot{margin-left:auto}
+.ozfc .fc-ozon-identifiers{padding:8px 9px;margin-bottom:8px;border:1px solid #e5eaf4;border-radius:10px;background:#fafbfe;font-size:10px;color:#7b8ba3}
+.ozfc .fc-ozon-identifiers section+section{margin-top:8px;padding-top:7px;border-top:1px solid #e7edf5}
+.ozfc .fc-id-store{display:block;margin-bottom:5px;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ozfc .fc-ozon-identifiers section>div{display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
+.ozfc .fc-copy-ozon{display:flex;align-items:center;gap:6px;min-width:0;width:100%;padding:5px 7px;border:1px solid #e5eaf4;border-radius:7px;background:#fff;color:#46638c;text-align:left}
+.ozfc .fc-copy-ozon small{flex-shrink:0;font-size:9px;color:#8697b0}
+.ozfc .fc-copy-ozon b{flex:1;min-width:0;font-weight:500;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ozfc .fc-copy-ozon>span{font-size:11px;color:#8ca0c4}
+.ozfc .fc-copy-ozon:hover{background:#f0f5ff;border-color:#bdcdef;color:#385ca0}
+.ozfc .fc-id-missing{padding:4px;font-size:9px;color:#9aa7ba}
+.ozfc .fc-id-refresh{margin-top:5px;font-size:9px;padding:3px 6px}
+.ozfc.fc-table-mode .fc-editor-row .fc-ozon-identifiers{max-height:92px;overflow:auto;padding:5px 6px;margin-bottom:5px;scrollbar-width:none}
+.ozfc.fc-table-mode .fc-editor-row .fc-ozon-identifiers::-webkit-scrollbar{display:none}
+/* Private login settings and independent, connected competitor result cards. */
+.ozfc .fc-competitors{width:440px;max-height:520px;overflow:auto;scrollbar-width:none;border-top:3px solid #19b8a7;}
+.ozfc .fc-competitors::-webkit-scrollbar{display:none;}
+.ozfc .fc-competitors p{white-space:normal;line-height:1.7;color:#334765;}
+.ozfc .fc-competitors a{color:#4264dd;}
+.ozfc.fc-table-mode .fc-competitors{position:relative!important;left:auto!important;top:auto!important;flex-shrink:0;}

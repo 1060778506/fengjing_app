@@ -61,11 +61,25 @@ def run_bundle_checks():
     return {"ok": True, "checks": "bundle quantity-weighted cost, buying fallback, cycle guard; mocked read-only"}
 
 
+def run_tariff_checks():
+    config = validate_config(default_config())
+    assert len(config["routes"]) == 46
+    assert len([r for r in config["routes"] if r["provider"] == "兴远"]) == 15
+    post = {r["destination"]: r for r in config["routes"] if r["id"].startswith("兴远-Post-")}
+    assert post["俄罗斯"]["fixed"] == 12 and post["俄罗斯"]["rate"] == 30
+    assert post["哈萨克斯坦"]["fixed"] == 1.6 and post["哈萨克斯坦"]["rate"] == 33
+    assert post["白俄罗斯"]["fixed"] == 13 and post["白俄罗斯"]["rate"] == 30
+    assert all(r["max_value"] == 1000 and r["value_currency"] == "CNY" and r["max_weight"] == 5 for r in post.values())
+    return {"ok": True, "routes": 46, "xy_routes": 15, "checks": "Merged July/September snapshots; no database writes"}
+
+
 def run_checks():
     config = validate_config(default_config())
-    assert len(config["routes"]) == 43
+    assert len(config["routes"]) == 46
+    postal = [r for r in config["routes"] if r["id"].startswith("兴远-Post-")]
+    assert len(postal) == 3 and all(r["value_currency"] == "CNY" and r["max_value"] == 1000 for r in postal)
     assert bootstrap()["can_create"]
-    canvas = {"version": 2, "displayMode": "table", "nodes": [], "active": None, "view": {"x": 60, "y": 50, "z": 1}}
+    canvas = {"version": 2, "displayMode": "table", "nodes": [{"id": "blank-check", "manual": True, "manualSale": 100, "costEdited": True, "item": {"item_code": "SIM-check", "item_name": "空白物料", "value": 8}, "x": 0, "y": 0}], "active": None, "view": {"x": 60, "y": 50, "z": 1}}
     frappe.db.savepoint("freight_canvas_check")
     try:
         first = save_canvas("运费画布诊断-不保留", canvas, config)
@@ -76,6 +90,7 @@ def run_checks():
             import json
             state = json.loads(state)
         assert state["displayMode"] == "table"
+        assert state["nodes"][0]["manualSale"] == 100
         updated = save_canvas("运费画布诊断-更新", canvas, config, first["name"], first["modified"])
         assert updated["name"] == first["name"]
         try:
@@ -97,6 +112,8 @@ def run_price_checks():
     with patch(module + "._seller_read", side_effect=[product, prices]) as read:
         result = _product_price({}, "5514899686")
         assert result["cny"] == 78 and result["currency"] == "CNY"
+        assert result["ozon_sku_ids"] == ["5514899686"]
+        assert result["offer_id"] == "MANG-SHOVEL-23" and result["product_id"] != result["ozon_sku_ids"][0]
         assert {c["schema"]:c["percent"] for c in result["commissions"]} == {"FBO":17,"FBS":18,"RFBS":12,"FBP":11}
         assert read.call_args_list[0].args[2] == {"sku": [5514899686]}
         assert read.call_args_list[1].args[2]["filter"]["product_id"] == ["6013264101"]
