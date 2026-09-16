@@ -7,6 +7,220 @@ import requests
 from frappe.utils import nowdate, flt
 
 DOCTYPE = "Ozon Freight Canvas"
+
+HISTORY = "Ozon Competitor Price History"
+
+
+def _history_access(canvas, write=False):
+    doc = frappe.get_doc(DOCTYPE, canvas)
+    doc.check_permission("write" if write else "read")
+    frappe.has_permission(HISTORY, "read", throw=True)
+    return doc
+
+
+def _json_value(value):
+    return json.loads(value) if isinstance(value, str) else value
+
+
+def _quote_time(value):
+    if not value:
+        return None
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        return parsed
+    return parsed.astimezone(ZoneInfo(frappe.utils.get_system_timezone())).replace(tzinfo=None)
+
+
+def _quote_offers(raw, product_id):
+    from urllib.parse import urlsplit
+    if not isinstance(raw, dict) or not isinstance(raw.get("competitors"), list):
+        frappe.throw("报价必须包含 competitors 数组")
+    if raw.get("syncing"):
+        return None
+    offers = []
+    for q in raw["competitors"]:
+        if not isinstance(q, dict) or str(q.get("itemId")) != str(product_id):
+            frappe.throw("报价的商品内部 ID 不匹配")
+        price = q.get("price") or {}
+        if not isinstance(price, dict) or not re.fullmatch(r"[0-9]+", str(price.get("units", ""))) or not re.fullmatch(r"[0-9]+", str(price.get("nanos") if price.get("nanos") is not None else 0)):
+            frappe.throw("报价金额必须使用整数 units 和 nanos")
+        try:
+            units, nanos = int(price.get("units")), int(price.get("nanos") or 0)
+        except (ValueError, TypeError):
+            frappe.throw("报价金额格式不正确")
+        if units < 0 or not 0 <= nanos < 1_000_000_000:
+            frappe.throw("报价金额格式不正确")
+        currency = str(price.get("currencyCode") or "")
+        if not re.fullmatch(r"[A-Z]{3}", currency):
+            frappe.throw("报价币种格式不正确")
+        url = str(q.get("url") or "")
+        match = re.search(r"\]\((https?://[^)]+)\)$", url)
+        if match:
+            url = match.group(1)
+        parsed = urlsplit(url)
+        if parsed.scheme != "https" or not (parsed.hostname == "ozon.ru" or (parsed.hostname or "").endswith(".ozon.ru")):
+            frappe.throw("报价链接必须是 Ozon HTTPS 地址")
+        reasons = q.get("rejectionReason") or []
+        if not isinstance(reasons, list):
+            frappe.throw("报价拒绝原因必须是数组")
+        offers.append({"price": units + nanos / 1e9, "currency": currency, "url": url,
+                       "sku": str(q.get("sku") or ""), "rejectionReason": [str(x) for x in reasons], "downloadedAt": q.get("downloadedAt")})
+    return offers
+
+
+def _insert_quote(canvas, store, product_id, record, import_key, batch_id, source, item_code=None):
+    if frappe.db.exists(HISTORY, {"import_key": import_key}):
+        return
+    version = frappe.db.sql(
+        "SELECT COALESCE(MAX(version_number),0) FROM \x60tabOzon Competitor Price History\x60 WHERE canvas=%s AND store=%s AND product_id=%s",
+        (canvas, store, product_id))[0][0] + 1
+    doc = frappe.new_doc(HISTORY)
+    doc.update({"canvas": canvas, "store": store, "product_id": product_id, "version_number": version,
+                "company_id": record.get("companyId"), "batch_id": batch_id, "source": source, "import_key": import_key,
+                "collected_at_iso": record.get("collectedAt"), "collected_at": _quote_time(record.get("collectedAt")),
+                "imported_at": _quote_time(record.get("importedAt")) or frappe.utils.now_datetime(),
+                "item_code": item_code if item_code and frappe.db.exists("Item", item_code) else None,
+                "sku": ",".join(dict.fromkeys(q.get("sku", "") for q in record["offers"] if q.get("sku")))[:140],
+                "offer_count": len(record["offers"]),
+                "offers_json": json.dumps(record["offers"], ensure_ascii=False),
+                "raw_json": json.dumps(record.get("raw") or {}, ensure_ascii=False)})
+    doc.flags.canvas_quote_import = True
+    # Only reachable after explicit canvas write / history read permission checks.
+    doc.insert(ignore_permissions=True)
+
+
+def _migrate_canvas_quotes(canvas_name, canvas):
+    import hashlib
+    for node in canvas.get("nodes", []):
+        data = node.get("competitors") or {}
+        if data.get("fromHistoryStore") or data.get("external"):
+            node["competitors"] = {"external": True}
+            continue
+        for product in data.get("products") or []:
+            snapshots = list(product.get("history") or []) + [{k: v for k, v in product.items() if k != "history"}]
+            for snapshot in snapshots:
+                store, product_id = str(product.get("store") or ""), str(product.get("itemId") or "")
+                if not store or not product_id.isdigit():
+                    frappe.throw("旧报价缺少店铺或商品内部 ID，未移除旧数据")
+                if not isinstance(snapshot.get("offers"), list):
+                    frappe.throw("旧报价格式不正确，未移除旧数据")
+                digest = hashlib.sha256(json.dumps([canvas_name, store, product_id, snapshot], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+                _insert_quote(canvas_name, store, product_id, snapshot, digest, "legacy-" + digest[:24], "旧画布历史迁移", node["item"].get("item_code"))
+        if data.get("products"):
+            node["competitors"] = {"external": True}
+
+
+def _import_quote_batch(canvas_name, canvas, packet):
+    import hashlib
+    packet = _json_value(packet)
+    if not isinstance(packet, dict) or len(json.dumps(packet, ensure_ascii=False).encode()) > 20_000_000:
+        frappe.throw("单次采集结果不能超过20MB")
+    batch_id = str(packet.get("batch_id") or "")
+    if not re.fullmatch(r"[A-Za-z0-9-]{1,100}", batch_id):
+        frappe.throw("缺少采集批次编号")
+    payload = _json_value(packet.get("payload"))
+    if not isinstance(payload, dict):
+        frappe.throw("请粘贴采集 JSON")
+    if payload.get("format") == "ozfc-competitors-v1":
+        results = payload.get("results")
+    else:
+        competitors = payload.get("competitors") or []
+        results = [{"ok": True, "data": payload, "itemId": competitors[0].get("itemId") if competitors else None,
+                    "collectedAt": payload.get("collectedAt")}]
+    if not isinstance(results, list) or len(results) > 10000:
+        frappe.throw("采集批次格式不正确")
+    targets = {}
+    for node in canvas["nodes"]:
+        for product in (node.get("meta") or {}).get("prices") or []:
+            store, product_id = str(product.get("store") or ""), str(product.get("product_id") or "")
+            if store and product_id.isdigit():
+                targets.setdefault((store, product_id), []).append(node)
+    pending, failed, unmatched = {}, 0, 0
+    for entry in results:
+        if not isinstance(entry, dict):
+            frappe.throw("采集条目格式不正确")
+        if not entry.get("ok"):
+            failed += 1
+            continue
+        if not isinstance(entry.get("data"), dict):
+            frappe.throw("采集条目缺少有效的报价数据")
+        if entry["data"].get("syncing"):
+            failed += 1
+            continue
+        product_id = str(entry.get("itemId") or "")
+        store = str(entry.get("store") or "")
+        matches = [key for key in targets if key[1] == product_id and (not store or key[0] == store)]
+        if len(matches) != 1:
+            unmatched += 1
+            continue
+        offers = _quote_offers(entry.get("data"), product_id)
+        if offers is None:
+            failed += 1
+            continue
+        pending[matches[0]] = {"offers": offers, "raw": entry["data"], "collectedAt": entry.get("collectedAt") or payload.get("collectedAt"),
+                               "companyId": entry.get("companyId")}
+    if not pending:
+        frappe.throw("没有成功且匹配当前画布的报价；未写入任何新版本")
+    matched_nodes = set()
+    for (store, product_id), record in pending.items():
+        key = hashlib.sha256((canvas_name + "|" + batch_id + "|" + store + "|" + product_id).encode()).hexdigest()
+        nodes = targets[(store, product_id)]
+        _insert_quote(canvas_name, store, product_id, record, key, batch_id, "Ozon 浏览器 F12 采集", nodes[0]["item"].get("item_code"))
+        for node in nodes:
+            node["competitors"] = {"external": True}
+            node["rivalsHidden"] = False
+            matched_nodes.add(node["id"])
+    return {"matched": len(matched_nodes), "products": len(pending), "failed": failed, "unmatched": unmatched, "batch_id": batch_id}
+
+
+def _quote_metadata(doc):
+    return {"record_name": doc["name"], "version": doc["version_number"], "collectedAt": doc.get("collected_at_iso"),
+            "importedAt": str(doc.get("imported_at") or ""), "itemId": doc["product_id"], "store": doc["store"], "loaded": False}
+
+
+@frappe.whitelist()
+def competitor_record(name):
+    doc = frappe.get_doc(HISTORY, name)
+    doc.check_permission("read")
+    _history_access(doc.canvas)
+    result = _quote_metadata(doc.as_dict())
+    result.update({"offers": _json_value(doc.offers_json) or [], "loaded": True})
+    return result
+
+
+@frappe.whitelist()
+def competitor_versions(canvas, store, product_id, before_version, start=0):
+    _history_access(canvas)
+    filters = {"canvas": canvas, "store": store, "product_id": str(product_id), "version_number": ["<", int(before_version)]}
+    rows = frappe.get_list(HISTORY, filters=filters, fields=["name", "version_number", "collected_at_iso", "imported_at", "product_id", "store"],
+                           order_by="version_number desc", start=max(0, int(start)), limit_page_length=51)
+    return {"versions": [_quote_metadata(r) for r in rows[:50]], "more": len(rows) > 50}
+
+
+@frappe.whitelist()
+def competitor_catalog(canvas):
+    _history_access(canvas)
+    rows = frappe.db.sql("""
+        SELECT h.name,h.store,h.product_id,h.version_number,h.company_id,h.collected_at_iso,h.imported_at,h.offers_json
+        FROM \x60tabOzon Competitor Price History\x60 h
+        JOIN (SELECT store,product_id,MAX(version_number) v FROM \x60tabOzon Competitor Price History\x60
+              WHERE canvas=%s GROUP BY store,product_id) latest
+        ON h.store=latest.store AND h.product_id=latest.product_id AND h.version_number=latest.v
+        WHERE h.canvas=%s
+    """, (canvas, canvas), as_dict=True)
+    products = []
+    for row in rows:
+        product = _quote_metadata(row)
+        history = competitor_versions(canvas, row.store, row.product_id, row.version_number)
+        product.update({"key": row.store + "|" + row.product_id, "companyId": row.company_id,
+                        "offers": _json_value(row.offers_json) or [], "loaded": True,
+                        "history": history["versions"], "historyMore": history["more"]})
+        products.append(product)
+    return {"products": products}
+
+
 PACKAGE_FIELDS = {
     "length": "custom_带包装长度mm", "width": "custom_带包装宽度mm",
     "height": "custom_带包装高度mm", "weight": "custom_带包装重量g",
@@ -460,7 +674,7 @@ def load_canvas(name):
 
 
 @frappe.whitelist(methods=["POST"])
-def save_canvas(title, canvas, config, name=None, modified=None):
+def save_canvas(title, canvas, config, name=None, modified=None, quote_batch=None):
     canvas, config = _object(canvas), validate_config(config)
     if not isinstance(canvas.get("nodes"), list) or len(canvas["nodes"]) > 300:
         frappe.throw("画布最多300张物料卡片")
@@ -531,4 +745,13 @@ def save_canvas(title, canvas, config, name=None, modified=None):
     doc.canvas_json = canvas
     doc.freight_config_json = config
     doc.save()
-    return dict(name=doc.name, modified=str(doc.modified))
+    has_legacy = any((node.get("competitors") or {}).get("products") and not (node.get("competitors") or {}).get("fromHistoryStore") for node in canvas["nodes"])
+    summary = None
+    if has_legacy or quote_batch:
+        _history_access(doc.name, write=True)
+        _migrate_canvas_quotes(doc.name, canvas)
+        if quote_batch:
+            summary = _import_quote_batch(doc.name, canvas, quote_batch)
+        doc.canvas_json = canvas
+        doc.save()
+    return dict(name=doc.name, modified=str(doc.modified), quote_summary=summary)

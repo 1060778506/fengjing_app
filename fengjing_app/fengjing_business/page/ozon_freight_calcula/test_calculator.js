@@ -1,5 +1,62 @@
 /* Run: node test_calculator.js */
 {
+ const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const c=Object.create(OzFreightCanvas.prototype);c.c={cny_per_rub:.08};
+ assert.match(c.competitorRmb(400,'RUB'),/人民币 ¥32.00/);
+ assert.match(c.competitorRmb(12,'CNY'),/人民币 ¥12.00/);
+ assert.match(c.competitorRmb(12,'USD'),/暂无人民币换算汇率/);
+ c.c.cny_per_rub=0;assert.match(c.competitorRmb(400,'RUB'),/暂无人民币换算汇率/);
+ console.log('PASS: individual rival quote RMB reference conversion and missing FX fallback');
+}
+{
+ const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const c=Object.create(OzFreightCanvas.prototype);c.c={cny_per_rub:.08};
+ const n={saleOverride:999,meta:{prices:[{amount:100,currency:'CNY',cny:100}]},competitors:{products:[{offers:[{price:400,currency:'RUB',rejectionReason:[]},{price:1,currency:'RUB',rejectionReason:['bad-offer-price']}]}]}};
+ const html=c.briefQuoteHTML(n);assert.match(html,/RUB 400.00/);assert.match(html,/≈ ¥32.00/);assert.match(html,/CNY 100.00/);assert.doesNotMatch(html,/999/);assert.match(html,/2 条/);assert.match(html,/fc-brief-has-rivals/);
+ assert.doesNotMatch(c.briefQuoteHTML({meta:n.meta}),/fc-brief-has-rivals/);
+ c.c.cny_per_rub=0;assert.match(c.briefQuoteHTML(n),/暂无人民币汇率/);
+ console.log('PASS: summary competition RMB conversion and raw backend price without simulation override');
+}
+{
+ const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const c=Object.create(OzFreightCanvas.prototype);c.s={nodes:Array.from({length:123},(_,i)=>({id:'page-'+i,x:i*350,y:0})),view:{x:0,y:0,z:1}};
+ assert.equal(c.tablePageNodes().length,50);c.tablePage=2;assert.equal(c.tablePageNodes().length,23);c.tablePage=99;assert.equal(c.tablePageNodes()[0].id,'page-100');
+ const n=c.s.nodes[120];n.competitors={products:[{offers:[{price:9,currency:'RUB',rejectionReason:['bad-offer-price']},{price:40,currency:'RUB',rejectionReason:[]},{price:35,currency:'RUB',rejectionReason:[]},{price:5,currency:'CNY',rejectionReason:[]}]}]};
+ assert.match(c.competitorBrief(n),/4 条/);assert.match(c.competitorBrief(n),/RUB 35.00 \/ CNY 5.00/);
+ c.change=c.paint=()=>{};c.stage={scrollTop:9999,scrollLeft:888};c.multiSelect=true;c.jumpMaterial(n.id);
+ assert.equal(c.stage.scrollTop,0);assert.equal(c.stage.scrollLeft,0);
+ assert.equal(c.s.displayMode,'canvas');assert.deepEqual(c.s.expanded,[n.id]);assert.equal(c.s.focus,n.id);assert.equal(c.s.view.x,60-n.x);assert.equal(c.multiSelect,false);
+ console.log('PASS: table pagination, per-currency valid competitor minimum, jump reveals and locates material');
+}
+{
+ const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const c=Object.create(OzFreightCanvas.prototype),n={id:'arrange-test',x:100,y:200,quote:{x:999,y:888},cost:{x:1,y:2},sale:{x:3,y:4},rivals:{x:5,y:6}};
+ c.s={nodes:[n],expanded:[]};c.snap=c.change=c.paint=c.status=()=>{};c.arrangeMaterialCards(n.id);
+ assert.deepEqual([n.x,n.y],[100,200]);assert.deepEqual(n.quote,{x:470,y:200});assert.deepEqual(n.cost,{x:1000,y:200});
+ assert.deepEqual(n.sale,{x:2040,y:200});assert.deepEqual(n.rivals,{x:470,y:810});assert.deepEqual(c.s.expanded,[]);
+ console.log('PASS: organize one material child cards without moving material or changing expansion');
+}
+{
+ const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const canvas=Object.create(OzFreightCanvas.prototype);canvas.s={expanded:['one','two'],active:'one'};canvas.paint=()=>{};
+ canvas.toggleMultiSelect();assert.deepEqual(canvas.expanded(),[]);assert.deepEqual(canvas.s.expanded,['one','two']);
+ canvas.toggleMultiSelect();assert.deepEqual(canvas.expanded(),['one','two']);
+ console.log('PASS: multiselect temporarily collapses children and restores original expansion');
+}
+{
+ const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const canvas=Object.create(OzFreightCanvas.prototype),manual={id:'manual',x:0,y:10};
+ canvas.s={nodes:[manual,...Array.from({length:5},(_,i)=>({id:String(i),systemGenerated:true,x:100,y:i*900,quote:{x:500,y:i*900}}))]};
+ canvas.arrangeSystemCards(1000);
+ assert.deepEqual(canvas.s.nodes.slice(1).map(n=>[n.x,n.y]),[[1000,0],[1350,0],[1700,0],[2050,0],[2400,0]]);
+ assert.deepEqual([manual.x,manual.y],[0,10]);assert.equal(canvas.s.nodes[1].quote.x,1400);
+ canvas.s.nodes.push(...Array.from({length:6},(_,i)=>({systemGenerated:true,x:0,y:0})));
+ canvas.arrangeSystemCards(1000);assert.equal(canvas.s.nodes.at(-1).x,1000);assert.equal(canvas.s.nodes.at(-1).y,620);
+ canvas.snap=canvas.change=canvas.paint=canvas.status=()=>{};canvas.sortCards();
+ assert.deepEqual([manual.x,manual.y],[0,0]);assert.deepEqual([canvas.s.nodes[1].x,canvas.s.nodes[1].y],[0,660]);
+ console.log('PASS: ten-column compact matrix, separate manual/system groups, linked cards follow');
+}
+{
  const assert=require('node:assert/strict');
  const {ozfcCompetitorVersion,OzFreightCanvas}=require('./ozon_freight_calcula.js');
  const first=ozfcCompetitorVersion(null,{key:'店铺|123',offers:[{price:10}],raw:{sample:1},collectedAt:'2026-09-17T00:00:00Z'});
@@ -36,6 +93,17 @@
  env.navigator.clipboard.writeText=async()=>{throw Error('Clipboard denied')};env.copy=text=>{clipboard=text};
  await vm.runInNewContext(ozfcCollectionCommand(products.slice(0,1)),env);assert.equal(JSON.parse(clipboard).results.length,1);
  console.log('PASS: generated F12 command serial delay, timestamps, 429 stop, automatic clipboard and DevTools copy fallback');
+ env.navigator.clipboard.writeText=async text=>{clipboard=text};
+ let requested=[],counts={};env.fetch=async url=>{
+  const id=new URL('https://seller.ozon.ru'+url).searchParams.get('item_id');requested.push(id);counts[id]=(counts[id]||0)+1;
+  return {ok:true,status:200,headers:{get(){return 'application/json';}},async json(){return {competitors:[],syncing:id==='2'&&counts[id]<3};}};
+ };
+ await vm.runInNewContext(ozfcCollectionCommand(products),env);
+ assert.deepEqual(requested,['1','2','3','2','2']);assert.equal(JSON.parse(clipboard).results.length,3);assert.equal(JSON.parse(clipboard).results[1].attempts,3);
+ requested=[];env.fetch=async url=>{requested.push(url);return {ok:false,status:500,headers:{get(){return 'application/json';}}};};
+ await vm.runInNewContext(ozfcCollectionCommand(products.slice(0,1)),env);
+ assert.equal(requested.length,5);assert.equal(JSON.parse(clipboard).results[0].attemptHistory.length,5);
+ console.log('PASS: complete first pass, retry pending only, latest result replaces attempt, four extra retries maximum');
 })().catch(e=>{console.error(e);process.exitCode=1;});
 {
  const {ozfcCollectionCommand,ozfcParseCompetitors,OzFreightCanvas}=require('./ozon_freight_calcula.js');
@@ -47,7 +115,14 @@
  const canvas=Object.create(OzFreightCanvas.prototype);canvas.snap=canvas.change=canvas.paint=()=>{};
  const node={id:'user-1',item:{item_code:'item-1',value:88},meta:{prices:[{store:'店铺',product_id:'6013264220'}]}};canvas.s={nodes:[node]};
  assert.equal(canvas.applyCompetitors(JSON.stringify(raw)).matched,1);assert.equal(node.item.value,88);assert.equal(node.competitors.products[0].offers[0].price,436.75);
+ assert.equal(canvas.competitorHTML(node),'');
+ assert.match(canvas.competitorCountHTML(node),/<b>1<\/b>/);
+ canvas.s.expanded=[node.id];
+ assert.match(canvas.competitorHTML(node),/https:\/\/seller.ozon.ru\/app\/prices\/manager\/6013264220\/prices/);
+ assert.equal(canvas.competitorManagerLink('bad-id'),'');
  assert.ok(canvas.competitorHTML(node).includes('bad-offer-price'));assert.ok(canvas.competitorHTML(node).includes('未提供'));
+ canvas.s.displayMode='table';node.rivalsHidden=true;assert.match(canvas.competitorHTML(node),/bad-offer-price/);
+ canvas.s.displayMode='canvas';node.rivalsHidden=false;
  const batch={format:'ozfc-competitors-v1',collectedAt:'2026-09-17T00:00:00Z',results:[{store:'店铺',itemId:'6013264220',ok:true,data:{competitors:[],syncing:false}}]};
  canvas.applyCompetitors(batch);assert.equal(node.competitors.products[0].offers.length,0);
  assert.equal(node.competitors.products[0].history.length,1);assert.equal(node.competitors.products[0].history[0].offers[0].price,436.75);

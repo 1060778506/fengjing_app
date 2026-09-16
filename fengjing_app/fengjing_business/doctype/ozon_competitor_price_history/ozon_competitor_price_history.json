@@ -1,0 +1,151 @@
+{
+ "doctype": "DocType",
+ "name": "Ozon Competitor Price History",
+ "module": "Fengjing Business",
+ "autoname": "hash",
+ "engine": "InnoDB",
+ "field_order": [
+  "canvas",
+  "store",
+  "product_id",
+  "sku",
+  "item_code",
+  "company_id",
+  "version_number",
+  "batch_id",
+  "collected_at",
+  "collected_at_iso",
+  "imported_at",
+  "offer_count",
+  "source",
+  "import_key",
+  "raw_json",
+  "offers_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "canvas",
+   "fieldtype": "Link",
+   "label": "所属画布",
+   "read_only": 1,
+   "options": "Ozon Freight Canvas",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "store",
+   "fieldtype": "Link",
+   "label": "店铺",
+   "read_only": 1,
+   "options": "Cost Center",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "product_id",
+   "fieldtype": "Data",
+   "label": "商品内部 ID",
+   "read_only": 1,
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sku",
+   "fieldtype": "Data",
+   "label": "Ozon SKU ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "对应物料",
+   "read_only": 1,
+   "options": "Item"
+  },
+  {
+   "fieldname": "company_id",
+   "fieldtype": "Data",
+   "label": "Ozon 公司 ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "version_number",
+   "fieldtype": "Int",
+   "label": "报价版本",
+   "read_only": 1,
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "batch_id",
+   "fieldtype": "Data",
+   "label": "采集保存批次",
+   "read_only": 1
+  },
+  {
+   "fieldname": "collected_at",
+   "fieldtype": "Datetime",
+   "label": "采集时间",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "collected_at_iso",
+   "fieldtype": "Data",
+   "label": "原始采集时间 ISO",
+   "read_only": 1
+  },
+  {
+   "fieldname": "imported_at",
+   "fieldtype": "Datetime",
+   "label": "导入时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "offer_count",
+   "fieldtype": "Int",
+   "label": "报价数量",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Data",
+   "label": "来源",
+   "read_only": 1
+  },
+  {
+   "fieldname": "import_key",
+   "fieldtype": "Data",
+   "label": "导入唯一键",
+   "read_only": 1,
+   "unique": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Long Text",
+   "label": "原始报价 JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "offers_json",
+   "fieldtype": "Long Text",
+   "label": "标准化报价 JSON",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "export": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "title_field": "product_id",
+ "allow_rename": 0,
+ "track_changes": 0
+}
