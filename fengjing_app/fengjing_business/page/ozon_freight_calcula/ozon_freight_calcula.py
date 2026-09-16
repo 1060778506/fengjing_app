@@ -246,16 +246,35 @@ def _ozon_access():
     return parent
 
 
-@frappe.whitelist(methods=["POST"])
-def save_ozon_cookie(cookie):
-    _ozon_access()
-    from frappe.utils.password import set_encrypted_password
-    cookie = str(cookie or "").strip()
-    if not cookie or len(cookie) > 32000 or any(c in cookie for c in "\r\n") or "=" not in cookie:
-        frappe.throw("请输入单行 Cookie 内容（不是整段 cURL 或 JavaScript）")
-    # Private per-user encrypted credential; never included in canvas/export/API responses.
-    set_encrypted_password("User", frappe.session.user, cookie, fieldname="ozfc_ozon_cookie")
-    return {"saved": True}
+@frappe.whitelist()
+def competitor_collection_manifest(products):
+    """Resolve account IDs only for the current canvas's explicit product list."""
+    parent = _ozon_access()
+    products = json.loads(products) if isinstance(products, str) else products
+    if not isinstance(products, list) or len(products) > 1500:
+        frappe.throw("当前画布商品列表格式不正确，最多1500个绑定商品")
+    configs = {}
+    for row in parent.get("table_wckx") or []:
+        if row.get("ozon_id") and row.get("ozon_秘钥"):
+            configs.setdefault(str(row.get("店铺选项") or ""), []).append(row)
+    output, seen = [], set()
+    for product in products:
+        if not isinstance(product, dict):
+            frappe.throw("当前画布商品编号格式不正确")
+        store, item_id = str(product.get("store") or ""), str(product.get("itemId") or "")
+        if not store or not item_id.isdigit() or int(item_id) <= 0:
+            frappe.throw("卡片缺少店铺或有效商品内部 ID，请先刷新物料标识")
+        rows = configs.get(store, [])
+        if len(rows) != 1:
+            frappe.throw("卡片对应 Ozon 店铺配置不存在或重复")
+        company = str(rows[0].get("ozon_id") or "")
+        if not company.isdigit():
+            frappe.throw("Ozon 店铺 Client ID 格式不正确")
+        if (store, item_id) in seen:
+            continue
+        seen.add((store, item_id))
+        output.append({"store": store, "companyId": company, "itemId": item_id})
+    return {"products": output}
 
 
 @frappe.whitelist()
@@ -311,27 +330,6 @@ def list_ozon_canvas_products(store="", last_id=""):
     return {"products": output, "last_id": str(result.get("last_id") or ""), "more": len(raw) == 100}
 
 
-@frappe.whitelist(methods=["POST"])
-def check_ozon_competitors(product_id, store):
-    parent = _ozon_access()
-    if not str(product_id).isdigit() or not any(str(r.get("店铺选项")) == store for r in parent.get("table_wckx") or []):
-        frappe.throw("缺少有效商品内部 ID 或店铺")
-    from frappe.utils.password import get_decrypted_password
-    cookie = get_decrypted_password("User", frappe.session.user, fieldname="ozfc_ozon_cookie", raise_exception=False)
-    if not cookie:
-        return {"needs_cookie": True, "message": "尚未保存 Ozon 后台 Cookie"}
-    url = "https://seller.ozon.ru/app/prices/manager/" + str(product_id) + "/prices"
-    try:
-        # Only a fixed same-origin read; no arbitrary URLs, proxying or credential redirects.
-        response = requests.get(url, headers={"Cookie": cookie, "User-Agent": "Mozilla/5.0"}, timeout=(5, 15), allow_redirects=False)
-    except requests.RequestException:
-        return {"message": "Ozon 后台连接未完成，请稍后重试", "offers": []}
-    location = response.headers.get("Location", "").lower()
-    if response.status_code == 401 or any(s in location for s in ("login", "sign-in", "sso", "auth")):
-        return {"needs_cookie": True, "message": "登录凭证可能已过期或不完整，请重新填写 Cookie"}
-    return {"offers": [], "url": url, "checked_at": str(frappe.utils.now_datetime())[:19],
-            "message": ("后台页面可访问，但尚未识别跟卖价格数据接口；不能从页面 HTML 确认跟卖报价。需要定位 F12 网络中的价格请求。" if response.status_code == 200 else
-                        "后台返回 HTTP %s：可能是登录凭证不完整、访问限制或请求被拒绝；不能确定是 Cookie 过期。" % response.status_code)}
 
 
 def _product_price(row, identifier):

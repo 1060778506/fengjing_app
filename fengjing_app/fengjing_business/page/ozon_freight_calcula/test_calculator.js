@@ -1,4 +1,65 @@
 /* Run: node test_calculator.js */
+{
+ const assert=require('node:assert/strict');
+ const {ozfcCompetitorVersion,OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const first=ozfcCompetitorVersion(null,{key:'店铺|123',offers:[{price:10}],raw:{sample:1},collectedAt:'2026-09-17T00:00:00Z'});
+ const second=ozfcCompetitorVersion(first,{key:'店铺|123',offers:[{price:20}],raw:{sample:2}});
+ const third=ozfcCompetitorVersion(second,{key:'店铺|123',offers:[{price:30}],raw:{sample:3}});
+ assert.equal(third.version,3);assert.deepEqual(third.history.map(v=>v.offers[0].price),[10,20]);assert.equal(third.history[1].history,undefined);assert.equal(first.history.length,0);
+ const restored=JSON.parse(JSON.stringify(third));assert.equal(restored.history[0].raw.sample,1);
+ const legacy=ozfcCompetitorVersion({key:'old',offers:[],raw:{old:true}},{key:'old',offers:[]});assert.equal(legacy.version,2);assert.equal(legacy.history[0].version,1);
+ console.log('PASS: competitor version history, flat full snapshots, legacy upgrade, JSON persistence, previous records unchanged');
+}
+{
+ const assert=require('node:assert/strict');
+ const {ozfcCanvasCollectionTargets}=require('./ozon_freight_calcula.js');
+ const price={store:'店铺A',product_id:'6013264220'};
+ const nodes=[{meta:{prices:[price,price,{store:'店铺B',product_id:'6013264220'}]}},{meta:{prices:[price]}},{manual:true,meta:{prices:[{store:'忽略',product_id:'123'}]}},{meta:{prices:[{store:'店铺A',product_id:'unknown'}]}}];
+ assert.deepEqual(ozfcCanvasCollectionTargets(nodes),[{store:'店铺A',itemId:'6013264220'},{store:'店铺B',itemId:'6013264220'}]);
+ assert.deepEqual(ozfcCanvasCollectionTargets([]),[]);
+ console.log('PASS: current canvas targets only, store/product deduplication, manual/missing ID skipped');
+}
+// Execute the generated browser command against fake responses (no network traffic).
+(async()=>{
+ const assert=require('node:assert/strict'),vm=require('node:vm');
+ const {ozfcCollectionCommand}=require('./ozon_freight_calcula.js');
+ let calls=0,clipboard='',delay=0;
+ const env={location:{hostname:'seller.ozon.ru'},window:{},URLSearchParams,AbortSignal,Date,JSON,
+  console:{log(){},warn(){}},setTimeout(resolve,ms){delay+=ms;resolve();},
+  navigator:{clipboard:{async writeText(text){clipboard=text;}}},
+  async fetch(){calls++;return {ok:calls===1,status:calls===1?200:429,headers:{get(){return 'application/json';}},async json(){return {competitors:[],syncing:false};}}}
+ };
+ const products=[1,2,3].map(id=>({store:'店铺',companyId:'5617125',itemId:String(id)}));
+ await vm.runInNewContext(ozfcCollectionCommand(products),env);
+ const batch=JSON.parse(clipboard);assert.equal(calls,2);assert.equal(delay,1500);assert.equal(batch.results.length,2);assert.equal(batch.results[0].ok,true);assert.equal(batch.results[1].status,429);assert.ok(batch.collectedAt);assert.equal(env.window.__ozfcCollecting,false);
+ env.fetch=async()=>({ok:true,status:200,headers:{get(){return 'application/json';}},async json(){return {competitors:[],syncing:false};}});
+ env.navigator.clipboard.writeText=async()=>{throw Error('Clipboard denied')};env.copy=text=>{clipboard=text};
+ await vm.runInNewContext(ozfcCollectionCommand(products.slice(0,1)),env);assert.equal(JSON.parse(clipboard).results.length,1);
+ console.log('PASS: generated F12 command serial delay, timestamps, 429 stop, automatic clipboard and DevTools copy fallback');
+})().catch(e=>{console.error(e);process.exitCode=1;});
+{
+ const {ozfcCollectionCommand,ozfcParseCompetitors,OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const assert=require('node:assert/strict');
+ const raw={competitors:[{sku:'5514900265',itemId:'6013264220',url:'https://ozon.ru/product/5552034272/',price:{currencyCode:'RUB',units:'436',nanos:750000000},rejectionReason:['bad-offer-price'],downloadedAt:'2026-09-16T05:34:26Z'}],syncing:false};
+ const parsed=ozfcParseCompetitors(raw);assert.equal(parsed.results[0].offers[0].price,436.75);assert.equal(parsed.results[0].collectedAt,null);
+ assert.throws(()=>ozfcParseCompetitors({...raw,competitors:[{...raw.competitors[0],url:'javascript:alert(1)'}]}));
+ assert.throws(()=>ozfcParseCompetitors({...raw,competitors:[{...raw.competitors[0],price:{currencyCode:'RUB',units:'436',nanos:1e9}}]}));
+ const canvas=Object.create(OzFreightCanvas.prototype);canvas.snap=canvas.change=canvas.paint=()=>{};
+ const node={id:'user-1',item:{item_code:'item-1',value:88},meta:{prices:[{store:'店铺',product_id:'6013264220'}]}};canvas.s={nodes:[node]};
+ assert.equal(canvas.applyCompetitors(JSON.stringify(raw)).matched,1);assert.equal(node.item.value,88);assert.equal(node.competitors.products[0].offers[0].price,436.75);
+ assert.ok(canvas.competitorHTML(node).includes('bad-offer-price'));assert.ok(canvas.competitorHTML(node).includes('未提供'));
+ const batch={format:'ozfc-competitors-v1',collectedAt:'2026-09-17T00:00:00Z',results:[{store:'店铺',itemId:'6013264220',ok:true,data:{competitors:[],syncing:false}}]};
+ canvas.applyCompetitors(batch);assert.equal(node.competitors.products[0].offers.length,0);
+ assert.equal(node.competitors.products[0].history.length,1);assert.equal(node.competitors.products[0].history[0].offers[0].price,436.75);
+ canvas.rivalVersions=new Map([[node.id+'|'+node.competitors.products[0].key,'1']]);
+ assert.ok(canvas.competitorHTML(node).includes('436.75'));assert.ok(canvas.competitorHTML(node).includes('历史 · 第1版'));
+ canvas.rivalVersions.clear();
+ batch.results[0].ok=false;canvas.applyCompetitors(batch);assert.equal(node.competitors.products[0].offers.length,0);
+ batch.results[0].ok=true;batch.results[0].data={...raw,syncing:true};assert.equal(canvas.applyCompetitors(batch).failed,1);assert.equal(node.competitors.products[0].offers.length,0);
+ const cmd=ozfcCollectionCommand([{store:'店铺',itemId:'6013264220',companyId:'5617125'}]);
+ assert.doesNotThrow(()=>new Function(cmd));assert.ok(cmd.includes('1500'));assert.ok(cmd.includes('navigator.clipboard.writeText'));assert.ok(!cmd.includes('document.cookie'));
+ console.log('PASS: browser collection command, nanos decimal, safe URLs, collection time, ID matching, empty results, pending/failure preservation');
+}
 // Async regression: refresh uses store/product identity and preserves user estimates.
 (async()=>{
  const {OzFreightCanvas}=require('./ozon_freight_calcula.js');

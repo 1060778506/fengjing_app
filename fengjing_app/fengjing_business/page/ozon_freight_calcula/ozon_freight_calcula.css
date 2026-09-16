@@ -314,3 +314,16 @@
 .ozfc .fc-competitors p{white-space:normal;line-height:1.7;color:#334765;}
 .ozfc .fc-competitors a{color:#4264dd;}
 .ozfc.fc-table-mode .fc-competitors{position:relative!important;left:auto!important;top:auto!important;flex-shrink:0;}
+.fc-collection-help{padding:16px;background:#f2f6ff;border-radius:14px;color:#334765;margin-bottom:16px;}
+.fc-collection-help small{display:block;line-height:1.7;margin-top:12px;color:#526887;}
+.ozfc .fc-competitor-content{padding:16px;}
+.ozfc .fc-competitor-content section+section{margin-top:18px;padding-top:16px;border-top:1px solid #dce5f1;}
+.ozfc .fc-competitor-content section>small{color:#526887;overflow-wrap:anywhere;}
+.ozfc .fc-competitor-summary{padding:10px;background:#e8faf3;color:#176b52;border-radius:9px;font-size:12px;margin-bottom:10px;}
+.ozfc .fc-competitor-offer{display:grid;grid-template-columns:1fr auto;gap:7px;padding:12px;border:1px solid #e0e9f1;border-radius:11px;margin-top:9px;background:#fff;}
+.ozfc .fc-competitor-offer b{color:#176b52;font-size:18px;}
+.ozfc .fc-competitor-offer small,.ozfc .fc-competitor-offer em{grid-column:1/-1;color:#667891;font-size:11px;font-style:normal;}
+.ozfc .fc-competitor-offer.rejected{background:#fff8ef;border-color:#efd7ac;}
+.ozfc .fc-competitor-offer.rejected b,.ozfc .fc-competitor-offer.rejected em{color:#9b651c;}
+.ozfc .fc-rival-version-label{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12px;color:#526887;}
+.ozfc .fc-rival-version-label select{flex:1;min-width:0;padding:8px;border:1px solid #dce5f1;border-radius:9px;background:#f5f8ff;color:#263d5f;}

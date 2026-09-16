@@ -1,3 +1,85 @@
+function ozfcCompetitorVersion(previous,record){
+ const history=structuredClone(previous?.history||[]);
+ if(previous){const snapshot=structuredClone(previous);delete snapshot.history;snapshot.version ||= 1;history.push(snapshot);}
+ return {...record,version:previous?(previous.version||1)+1:1,history};
+}
+
+function ozfcCanvasCollectionTargets(nodes){
+ const seen=new Set(),targets=[];
+ for(const n of nodes||[]){
+  if(n.manual)continue;
+  for(const p of n.meta?.prices||[]){
+   const store=String(p.store||''),itemId=String(p.product_id||'');
+   if(!store||!/^\d+$/.test(itemId)||Number(itemId)<=0)continue;
+   const key=store+'|'+itemId;if(seen.has(key))continue;
+   seen.add(key);targets.push({store,itemId});
+  }
+ }
+ return targets;
+}
+function ozfcCollectionCommand(products) {
+ const collect=async function(products){
+  if(location.hostname!=='seller.ozon.ru')throw Error('请在已登录的 seller.ozon.ru 页面 F12 控制台运行');
+  if(window.__ozfcCollecting)throw Error('已有采集任务运行，请勿重复执行');
+  window.__ozfcCollecting=true;
+  const batch={format:'ozfc-competitors-v1',startedAt:new Date().toISOString(),collectedAt:null,intervalMs:1500,results:[]};
+  window.__ozfcCollectionResult=batch;
+  try{
+   for(let i=0;i<products.length;i++){
+    if(i)await new Promise(resolve=>setTimeout(resolve,1500));
+    const p=products[i],entry={...p,collectedAt:new Date().toISOString(),ok:false};
+    let stop=false;
+    try{
+     const query=new URLSearchParams({company_id:p.companyId,item_id:p.itemId,sync:'true'});
+     const response=await fetch('/api/ozon-min-price-sku/v1/competitor-prices-by-item-id-with-url?'+query,{credentials:'same-origin',signal:AbortSignal.timeout(30000)});
+     entry.status=response.status;
+     if(!response.ok){entry.error='HTTP '+response.status;stop=[401,403,429].includes(response.status);}
+     else if(!(response.headers.get('Content-Type')||'').includes('application/json')){entry.error='返回登录/验证页面而不是价格 JSON';stop=true;}
+     else {
+      const data=await response.json();
+      if(!data||!Array.isArray(data.competitors))throw Error('接口没有返回 competitors 数组');
+      entry.ok=true;entry.data=data;
+     }
+    }catch(e){entry.error=e.name==='TimeoutError'?'请求超时':String(e.message||e).slice(0,180);}
+    entry.collectedAt=new Date().toISOString();batch.results.push(entry);
+    console.log('跟卖采集 '+(i+1)+'/'+products.length,p.itemId,entry.ok?'成功':entry.error);
+    if(stop){console.warn('登录、访问限制或限流：停止采集，不绕过验证。');break;}
+   }
+  }finally{window.__ozfcCollecting=false;batch.collectedAt=new Date().toISOString();}
+  const text=JSON.stringify(batch);
+  let copied=false;
+  try{await navigator.clipboard.writeText(text);copied=true;}catch(e){}
+  if(!copied&&typeof copy==='function'){try{copy(text);copied=true;}catch(e){}}
+  if(!copied){
+   const a=document.createElement('a'),url=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.href=url;a.download='ozon-跟卖采集.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);
+   console.warn('浏览器禁止自动复制，已下载 JSON。也可运行 copy(JSON.stringify(window.__ozfcCollectionResult))');
+  }
+  console.log('采集完成：成功 '+batch.results.filter(r=>r.ok).length+'，失败 '+batch.results.filter(r=>!r.ok).length+'，总商品 '+products.length+(copied?'；已复制到剪贴板':'；请导入下载结果'));
+ };
+ return '('+collect.toString()+')('+JSON.stringify(products)+');';
+}
+function ozfcParseCompetitors(input){
+ const parsed=typeof input==='string'?JSON.parse(input):input;
+ if(!parsed||typeof parsed!=='object')throw Error('请粘贴采集结果 JSON，不是 Cookie');
+ const batch=parsed.format==='ozfc-competitors-v1'?parsed:{results:[{ok:true,data:parsed,itemId:parsed.competitors?.[0]?.itemId,collectedAt:parsed.collectedAt||null}],collectedAt:parsed.collectedAt||null};
+ if(!Array.isArray(batch.results)||batch.results.length>10000)throw Error('采集结果格式不正确');
+ const results=batch.results.map(r=>{
+  if(!r.ok)return {...r,offers:[]};
+  if(!/^\d+$/.test(String(r.itemId||''))||!Array.isArray(r.data?.competitors))throw Error('缺少商品内部 ID 或 competitors 数组；空结果请使用批量采集命令');
+  if(r.data.competitors.some(q=>String(q.itemId)!==String(r.itemId)))throw Error('报价商品内部 ID 与采集记录不匹配');
+  const offers=r.data.competitors.map(q=>{
+   const units=Number(q.price?.units),nanos=Number(q.price?.nanos||0),currency=String(q.price?.currencyCode||'');
+   if(!Number.isSafeInteger(units)||!Number.isInteger(nanos)||nanos<0||nanos>=1e9||units<0||!/^[A-Z]{3}$/.test(currency))throw Error('报价金额或币种格式不正确');
+   const raw=String(q.url||''),match=raw.match(/\]\((https?:\/\/[^)]+)\)$/),url=match?match[1]:raw;
+   let u;try{u=new URL(url);}catch(e){throw Error('报价链接格式不正确');}
+   if(u.protocol!=='https:'||!(u.hostname==='ozon.ru'||u.hostname.endsWith('.ozon.ru')))throw Error('报价链接必须是 Ozon HTTPS 地址');
+   return {price:units+nanos/1e9,currency,url:u.href,sku:String(q.sku||''),rejectionReason:Array.isArray(q.rejectionReason)?q.rejectionReason.map(String):[],downloadedAt:q.downloadedAt||null};
+  });
+  return {...r,itemId:String(r.itemId),collectedAt:r.collectedAt||batch.collectedAt||null,offers};
+ });
+ return {...batch,results};
+}
+
 /* Native draggable canvas. Tariffs are data, never executable formulas. */
 function ozfcCalculate(it,r,fx=0){
  const dims=[it.length,it.width,it.height].map(v=>Number(v)/10),kg=Number(it.weight)/1000,reasons=[],steps=[];
@@ -141,7 +223,7 @@ class OzFreightCanvas{
    const sale=n.sale||{x:c.x+this.costWidth(n)+40,y:c.y};
    if(this.isTable())return '';
    return `<path d="M${x} ${y} C${x+80} ${y} ${x2-80} ${y2} ${x2} ${y2}" fill="none" stroke="#6b7bf5" stroke-width="3" stroke-dasharray="7 5"/><circle cx="${x}" cy="${y}" r="5" fill="#6b7bf5"/><circle cx="${x2}" cy="${y2}" r="5" fill="#19b8a7"/><path d="M${cx} ${cy} C${cx+70} ${cy} ${tx-70} ${ty} ${tx} ${ty}" fill="none" stroke="#b68bdc" stroke-width="3" stroke-dasharray="7 5"/><circle cx="${tx}" cy="${ty}" r="5" fill="#b68bdc"/><path d="M${c.x+this.costWidth(n)} ${c.y+100} C${c.x+this.costWidth(n)+20} ${c.y+100} ${sale.x-20} ${sale.y+100} ${sale.x} ${sale.y+100}" fill="none" stroke="#e5a346" stroke-width="3"/>`;
-  }).join('')+this.s.nodes.filter(n=>n.competitors&&!this.isTable()).map(n=>{const x=n.x+330,y=n.y+250,x2=n.rivals?.x??n.x+370,y2=(n.rivals?.y??n.y+600)+100;return `<path d="M${x} ${y} C${x+60} ${y} ${x2-60} ${y2} ${x2} ${y2}" fill="none" stroke="#19b8a7" stroke-width="3"/>`;}).join('');
+  }).join('')+this.s.nodes.filter(n=>n.competitors&&!n.rivalsHidden&&!this.isTable()).map(n=>{const x=n.x+330,y=n.y+250,x2=n.rivals?.x??n.x+370,y2=(n.rivals?.y??n.y+600)+100;return `<path d="M${x} ${y} C${x+60} ${y} ${x2-60} ${y2} ${x2} ${y2}" fill="none" stroke="#19b8a7" stroke-width="3"/>`;}).join('');
  }
  ozonIdentifiers(n){
   if(n.manual)return '';
@@ -173,17 +255,6 @@ class OzFreightCanvas{
  }
 
 
- async cookieDialog(after){
-  const d=new frappe.ui.Dialog({title:'Ozon 后台 Cookie · 私密保存',fields:[{fieldtype:'HTML',fieldname:'help'},{fieldtype:'Small Text',fieldname:'cookie',label:'Cookie',reqd:1}],primary_action_label:'保存',primary_action:async v=>{
-   if(d._saving)return;d._saving=true;d.get_primary_btn().prop('disabled',true);
-   try{await this.api('save_ozon_cookie',{cookie:v.cookie});d.fields_dict.cookie.set_value('');d.hide();frappe.show_alert({message:'Cookie 已加密保存',indicator:'green'});if(after)await after();}
-   catch(e){frappe.msgprint('保存或查询失败，请检查权限与连接');}finally{d._saving=false;d.get_primary_btn().prop('disabled',false);}
-  }});
-  d.fields_dict.help.$wrapper.html('<p>在 Ozon 页面控制台运行下方命令。注意：它看不到 HttpOnly 登录 Cookie，可能不足以获取后台数据。</p><button type="button" class="btn btn-default fc-copy-cookie-command">document.cookie ⧉</button><p>凭证按当前 ERPNext 用户加密保存，不随画布导出、不显示旧值。仅系统管理员可使用。</p>');
-  d.fields_dict.help.$wrapper.find('button').on('click',()=>this.copyItem('document.cookie'));
-  d.$wrapper.on('hidden.bs.modal',()=>d.fields_dict.cookie.set_value(''));
-  d.show();
- }
  async refreshSkus(){
   if(this.skuRefreshing)return;this.skuRefreshing=true;this.status('正在读取 Ozon 全部商品…');
   let added=0,merged=0;this.snap();const columnX=Math.max(0,...this.s.nodes.filter(n=>!n.systemGenerated).map(n=>Math.max(n.x+330,(n.sale?.x||n.cost?.x||n.quote?.x||n.x)+800)))+220;
@@ -221,21 +292,73 @@ class OzFreightCanvas{
    this.status('SKU 刷新完成：新增 '+added+' 张，匹配 '+merged+' 个 · 请保存画布');
   }finally{this.skuRefreshing=false;}
  }
- async refreshCompetitors(id,retried=false){
-  const n=this.s.nodes.find(n=>n.id===id);if(!n)return;
-  this.competitorPending ||= new Set();if(this.competitorPending.has(id))return;
-  const prices=n.meta?.prices||[],p=prices[n.priceIndex]||(prices.length===1?prices[0]:null);
-  if(!p?.product_id){frappe.msgprint('请先查询商品标识或刷新 SKU，取得商品内部 ID；多个商品需先选择绑定商品。');return;}
-  this.competitorPending.add(id);this.paint();
-  let result;
-  try{result=await this.api('check_ozon_competitors',{product_id:p.product_id,store:p.store});if(this.s.nodes.includes(n)){this.snap();n.competitors=result;this.change();}}
-  finally{this.competitorPending.delete(id);this.paint();}
-  if(result?.needs_cookie&&!retried)this.cookieDialog(()=>this.refreshCompetitors(id,true));
+
+ async collectionDialog(nodeId){
+  const d=new frappe.ui.Dialog({title:'抓取跟卖 · 浏览器采集与导入',size:'large',fields:[{fieldtype:'HTML',fieldname:'help'},{fieldtype:'Small Text',fieldname:'result',label:'粘贴 F12 采集结果 JSON',reqd:1}],primary_action_label:'保存并加载到卡片',primary_action:async v=>{
+   if(d._saving)return;d._saving=true;d.get_primary_btn().prop('disabled',true);
+   try{
+    const before=structuredClone(this.s);const summary=this.applyCompetitors(v.result,nodeId);
+    if(!summary.matched)throw Error('没有成功匹配的报价。请先刷新 SKU 建立卡片，再检查是否为对应店铺的结果。');
+    try{await this.save();}catch(e){this.s=before;this.change();this.paint();throw e;}
+    d.hide();frappe.show_alert({message:'已保存：匹配 '+summary.matched+' 张卡片，未匹配 '+summary.unmatched+'，失败/未完成 '+summary.failed,indicator:'green'});
+   }catch(e){frappe.msgprint(this.e(e.message));}finally{d._saving=false;d.get_primary_btn().prop('disabled',false);}
+  }});
+  d.fields_dict.help.$wrapper.html('<div class="fc-collection-help"><p>① 复制命令 → ② 在正常登录的 Ozon 页面 F12 运行 → ③ 等待完成，结果自动复制 → ④ 粘贴到下面并保存。</p><button type="button" class="btn btn-primary">复制F12命令</button><small>命令只采集当前画布卡片关联的 Ozon 商品内部 ID。想采集全部商品，请先点击“刷新 SKU”。逐个请求，间隔1.5秒。登录失败、访问拒绝或限流时停止；不会复制 Cookie，也不会修改售价。多个店铺需有相应登录权限。</small><small>保存会连同当前画布更改一起写入数据库。失败、仍在计算的结果不会覆盖已保存报价；找不到卡片的商品请先刷新 SKU。</small></div>');
+  const button=d.fields_dict.help.$wrapper.find('button');
+  button.on('click',async()=>{
+   button.prop('disabled',true).text('读取当前画布商品 ID…');
+   try{
+    const products=ozfcCanvasCollectionTargets(this.s.nodes);
+    if(!products.length)throw Error('当前画布没有可采集的 Ozon 商品内部 ID，请先选择物料并查询标识，或点击刷新 SKU');
+    const manifest=await this.api('competitor_collection_manifest',{products:JSON.stringify(products)});
+    if(!manifest.products?.length)throw Error('没有可采集的 Ozon 商品');
+    await this.copyItem(ozfcCollectionCommand(manifest.products));
+   }catch(e){frappe.msgprint(this.e(e.message));}finally{button.prop('disabled',false).text('复制F12命令');}
+  });d.show();
  }
+ applyCompetitors(input,nodeId){
+  if(typeof input==='string'&&new TextEncoder().encode(input).length>2000000)throw Error('采集 JSON 不能超过2MB');
+  const batch=ozfcParseCompetitors(input),updates=new Map(),touched=new Set(),importedAt=new Date().toISOString();let failed=0,unmatched=0;
+  for(const r of batch.results){
+   if(!r.ok||r.data.syncing){failed++;continue;}
+   const candidates=this.s.nodes.filter(n=>(n.meta?.prices||[]).some(p=>String(p.product_id)===r.itemId&&(!r.store||p.store===r.store)));
+   const stores=new Set(candidates.flatMap(n=>(n.meta?.prices||[]).filter(p=>String(p.product_id)===r.itemId&&(!r.store||p.store===r.store)).map(p=>p.store)));
+   if(!candidates.length||stores.size!==1){unmatched++;continue;}
+   for(const n of candidates){
+    const data=updates.get(n)||structuredClone(n.competitors||{products:[]});
+    data.products ||= [];
+    const store=[...stores][0],key=store+'|'+r.itemId;
+    const record={key,store,itemId:r.itemId,companyId:r.companyId||null,offers:r.offers,raw:r.data,collectedAt:r.collectedAt,importedAt};
+    const index=data.products.findIndex(p=>p.key===key),touch=n.id+'|'+key;
+    if(index<0)data.products.push(ozfcCompetitorVersion(null,record));
+    else if(touched.has(touch))data.products[index]={...record,version:data.products[index].version,history:data.products[index].history};
+    else data.products[index]=ozfcCompetitorVersion(data.products[index],record);
+    touched.add(touch);
+    data.message='浏览器采集结果';data.checked_at=r.collectedAt;updates.set(n,data);
+   }
+  }
+  if(updates.size){
+   const prospective=structuredClone(this.s);
+   prospective.nodes.forEach(n=>{const source=this.s.nodes.find(q=>q.id===n.id);if(updates.has(source))n.competitors=updates.get(source);});
+   if(new TextEncoder().encode(JSON.stringify(prospective)).length>2000000)throw Error('导入后画布超过2MB，请分画布保存或减少采集范围');
+   this.snap();for(const [n,data] of updates){n.competitors=data;n.rivalsHidden=false;for(const product of data.products)this.rivalVersions?.delete(n.id+'|'+product.key);}this.change();this.paint();
+  }
+  return {matched:updates.size,unmatched,failed};
+ }
+ async refreshCompetitors(id){const n=this.s.nodes.find(n=>n.id===id);if(n?.rivalsHidden){n.rivalsHidden=false;this.change();this.paint();}return this.collectionDialog(id);}
  competitorHTML(n){
-  const data=n.competitors;if(!data)return '';const pos=n.rivals||{x:n.x+370,y:n.y+600};
-  return '<article class="fc-card fc-competitors" style="left:'+pos.x+'px;top:'+pos.y+'px"><header class="fc-drag" data-n="'+n.id+'" data-rivals="true"><span>跟卖价格检查</span><button data-close-rivals="'+n.id+'">×</button></header><div style="padding:18px"><p>'+this.e(data.message)+'</p>'+(data.offers||[]).map(q=>'<p>'+this.e(q.seller)+' · '+this.e(q.price)+' '+this.e(q.currency)+'</p>').join('')+(data.url?'<a href="'+this.image(data.url)+'" target="_blank" rel="noopener noreferrer">打开 Ozon 后台价格页面 ↗</a>':'')+'<small style="display:block">'+this.e(data.checked_at||'')+'</small></div></article>';
+  const data=n.competitors;if(!data||n.rivalsHidden)return '';const pos=n.rivals||{x:n.x+370,y:n.y+600};
+  const date=t=>t&&!Number.isNaN(Date.parse(t))?new Date(t).toLocaleString('zh-CN',{hour12:false}):'未提供';
+  const products=data.products||[];
+  return '<article class="fc-card fc-competitors" style="left:'+pos.x+'px;top:'+pos.y+'px"><header class="fc-drag" data-n="'+n.id+'" data-rivals="true"><span>跟卖报价 · 浏览器采集</span><button data-close-rivals="'+n.id+'">×</button></header><div class="fc-competitor-content">'+(products.length?products.map(current=>{
+   const selection=this.rivalVersions?.get(n.id+'|'+current.key)||'current';
+   const p=selection==='current'?current:(current.history||[]).find(v=>String(v.version)===selection)||current;
+   const versions='<label class="fc-rival-version-label">报价版本<select data-rival-version="'+n.id+'" data-rival-key="'+this.e(current.key)+'"><option value="current" '+(p===current?'selected':'')+'>最新 · 第'+(current.version||1)+'版</option>'+(current.history||[]).slice().reverse().map(v=>'<option value="'+v.version+'" '+(p===v?'selected':'')+'>历史 · 第'+v.version+'版 · '+this.e(date(v.collectedAt||v.importedAt))+'</option>').join('')+'</select></label>';
+   const valid=p.offers.filter(q=>!q.rejectionReason.length),currencies=[...new Set(valid.map(q=>q.currency))];
+   return '<section><small>'+this.e(p.store)+' · 商品 '+this.e(p.itemId)+'</small>'+versions+'<p>导入时间：'+this.e(date(p.importedAt))+'</p><p>采集时间：'+this.e(date(p.collectedAt))+'</p><div class="fc-competitor-summary">'+p.offers.length+' 个报价 · '+valid.length+' 个未标记拒绝'+(currencies.length===1&&valid.length?' · 最低 '+Math.min(...valid.map(q=>q.price)).toFixed(2)+' '+this.e(currencies[0]):'')+'</div>'+p.offers.map((q,i)=>'<div class="fc-competitor-offer '+(q.rejectionReason.length?'rejected':'')+'"><b>'+q.price.toFixed(2)+' '+this.e(q.currency)+'</b><a href="'+this.image(q.url)+'" target="_blank" rel="noopener noreferrer">报价商品 '+(i+1)+' ↗</a><small>Ozon 数据时间：'+this.e(date(q.downloadedAt))+'</small>'+(q.rejectionReason.length?'<em>接口拒绝标记：'+this.e(q.rejectionReason.map(s=>s==='bad-offer-price'?'报价价格异常（bad-offer-price）':s).join('、'))+'</em>':'<small>接口未标记拒绝；仍需核对是否同款</small>')+'</div>').join('')+(!p.offers.length?'<p>接口本次没有返回竞争报价。</p>':'')+'</section>';
+  }).join(''):'<p>'+this.e(data.message||'请通过“抓取跟卖”导入新结果')+'</p>')+'</div></article>';
  }
+
 
  async enrich(id,force=false){
   const n=this.s.nodes.find(n=>n.id===id);this.pending ||= new Set();if(!n||n.manual||this.pending.has(id))return;this.pending.add(id);this.paint();
@@ -263,7 +386,7 @@ class OzFreightCanvas{
  change(){this.changeId=(this.changeId||0)+1;this.dirty=true;this.status('● 有未保存的更改');}
  snap(){this.undo.push(JSON.stringify({s:this.s,c:this.c}));if(this.undo.length>50)this.undo.shift();this.redo=[];}
  history(back){const a=back?this.undo:this.redo,b=back?this.redo:this.undo;if(!a.length)return;b.push(JSON.stringify({s:this.s,c:this.c}));const x=JSON.parse(a.pop());this.s=x.s;this.c=x.c;this.change();this.paint();}
- shell(){this.root.innerHTML=`<style>${OzFreightCanvas.css}</style><div class="fc-hero"><div><small>OZON · FREIGHT STUDIO</small><h2>让每一笔运费，算得明明白白</h2><p>物料 → 渠道筛选 → 计费过程 · 自由拖拽的运费分析画板</p></div><b class="fc-count">0 张物料卡片</b></div><div class="fc-tools"><input class="fc-title" value="我的运费画板" aria-label="画布名称"><button data-a="blank">＋ 空白物料</button><button data-a="add" class="primary">＋ 选择物料</button><button data-a="config">⚙ 物流配置</button><button data-a="save" class="primary">保存画布</button><button data-a="open">打开</button><button data-a="new">新画布</button><button data-a="export">导出</button><button data-a="import">导入画布</button><label class="fc-utility"><input type="checkbox" class="fc-exclusive" checked> 单物料展开</label><div class="fc-mode-switch"><button data-a="mode-canvas" class="active">画布</button><button data-a="mode-table">横向表格</button></div><button data-a="brief">简略展示</button><button data-a="cookie">Cookie</button><button data-a="sku-refresh">刷新 SKU</button><label class="fc-utility">1 RUB = ¥ <input class="fc-fx" type="number" min="0" step="0.000001" placeholder="汇率"></label><button data-a="exchange">刷新汇率</button><span class="fc-threshold"></span><span class="fc-status">读取中…</span></div><div class="fc-moneybar">${this.feeControls()}<label class="fc-fee-control">佣金 <input class="fc-top-commission" type="number" min="0" max="99.99" step="0.01" placeholder="API"><span>%</span></label></div><div class="fc-menu-switch"><button data-a="menu-toggle" aria-label="收起顶部菜单" aria-expanded="true"><span class="fc-menu-grip"></span><span>收起工具栏</span><span class="fc-menu-chevron"></span></button></div><div class="fc-stage" tabindex="0"><div class="fc-world"><svg class="fc-lines" width="1" height="1"></svg><div class="fc-nodes"></div></div><div class="fc-empty"><span>◇</span><h3>从一张物料卡片开始</h3><p>选择物料，点击卡片展开报价和计算过程</p><button data-a="add" class="primary">＋ 添加物料</button></div><div class="fc-controls"><button data-a="undo">↶</button><button data-a="redo">↷</button><button data-a="minus">−</button><span class="fc-zoom">100%</span><button data-a="plus">＋</button><button data-a="fit">居中</button><button data-a="fullscreen">全屏</button></div><small class="fc-help">空白处拖拽平移 · 滚轮缩放 · 拖动卡片顶部移动 · Ctrl+Z 撤销</small></div>`;this.stage=this.root.querySelector('.fc-stage');this.world=this.root.querySelector('.fc-world');this.root.querySelector('.fc-title').oninput=()=>this.change();this.layoutObserver=new ResizeObserver(()=>this.layout());this.layoutObserver.observe(this.root);window.addEventListener('resize',()=>this.layout());}
+ shell(){this.root.innerHTML=`<style>${OzFreightCanvas.css}</style><div class="fc-hero"><div><small>OZON · FREIGHT STUDIO</small><h2>让每一笔运费，算得明明白白</h2><p>物料 → 渠道筛选 → 计费过程 · 自由拖拽的运费分析画板</p></div><b class="fc-count">0 张物料卡片</b></div><div class="fc-tools"><input class="fc-title" value="我的运费画板" aria-label="画布名称"><button data-a="blank">＋ 空白物料</button><button data-a="add" class="primary">＋ 选择物料</button><button data-a="config">⚙ 物流配置</button><button data-a="save" class="primary">保存画布</button><button data-a="open">打开</button><button data-a="new">新画布</button><button data-a="export">导出</button><button data-a="import">导入画布</button><label class="fc-utility"><input type="checkbox" class="fc-exclusive" checked> 单物料展开</label><div class="fc-mode-switch"><button data-a="mode-canvas" class="active">画布</button><button data-a="mode-table">横向表格</button></div><button data-a="brief">简略展示</button><button data-a="collect">抓取跟卖</button><button data-a="sku-refresh">刷新 SKU</button><label class="fc-utility">1 RUB = ¥ <input class="fc-fx" type="number" min="0" step="0.000001" placeholder="汇率"></label><button data-a="exchange">刷新汇率</button><span class="fc-threshold"></span><span class="fc-status">读取中…</span></div><div class="fc-moneybar">${this.feeControls()}<label class="fc-fee-control">佣金 <input class="fc-top-commission" type="number" min="0" max="99.99" step="0.01" placeholder="API"><span>%</span></label></div><div class="fc-menu-switch"><button data-a="menu-toggle" aria-label="收起顶部菜单" aria-expanded="true"><span class="fc-menu-grip"></span><span>收起工具栏</span><span class="fc-menu-chevron"></span></button></div><div class="fc-stage" tabindex="0"><div class="fc-world"><svg class="fc-lines" width="1" height="1"></svg><div class="fc-nodes"></div></div><div class="fc-empty"><span>◇</span><h3>从一张物料卡片开始</h3><p>选择物料，点击卡片展开报价和计算过程</p><button data-a="add" class="primary">＋ 添加物料</button></div><div class="fc-controls"><button data-a="undo">↶</button><button data-a="redo">↷</button><button data-a="minus">−</button><span class="fc-zoom">100%</span><button data-a="plus">＋</button><button data-a="fit">居中</button><button data-a="fullscreen">全屏</button></div><small class="fc-help">空白处拖拽平移 · 滚轮缩放 · 拖动卡片顶部移动 · Ctrl+Z 撤销</small></div>`;this.stage=this.root.querySelector('.fc-stage');this.world=this.root.querySelector('.fc-world');this.root.querySelector('.fc-title').oninput=()=>this.change();this.layoutObserver=new ResizeObserver(()=>this.layout());this.layoutObserver.observe(this.root);window.addEventListener('resize',()=>this.layout());}
  layout(){if(!this.stage)return;const rect=this.root.getBoundingClientRect(),height=Math.max(220,window.innerHeight-Math.max(0,rect.top)-16);this.root.style.height=height+'px';this.root.style.setProperty('--fc-card-height',Math.max(140,this.stage.clientHeight-16)+'px');}
  logisticsHeight(){this.root.querySelectorAll('.fc-results').forEach(el=>{const rows=[...el.querySelectorAll('.fc-route')].filter(row=>!row.hidden).slice(0,this.isTable()?1:3);if(rows.length){const last=rows.at(-1);el.style.height=(last.offsetTop+last.offsetHeight-rows[0].offsetTop+24)+'px';}});}
  topCommission(){const n=this.s.nodes.find(n=>n.id===(this.s.focus||this.s.active))||this.s.nodes[0],el=this.root.querySelector('.fc-top-commission');if(!el)return;const prices=n?.meta?.prices||[],product=prices[n?.priceIndex]||(prices.length===1?prices[0]:null),api=product?.commissions?.find(c=>c.schema===(n.commissionSchema||'RFBS'));el.value=n?.commissionOverride??api?.percent??'';el.dataset.node=n?.id||'';el.disabled=!n;}
@@ -404,13 +527,14 @@ class OzFreightCanvas{
   const reset=ev.target.closest('[data-restore-sale]');if(reset){const n=this.s.nodes.find(n=>n.id===reset.dataset.restoreSale);if(n){this.snap();if(n.manual)n.manualSale='';else delete n.saleOverride;this.change();this.paint();}}
  });
  this.root.addEventListener('change',ev=>{
+  if(ev.target.dataset.rivalVersion){this.rivalVersions ||= new Map();this.rivalVersions.set(ev.target.dataset.rivalVersion+'|'+ev.target.dataset.rivalKey,ev.target.value);this.paint();return;}
   const el=ev.target,n=this.s.nodes.find(n=>n.id===el.dataset.nodeToggle);if(n){this.snap();n.fees ||= {};n.fees[el.dataset.key+'_enabled']=el.checked;this.change();this.paint();}
  });
 
  this.root.addEventListener('input',ev=>{if(this.liveEdit(ev.target))return;if(ev.target.dataset.logisticsSearch){this.logisticsQueries ||= {};this.logisticsQueries[ev.target.dataset.logisticsSearch]=ev.target.value;this.filterLogistics();this.logisticsHeight();this.restoreTableScroll();}});
 
  this.root.addEventListener('toggle',ev=>{if(ev.target.matches('.fc-route'))this.filterLogistics();this.logisticsHeight();this.restoreTableScroll();},true);
- this.root.addEventListener('click',ev=>{if(this.suppress)return;const copy=ev.target.closest('[data-copy-item]');if(copy){this.copyItem(copy.dataset.copyItem).catch(()=>frappe.msgprint('复制失败，请允许剪贴板访问'));return;}const rivals=ev.target.closest('[data-competitors]');if(rivals){this.refreshCompetitors(rivals.dataset.competitors).catch(e=>frappe.msgprint(this.e(e.message)));return;}const closeRivals=ev.target.closest('[data-close-rivals]');if(closeRivals){const n=this.s.nodes.find(n=>n.id===closeRivals.dataset.closeRivals);if(n){n.competitors=null;this.change();this.paint();}return;}const restore=ev.target.closest('[data-restore-commission]');if(restore){const n=this.s.nodes.find(n=>n.id===restore.dataset.restoreCommission);if(n){this.snap();delete n.commissionOverride;this.change();this.paint();}return;}if(ev.target.closest('.fc-stage')&&!ev.target.closest('.fc-card,.fc-controls,button,input,select')){this.s.focus=null;this.paint();return;}const route=ev.target.closest('[data-cost-route]');if(route){const n=this.s.nodes.find(n=>n.id===route.dataset.node);if(n){this.snap();n.costRoute=route.dataset.costRoute;this.change();this.paint();}return;}const lookup=ev.target.closest('[data-lookup]');if(lookup){this.enrich(lookup.dataset.lookup,true);return;}const a=ev.target.closest('[data-a]');if(a){this.action(a.dataset.a).catch(e=>frappe.msgprint(this.e(e.message)));return;}const del=ev.target.closest('[data-del]');if(del){this.snap();this.s.nodes=this.s.nodes.filter(n=>n.id!==del.dataset.del);this.change();this.paint();return;}const refresh=ev.target.closest('[data-refresh]');if(refresh){this.refresh(refresh.dataset.refresh).catch(e=>frappe.msgprint(this.e(e.message)));return;}if(ev.target.closest('input,select,button,details,a'))return;const card=ev.target.closest('.fc-item');if(card){if(this.isTable()){this.s.active=card.dataset.id;this.topCommission();}else this.activate(card.dataset.id);}});
+ this.root.addEventListener('click',ev=>{if(this.suppress)return;const copy=ev.target.closest('[data-copy-item]');if(copy){this.copyItem(copy.dataset.copyItem).catch(()=>frappe.msgprint('复制失败，请允许剪贴板访问'));return;}const rivals=ev.target.closest('[data-competitors]');if(rivals){this.refreshCompetitors(rivals.dataset.competitors).catch(e=>frappe.msgprint(this.e(e.message)));return;}const closeRivals=ev.target.closest('[data-close-rivals]');if(closeRivals){const n=this.s.nodes.find(n=>n.id===closeRivals.dataset.closeRivals);if(n){n.rivalsHidden=true;this.change();this.paint();}return;}const restore=ev.target.closest('[data-restore-commission]');if(restore){const n=this.s.nodes.find(n=>n.id===restore.dataset.restoreCommission);if(n){this.snap();delete n.commissionOverride;this.change();this.paint();}return;}if(ev.target.closest('.fc-stage')&&!ev.target.closest('.fc-card,.fc-controls,button,input,select')){this.s.focus=null;this.paint();return;}const route=ev.target.closest('[data-cost-route]');if(route){const n=this.s.nodes.find(n=>n.id===route.dataset.node);if(n){this.snap();n.costRoute=route.dataset.costRoute;this.change();this.paint();}return;}const lookup=ev.target.closest('[data-lookup]');if(lookup){this.enrich(lookup.dataset.lookup,true);return;}const a=ev.target.closest('[data-a]');if(a){this.action(a.dataset.a).catch(e=>frappe.msgprint(this.e(e.message)));return;}const del=ev.target.closest('[data-del]');if(del){this.snap();this.s.nodes=this.s.nodes.filter(n=>n.id!==del.dataset.del);this.change();this.paint();return;}const refresh=ev.target.closest('[data-refresh]');if(refresh){this.refresh(refresh.dataset.refresh).catch(e=>frappe.msgprint(this.e(e.message)));return;}if(ev.target.closest('input,select,button,details,a'))return;const card=ev.target.closest('.fc-item');if(card){if(this.isTable()){this.s.active=card.dataset.id;this.topCommission();}else this.activate(card.dataset.id);}});
  this.root.addEventListener('change',ev=>{
  const manualKey=ev.target.dataset.manualName?'manualName':ev.target.dataset.manualSale?'manualSale':ev.target.dataset.manualCommission?'manualCommission':null;
  if(manualKey){const n=this.s.nodes.find(n=>n.id===ev.target.dataset[manualKey]);if(!n?.manual)return;const value=ev.target.value,v=Number(value);if(manualKey!=='manualName'&&value!==''&&(!Number.isFinite(v)||v<0||(manualKey==='manualCommission'&&v>=100))){frappe.msgprint('请填写有效的非负金额，佣金需小于100%');this.paint();return;}this.snap();if(manualKey==='manualName')n.item.item_name=value||'空白物料';else if(manualKey==='manualSale')n.manualSale=value===''?'':v;else if(value==='')delete n.commissionOverride;else n.commissionOverride=v;this.change();this.paint();return;}
@@ -440,7 +564,7 @@ class OzFreightCanvas{
  this.stage.addEventListener('keydown',ev=>{if(ev.target.matches('input,textarea,select'))return;if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='z'){ev.preventDefault();this.history(!ev.shiftKey);}if(ev.key==='Escape'){this.s.focus=null;this.s.active=null;this.s.expanded=[];this.paint();}});
  window.addEventListener('beforeunload',ev=>{if(this.dirty){ev.preventDefault();ev.returnValue='';}});
  }
- async action(a){if(!this.c)return;if(a==='mode-canvas'||a==='mode-table'){this.snap();this.s.displayMode=a==='mode-table'?'table':'canvas';this.change();this.paint();return;}if(a==='cookie')return this.cookieDialog();if(a==='sku-refresh')return this.refreshSkus();if(a==='brief')return this.brief();if(a==='menu-toggle'){this.menuCollapsed=!this.menuCollapsed;this.paint();return;}if(a==='exchange'){const x=await this.api('exchange_info');this.snap();this.c.cny_per_rub=x.cny_per_rub;this.c.exchange_date=x.date;this.change();this.paint();return;}if(a==='blank')return this.addBlank();if(a==='add')return this.picker();if(a==='config')return this.editor();if(a==='save')return this.save();if(a==='open')return this.open();if(a==='undo'||a==='redo')return this.history(a==='undo');if(a==='plus'||a==='minus')return this.zoom(this.s.view.z*(a==='plus'?1.2:1/1.2));if(a==='fullscreen')return document.fullscreenElement?document.exitFullscreen():this.stage.requestFullscreen();if(a==='fit'){this.s.view={x:50-Math.min(0,...this.s.nodes.map(n=>n.x)),y:50-Math.min(0,...this.s.nodes.map(n=>n.y)),z:1};this.transform();this.change();}if(a==='export')this.download({title:this.root.querySelector('.fc-title').value,canvas:this.s,config:this.c},'ozon-freight-canvas.json');if(a==='new'){if(this.dirty&&!confirm('有未保存内容，仍然新建？'))return;this.s={version:2,nodes:[],active:null,expanded:[],exclusive:true,view:{x:60,y:50,z:1}};this.c=structuredClone(this.bootData.defaults);this.name=this.modified=null;this.undo=[];this.redo=[];this.root.querySelector('.fc-title').value='新运费画板';this.change();this.paint();}if(a==='import')this.file(x=>{this.validateCanvas(x.canvas);this.validateConfig(x.config);if(this.dirty&&!confirm('替换当前画布？'))return;this.snap();this.s=x.canvas;this.c=x.config;this.prepare(this.s,this.c);this.name=this.modified=null;this.root.querySelector('.fc-title').value=x.title||'导入画布';this.change();this.paint();});}
+ async action(a){if(!this.c)return;if(a==='mode-canvas'||a==='mode-table'){this.snap();this.s.displayMode=a==='mode-table'?'table':'canvas';this.change();this.paint();return;}if(a==='collect')return this.collectionDialog();if(a==='sku-refresh')return this.refreshSkus();if(a==='brief')return this.brief();if(a==='menu-toggle'){this.menuCollapsed=!this.menuCollapsed;this.paint();return;}if(a==='exchange'){const x=await this.api('exchange_info');this.snap();this.c.cny_per_rub=x.cny_per_rub;this.c.exchange_date=x.date;this.change();this.paint();return;}if(a==='blank')return this.addBlank();if(a==='add')return this.picker();if(a==='config')return this.editor();if(a==='save')return this.save();if(a==='open')return this.open();if(a==='undo'||a==='redo')return this.history(a==='undo');if(a==='plus'||a==='minus')return this.zoom(this.s.view.z*(a==='plus'?1.2:1/1.2));if(a==='fullscreen')return document.fullscreenElement?document.exitFullscreen():this.stage.requestFullscreen();if(a==='fit'){this.s.view={x:50-Math.min(0,...this.s.nodes.map(n=>n.x)),y:50-Math.min(0,...this.s.nodes.map(n=>n.y)),z:1};this.transform();this.change();}if(a==='export')this.download({title:this.root.querySelector('.fc-title').value,canvas:this.s,config:this.c},'ozon-freight-canvas.json');if(a==='new'){if(this.dirty&&!confirm('有未保存内容，仍然新建？'))return;this.s={version:2,nodes:[],active:null,expanded:[],exclusive:true,view:{x:60,y:50,z:1}};this.c=structuredClone(this.bootData.defaults);this.name=this.modified=null;this.undo=[];this.redo=[];this.root.querySelector('.fc-title').value='新运费画板';this.change();this.paint();}if(a==='import')this.file(x=>{this.validateCanvas(x.canvas);this.validateConfig(x.config);if(this.dirty&&!confirm('替换当前画布？'))return;this.snap();this.s=x.canvas;this.c=x.config;this.prepare(this.s,this.c);this.name=this.modified=null;this.root.querySelector('.fc-title').value=x.title||'导入画布';this.change();this.paint();});}
  zoom(z,cx,cy){const r=this.stage.getBoundingClientRect(),v=this.s.view;cx=(cx??r.left+r.width/2)-r.left;cy=(cy??r.top+r.height/2)-r.top;z=Math.max(.05,Math.min(5,z));v.x=cx-(cx-v.x)*z/v.z;v.y=cy-(cy-v.y)*z/v.z;v.z=z;this.transform();this.change();}
  transform(){const v=this.s.view;if(this.isTable()){this.world.style.transform='none';this.root.querySelector('.fc-zoom').textContent='表格';this.imageCard();return;}this.world.style.transform=`translate(${v.x}px,${v.y}px) scale(${v.z})`;this.root.querySelector('.fc-zoom').textContent=Math.round(v.z*100)+'%';this.imageCard();}
  normalize(r){return {item_code:r.item_code,item_name:r.item_name,image:r.image,length:r.custom_带包装长度mm||'',width:r.custom_带包装宽度mm||'',height:r.custom_带包装高度mm||'',weight:r.custom_带包装重量g||'',value:'',value_currency:'CNY',battery:false,liquid:false};}
@@ -460,5 +584,6 @@ class OzFreightCanvas{
  host.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{try{if(mode==='json')draft=JSON.parse(host.querySelector('textarea').value);const a=b.dataset.c;if(a==='table'||a==='json'){mode=a;draw();}if(a==='export')this.download(draft,'ozon-freight-config.json');if(a==='import')this.file(x=>{this.validateConfig(x);draft=x;draw();});if(a==='reset'&&confirm('替换为初始报价快照？')){draft=structuredClone(this.bootData.defaults);draw();}if(a==='add'){draft.routes.push({...structuredClone(this.bootData.defaults.routes[0]),id:crypto.randomUUID(),provider:'新承运商',name:'新渠道',enabled:false,source:'手动配置',note:'请核对'});draw();}}catch(e){frappe.msgprint(this.e(e.message));}});host.querySelectorAll('[data-key]').forEach(i=>i.onchange=()=>draft.routes[Number(i.dataset.row)][i.dataset.key]=i.type==='checkbox'?i.checked:i.type==='number'?Number(i.value):i.value);host.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{draft.routes.splice(Number(b.dataset.remove),1);draw();});};draw();d.show();}
 }
 if(typeof module!=='undefined')module.exports.OzFreightCanvas=OzFreightCanvas;
+if(typeof module!=='undefined')Object.assign(module.exports,{ozfcCompetitorVersion,ozfcCanvasCollectionTargets,ozfcCollectionCommand,ozfcParseCompetitors});
 OzFreightCanvas.css=`
 .ozfc{font-family:var(--font-stack,sans-serif);color:#233654}.ozfc *{box-sizing:border-box}.ozfc button{border:1px solid #dce3f0;border-radius:9px;background:#fff;color:#334463;padding:8px 12px;cursor:pointer;font-size:12px}.ozfc button:hover{border-color:#7783f4;background:#f1f3ff}.ozfc button:disabled{opacity:.4;cursor:not-allowed}.ozfc .primary{background:#606df5;color:white;border-color:#606df5}.fc-hero{background:linear-gradient(115deg,#162b50,#384f99 65%,#1199a1);border-radius:18px;padding:24px 28px;display:flex;justify-content:space-between;gap:20px;color:#fff;margin:12px 0}.fc-hero small{letter-spacing:3px;color:#a7d7ff;font-size:10px}.fc-hero h2{color:white;font-size:24px;margin:8px 0}.fc-hero p{color:#d6e3ff;font-size:12px;margin:0}.fc-count{align-self:center;border:1px solid #ffffff40;border-radius:12px;padding:14px;white-space:nowrap}.fc-tools{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:12px 0}.fc-title{border:1px solid #dce3f0;border-radius:9px;padding:8px;width:175px;font-size:13px;background:white;color:#18243c}.fc-status{font-size:11px;color:#687795;margin-left:auto}.fc-stage{height:calc(100vh - 310px);min-height:450px;position:relative;overflow:hidden;border:1px solid #e0e6f3;border-radius:18px;background-color:#f5f7fc;background-image:radial-gradient(#cdd6e7 1px,transparent 1px);background-size:22px 22px;touch-action:none;outline:none}.fc-stage:fullscreen{height:100vh;border-radius:0}.fc-world{position:absolute;transform-origin:0 0;width:0;height:0}.fc-lines{position:absolute;overflow:visible;pointer-events:none}.fc-card{position:absolute;background:#fff;border:1px solid #dce4f3;border-radius:16px;box-shadow:0 10px 28px #1c315814;overflow:hidden;width:330px}.fc-item.active{border-color:#7783f4;box-shadow:0 10px 30px #596ce533}.fc-drag{padding:12px 16px;background:#edf1fc;display:flex;align-items:center;justify-content:space-between;cursor:grab;user-select:none;color:#6b7c9e;font-size:10px;letter-spacing:.8px}.fc-drag button{padding:0 7px;font-size:18px;background:transparent;border:0}.fc-product{padding:18px 16px;display:flex;gap:13px;align-items:center}.fc-product img{width:76px;height:76px;object-fit:contain;background:#f8f9fc;border-radius:12px}.fc-product h3{font-size:14px;line-height:1.5;margin:0;overflow-wrap:anywhere}.fc-product small{font-size:10px;color:#8390a8;display:block;margin-top:6px;word-break:break-all}.fc-inputs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 16px 14px}.fc-inputs label{color:#8490a6;font-size:10px;margin:0}.fc-inputs input{width:100%;border:1px solid #dce3f0;border-radius:7px;padding:7px;margin-top:4px;color:#243751;font-size:12px;background:#fafbfe}.fc-inputs label:last-child{grid-column:span 2}.fc-checks{display:flex;align-items:center;gap:12px;padding:0 16px 14px;font-size:11px}.fc-checks label{margin:0}.fc-checks button{margin-left:auto;padding:4px 6px}.fc-card footer{border-top:1px solid #edf0f6;padding:12px 16px;color:#8592aa;font-size:10px}.fc-quotes{width:490px}.fc-quotes header{background:#e9f8f6;color:#258d86}.fc-best{background:linear-gradient(120deg,#fafbff,#eef8fb);padding:20px}.fc-best small{color:#718099;font-size:11px}.fc-best strong{display:block;font-size:30px;color:#213d6b;margin:5px 0}.fc-best p{font-size:12px;color:#6d83a4;margin:0}.fc-results{max-height:440px;overflow-y:auto;padding:8px 16px;overscroll-behavior:contain}.fc-route{border:1px solid #e0e8f2;border-radius:10px;margin:8px 0;overflow:hidden}.fc-route summary{padding:13px;display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer;list-style:none}.fc-route summary b{font-size:12px}.fc-route summary small{display:block;font-size:10px;color:#8491a5;margin-top:4px}.fc-route summary strong{color:#16948d;font-size:17px;white-space:nowrap}.fc-route ol{list-style:none;padding:0 13px;margin:0}.fc-route li{font-size:11px;line-height:1.8;border-top:1px dashed #e5eaf2;padding:7px 0;color:#465d7b}.fc-route.invalid summary strong{font-size:11px;color:#a8aebd}.fc-route.invalid{background:#fafbfc}.fc-warning{padding:10px 13px;background:#fff4ee;color:#b7754b;font-size:11px;line-height:1.7}.fc-source{font-size:9px;line-height:1.7;color:#97a1b3;padding:0 13px}.fc-empty{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);text-align:center;color:#8795b0;pointer-events:none}.fc-empty[hidden]{display:none}.fc-empty span{font-size:70px;color:#b1bef3}.fc-empty h3{font-size:20px;color:#465c86}.fc-empty p{font-size:12px}.fc-empty button{pointer-events:auto}.fc-controls{position:absolute;bottom:18px;right:18px;display:flex;gap:6px;align-items:center;background:#fffffff0;padding:7px;border-radius:13px;box-shadow:0 5px 20px #21344b15}.fc-zoom{font-size:11px;width:40px;text-align:center}.fc-help{position:absolute;bottom:25px;left:20px;font-size:10px;color:#96a0b5;pointer-events:none}.fc-search{width:100%;padding:12px;border-radius:9px;border:1px solid #dce3f0;margin-bottom:12px}.fc-list{max-height:480px;overflow:auto}.fc-pick{width:100%;display:flex;align-items:center;text-align:left;gap:16px;margin:5px 0}.fc-pick img{width:58px;height:58px;object-fit:contain;background:#f8f9fc;border-radius:9px}.fc-pick span{flex:1}.fc-pick b{font-size:13px}.fc-pick small{display:block;font-size:10px;color:#8190a6;margin-top:4px}.fc-pick strong{font-size:22px;color:#606df5}.fc-more{width:100%;margin-top:10px}.fc-note{padding:16px;background:#f0f4ff;border-radius:12px;font-size:12px;line-height:1.7}.fc-note p{margin:8px 0 0;color:#73829e}.fc-configtable{max-height:470px;overflow:auto;border:1px solid #e2e8f3;border-radius:10px}.fc-configtable table{border-collapse:collapse;min-width:2300px}.fc-configtable th{position:sticky;top:0;background:#eef2fc;z-index:1;white-space:nowrap;font-size:10px;padding:10px}.fc-configtable td{padding:5px;border-bottom:1px solid #edf1f7}.fc-configtable input{width:100px;border:1px solid #e0e6f0;border-radius:5px;padding:7px;font-size:11px}.fc-configtable input[type=checkbox]{width:18px}.fc-editor textarea{height:430px;width:100%;font-family:monospace;border:1px solid #d9e1ef;border-radius:9px;padding:15px;color:#334765;background:#fafbff;tab-size:2}@media(max-width:900px){.fc-help{display:none}.fc-hero h2{font-size:19px}.fc-count{display:none}.fc-stage{height:65vh}.fc-status{width:100%;margin:0}.fc-controls{right:8px;bottom:8px;gap:3px}.fc-controls button{padding:7px}}`;
