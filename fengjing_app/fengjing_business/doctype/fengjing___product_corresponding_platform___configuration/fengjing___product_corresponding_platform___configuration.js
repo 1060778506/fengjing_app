@@ -484,6 +484,83 @@ frappe.ui.form.on('Amazon API configuration', {
     }
 });
 
+function 确认ozon操作(message) {
+    return new Promise((resolve) => {
+        frappe.confirm(message, () => resolve(true), () => resolve(false));
+    });
+}
+
+async function 保存并取得ozon配置行(frm, cdt, cdn) {
+    const original = locals[cdt] && locals[cdt][cdn];
+    if (!original) {
+        throw new Error(__('找不到当前 Ozon API 配置行。'));
+    }
+
+    const originalName = original.name;
+    const originalIndex = original.idx;
+    const originalStore = original.店铺选项;
+    if (frm.is_dirty() || original.__islocal) {
+        frappe.show_alert({
+            message: __('正在自动保存 Ozon 配置…'),
+            indicator: 'blue'
+        });
+        await frm.save();
+    }
+
+    const rows = frm.doc.table_wckx || [];
+    const saved = rows.find((item) => item.name === originalName)
+        || rows.find((item) => item.idx === originalIndex && item.店铺选项 === originalStore);
+    if (!saved || saved.__islocal) {
+        throw new Error(__('Ozon 配置尚未成功保存，请检查必填字段。'));
+    }
+    return saved;
+}
+
+async function 提交ozon后台任务(frm, cdt, cdn, options) {
+    let row = locals[cdt] && locals[cdt][cdn];
+    if (!row) {
+        frappe.msgprint(__('找不到当前 Ozon API 配置行。'));
+        return;
+    }
+
+    const validationMessage = options.validate ? options.validate(row) : '';
+    if (validationMessage) {
+        frappe.msgprint(validationMessage);
+        return;
+    }
+
+    if (options.confirmMessage) {
+        const confirmed = await 确认ozon操作(options.confirmMessage(row));
+        if (!confirmed) return;
+    }
+
+    try {
+        row = await 保存并取得ozon配置行(frm, cdt, cdn);
+        const response = await frappe.call({
+            method: options.method,
+            args: { 配置行名称: row.name }
+        });
+        if (response.message) {
+            frappe.show_alert({
+                message: response.message.message || __('后台任务已提交。'),
+                indicator: 'green'
+            }, 7);
+        }
+        await frm.reload_doc();
+    } catch (error) {
+        frappe.msgprint({
+            title: __('Ozon 任务提交失败'),
+            indicator: 'red',
+            message: frappe.utils.escape_html(error.message || String(error))
+        });
+    } finally {
+        // 清理旧版按钮请求可能遗留的整页灰色遮罩。
+        if (frappe.dom && frappe.dom.unfreeze) {
+            frappe.dom.unfreeze();
+        }
+    }
+}
+
 // 测试 Ozon Seller API 与 Performance API
 frappe.ui.form.on('Ozon Store API Sub-table', {
     测试api: function (frm, cdt, cdn) {
@@ -539,129 +616,49 @@ frappe.ui.form.on('Ozon Store API Sub-table', {
         });
     },
 
-    同步历史订单: function (frm, cdt, cdn) {
-        const row = locals[cdt] && locals[cdt][cdn];
-        if (!row) return;
-        if (frm.is_dirty()) {
-            frappe.msgprint(__('请先保存配置，再启动Ozon历史订单同步。'));
-            return;
-        }
-        if (!row.开启订单同步) {
-            frappe.msgprint(__('请先开启“开启订单同步”总开关并保存。'));
-            return;
-        }
-        if (!row.历史同步开始时间 || !row.历史同步结束时间) {
-            frappe.msgprint(__('请先填写历史同步开始时间和历史同步结束时间。'));
-            return;
-        }
-        frappe.confirm(
-            __('确定开始同步店铺 {0} 的Ozon历史订单吗？任务将在后台运行。', [row.店铺选项]),
-            () => frappe.call({
-                method: 'fengjing_app.fengjing_business.doctype.fengjing___product_corresponding_platform___configuration.fengjing___product_corresponding_platform___configuration.启动ozon历史订单同步',
-                args: { 配置行名称: row.name },
-                freeze: true,
-                freeze_message: __('正在提交Ozon历史订单同步任务...'),
-                callback: function (r) {
-                    if (r.message) {
-                        frappe.show_alert({
-                            message: r.message.message,
-                            indicator: 'green'
-                        });
-                        frm.reload_doc();
-                    }
+    同步历史订单: async function (frm, cdt, cdn) {
+        await 提交ozon后台任务(frm, cdt, cdn, {
+            method: 'fengjing_app.fengjing_business.doctype.fengjing___product_corresponding_platform___configuration.fengjing___product_corresponding_platform___configuration.启动ozon历史订单同步',
+            validate: (row) => {
+                if (!row.开启订单同步) return __('请先开启“开启订单同步”总开关。');
+                if (!row.历史同步开始时间 || !row.历史同步结束时间) {
+                    return __('请先填写历史同步开始时间和历史同步结束时间。');
                 }
-            })
-        );
-    },
-
-    立即同步最新订单: function (frm, cdt, cdn) {
-        const row = locals[cdt] && locals[cdt][cdn];
-        if (!row) return;
-        if (frm.is_dirty()) {
-            frappe.msgprint(__('请先保存配置，再同步Ozon最新订单。'));
-            return;
-        }
-        if (!row.开启订单同步) {
-            frappe.msgprint(__('请先开启“开启订单同步”总开关并保存。'));
-            return;
-        }
-        frappe.call({
-            method: 'fengjing_app.fengjing_business.doctype.fengjing___product_corresponding_platform___configuration.fengjing___product_corresponding_platform___configuration.启动ozon最新订单同步',
-            args: { 配置行名称: row.name },
-            freeze: true,
-            freeze_message: __('正在提交Ozon最新订单同步任务...'),
-            callback: function (r) {
-                if (r.message) {
-                    frappe.show_alert({
-                        message: r.message.message,
-                        indicator: 'green'
-                    });
-                    frm.reload_doc();
-                }
-            }
+                return '';
+            },
+            confirmMessage: (row) => __('确定开始同步店铺 {0} 的Ozon历史订单吗？配置会自动保存，任务将在后台运行。', [row.店铺选项])
         });
     },
 
-    同步历史排名: function (frm, cdt, cdn) {
-        const row = locals[cdt] && locals[cdt][cdn];
-        if (!row) return;
-        if (frm.is_dirty()) {
-            frappe.msgprint(__('请先保存配置，再启动 Ozon 历史排名同步。'));
-            return;
-        }
-        if (!row.开启ozon商品排名同步) {
-            frappe.msgprint(__('请先开启“开启 Ozon 商品排名同步”并保存。'));
-            return;
-        }
-        if (!row.排名历史同步开始日期 || !row.排名历史同步结束日期) {
-            frappe.msgprint(__('请先填写排名历史同步开始日期和结束日期。'));
-            return;
-        }
-        frappe.confirm(
-            __('确定开始同步店铺 {0} 的 Ozon 历史排名吗？任务将在后台运行。', [row.店铺选项]),
-            () => frappe.call({
-                method: 'fengjing_app.fengjing_business.doctype.ozon_ranking_storage.ozon_ranking_storage.启动ozon历史排名同步',
-                args: { 配置行名称: row.name },
-                freeze: true,
-                freeze_message: __('正在提交 Ozon 历史排名同步任务...'),
-                callback: function (r) {
-                    if (r.message) {
-                        frappe.show_alert({
-                            message: r.message.message,
-                            indicator: 'green'
-                        });
-                        frm.reload_doc();
-                    }
-                }
-            })
-        );
+    立即同步最新订单: async function (frm, cdt, cdn) {
+        await 提交ozon后台任务(frm, cdt, cdn, {
+            method: 'fengjing_app.fengjing_business.doctype.fengjing___product_corresponding_platform___configuration.fengjing___product_corresponding_platform___configuration.启动ozon最新订单同步',
+            validate: (row) => row.开启订单同步
+                ? ''
+                : __('请先开启“开启订单同步”总开关。')
+        });
     },
 
-    立即同步最新排名: function (frm, cdt, cdn) {
-        const row = locals[cdt] && locals[cdt][cdn];
-        if (!row) return;
-        if (frm.is_dirty()) {
-            frappe.msgprint(__('请先保存配置，再同步 Ozon 最新排名。'));
-            return;
-        }
-        if (!row.开启ozon商品排名同步) {
-            frappe.msgprint(__('请先开启“开启 Ozon 商品排名同步”并保存。'));
-            return;
-        }
-        frappe.call({
-            method: 'fengjing_app.fengjing_business.doctype.ozon_ranking_storage.ozon_ranking_storage.启动ozon最新排名同步',
-            args: { 配置行名称: row.name },
-            freeze: true,
-            freeze_message: __('正在提交 Ozon 最新排名同步任务...'),
-            callback: function (r) {
-                if (r.message) {
-                    frappe.show_alert({
-                        message: r.message.message,
-                        indicator: 'green'
-                    });
-                    frm.reload_doc();
+    同步历史排名: async function (frm, cdt, cdn) {
+        await 提交ozon后台任务(frm, cdt, cdn, {
+            method: 'fengjing_app.fengjing_business.doctype.ozon_ranking_storage.ozon_ranking_storage.启动ozon历史排名同步',
+            validate: (row) => {
+                if (!row.开启ozon商品排名同步) return __('请先开启“开启 Ozon 商品排名同步”。');
+                if (!row.排名历史同步开始日期 || !row.排名历史同步结束日期) {
+                    return __('请先填写排名历史同步开始日期和结束日期。');
                 }
-            }
+                return '';
+            },
+            confirmMessage: (row) => __('确定开始同步店铺 {0} 的 Ozon 历史排名吗？配置会自动保存，任务将在后台运行。', [row.店铺选项])
+        });
+    },
+
+    立即同步最新排名: async function (frm, cdt, cdn) {
+        await 提交ozon后台任务(frm, cdt, cdn, {
+            method: 'fengjing_app.fengjing_business.doctype.ozon_ranking_storage.ozon_ranking_storage.启动ozon最新排名同步',
+            validate: (row) => row.开启ozon商品排名同步
+                ? ''
+                : __('请先开启“开启 Ozon 商品排名同步”。')
         });
     }
 });
