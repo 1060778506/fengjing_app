@@ -1,5 +1,18 @@
 /* Run: node test_calculator.js */
 {
+ const assert=require('node:assert/strict'),{ozfcCalculate,ozfcCost,OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const item={length:100,width:100,height:100,weight:250,value:100,value_currency:'RUB',quantity:3};
+ const r={fixed:3,rate:20,min_weight:.001,max_weight:30,min_value:1,max_value:1500,max_side:60,max_sum:90,divisor:12000,step:.001};
+ const result=ozfcCalculate(item,r,.08);assert.equal(result.price,18);assert.equal(result.bill,.75);assert.equal(result.eligible,true);
+ assert.equal(ozfcCalculate({...item,quantity:0},r,.08).eligible,false);
+ assert.equal(ozfcCalculate({...item,value:600},r,.08).eligible,false);
+ const cost=ozfcCost(8,18,35,10,{quantity:3});assert.equal(cost.cost,24);assert.equal(cost.unitCost,8);assert.equal(cost.quantity,3);
+ const c=Object.create(OzFreightCanvas.prototype);assert.equal(c.normalize({item_code:'test'}).quantity,1);
+ c.bootData={defaults:{routes:[{id:'GUOO-test',provider:'GUOO'}]}};const state={nodes:[]},config={routes:[],xy_post_snapshot:2};
+ c.prepare(state,config);assert.equal(config.routes.length,1);c.prepare(state,config);assert.equal(config.routes.length,1);
+ console.log('PASS: default quantity, aggregate parcel weight/value/cost, one fixed charge, non-destructive GUOO merge');
+}
+{
  const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
  const c=Object.create(OzFreightCanvas.prototype);c.c={cny_per_rub:.08};
  assert.match(c.competitorRmb(400,'RUB'),/人民币 ¥32.00/);

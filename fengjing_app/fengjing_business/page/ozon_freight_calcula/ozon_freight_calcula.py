@@ -292,7 +292,9 @@ def default_config():
             source="兴远rFBS全渠道计算器临沂 / 兴远渠道计算 · 2026.07.17",
             note="中国邮政渠道；按实重计费，货值上限1000人民币。原表H15:H17、I15:I17、J15:J17为合并限制。自送，不适用免费顺丰揽收；带电、液体未确认。请核对目的国和实时运价。",
         ))
-    return {"version": 2, "xy_post_snapshot": 2, "routes": routes}
+    from .guoo_tariffs import routes as guoo_routes
+    routes.extend(guoo_routes())
+    return {"version": 2, "xy_post_snapshot": 2, "guoo_snapshot": 1, "routes": routes}
 
 
 def _object(value):
@@ -713,6 +715,9 @@ def save_canvas(title, canvas, config, name=None, modified=None, quote_batch=Non
                 continue
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value < 0 or (key.endswith("_pct") and value >= 100) or (key == "lastmile_rub" and value > 500):
                 frappe.throw("物料费用参数无效")
+        quantity = node["item"].get("quantity", 1)
+        if isinstance(quantity, bool) or not isinstance(quantity, (int, float)) or not math.isfinite(quantity) or quantity < 1 or quantity > 10000 or int(quantity) != quantity:
+            frappe.throw("数量必须是1至10000之间的整数")
         positions = [node] + [node[k] for k in ("quote", "cost", "sale", "rivals") if k in node]
         if "costEdited" in node and not isinstance(node["costEdited"], bool):
             frappe.throw("模拟成本标记必须为布尔值")

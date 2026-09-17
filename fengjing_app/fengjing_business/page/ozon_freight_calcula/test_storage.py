@@ -63,19 +63,19 @@ def run_bundle_checks():
 
 def run_tariff_checks():
     config = validate_config(default_config())
-    assert len(config["routes"]) == 46
+    assert len(config["routes"]) == 109
     assert len([r for r in config["routes"] if r["provider"] == "兴远"]) == 15
     post = {r["destination"]: r for r in config["routes"] if r["id"].startswith("兴远-Post-")}
     assert post["俄罗斯"]["fixed"] == 12 and post["俄罗斯"]["rate"] == 30
     assert post["哈萨克斯坦"]["fixed"] == 1.6 and post["哈萨克斯坦"]["rate"] == 33
     assert post["白俄罗斯"]["fixed"] == 13 and post["白俄罗斯"]["rate"] == 30
     assert all(r["max_value"] == 1000 and r["value_currency"] == "CNY" and r["max_weight"] == 5 for r in post.values())
-    return {"ok": True, "routes": 46, "xy_routes": 15, "checks": "Merged July/September snapshots; no database writes"}
+    return {"ok": True, "routes": 109, "xy_routes": 15, "checks": "Merged July/September snapshots and GUOO; no database writes"}
 
 
 def run_checks():
     config = validate_config(default_config())
-    assert len(config["routes"]) == 46
+    assert len(config["routes"]) == 109
     postal = [r for r in config["routes"] if r["id"].startswith("兴远-Post-")]
     assert len(postal) == 3 and all(r["value_currency"] == "CNY" and r["max_value"] == 1000 for r in postal)
     assert bootstrap()["can_create"]

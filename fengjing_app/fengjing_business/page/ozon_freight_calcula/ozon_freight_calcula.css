@@ -63,6 +63,7 @@
 .ozfc .fc-top-commission{width:65px}
 .ozfc .fc-quotes,.ozfc .fc-cost-card{height:var(--fc-card-height,580px);max-height:580px}
 .ozfc .fc-item{height:auto;max-height:none;overflow:hidden}
+.ozfc:not(.fc-table-mode) .fc-inputs label:last-child{grid-column:auto}
 .ozfc:not(.fc-table-mode) .fc-nodes .fc-card{transition:opacity .16s ease}
 .ozfc:not(.fc-table-mode) .fc-nodes .fc-muted-group{opacity:.25}
 .ozfc .fc-minimap{position:absolute;right:18px;bottom:72px;width:190px;padding:9px;background:#fffffff2;border:1px solid #dce4f2;border-radius:13px;box-shadow:0 5px 20px #21344b15;z-index:60;user-select:none}
