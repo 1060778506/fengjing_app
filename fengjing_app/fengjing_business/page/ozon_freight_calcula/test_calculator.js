@@ -1,5 +1,42 @@
 /* Run: node test_calculator.js */
 {
+ const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const c=Object.create(OzFreightCanvas.prototype),n={meta:{prices:[{store:'my-store',currency:'CNY',amount:10}]},priceIndex:0};
+ const method={store:'my-store',warehouse_id:'1',warehouse_name:'我的仓库',method_name:'CEL Standard Small Linyi PUDO',mode:'RFBS',dropoff_name:'CEL集货仓'};
+ c.warehouseData={channels:[method,{...method,store:'other-store'},{...method,method_name:'CEL Standard Extra Small Linyi PUDO'},{...method,method_name:'CEL Standard Small Kyrgyz PUDO'}],errors:[]};
+ const route={provider:'CEL',mode:'RFBS',destination:'俄罗斯',name:'Small · Standard'};
+ assert.equal(c.routeWarehouseMatches(n,route).length,1);
+ assert.match(c.routeWarehouseHTML(n,route),/我的仓库/);assert.match(c.routeWarehouseHTML(n,route),/CEL集货仓/);
+ assert.equal(c.routeWarehouseMatches(n,{...route,mode:'FBP'}).length,0);
+ assert.equal(c.routeWarehouseMatches(n,{...route,destination:'吉尔吉斯斯坦'}).length,1);
+ n.meta.prices[0].ozon_sku_ids=['100'];c.warehouseStockMap=new Map([['my-store|100|1',0]]);
+ assert.equal(c.routeWarehouseMatches(n,route).length,0);
+ c.warehouseStockMap.set('my-store|100|1',100);assert.equal(c.routeWarehouseMatches(n,route).length,1);
+ assert.match(c.routeWarehouseHTML(n,route),/可售库存 100/);
+ c.warehouseStockMap.clear();assert.equal(c.routeWarehouseMatches(n,route).length,1);
+ assert.match(c.routeWarehouseHTML(n,route),/库存未知/);
+ n.meta.prices[0].ozon_sku_ids=['100','101'];c.warehouseStockMap.set('my-store|100|1',0);
+ assert.equal(c.stockForWarehouse(n,method),null);
+ console.log('PASS: warehouse matching isolates shop, weight group, speed, destination and fulfillment mode');
+}
+{
+ const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const c=Object.create(OzFreightCanvas.prototype);
+ const html=c.routeRequirements({min_value:1,max_value:1500,min_weight:.5,max_weight:30,min_exclusive:true,max_billable:31});
+ assert.match(html,/货值要求/);assert.match(html,/1500 RUB（卢布）/);assert.match(html,/＞ 0.5/);assert.match(html,/计费重上限/);
+ assert.match(c.routeRequirements({no_value_limit:true,min_weight:.001,max_weight:5}),/原表未注明货值限制/);
+ assert.match(c.routeRequirements({min_value:0,max_value:1000,value_currency:'CNY'}),/CNY（人民币）/);
+ console.log('PASS: every logistics summary shows value currency, strict weight bounds and billable cap');
+}
+{
+ const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const c=Object.create(OzFreightCanvas.prototype);c.c={cny_per_rub:.08};
+ const html=c.saleExtras(10);assert.match(html,/¥11\.80/);assert.match(html,/¥20\.00/);
+ for(const quantity of [0,10001,1.5,'2',null,true])assert.throws(()=>c.validatePacking({item:{quantity}}),/数量必须/);
+ c.validatePacking({item:{quantity:2}});c.validatePacking({item:{}});
+ console.log('PASS: promotion 118%, crossed-out 200%, strict local quantity validation before API');
+}
+{
  const assert=require('node:assert/strict'),{ozfcCalculate,OzFreightCanvas}=require('./ozon_freight_calcula.js');
  const post={id:'兴远-XY-Post-RU',fixed:15,rate:34.75,min_weight:.001,max_weight:5,min_value:0,max_value:0,no_value_limit:true,max_side:60,max_sum:90,min_sorted_sides:[14,11,0]};
  const item={length:140,width:110,height:20,weight:343,value:9000};

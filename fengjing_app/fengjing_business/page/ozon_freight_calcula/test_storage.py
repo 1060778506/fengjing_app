@@ -6,6 +6,32 @@ from .ozon_freight_calcula import _product_price
 from .ozon_freight_calcula import _valuation, validate_packing
 
 
+def run_warehouse_checks():
+    from . import ozon_freight_calcula as mod
+    pages = [
+        {"warehouses": [{"warehouse_id": 1, "name": "test", "is_rfbs": True}]},
+        {"delivery_methods": [{"id": 10, "warehouse_id": 1, "status": "ACTIVE", "name": "CEL Standard Small", "tpl_dropoff_point": {"name": "CEL test", "address": "private"}}, {"id": 11, "warehouse_id": 99, "status": "ACTIVE"}, {"id": 12, "warehouse_id": 1, "status": "INACTIVE"}], "has_next": True, "cursor": "next"},
+        {"delivery_methods": [], "has_next": False},
+    ]
+    with patch.object(mod, "_seller_read", side_effect=pages) as read:
+        result = mod._warehouse_channels({}, "shop")
+        assert len(result) == 1 and result[0]["dropoff_name"] == "CEL test"
+        assert "address" not in str(result) and result[0]["mode"] == "RFBS"
+        assert read.call_args_list[-1].args[2]["cursor"] == "next"
+    with patch.object(mod, "_seller_read", side_effect=[pages[0], {"has_next": True, "cursor": "same"}, {"has_next": True, "cursor": "same"}]):
+        try:
+            mod._warehouse_channels({}, "shop")
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Must stop a repeated cursor")
+    with patch.object(mod, "_seller_read", side_effect=[{"products": [{"sku": 100, "warehouse_id": 1, "free_stock": 0}, {"sku": 100, "warehouse_id": 2, "free_stock": 100}, {"sku": 101, "warehouse_id": 3, "present": 3, "reserved": 1}, {"sku": 100, "warehouse_id": 4}], "has_next": True, "cursor": "next"}, {"products": [], "has_next": False}]) as read:
+        stocks = mod._warehouse_stocks({}, "shop", ["100", "101"])
+        assert [s["free_stock"] for s in stocks] == [0, 100, 2, None]
+        assert read.call_args_list[-1].args[2]["cursor"] == "next"
+    return {"ok": True, "checks": "v2 cursor pagination, active warehouse join, per-SKU stocks preserve zero/positive/unknown; mocked read-only"}
+
+
 def run_cost_fallback_checks():
     item = frappe._dict(name="test-item", stock_uom="Nos", last_purchase_rate=0)
     prices = [

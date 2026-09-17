@@ -201,8 +201,8 @@
 .ozfc .fc-calculation-pane h4{font-size:13px;color:#506285;margin:0 0 12px}
 .ozfc .fc-cost-summary input,.ozfc .fc-node-fees input[type=number]{width:100%;min-width:0;padding:7px;border:1px solid #dce5f3;border-radius:7px;color:#263d60;background:white;margin-top:6px}
 .ozfc .fc-node-fees{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
-.ozfc .fc-node-fees label{padding:10px;border:1px solid #e5eaf4;border-radius:10px;font-size:11px;color:#49607e}
-.ozfc .fc-node-fees label>div{display:flex;align-items:center;gap:6px}
+.ozfc .fc-node-fees .fc-node-fee{padding:10px;border:1px solid #e5eaf4;border-radius:10px;font-size:11px;color:#49607e}
+.ozfc .fc-node-fees .fc-node-fee>div{display:flex;align-items:center;gap:6px}
 .ozfc .fc-node-fees small{white-space:nowrap}
 .ozfc .fc-cost-summary button[data-restore-sale]{float:right;padding:2px 5px;border-radius:6px;font-size:10px}
 .ozfc.fc-table-mode .fc-editor-row .fc-cost-card{width:auto}
@@ -252,7 +252,7 @@
 .ozfc .fc-cost-layout>.fc-cost-content{width:420px;padding:14px}
 .ozfc .fc-inputs input,.ozfc .fc-cost-summary input,.ozfc .fc-node-fees input[type=text],.ozfc .fc-node-fees input[type=number],.ozfc .fc-manual-prices input{box-sizing:border-box;width:100%;min-width:0;height:33px;padding:6px 9px;border:1px solid #dde5f0;border-radius:9px;background:#f8fafc;color:#334d70;font-size:12px;font-weight:500;box-shadow:inset 0 1px 2px #253f5d04;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
 .ozfc .fc-inputs input:focus,.ozfc .fc-cost-summary input:focus,.ozfc .fc-node-fees input:focus,.ozfc .fc-manual-prices input:focus{border-color:#94a8ec;background:#fff;box-shadow:0 0 0 3px #687deb12}
-.ozfc .fc-node-fees label{padding:8px;background:#f9fbfe;border-color:#e8edf5;border-radius:12px;font-size:10px}
+.ozfc .fc-node-fees .fc-node-fee{padding:8px;background:#f9fbfe;border-color:#e8edf5;border-radius:12px;font-size:10px}
 .ozfc .fc-node-fees input[type=text]{margin-top:5px}
 .ozfc .fc-node-fees input[type=checkbox]{accent-color:#7385d5}
 .ozfc .fc-cost-summary>span{border-radius:11px;background:#f6f8fd;padding:8px}
@@ -298,7 +298,7 @@
 .ozfc.fc-table-mode .fc-editor-row .fc-cost-summary{grid-column:2;grid-row:2;margin:0;gap:5px}
 .ozfc.fc-table-mode .fc-editor-row .fc-commission-label{grid-column:1;grid-row:3;margin:0;font-size:10px}
 .ozfc.fc-table-mode .fc-editor-row .fc-node-fees{grid-column:2;grid-row:3;margin:0;gap:5px}
-.ozfc.fc-table-mode .fc-editor-row .fc-node-fees label{padding:5px}
+.ozfc.fc-table-mode .fc-editor-row .fc-node-fees .fc-node-fee{padding:5px}
 .ozfc.fc-table-mode .fc-editor-row .fc-pricing-note{grid-column:1/-1;margin:0}
 .ozfc.fc-table-mode .fc-editor-row .fc-inputs input,.ozfc.fc-table-mode .fc-editor-row .fc-cost-summary input,.ozfc.fc-table-mode .fc-editor-row .fc-node-fees input[type=text]{height:28px;padding:4px 7px;font-size:11px;border-radius:7px}
 .ozfc.fc-table-mode .fc-editor-row .fc-cost-summary>span{padding:5px;font-size:9px}
@@ -332,7 +332,28 @@
 .ozfc .fc-full-image-card{width:max-content}
 .ozfc .fc-full-image-card header{flex-shrink:0;min-width:0;height:42px;box-sizing:border-box}
 .ozfc .fc-override-dot{display:inline-block;width:6px;height:6px;min-width:6px;margin-left:5px;border-radius:50%;background:#ee5a67;box-shadow:0 0 0 2px #ee5a6710;vertical-align:middle}
-.ozfc .fc-node-fees label>span{display:flex;align-items:center;gap:3px;white-space:nowrap}
+.ozfc .fc-node-fees .fc-node-fee>span{display:flex;align-items:center;gap:3px;white-space:nowrap}
+.ozfc .fc-fee-check{display:flex;align-items:center;gap:3px;margin:0;padding:0;cursor:pointer;font-size:inherit;font-weight:inherit;color:inherit}
+.ozfc .fc-sale-extras{display:grid;gap:8px;margin:12px 0}
+.ozfc .fc-sale-extra{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid #e3e9f5;border-radius:12px;background:#f6f8ff}
+.ozfc .fc-sale-extra small{display:block;color:#7a8aa5;font-size:10px;margin-top:3px}
+.ozfc .fc-sale-extra strong{color:#4655ba;font-size:18px;white-space:nowrap}
+.ozfc .fc-sale-extra:last-child strong{color:#8792aa;text-decoration:none}
+.ozfc .fc-copy-price{cursor:pointer;border-radius:5px;transition:background .15s}
+.ozfc .fc-copy-price:hover,.ozfc .fc-copy-price:focus-visible{background:#6777e51a;outline:2px solid #8799e866;outline-offset:3px}
+.ozfc .fc-route-requirements{display:grid;gap:2px;margin:4px 16px 8px;padding:0;border:0;background:transparent;font-size:9px;line-height:1.4}
+.ozfc .fc-route-requirements>div{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.ozfc .fc-route-requirements span{color:#8c98aa;flex-shrink:0}
+.ozfc .fc-route-requirements b{font-weight:400;color:#7b889b;overflow-wrap:anywhere}
+.ozfc .fc-route summary>div:first-child{min-width:0;flex:1}
+.ozfc .fc-route-price-area{display:flex;align-items:flex-start;justify-content:flex-end;gap:24px;flex:0 1 55%;min-width:0}
+.ozfc .fc-route-price-area>strong{white-space:nowrap;flex-shrink:0}
+.ozfc .fc-route-warehouses{display:grid;gap:5px;min-width:0;font-size:9px;line-height:1.4;color:#577487;max-width:150px;margin-left:auto;text-align:right}
+.ozfc .fc-route-warehouses>small{font-size:8px;color:#9ba7b5}
+.ozfc .fc-route-warehouses>span{padding-right:6px;border-right:2px solid #9cd3c7;overflow-wrap:anywhere}
+.ozfc .fc-route-warehouses em{display:block;font-style:normal;color:#8a99a6;font-size:8px}
+.ozfc .fc-route-warehouses.empty{color:#9ba7b5;font-size:8px;padding-top:3px}
+.ozfc .fc-best-price-row{display:flex;align-items:center;justify-content:space-between;gap:30px}
 .ozfc .fc-node-fees .fc-override-dot{margin-left:auto}
 .ozfc .fc-ozon-identifiers{padding:8px 9px;margin-bottom:8px;border:1px solid #e5eaf4;border-radius:10px;background:#fafbfe;font-size:10px;color:#7b8ba3}
 .ozfc .fc-ozon-identifiers section+section{margin-top:8px;padding-top:7px;border-top:1px solid #e7edf5}

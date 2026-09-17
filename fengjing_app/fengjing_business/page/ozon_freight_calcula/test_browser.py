@@ -31,6 +31,8 @@ def run():
           c.dirty=true;c.saving=true;if(await c.autoSaveTick()||calls)return false;c.saving=false;
           const input=document.querySelector('[data-f="value"]');input.focus();if(await c.autoSaveTick()||calls)return false;input.blur();
           const modal=document.createElement('div');modal.className='modal show';document.body.append(modal);if(await c.autoSaveTick()||calls)return false;modal.remove();
+          const quantity=c.s.nodes[0].item.quantity;c.s.nodes[0].item.quantity=0;
+          if(await c.autoSaveTick()||calls)return false;c.s.nodes[0].item.quantity=quantity;
           const before=document.querySelector('.fc-item'),saved=await c.autoSaveTick();
           const valid=saved&&delay===60000&&calls===1&&!c.dirty&&hydrations===0&&before===document.querySelector('.fc-item');
           c.save=async()=>{throw Error('offline')};c.dirty=true;const failed=await c.autoSaveTick();const retained=c.dirty&&!c.autoSaving;
@@ -38,9 +40,67 @@ def run():
           return valid&&!failed&&retained;
         }"""), 'One-minute autosave guards, quiet saving without paint, failed save retains edits'
         assert page.locator(".fc-quotes").count() == 1
+        assert page.locator('[data-a="sort-cards"] + [data-a="refresh-info"]').count() == 1
+        assert page.evaluate("""async () => {
+          const c=canvas,original=c.s.nodes,api=c.api,db=frappe.db,snap=c.snap;
+          const normal={id:'refresh-normal',item:{item_code:'erp-test',item_name:'旧名称',quantity:3,value:1,length:10,width:10,height:10,weight:20},meta:{costs:[],prices:[]},x:0,y:0};
+          const manual={id:'refresh-manual',manual:true,item:{item_code:'SIM-test',value:10},x:1,y:1};
+          const edited={...structuredClone(normal),id:'refresh-edited',costEdited:true,commissionOverride:19,saleOverride:99};edited.item.value=8;
+          const only={id:'refresh-ozon',ozonOnly:true,item:{item_code:'ozon-only',quantity:1,value:12},meta:{costs:[],prices:[{store:'test-store',product_id:'42',amount:1,commissions:[]}]},x:2,y:2};
+          c.s.nodes=[normal,manual,edited,only];c.s.active=null;c.s.focus=null;c.s.expanded=[];
+          let docs=0,details=0,catalog=0;
+          frappe.db={get_doc:async()=>{docs++;return {item_code:'erp-test',item_name:'新名称',custom_带包装重量g:343}}};
+          c.api=async(method,args)=>{
+            if(method==='warehouse_channels')return {channels:[],errors:[]};
+            if(method==='warehouse_stocks')return {stocks:[],errors:[]};
+            if(method==='item_details'){details++;if(args.force!==1)throw Error('Not forced');return {costs:[{currency:'CNY',amount:18}],prices:[{store:'test-store',product_id:'1',currency:'CNY',amount:50,commissions:[{schema:'RFBS',percent:20}]}],errors:[]};}
+            catalog++;return {products:[{store:'test-store',product_id:'42',name:'新Ozon名称',image:'/test.png',currency:'CNY',amount:70,commissions:[{schema:'RFBS',percent:21}],ozon_sku_ids:['43']}],more:false};
+          };
+          const result=await c.refreshAllInfo();
+          const ok=result.success===3&&result.skipped===1&&docs===1&&details===1&&catalog===1&&c.s.nodes.length===4&&normal.item.value==='18.00'&&normal.item.weight===343&&normal.item.quantity===3&&edited.item.value===8&&edited.commissionOverride===19&&edited.saleOverride===99&&only.meta.prices[0].amount===70&&!c.infoRefreshing;
+          c.api=async()=>{throw Error('offline')};const failed=await c.refreshAllInfo();
+          const retained=failed.failed===3&&normal.item.value==='18.00'&&only.meta.prices[0].amount===70&&!c.infoRefreshing;
+          c.s.nodes=original;c.s.active=original[0].id;c.s.focus=original[0].id;c.s.expanded=[original[0].id];c.api=api;frappe.db=db;c.snap=snap;c.paint();
+          return ok&&retained;
+        }"""), 'Refresh current cards only, force backend query, reuse per-item lookup, preserve simulations and quantity'
+        page.set_viewport_size({"width": 4000, "height": 1600})
+        margin = page.locator('[data-edit-key="margin_pct"]')
+        margin_toggle = page.locator('[data-node-toggle="ui-test"][data-key="margin"]')
+        for _ in range(3):
+            margin.click()
+            assert margin_toggle.is_checked(), 'Clicking fee input must not toggle checkbox'
+        page.locator('.fc-node-fee').first.locator('small').click()
+        assert margin_toggle.is_checked(), 'Clicking fee unit must not toggle checkbox'
+        assert page.locator('.fc-sale-extra').count() == 2
+        page.evaluate("canvas.copyItem=async value=>{window.lastCopied=value}")
+        prices=page.locator('.fc-sale-card .fc-copy-price')
+        assert prices.count() == 3
+        for i in range(3):
+            expected=prices.nth(i).get_attribute('data-copy-item')
+            prices.nth(i).click()
+            assert page.evaluate('window.lastCopied') == expected
+            assert '¥' not in expected and 'RUB' not in expected
+        assert page.locator('.fc-sale-extra').last.locator('strong').evaluate("el=>getComputedStyle(el).textDecorationLine") == 'none'
+        page.set_viewport_size({"width": 1600, "height": 1000})
         assert page.locator('.fc-route .fc-suggested-route.ready').count() == 1
         assert page.locator('.fc-best-validation .fc-suggested-route.ready').count() == 1
+        assert page.evaluate("""() => {
+          const c=canvas,r=c.c.routes[0],old={provider:r.provider,name:r.name},data=c.warehouseData;
+          r.provider='CEL';r.name='Small · Standard';
+          c.warehouseData={channels:[{store:'test',warehouse_id:'1',warehouse_name:'测试后台仓库',method_name:'CEL Standard Small PUDO',mode:'RFBS',dropoff_name:'CEL集货仓'}],errors:[]};c.paint();
+          const ok=document.querySelector('.fc-route-price-area .fc-route-warehouses').textContent.includes('测试后台仓库')&&document.querySelector('.fc-best-price-row .fc-route-warehouses').textContent.includes('CEL集货仓');
+          Object.assign(r,old);c.warehouseData=data;c.paint();return ok;
+        }"""), 'Warehouse names shown beside both channel price and chosen price'
         assert page.locator('.fc-route summary .fc-suggested-route').count() == 1
+        assert page.locator('.fc-route summary .fc-route-requirements').count() == 0
+        assert page.locator('.fc-route .fc-route-choice + .fc-route-requirements').count() == page.locator('.fc-route').count()
+        route = page.locator('.fc-route').first
+        route.evaluate("el=>el.open=false")
+        assert not route.locator('.fc-route-requirements').is_visible()
+        route.evaluate("el=>el.open=true")
+        assert route.locator('.fc-route-requirements').is_visible()
+        assert '货值要求' in page.locator('.fc-route-requirements').first.inner_text()
+        assert '实重要求' in page.locator('.fc-route-requirements').first.inner_text()
         assert page.locator('[data-logistics-filter="destination"]').input_value() == '俄罗斯'
         assert page.locator('[data-logistics-filter="mode"]').input_value() == 'RFBS'
         page.evaluate("canvas.copyItem=async value=>{window.lastCopied=value}")

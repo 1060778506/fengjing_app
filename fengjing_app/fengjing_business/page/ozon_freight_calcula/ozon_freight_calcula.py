@@ -1,5 +1,6 @@
 """Freight canvas storage. Only ordinary Frappe document permissions are used."""
 import json
+import hashlib
 import math
 import re
 import frappe
@@ -462,7 +463,7 @@ def _valuation(item, visited=None):
 
 def _seller_read(row, path, payload):
     # Only these price/product read endpoints are permitted; never mutate Ozon prices.
-    if path not in ("/v3/product/info/list", "/v5/product/info/prices", "/v3/product/list"):
+    if path not in ("/v3/product/info/list", "/v5/product/info/prices", "/v3/product/list", "/v2/warehouse/list", "/v2/delivery-method/list", "/v2/product/info/stocks-by-warehouse/fbs"):
         raise ValueError("Unsupported read endpoint")
     response = requests.post("https://api-seller.ozon.ru" + path, headers={
         "Client-Id": str(row.get("ozon_id") or "").strip(),
@@ -479,6 +480,117 @@ def _number(value):
         return value if math.isfinite(value) and value >= 0 else None
     except (ValueError, TypeError):
         return None
+
+
+def _warehouse_channels(row, store):
+    warehouses = _seller_read(row, "/v2/warehouse/list", {}).get("warehouses", [])
+    by_id = {str(w["warehouse_id"]): w for w in warehouses}
+    output, cursor, seen = [], "", set()
+    for _ in range(50):
+        # v2 paginates by cursor, not v1's offset; join actual warehouse_id.
+        page = _seller_read(row, "/v2/delivery-method/list", {"limit": 100, "cursor": cursor})
+        for method in page.get("delivery_methods", []):
+            w = by_id.get(str(method.get("warehouse_id")))
+            if not w or method.get("status") != "ACTIVE":
+                continue
+            drop = method.get("tpl_dropoff_point") or {}
+            output.append(dict(store=store, warehouse_id=str(w["warehouse_id"]), warehouse_name=w.get("name") or "",
+                               method_id=str(method["id"]), method_name=method.get("name") or "",
+                               mode="RFBS" if w.get("is_rfbs") else "FBS",
+                               dropoff_name=drop.get("name") or "", dropoff_code=drop.get("code") or ""))
+        if not page.get("has_next"):
+            return output
+        cursor = page.get("cursor")
+        if not cursor or cursor in seen:
+            raise ValueError("仓库配送方式分页没有推进")
+        seen.add(cursor)
+    raise ValueError("仓库配送方式超过分页上限，未完整读取")
+
+
+def _warehouse_stocks(row, store, skus):
+    output, cursor, seen = [], "", set()
+    requested = set(skus)
+    for _ in range(100):
+        page = _seller_read(row, "/v2/product/info/stocks-by-warehouse/fbs",
+                            {"sku": [int(s) for s in skus], "limit": 1000, "cursor": cursor})
+        for p in page.get("products", []):
+            if str(p.get("sku")) not in requested or not p.get("warehouse_id"):
+                continue
+            free = _number(p.get("free_stock"))
+            present, reserved = _number(p.get("present")), _number(p.get("reserved"))
+            if free is None and present is not None and reserved is not None:
+                free = max(0, present - reserved)
+            output.append(dict(store=store, sku=str(p["sku"]), warehouse_id=str(p["warehouse_id"]), free_stock=free))
+        if not page.get("has_next"):
+            return output
+        cursor = page.get("cursor")
+        if not cursor or cursor in seen:
+            raise ValueError("分仓库存分页没有推进")
+        seen.add(cursor)
+    raise ValueError("分仓库存超过分页上限，未完整读取")
+
+
+@frappe.whitelist()
+def warehouse_stocks(products, force=0):
+    parent = _ozon_access()
+    if isinstance(products, str):
+        products = json.loads(products)
+    if not isinstance(products, list) or len(products) > 1500:
+        frappe.throw("分仓库存查询最多1500组商品")
+    configs = {}
+    for row in parent.get("table_wckx") or []:
+        if row.get("店铺选项") and row.get("ozon_id") and row.get("ozon_秘钥"):
+            configs.setdefault(str(row.get("店铺选项")), []).append(row)
+    grouped = {}
+    for p in products:
+        if not isinstance(p, dict) or not isinstance(p.get("skus"), list) or len(p["skus"]) > 20:
+            frappe.throw("分仓库存商品格式不正确")
+        store = str(p.get("store") or "")
+        if len(configs.get(store, [])) != 1:
+            frappe.throw("分仓库存查询的店铺配置不存在或不唯一")
+        for sku in p["skus"]:
+            if not re.fullmatch(r"[1-9][0-9]{0,18}", str(sku)):
+                frappe.throw("Ozon SKU ID格式不正确")
+            grouped.setdefault(store, set()).add(str(sku))
+    output, errors = [], []
+    for store, values in grouped.items():
+        row = configs[store][0]
+        values = sorted(values)
+        for start in range(0, len(values), 100):
+            skus = values[start:start + 100]
+            digest = hashlib.sha256(json.dumps([row.get("ozon_id"), row.get("ozon_秘钥"), skus]).encode()).hexdigest()
+            key = "ozfc:warehouse-stock:" + digest
+            cached = None if int(force) else frappe.cache.get_value(key)
+            try:
+                records = cached if cached is not None else _warehouse_stocks(row, store, skus)
+                if cached is None:
+                    frappe.cache.set_value(key, records, expires_in_sec=300)
+                output.extend({**record, "store": store} for record in records)
+            except (ValueError, requests.RequestException):
+                errors.append(store + "：分仓库存查询未完成，未将未知库存当作0")
+    return {"stocks": output, "errors": errors, "checked_at": str(frappe.utils.now_datetime())[:19]}
+
+
+@frappe.whitelist()
+def warehouse_channels(force=0):
+    parent = _ozon_access()
+    rows = [r for r in parent.get("table_wckx") or [] if r.get("ozon_id") and r.get("ozon_秘钥")]
+    names = [str(r.get("店铺选项") or "") for r in rows]
+    if any(not s for s in names) or len(set(names)) != len(names):
+        frappe.throw("Ozon 店铺配置必须唯一且非空")
+    output, errors = [], []
+    for row, store in zip(rows, names):
+        credential = hashlib.sha256(str(row.get("ozon_秘钥")).encode()).hexdigest()[:16]
+        key = "ozfc:warehouse:" + str(row.get("ozon_id")) + ":" + credential
+        cached = None if int(force) else frappe.cache.get_value(key)
+        try:
+            channels = cached if cached is not None else _warehouse_channels(row, store)
+            if cached is None:
+                frappe.cache.set_value(key, channels, expires_in_sec=300)
+            output.extend({**channel, "store": store} for channel in channels)
+        except (ValueError, requests.RequestException):
+            errors.append(store + "：仓库配送方式查询未完成，请稍后重试")
+    return {"channels": output, "errors": errors, "stores": names, "checked_at": str(frappe.utils.now_datetime())[:19]}
 
 
 def _ozon_access():
