@@ -404,3 +404,10 @@
 .fc-logistics-speeds input{accent-color:#169b8e;}.fc-logistics-speeds small{font-size:10px;color:#8594a6;}.fc-logistics-speeds small:last-child{margin-left:auto;}
 .ozfc .fc-product h3 .fc-copy-name{display:block;width:100%;padding:0;border:0;background:transparent;text-align:left;font:inherit;line-height:inherit;color:inherit;border-radius:4px;overflow-wrap:anywhere;}
 .ozfc .fc-product h3 .fc-copy-name:hover{color:#5365d8;background:#edf2ff;}
+.fc-suggested-route{margin:0 12px 10px;padding:7px 9px;border-radius:7px;font-size:11px;line-height:1.5;display:flex;align-items:center;gap:6px;}
+.fc-suggested-route span{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;font-size:11px;font-weight:700;flex-shrink:0;}
+.fc-suggested-route.ready{background:#e8f7ee;color:#238451;}.fc-suggested-route.ready span{background:#ccefd9;}
+.fc-suggested-route.blocked{background:#fff0ef;color:#c24f4b;}.fc-suggested-route.blocked span{background:#ffdcd9;}
+.fc-suggested-route.pending{background:#f1f4f8;color:#7b899c;}.fc-suggested-route.pending span{background:#e1e7ee;}
+.fc-route summary .fc-suggested-route{margin:6px 0 0;padding:4px 7px;font-size:10px;}
+.fc-best-validation .fc-suggested-route{display:inline-flex;margin:2px 0 10px;padding:5px 9px;}

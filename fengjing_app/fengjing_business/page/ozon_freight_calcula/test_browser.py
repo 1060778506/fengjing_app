@@ -23,7 +23,24 @@ def run():
           c.undo=[];c.redo=[];c.shell();c.bind();c.paint();
         }""")
         assert page.locator(".fc-packing").count() == 1
+        assert page.evaluate("""async () => {
+          const c=canvas,api=c.api,save=c.save,hydrate=c.hydrateHistory;let calls=0,hydrations=0,delay;
+          const interval=window.setInterval;window.setInterval=(fn,ms)=>{delay=ms;return 123;};c.startAutoSave();window.setInterval=interval;c.autoSaveTimer=null;
+          c.autosaveReady=true;c.api=async()=>{calls++;return {name:'local-test',modified:'local-revision'};};c.hydrateHistory=async()=>{hydrations++;};
+          c.dirty=false;if(await c.autoSaveTick()||calls)return false;
+          c.dirty=true;c.saving=true;if(await c.autoSaveTick()||calls)return false;c.saving=false;
+          const input=document.querySelector('[data-f="value"]');input.focus();if(await c.autoSaveTick()||calls)return false;input.blur();
+          const modal=document.createElement('div');modal.className='modal show';document.body.append(modal);if(await c.autoSaveTick()||calls)return false;modal.remove();
+          const before=document.querySelector('.fc-item'),saved=await c.autoSaveTick();
+          const valid=saved&&delay===60000&&calls===1&&!c.dirty&&hydrations===0&&before===document.querySelector('.fc-item');
+          c.save=async()=>{throw Error('offline')};c.dirty=true;const failed=await c.autoSaveTick();const retained=c.dirty&&!c.autoSaving;
+          c.api=api;c.save=save;c.hydrateHistory=hydrate;c.name=null;c.modified=null;
+          return valid&&!failed&&retained;
+        }"""), 'One-minute autosave guards, quiet saving without paint, failed save retains edits'
         assert page.locator(".fc-quotes").count() == 1
+        assert page.locator('.fc-route .fc-suggested-route.ready').count() == 1
+        assert page.locator('.fc-best-validation .fc-suggested-route.ready').count() == 1
+        assert page.locator('.fc-route summary .fc-suggested-route').count() == 1
         assert page.locator('[data-logistics-filter="destination"]').input_value() == '俄罗斯'
         assert page.locator('[data-logistics-filter="mode"]').input_value() == 'RFBS'
         page.evaluate("canvas.copyItem=async value=>{window.lastCopied=value}")
@@ -62,6 +79,14 @@ def run():
           }) && document.querySelectorAll('.fc-lines circle').length===document.querySelectorAll('.fc-lines path').length*2;
         }"""), "Each package line starts at its own row, every edge has two dots"
         page.locator("[data-pack-mode]").select_option("custom")
+        page.evaluate("""() => {const el=document.querySelector('[data-f="value"]');el.focus();el.value='1000';el.dispatchEvent(new Event('input',{bubbles:true}));}""")
+        page.wait_for_timeout(250)
+        assert page.locator('.fc-route .fc-suggested-route.blocked').count() == 2, 'Cost edits update recommended-price restrictions'
+        assert page.locator('.fc-best-validation .fc-suggested-route.blocked').count() == 2
+        page.evaluate("""() => {const el=document.querySelector('[data-f="value"]');el.value='10';el.dispatchEvent(new Event('input',{bubbles:true}));el.blur();}""")
+        page.wait_for_timeout(250)
+        assert page.locator('.fc-route .fc-suggested-route.ready').count() == 2
+        assert page.locator('.fc-best-validation .fc-suggested-route.ready').count() == 2
         quantity=page.locator('[data-pack-node="ui-test"][data-pack-index="0"][data-pack-field="quantity"]')
         quantity.fill("3")
         page.wait_for_timeout(250)

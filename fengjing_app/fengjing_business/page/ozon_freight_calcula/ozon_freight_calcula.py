@@ -292,9 +292,34 @@ def default_config():
             source="兴远rFBS全渠道计算器临沂 / 兴远渠道计算 · 2026.07.17",
             note="中国邮政渠道；按实重计费，货值上限1000人民币。原表H15:H17、I15:I17、J15:J17为合并限制。自送，不适用免费顺丰揽收；带电、液体未确认。请核对目的国和实时运价。",
         ))
+    # Independent rFBS sheet: same mainland rates/bounds, different transit
+    # times and no Express service for Big / Premium Big. Keep FBP untouched.
+    for original in list(routes):
+        if original["provider"] != "CEL":
+            continue
+        if original["id"] in ("CEL-Big-Express", "CEL-Premium Big-Express"):
+            continue
+        route = dict(original)
+        speed = original["name"].split(" · ")[-1]
+        route.update(id="CEL-RFBS-" + original["id"][4:], mode="RFBS", speed=speed,
+                     days={"Express": "5–10天", "Standard": "10–15天", "Economy": "15–25天"}[speed],
+                     source="CEL产品资费表 V7.24 / OZON-rFBS",
+                     note="原表支持到取货点或到门。轻小件/低客单价件免费销毁、不改派、不退回；其余大陆渠道支持改派，退回收取正向运价1.5倍。带电、液体未明确，默认不放行。")
+        routes.append(route)
+    routes.append(dict(
+        id="CEL-RFBS-HK-Express", provider="CEL", name="香港空运 · Express",
+        enabled=True, destination="俄罗斯", mode="RFBS", speed="Express",
+        fixed=19, rate=96, min_weight=.001, max_weight=25,
+        min_value=1, max_value=500000, max_side=150, max_sum=310,
+        divisor=6000, volumetric_min_sum=60, step=.1, max_billable=0,
+        surcharge=0, sorted_sides=[], battery=False, liquid=False,
+        days="7–12天", source="CEL产品资费表 V7.24 / OZON-rFBS / 香港空运",
+        note="三边和超过60cm才计体积重，实重与体积重取大；百克向上进位。免费销毁、支持改派，退运收取正向运价1.5倍。带电、液体需另行确认。"))
     from .guoo_tariffs import routes as guoo_routes
     routes.extend(guoo_routes())
-    return {"version": 2, "xy_post_snapshot": 2, "guoo_snapshot": 1, "routes": routes}
+    from .xy_tariffs import routes as xy_routes
+    routes.extend(xy_routes())
+    return {"version": 2, "xy_post_snapshot": 2, "guoo_snapshot": 1, "cel_rfbs_snapshot": 1, "xy_extra_snapshot": 1, "routes": routes}
 
 
 def _object(value):
@@ -331,7 +356,7 @@ def validate_config(config):
     if not isinstance(routes, list) or len(routes) > 500:
         frappe.throw("运价配置需要 routes 数组，最多500条")
     ids = set()
-    numeric = ("fixed", "rate", "min_weight", "max_weight", "min_value", "max_value", "max_side", "max_sum", "divisor", "max_billable", "step", "surcharge")
+    numeric = ("fixed", "rate", "min_weight", "max_weight", "min_value", "max_value", "max_side", "max_sum", "divisor", "volumetric_min_sum", "max_billable", "step", "surcharge")
     for r in routes:
         if not isinstance(r, dict) or not r.get("id") or r["id"] in ids:
             frappe.throw("渠道 ID 不能为空或重复")
@@ -349,11 +374,14 @@ def validate_config(config):
                 frappe.throw(f"{r['id']} 的 {key} 必须是非负数字")
         if r.get("max_weight", 0) < r.get("min_weight", 0) or r.get("max_value", 0) < r.get("min_value", 0):
             frappe.throw("重量或货值上下限顺序错误")
-        for key in ("enabled", "battery", "liquid", "min_exclusive", "value_exclusive"):
+        for key in ("enabled", "battery", "liquid", "min_exclusive", "value_exclusive", "no_value_limit"):
             if key in r and not isinstance(r[key], bool): frappe.throw(f"{key} 必须为 true 或 false")
         sides = r.get("sorted_sides", [])
         if not isinstance(sides, list) or len(sides) not in (0, 3) or any(not isinstance(v, (int, float)) or not math.isfinite(v) or v <= 0 for v in sides):
             frappe.throw("sorted_sides 必须为空或三个正数")
+        minimum = r.get("min_sorted_sides", [])
+        if not isinstance(minimum, list) or len(minimum) not in (0, 3) or any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or v < 0 for v in minimum):
+            frappe.throw("min_sorted_sides 必须为空或三个非负数字")
     return config
 
 

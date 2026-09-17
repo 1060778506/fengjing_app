@@ -1,5 +1,30 @@
 /* Run: node test_calculator.js */
 {
+ const assert=require('node:assert/strict'),{ozfcCalculate,OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const post={id:'兴远-XY-Post-RU',fixed:15,rate:34.75,min_weight:.001,max_weight:5,min_value:0,max_value:0,no_value_limit:true,max_side:60,max_sum:90,min_sorted_sides:[14,11,0]};
+ const item={length:140,width:110,height:20,weight:343,value:9000};
+ assert.equal(ozfcCalculate(item,post,.08).price,26.92);assert.equal(ozfcCalculate(item,post,.08).eligible,true);
+ assert.equal(ozfcCalculate({...item,width:109},post,.08).eligible,false);
+ assert.equal(ozfcCalculate({...item,weight:5001},post,.08).eligible,false);
+ const c=Object.create(OzFreightCanvas.prototype);c.bootData={defaults:{routes:[post]}};
+ const config={routes:[],guoo_snapshot:1,xy_post_snapshot:2,cel_rfbs_snapshot:1};c.prepare({nodes:[]},config);
+ config.routes[0].rate=40;c.prepare({nodes:[]},config);assert.equal(config.routes.length,1);assert.equal(config.routes[0].rate,40);
+ console.log('PASS: XY extra snapshot preserves edits; E-post minimum dimensions and unspecified value limit');
+}
+{
+ const assert=require('node:assert/strict'),{ozfcCalculate,OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const hk={id:'CEL-RFBS-HK-Express',fixed:19,rate:96,min_weight:.001,max_weight:25,min_value:1,max_value:500000,max_side:150,max_sum:310,divisor:6000,volumetric_min_sum:60,step:.1};
+ const item={length:200,width:200,height:200,weight:100,value:1500};
+ assert.equal(ozfcCalculate(item,hk,.08).price,28.6);
+ assert.equal(ozfcCalculate({...item,length:210},hk,.08).price,153.4);
+ assert.equal(ozfcCalculate({...item,weight:101},hk,.08).price,38.2);
+ const c=Object.create(OzFreightCanvas.prototype);c.bootData={defaults:{routes:[hk]}};
+ const config={routes:[],guoo_snapshot:1,xy_post_snapshot:2};c.prepare({nodes:[]},config);
+ config.routes[0].fixed=25;c.prepare({nodes:[]},config);
+ assert.equal(config.routes.length,1);assert.equal(config.routes[0].fixed,25);
+ console.log('PASS: CEL rFBS merge preserves edits; HK conditional volume and hundred-gram rounding');
+}
+{
  const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
  const c=Object.create(OzFreightCanvas.prototype);c.c={cny_per_rub:.08,routes:[{id:'parcel-route',enabled:true,provider:'测试',name:'按包计费',speed:'Standard',mode:'RFBS',destination:'俄罗斯',fixed:5,rate:10,min_weight:0,max_weight:20,min_value:0,max_value:10000,max_side:100,max_sum:200,divisor:12000,step:.001}]};
  const n={id:'flow-test',manual:true,manualSale:100,x:0,y:0,item:{item_code:'SIM-flow',quantity:4,value:10,value_currency:'CNY',length:100,width:100,height:100,weight:200},packing:{mode:'custom',rows:[{quantity:2,length:120,width:110,height:100,weight:500},{quantity:2,length:120,width:110,height:100,weight:500}]}};
@@ -13,6 +38,11 @@
  assert.equal(c.matchesParcelFilters({name:'Economy',mode:'rFBS',destination:'俄罗斯'},{...c.parcelFilters(n,0),speeds:['Standard']}),false);
  assert.throws(()=>c.validateLogisticsFilters({speeds:'Express'}));
  assert.equal(c.combinedFreight(n).price,20);assert.equal((c.quotes(n).match(/class="fc-card fc-quotes"/g)||[]).length,2);
+ const valueRoute={...c.c.routes[0],max_value:1500,value_currency:'RUB'},parcel=c.parcelResults(n)[0];
+ assert.equal(c.suggestedRouteState(n,parcel,valueRoute,100).kind,'ready');
+ assert.equal(c.suggestedRouteState(n,parcel,valueRoute,400).kind,'blocked');
+ assert.equal(c.suggestedRouteState(n,parcel,valueRoute,undefined).kind,'pending');
+ assert.match(c.suggestedRouteState(n,parcel,valueRoute,400).detail,/本包分摊货值 ¥200.00/);
  const positions=c.flowPositions(n);assert.ok(positions.packing.x>n.x&&positions.quote.x>positions.packing.x&&positions.cost.x>positions.quote.x&&positions.rivals.x>positions.sale.x);
  n.parcelQuotes=[{routeId:'parcel-route',x:740,y:0},{routeId:'not-available',x:740,y:760}];assert.equal(c.combinedFreight(n),undefined);
  n.parcelQuotes[1].routeId='parcel-route';n.packing.rows[1].quantity=1;assert.equal(c.combinedFreight(n),undefined);n.packing.rows[1].quantity=2;
