@@ -376,3 +376,31 @@
 .ozfc .fc-competitor-offer.rejected b,.ozfc .fc-competitor-offer.rejected em{color:#9b651c;}
 .ozfc .fc-rival-version-label{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12px;color:#526887;}
 .ozfc .fc-rival-version-label select{flex:1;min-width:0;padding:8px;border:1px solid #dce5f1;border-radius:9px;background:#f5f8ff;color:#263d5f;}
+.ozfc .fc-route summary .fc-copy-route{padding:0;border:0;background:transparent;color:inherit;font-size:12px;font-weight:700;text-align:left;line-height:1.5;border-radius:4px;}
+.ozfc .fc-route summary .fc-copy-route:hover{background:#edf2ff;color:#5365d8;}
+.fc-copy-route span{font-size:11px;opacity:.55;margin-left:4px;}
+.fc-packing{width:330px;}
+.fc-packing .fc-drag{background:#fff2de;color:#946728;}
+.fc-packing-body{padding:16px;}
+.fc-packing-body label{display:block;font-size:11px;color:#748198;margin:0;}
+.fc-packing-body select,.fc-packing-body input{width:100%;border:1px solid #dce3f0;background:#fafbfe;border-radius:7px;padding:7px;margin:5px 0 10px;color:#243751;}
+.fc-pack-count{background:#edf7f4;color:#278475;border-radius:8px;padding:10px;font-size:12px;margin:8px 0;}
+.fc-pack-count.warning{background:#fff0e8;color:#b66a43;}
+.fc-pack-list{max-height:340px;overflow:auto;overscroll-behavior:contain;scrollbar-width:none;}
+.fc-pack-list section{border:1px solid #e5e9f1;border-radius:10px;padding:10px;margin-bottom:8px;}
+.fc-pack-list section>strong{font-size:12px;}.fc-pack-list section>button{float:right;padding:1px 5px;font-size:10px;}
+.fc-pack-fields{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;}
+.fc-pack-fields input{min-width:0;margin-bottom:0;}
+.fc-packing-body p{font-size:10px;line-height:1.7;color:#8791a3;margin-top:12px;}
+.fc-pack-notice{font-size:11px;line-height:1.7;background:#fff6e8;color:#976c36;border-radius:8px;padding:10px;}
+.fc-table-packages{display:flex;flex-direction:column;gap:12px;min-width:0;}
+.fc-editor-row .fc-table-packages .fc-packing,.fc-editor-row .fc-table-packages .fc-quotes{position:relative;left:auto!important;top:auto!important;width:100%;}
+.fc-editor-row .fc-table-packages .fc-pack-list{max-height:170px;}
+.fc-logistics-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px 16px 0;}
+.fc-logistics-filters label{font-size:10px;color:#75859a;margin:0;}
+.fc-logistics-filters select{width:100%;min-width:0;padding:6px;margin-top:4px;border:1px solid #dde5ed;border-radius:7px;background:#fafcfe;color:#314960;font-size:11px;}
+.fc-logistics-speeds{display:flex;align-items:center;gap:12px;padding:10px 16px 0;font-size:11px;color:#465d76;}
+.fc-logistics-speeds label{display:flex;align-items:center;gap:4px;margin:0;cursor:pointer;}
+.fc-logistics-speeds input{accent-color:#169b8e;}.fc-logistics-speeds small{font-size:10px;color:#8594a6;}.fc-logistics-speeds small:last-child{margin-left:auto;}
+.ozfc .fc-product h3 .fc-copy-name{display:block;width:100%;padding:0;border:0;background:transparent;text-align:left;font:inherit;line-height:inherit;color:inherit;border-radius:4px;overflow-wrap:anywhere;}
+.ozfc .fc-product h3 .fc-copy-name:hover{color:#5365d8;background:#edf2ff;}

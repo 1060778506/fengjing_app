@@ -3,7 +3,7 @@ import frappe
 from unittest.mock import patch
 from .ozon_freight_calcula import bootstrap, default_config, load_canvas, save_canvas, validate_config
 from .ozon_freight_calcula import _product_price
-from .ozon_freight_calcula import _valuation
+from .ozon_freight_calcula import _valuation, validate_packing
 
 
 def run_cost_fallback_checks():
@@ -80,6 +80,9 @@ def run_checks():
     assert len(postal) == 3 and all(r["value_currency"] == "CNY" and r["max_value"] == 1000 for r in postal)
     assert bootstrap()["can_create"]
     canvas = {"version": 2, "displayMode": "table", "nodes": [{"id": "blank-check", "manual": True, "manualSale": 100, "costEdited": True, "item": {"item_code": "SIM-check", "item_name": "空白物料", "value": 8}, "x": 0, "y": 0}], "active": None, "view": {"x": 60, "y": 50, "z": 1}}
+    canvas["nodes"][0].update(packing={"mode": "custom", "rows": [{"quantity": 1, "length": 120, "width": 80, "height": 30, "weight": 343}]}, packPos={"x": 370, "y": 0}, parcelQuotes=[{"routeId": config["routes"][0]["id"], "x": 740, "y": 0}])
+    validate_packing(canvas["nodes"][0])
+    canvas["nodes"][0]["parcelQuotes"][0]["filters"] = {"destination": "俄罗斯", "mode": "RFBS", "provider": "", "speeds": ["Standard", "Economy"]}
     frappe.db.savepoint("freight_canvas_check")
     try:
         first = save_canvas("运费画布诊断-不保留", canvas, config)
@@ -91,6 +94,8 @@ def run_checks():
             state = json.loads(state)
         assert state["displayMode"] == "table"
         assert state["nodes"][0]["manualSale"] == 100
+        assert state["nodes"][0]["packing"] == canvas["nodes"][0]["packing"]
+        assert state["nodes"][0]["parcelQuotes"] == canvas["nodes"][0]["parcelQuotes"]
         updated = save_canvas("运费画布诊断-更新", canvas, config, first["name"], first["modified"])
         assert updated["name"] == first["name"]
         try:

@@ -1,5 +1,26 @@
 /* Run: node test_calculator.js */
 {
+ const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const c=Object.create(OzFreightCanvas.prototype);c.c={cny_per_rub:.08,routes:[{id:'parcel-route',enabled:true,provider:'测试',name:'按包计费',speed:'Standard',mode:'RFBS',destination:'俄罗斯',fixed:5,rate:10,min_weight:0,max_weight:20,min_value:0,max_value:10000,max_side:100,max_sum:200,divisor:12000,step:.001}]};
+ const n={id:'flow-test',manual:true,manualSale:100,x:0,y:0,item:{item_code:'SIM-flow',quantity:4,value:10,value_currency:'CNY',length:100,width:100,height:100,weight:200},packing:{mode:'custom',rows:[{quantity:2,length:120,width:110,height:100,weight:500},{quantity:2,length:120,width:110,height:100,weight:500}]}};
+ c.s={nodes:[n],active:n.id,focus:n.id,expanded:[n.id],view:{x:0,y:0,z:1}};c.snap=c.paint=c.change=c.status=()=>{};c.root={querySelector:()=>null};
+ assert.equal(c.parcelResults(n).length,2);assert.equal(c.parcelResults(n)[0].chosen.bill,.5);
+ assert.deepEqual(c.parcelFilters(n,0),{destination:'俄罗斯',mode:'RFBS',provider:'',speeds:['Standard']});
+ assert.deepEqual(c.parcelFilters({parcelQuotes:[{filters:{speeds:[]}}]},0).speeds,[]);
+ assert.equal(c.matchesParcelFilters({destination:'加拿大',mode:'RFBS'},c.parcelFilters(n,0)),false);
+ assert.equal(c.matchesParcelFilters({destination:'俄罗斯',mode:'FBP'},c.parcelFilters(n,0)),false);
+ assert.equal(c.matchesParcelFilters({name:'Standard',mode:'rFBS',destination:'俄罗斯'},{...c.parcelFilters(n,0),speeds:['Standard']}),true);
+ assert.equal(c.matchesParcelFilters({name:'Economy',mode:'rFBS',destination:'俄罗斯'},{...c.parcelFilters(n,0),speeds:['Standard']}),false);
+ assert.throws(()=>c.validateLogisticsFilters({speeds:'Express'}));
+ assert.equal(c.combinedFreight(n).price,20);assert.equal((c.quotes(n).match(/class="fc-card fc-quotes"/g)||[]).length,2);
+ const positions=c.flowPositions(n);assert.ok(positions.packing.x>n.x&&positions.quote.x>positions.packing.x&&positions.cost.x>positions.quote.x&&positions.rivals.x>positions.sale.x);
+ n.parcelQuotes=[{routeId:'parcel-route',x:740,y:0},{routeId:'not-available',x:740,y:760}];assert.equal(c.combinedFreight(n),undefined);
+ n.parcelQuotes[1].routeId='parcel-route';n.packing.rows[1].quantity=1;assert.equal(c.combinedFreight(n),undefined);n.packing.rows[1].quantity=2;
+ assert.doesNotThrow(()=>c.validatePacking(n));assert.throws(()=>c.validatePacking({...n,packing:{mode:'custom',rows:[{quantity:-1}]}}));
+ c.copyMaterial();const snapshot=JSON.stringify(n);
+ c.pasteMaterial().then(()=>{const copied=c.s.nodes[1];assert.notEqual(copied.id,n.id);assert.deepEqual(copied.packing,n.packing);assert.notEqual(copied.packing,n.packing);copied.packing.rows[0].weight=999;copied.item.value=99;copied.parcelQuotes[0].routeId='changed';assert.equal(JSON.stringify(n),snapshot);assert.equal(c.s.focus,copied.id);console.log('PASS: independent deep-copy paste, per-package actual weights, fixed fees, route selection and connected flow');}).catch(e=>{console.error(e);process.exitCode=1;});
+}
+{
  const assert=require('node:assert/strict'),{ozfcCalculate,ozfcCost,OzFreightCanvas}=require('./ozon_freight_calcula.js');
  const item={length:100,width:100,height:100,weight:250,value:100,value_currency:'RUB',quantity:3};
  const r={fixed:3,rate:20,min_weight:.001,max_weight:30,min_value:1,max_value:1500,max_side:60,max_sum:90,divisor:12000,step:.001};
@@ -45,8 +66,8 @@
  const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
  const c=Object.create(OzFreightCanvas.prototype),n={id:'arrange-test',x:100,y:200,quote:{x:999,y:888},cost:{x:1,y:2},sale:{x:3,y:4},rivals:{x:5,y:6}};
  c.s={nodes:[n],expanded:[]};c.snap=c.change=c.paint=c.status=()=>{};c.arrangeMaterialCards(n.id);
- assert.deepEqual([n.x,n.y],[100,200]);assert.deepEqual(n.quote,{x:470,y:200});assert.deepEqual(n.cost,{x:1000,y:200});
- assert.deepEqual(n.sale,{x:2040,y:200});assert.deepEqual(n.rivals,{x:470,y:810});assert.deepEqual(c.s.expanded,[]);
+ assert.deepEqual([n.x,n.y],[100,200]);assert.deepEqual(n.packPos,{x:470,y:200});assert.deepEqual(n.quote,{x:840,y:200});assert.deepEqual(n.cost,{x:1370,y:200});
+ assert.deepEqual(n.sale,{x:2410,y:200});assert.deepEqual(n.rivals,{x:2780,y:200});assert.deepEqual(c.s.expanded,[]);
  console.log('PASS: organize one material child cards without moving material or changing expansion');
 }
 {
@@ -223,6 +244,7 @@ assert.ok(ozfcCost(8.79,62.3,85,18).error);
 assert.equal(ozfcCost(8.79,62.3,0,0).price,71.09);
 canvas.c={margin_pct:35,cny_per_rub:.07952};canvas.s.nodes=[];
 const costNode={id:'a',item:{},meta:{costs:[{amount:8.79,currency:'CNY'}],prices:[{store:'店铺',sku:'SKU',commissions:[{schema:'FBP',percent:11},{schema:'RFBS',percent:12}]}]},x:0,y:0};
+costNode.parcelQuotes=[{filters:{destination:'',mode:'',provider:'',speeds:[]}}];
 const freight=[{eligible:true,r:{id:'route',provider:'CEL',name:'Economy',mode:'FBP'},price:62.3}];
 assert.match(canvas.costCard(costNode,freight),/11%/);
 assert.match(canvas.costCard(costNode,freight),/data-cost="1"/);
@@ -235,7 +257,20 @@ assert.match(canvas.quotes(costNode),/fc-cost-card/);
 assert.match(canvas.quotes(costNode),/用此运费计算售价/);
 canvas.s.nodes=[costNode];canvas.s.expanded=['a'];let connectors='';
 canvas.root={querySelector:()=>({set innerHTML(s){connectors=s;}})};
-canvas.drawLines();assert.equal((connectors.match(/<path /g)||[]).length,3);
+canvas.drawLines();assert.equal((connectors.match(/<path /g)||[]).length,4);
+assert.equal((connectors.match(/<circle /g)||[]).length,8);
+const packingTest={id:'packing',x:0,y:0,item:{quantity:6,length:100,width:40,height:20,weight:200}};
+assert.equal(canvas.packingRows(packingTest).length,1);
+assert.equal(canvas.packingRows(packingTest)[0].weight,1200);
+assert.match(canvas.packingCard(packingTest),/不分包（默认）/);
+assert.match(canvas.packingCard(packingTest),/全部运费汇总到成本计算/);
+packingTest.packing={mode:'equal',perPack:2};assert.deepEqual(canvas.packingRows(packingTest).map(r=>r.quantity),[2,2,2]);
+packingTest.packing.perPack=4;assert.deepEqual(canvas.packingRows(packingTest).map(r=>r.quantity),[4,2]);
+packingTest.packing={mode:'custom',rows:[{quantity:3,weight:650},{quantity:2,weight:430}]};
+assert.match(canvas.packingCard(packingTest),/数量不一致/);
+packingTest.item.weight=343;assert.equal(canvas.setPackageQuantity(packingTest,0,4),true);assert.equal(packingTest.packing.rows[0].weight,1372);
+assert.equal(canvas.setPackageQuantity(packingTest,0,0),false);assert.equal(packingTest.packing.rows[0].quantity,4);
+console.log('PASS: packing preview defaults to no split, equal remainder, custom quantity validation warning');
 console.log('PASS: margin pricing, null commission rejection, FBP/RFBS selection, step-by-step cost card');
 const fees=ozfcCost(8.79,62.3,35,12,{acquisition:2,withdrawal:2,returns:15*.07952,lastmile:0});
 assert.equal(fees.price,147.52);
@@ -287,7 +322,7 @@ canvas.s.displayMode='table';assert.equal(canvas.isTable(),true);
 canvas.s.displayMode='canvas';assert.equal(canvas.isTable(),false);
 const listeners={},stageListeners={};
 const dragCanvas=Object.create(OzFreightCanvas.prototype);
-dragCanvas.s={nodes:[{id:'drag',x:10,y:20}],view:{x:0,y:0,z:2}};
+dragCanvas.s={nodes:[{id:'drag',x:10,y:20,item:{quantity:1}}],view:{x:0,y:0,z:2}};
 dragCanvas.root={addEventListener:()=>{}};
 dragCanvas.stage={addEventListener:(name,fn)=>stageListeners[name]=fn,classList:{add:()=>{},remove:()=>{}}};
 dragCanvas.snap=()=>{};dragCanvas.positionCards=()=>{};dragCanvas.change=()=>{};
@@ -301,7 +336,7 @@ function drag(zoneType,kind){
 }
 drag('single','item');
 assert.deepEqual({x:dragCanvas.s.nodes[0].x,y:dragCanvas.s.nodes[0].y},{x:20,y:40});
-assert.deepEqual(dragCanvas.s.nodes[0].quote,{x:380,y:20});
+assert.deepEqual(dragCanvas.s.nodes[0].quote,{x:750,y:20});
 const before=JSON.parse(JSON.stringify(dragCanvas.s.nodes[0]));
 drag('group','sale');
 assert.equal(dragCanvas.s.nodes[0].x,before.x+10);
@@ -316,6 +351,7 @@ const selectedCanvas=Object.create(OzFreightCanvas.prototype);
 selectedCanvas.s={nodes:[],displayMode:'table'};
 selectedCanvas.c={cny_per_rub:.07952,routes:[{...route,id:'cheap',provider:'LOW',name:'cheap',fixed:1},{...route,id:'selected',provider:'PICKED',name:'selected',fixed:20}]};
 selectedCanvas.costCard=()=>'';selectedCanvas.logisticsQueries={};
+selectedCanvas.c.routes.forEach(r=>r.speed='Standard');
 const chosenNode={id:'chosen',x:0,y:0,item:{length:100,width:100,height:100,weight:100,value:5,value_currency:'CNY'},costRoute:'selected',meta:{prices:[{currency:'RUB',amount:100,cny:7.952}]}};
 const html=selectedCanvas.quotes(chosenNode);
 const listing=html.slice(html.indexOf('data-logistics-list'));
@@ -327,7 +363,7 @@ selectedCanvas.restoreTableScroll();assert.equal(first.scrollLeft,123);assert.eq
 console.log('PASS: selected shipping pinned, full rules in table, synchronized scroll restoration');
 const blankCanvas=Object.create(OzFreightCanvas.prototype);
 blankCanvas.s={nodes:[],exclusive:true,expanded:[],view:{x:0,y:0,z:1}};
-blankCanvas.c={cny_per_rub:.07952,margin_pct:35,routes:[{...route,provider:'TEST',name:'test'}]};
+blankCanvas.c={cny_per_rub:.07952,margin_pct:35,routes:[{...route,provider:'TEST',name:'test',speed:'Standard'}]};
 blankCanvas.snap=()=>{};blankCanvas.change=()=>{};blankCanvas.paint=()=>{};
 blankCanvas.addBlank();
 const blank=blankCanvas.s.nodes[0];assert.equal(blank.manual,true);
@@ -394,7 +430,7 @@ console.log('PASS: full-image card anchored left in canvas coordinates with conn
 let restoredCaret=null,focused=false;
 canvas.s.nodes=[independent];canvas.root={querySelector:()=>({focus(){focused=true;},setSelectionRange(a,b,d){restoredCaret=[a,b,d];}})};
 canvas.liveEdit({dataset:{editNode:'independent',editKey:'cost'},value:'123.45',selectionStart:2,selectionEnd:2,selectionDirection:'none'});
-assert.equal(independent.item.value,'123.45');assert.equal(focused,true);assert.deepEqual(restoredCaret,[2,2,'none']);
+assert.equal(independent.item.value,'123.45');assert.equal(focused,false);assert.equal(restoredCaret,null);
 canvas.c.acquisition_pct=9;canvas.c.acquisition_enabled=false;canvas.resetFee('acquisition');
 assert.equal(canvas.c.acquisition_pct,2);assert.equal(canvas.c.acquisition_enabled,false);
 canvas.c.returns_rub=50;canvas.resetFee('returns');assert.equal(canvas.c.returns_rub,15);
@@ -410,7 +446,28 @@ assert.ok(checks.indexOf('② 退货费用换算')<checks.indexOf('② 加上物
 assert.match(checks,/fc-step-check"><small>⑤ 收单费校验/);
 assert.match(checks,/fc-step-check"><small>⑤ 提现费校验/);
 assert.match(checks,/fc-step-profit"><small>⑥ 利润校验/);
-console.log('PASS: caret restoration, four reset defaults preserving switches, reordered/colored verification steps');
+console.log('PASS: input retains focus/caret without replacement, four reset defaults, reordered verification steps');
+const perfCanvas=Object.create(OzFreightCanvas.prototype);
+perfCanvas.s={nodes:[{id:'fast',item:{value:1,quantity:1}}]};perfCanvas.root={querySelectorAll:()=>[]};
+perfCanvas.snap=()=>{};perfCanvas.change=()=>{};perfCanvas.paint=()=>{throw new Error('Typing must not repaint the canvas');};
+let scheduled=[];perfCanvas.queueMaterialCalculation=(id,shipping)=>scheduled.push([id,shipping]);
+assert.equal(perfCanvas.liveEdit({dataset:{n:'fast',f:'quantity'},value:'3'}),true);
+assert.equal(perfCanvas.s.nodes[0].item.quantity,3);
+perfCanvas.liveEdit({dataset:{n:'fast',f:'weight'},value:'343'});
+assert.equal(perfCanvas.s.nodes[0].item.weight,'343');
+assert.deepEqual(scheduled,[['fast',true],['fast',true]]);
+const nativeTimeout=global.setTimeout,nativeClearTimeout=global.clearTimeout;
+try{
+ const callbacks=new Map();let timerId=0,updates=[];
+ global.setTimeout=(fn,delay)=>{assert.equal(delay,180);callbacks.set(++timerId,fn);return timerId;};
+ global.clearTimeout=id=>callbacks.delete(id);
+ delete perfCanvas.queueMaterialCalculation;
+ perfCanvas.updateMaterialCalculation=(id,shipping)=>updates.push([id,shipping]);
+ perfCanvas.queueMaterialCalculation('fast',true);perfCanvas.queueMaterialCalculation('fast',false);
+ assert.equal(callbacks.size,1);[...callbacks.values()][0]();
+ assert.deepEqual(updates,[['fast',true]]);assert.equal(perfCanvas.pendingCalculations.size,0);
+}finally{global.setTimeout=nativeTimeout;global.clearTimeout=nativeClearTimeout;}
+console.log('PASS: typing updates model immediately without full paint, merged 180ms calculation preserves shipping refresh');
 const hoverDocument=global.document,hoverWindow=global.window;
 try{
  const listeners={},shown=[];

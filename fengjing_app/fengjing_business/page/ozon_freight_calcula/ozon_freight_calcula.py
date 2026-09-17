@@ -675,6 +675,57 @@ def load_canvas(name):
     return dict(name=doc.name, title=doc.canvas_title, canvas=doc.canvas_json, config=doc.freight_config_json, modified=str(doc.modified))
 
 
+def validate_packing(node):
+    plan = node.get("packing")
+    if plan is not None:
+        if not isinstance(plan, dict) or plan.get("mode") not in ("none", "equal", "custom"):
+            frappe.throw("分包方式不正确")
+        if "perPack" in plan:
+            value = plan["perPack"]
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 1 <= value <= 10000 or int(value) != value:
+                frappe.throw("每包件数必须为1至10000的整数")
+        rows = plan.get("rows", [])
+        if not isinstance(rows, list) or len(rows) > 100:
+            frappe.throw("最多100个包裹")
+        for row in rows:
+            if not isinstance(row, dict):
+                frappe.throw("包裹数据无效")
+            quantity = row.get("quantity")
+            if isinstance(quantity, bool) or not isinstance(quantity, (int, float)) or not math.isfinite(quantity) or not 1 <= quantity <= 10000 or int(quantity) != quantity:
+                frappe.throw("包裹件数必须为有效整数")
+            for key in ("length", "width", "height", "weight"):
+                value = row.get(key)
+                if value in (None, ""):
+                    continue
+                try:
+                    number = float(value)
+                except (ValueError, TypeError):
+                    frappe.throw("包裹尺寸或重量无效")
+                if isinstance(value, bool) or not math.isfinite(number) or number < 0:
+                    frappe.throw("包裹尺寸或重量无效")
+    quotes = node.get("parcelQuotes", [])
+    if not isinstance(quotes, list) or len(quotes) > 100:
+        frappe.throw("包裹物流设置无效")
+    for position in [node.get("packPos")] + quotes:
+        if position is None:
+            continue
+        if not isinstance(position, dict):
+            frappe.throw("包裹物流设置无效")
+        if "x" in position or "y" in position:
+            if any(isinstance(position.get(k), bool) or not isinstance(position.get(k), (int, float)) or not math.isfinite(position[k]) or abs(position[k]) > 1000000 for k in ("x", "y")):
+                frappe.throw("包裹卡片坐标无效")
+        if "routeId" in position and not isinstance(position["routeId"], str):
+            frappe.throw("包裹物流选择无效")
+        filters = position.get("filters", {})
+        if not isinstance(filters, dict) or set(filters) - {"destination", "mode", "provider", "speeds"}:
+            frappe.throw("物流筛选设置无效")
+        if any(not isinstance(filters.get(k, ""), str) or len(filters.get(k, "")) > 200 for k in ("destination", "mode", "provider")):
+            frappe.throw("物流筛选设置无效")
+        speeds = filters.get("speeds", [])
+        if not isinstance(speeds, list) or len(speeds) > 3 or any(v not in ("Express", "Standard", "Economy") for v in speeds):
+            frappe.throw("物流速度筛选无效")
+
+
 @frappe.whitelist(methods=["POST"])
 def save_canvas(title, canvas, config, name=None, modified=None, quote_batch=None):
     canvas, config = _object(canvas), validate_config(config)
@@ -687,6 +738,7 @@ def save_canvas(title, canvas, config, name=None, modified=None, quote_batch=Non
     for node in canvas["nodes"]:
         if not isinstance(node, dict) or not isinstance(node.get("item"), dict) or not node["item"].get("item_code"):
             frappe.throw("物料卡片数据不完整")
+        validate_packing(node)
         identifier = node.get("id", "")
         if not isinstance(identifier, str) or not re.fullmatch(r"[A-Za-z0-9-]{1,100}", identifier) or identifier in ids:
             frappe.throw("物料卡片 ID 不正确或重复")
