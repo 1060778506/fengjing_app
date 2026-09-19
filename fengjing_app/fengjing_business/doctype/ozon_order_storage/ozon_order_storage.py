@@ -158,7 +158,7 @@ def 保存ozon订单(posting, store, ozon_id, fulfillment_type, sync_type):
 		"cancellation_reason": cancellation.get("cancel_reason"),
 		"is_cancelled": cint(bool(cancellation.get("cancel_reason_id")) or posting.get("status") == "cancelled"),
 		"is_express": cint(posting.get("is_express")),
-		"sync_type": sync_type,
+		"sync_type": "新订单增量" if sync_type == "最新订单增量" else sync_type,
 		"order_created_at": _ozon_time_to_system(posting.get("created_at") or posting.get("in_process_at")),
 		"in_process_at": _ozon_time_to_system(posting.get("in_process_at")),
 		"source_updated_at": _ozon_time_to_system(posting.get("updated_at") or posting.get("last_changed_status_date")),
