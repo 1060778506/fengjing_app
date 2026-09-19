@@ -606,6 +606,7 @@ $(document).on('app_ready', function () {
 // 1. items子表的物料编号左侧显示缩略图
 // 2. 鼠标经过缩略图显示完整大图
 // 3. Item物料下拉菜单显示图片并美化
+// 4. Item物料下拉菜单批量选择物料
 // ============================================================
 (() => {
     if (window.__fengjing_item_image_module_loaded) {
@@ -884,6 +885,307 @@ $(document).on('app_ready', function () {
                 font-size: 12px;
                 white-space: nowrap;
                 text-overflow: ellipsis;
+            }
+
+            /* 物料下拉菜单中的批量选择入口 */
+            .fengjing-multi-select-entry {
+                position: sticky;
+                top: 0;
+                z-index: 4;
+                display: block;
+                margin: 0 0 6px !important;
+                padding: 0 !important;
+                border: 0 !important;
+                background: #ffffff !important;
+            }
+
+            .fengjing-multi-select-button {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 7px;
+                width: 100%;
+                min-height: 38px;
+                padding: 8px 12px;
+                border: 1px solid #9db7ff;
+                border-radius: 8px;
+                color: #2356d8;
+                font-size: 13px;
+                font-weight: 600;
+                background: linear-gradient(135deg, #f5f8ff 0%, #edf3ff 100%);
+                cursor: pointer;
+                transition: background-color 0.15s ease, border-color 0.15s ease;
+            }
+
+            .fengjing-multi-select-button:hover {
+                border-color: #5f87ff;
+                color: #1746c4;
+                background: #e7efff;
+            }
+
+            /* 批量选择物料弹窗 */
+            .fengjing-item-picker {
+                min-height: 430px;
+            }
+
+            .fengjing-bom-picker {
+                margin-bottom: 12px;
+            }
+
+            .fengjing-bom-picker-title {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 7px;
+                color: #475569;
+                font-size: 12px;
+                font-weight: 600;
+            }
+
+            .fengjing-bom-picker-list {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                max-height: min(58vh, 620px);
+                padding: 2px 4px 6px 1px;
+                overflow-y: auto;
+                scrollbar-width: none;
+            }
+
+            .fengjing-bom-picker-list::-webkit-scrollbar {
+                display: none;
+            }
+
+            .fengjing-bom-option {
+                display: grid;
+                grid-template-columns: 76px minmax(0, 1fr);
+                align-items: center;
+                gap: 8px;
+                width: 100%;
+                min-height: 84px;
+                padding: 6px 8px;
+                border: 1px solid #dce4ef;
+                border-radius: 9px;
+                color: #334155;
+                background: #fff;
+                cursor: pointer;
+                transition: border-color .15s ease, background-color .15s ease,
+                    box-shadow .15s ease;
+            }
+
+            .fengjing-bom-option:hover {
+                border-color: #8daaf8;
+                background: #f7f9ff;
+            }
+
+            .fengjing-bom-option.is-active {
+                border-color: #4f78ed;
+                background: #edf3ff;
+                box-shadow: 0 0 0 1px rgba(79, 120, 237, .12);
+            }
+
+            .fengjing-bom-option-image {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 76px;
+                height: 76px;
+                overflow: hidden;
+                border-radius: 7px;
+                color: #94a3b8;
+                font-size: 10px;
+                background: #f1f5f9;
+            }
+
+            .fengjing-bom-option-image img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                background: #fff;
+            }
+
+            .fengjing-bom-option-info {
+                min-width: 0;
+            }
+
+            .fengjing-bom-option-name,
+            .fengjing-bom-option-code {
+                display: block;
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+            }
+
+            .fengjing-bom-option-name {
+                font-size: 12px;
+                font-weight: 600;
+            }
+
+            .fengjing-bom-option-code {
+                margin-top: 2px;
+                color: #718096;
+                font-size: 10px;
+            }
+
+            .fengjing-item-picker-toolbar {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+                margin-bottom: 10px;
+                color: #64748b;
+                font-size: 12px;
+            }
+
+            .fengjing-item-picker-list {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                gap: 8px;
+                max-height: min(58vh, 620px);
+                overflow-y: auto;
+                padding: 8px;
+                border: 1px solid #dfe6f1;
+                border-radius: 10px;
+                background: #f8fafc;
+            }
+
+            .fengjing-item-picker-row {
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 3px;
+                aspect-ratio: 1 / 1;
+                min-width: 0;
+                min-height: 240px;
+                padding: 8px;
+                overflow: hidden;
+                border: 1px solid #e1e7f0;
+                border-radius: 10px;
+                background: #fff;
+                cursor: pointer;
+                transition: transform .15s ease, border-color .15s ease,
+                    box-shadow .15s ease, background-color .15s ease;
+            }
+
+            .fengjing-item-picker-row:hover,
+            .fengjing-item-picker-row.is-selected {
+                background: #f5f8ff;
+                border-color: #7fa1fb;
+                box-shadow: 0 4px 14px rgba(43, 79, 150, .10);
+            }
+
+            .fengjing-item-picker-row:hover {
+                transform: translateY(-1px);
+            }
+
+            .fengjing-item-picker-image {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 112px;
+                height: 112px;
+                flex: 0 0 auto;
+                overflow: hidden;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                color: #94a3b8;
+                font-size: 11px;
+                background: #f8fafc;
+            }
+
+            .fengjing-item-picker-image img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                background: #ffffff;
+            }
+
+            .fengjing-item-picker-info {
+                display: block;
+                width: 100%;
+                min-width: 0;
+                text-align: center;
+            }
+
+            .fengjing-item-picker-name {
+                display: -webkit-box;
+                overflow: hidden;
+                min-height: 30px;
+                line-height: 15px;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 2;
+            }
+
+            .fengjing-item-picker-name {
+                color: #172033;
+                font-size: 13px;
+                font-weight: 600;
+            }
+
+            .fengjing-item-picker-code,
+            .fengjing-item-picker-supplier {
+                display: block;
+                overflow: hidden;
+                margin-top: 3px;
+                color: #64748b;
+                font-size: 11px;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+            }
+
+            .fengjing-item-picker-stock {
+                width: 100%;
+                color: #334155;
+                font-size: 11px;
+                text-align: center;
+            }
+
+            .fengjing-item-picker-qty {
+                width: 100%;
+                height: 29px;
+                margin-top: auto;
+                padding: 4px 8px;
+                border: 1px solid #cfd8e6;
+                border-radius: 7px;
+                text-align: center;
+                background: #ffffff;
+            }
+
+            .fengjing-item-picker-empty {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                grid-column: 1 / -1;
+                min-height: 240px;
+                color: #94a3b8;
+            }
+
+            .fengjing-item-picker-pager {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                margin-top: 12px;
+            }
+
+            @media (max-width: 760px) {
+                .fengjing-item-picker-list {
+                    grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+                }
+
+                .fengjing-item-picker-row {
+                    min-height: 190px;
+                }
+
+                .fengjing-item-picker-image {
+                    width: 90px;
+                    height: 90px;
+                }
+
+                .fengjing-item-picker-qty {
+                    width: 100%;
+                }
             }
         `;
 
@@ -1288,6 +1590,637 @@ $(document).on('app_ready', function () {
         }
     }
 
+    // --------------------------------------------------------
+    // 批量选择物料
+    // --------------------------------------------------------
+    function 获取当前物料表单(input) {
+        const frm = window.cur_frm;
+
+        if (
+            !frm ||
+            !支持的单据.includes(frm.doc.doctype) ||
+            frm.doc.docstatus !== 0
+        ) {
+            return null;
+        }
+
+        const grid = frm.fields_dict.items?.grid;
+        const wrapper = grid?.wrapper?.get
+            ? grid.wrapper.get(0)
+            : grid?.wrapper;
+
+        if (!grid || !wrapper || !wrapper.contains(input)) {
+            return null;
+        }
+
+        return frm;
+    }
+
+    async function 批量填充物料(frm, selectedItems) {
+        const selections = Array.from(selectedItems.values()).filter(
+            item => Number(item.qty) > 0
+        );
+
+        if (!selections.length) {
+            frappe.msgprint(__("请至少选择一个物料并填写有效数量。"));
+            return false;
+        }
+
+        if (selections.length > 100) {
+            frappe.msgprint(__("每次最多批量添加100个物料。"));
+            return false;
+        }
+
+        frappe.dom.freeze(__("正在按顺序填充物料资料…"));
+
+        try {
+            const response = await frappe.call({
+                method: "fengjing_app.api.item_multi_select.get_items_by_codes",
+                args: {
+                    item_codes: selections.map(item => item.item_code)
+                }
+            });
+
+            const resolvedItems = new Map(
+                (response.message || []).map(item => [
+                    String(item.item_code || ""),
+                    item
+                ])
+            );
+            const grid = frm.fields_dict.items?.grid;
+
+            if (!grid) {
+                throw new Error(__("当前单据没有可填充的物料明细表。"));
+            }
+
+            let addedCount = 0;
+            let mergedCount = 0;
+
+            for (const selected of selections) {
+                const resolvedItem = resolvedItems.get(selected.item_code);
+                if (!resolvedItem) {
+                    continue;
+                }
+
+                // 始终使用服务器重新核验后的物料号，物料套件只负责筛选，
+                // 绝不能把组件替换为套件父物料。
+                const exactItemCode = String(resolvedItem.item_code || "");
+
+                const qty = Number(selected.qty);
+                const existingRow = (frm.doc.items || []).find(
+                    row => row.item_code === exactItemCode
+                );
+
+                if (existingRow) {
+                    await frappe.model.set_value(
+                        existingRow.doctype,
+                        existingRow.name,
+                        "qty",
+                        Number(existingRow.qty || 0) + qty
+                    );
+                    mergedCount += 1;
+                    continue;
+                }
+
+                let row = (frm.doc.items || []).find(
+                    item => !item.item_code
+                );
+
+                if (!row) {
+                    row = frm.add_child("items");
+                }
+
+                // 使用 ERPNext 原生事件写入，并等待它触发的后台请求
+                // 全部结束后再处理下一行，避免多行资料相互覆盖。
+                await frappe.model.set_value(
+                    row.doctype,
+                    row.name,
+                    "item_code",
+                    exactItemCode
+                );
+                await new Promise(resolve => frappe.after_ajax(resolve));
+
+                // 后台处理完成后核对实际写入值；发生错位时立即停止，
+                // 不再通过二次 set_value 制造新的异步请求。
+                const processedRow = frappe.get_doc(row.doctype, row.name) || row;
+                if (String(processedRow.item_code || "") !== exactItemCode) {
+                    throw new Error(__(
+                        "物料 {0} 被其他脚本改成了 {1}，本次已停止填充。",
+                        [exactItemCode, processedRow.item_code || __("空值")]
+                    ));
+                }
+                await frappe.model.set_value(
+                    processedRow.doctype,
+                    processedRow.name,
+                    "qty",
+                    qty
+                );
+                await new Promise(resolve => frappe.after_ajax(resolve));
+                addedCount += 1;
+            }
+
+            frm.refresh_field("items");
+            frm.dirty();
+            frappe.show_alert({
+                message: __(
+                    "批量添加完成：新增 {0} 项，合并 {1} 项",
+                    [addedCount, mergedCount]
+                ),
+                indicator: "green"
+            });
+            return true;
+        } catch (error) {
+            console.error("批量填充物料失败：", error);
+            frappe.msgprint({
+                title: __("批量添加失败"),
+                message: frappe.utils.escape_html(
+                    error?.message || String(error)
+                ),
+                indicator: "red"
+            });
+            return false;
+        } finally {
+            frappe.dom.unfreeze();
+        }
+    }
+
+    function 打开物料多选窗口(frm) {
+        const state = {
+            start: 0,
+            pageLength: 80,
+            hasMore: false,
+            loading: false,
+            bundleLoading: false,
+            items: [],
+            bundles: [],
+            selectedBundle: "",
+            selected: new Map()
+        };
+
+        const dialog = new frappe.ui.Dialog({
+            title: __("批量选择物料"),
+            size: "extra-large",
+            fields: [
+                {
+                    fieldname: "bundle_search_text",
+                    fieldtype: "Data",
+                    label: __("搜索物料套件"),
+                    placeholder: __("输入套件、父物料编号或名称")
+                },
+                {
+                    fieldname: "bundle_filter",
+                    fieldtype: "HTML"
+                },
+                {
+                    fieldtype: "Column Break"
+                },
+                {
+                    fieldname: "search_text",
+                    fieldtype: "Data",
+                    label: __("搜索物料"),
+                    placeholder: __("输入物料号、名称或物料组")
+                },
+                {
+                    fieldname: "item_list",
+                    fieldtype: "HTML"
+                }
+            ],
+            primary_action_label: __("确定添加"),
+            async primary_action() {
+                const success = await 批量填充物料(
+                    frm,
+                    state.selected
+                );
+                if (success) {
+                    dialog.hide();
+                }
+            }
+        });
+
+        const bundleWrapper = dialog.fields_dict.bundle_filter.$wrapper.get(0);
+        const listWrapper = dialog.fields_dict.item_list.$wrapper.get(0);
+
+        function 渲染物料套件列表() {
+            if (state.bundleLoading) {
+                bundleWrapper.innerHTML = `
+                    <div class="fengjing-bom-picker">
+                        <div class="fengjing-bom-picker-title">
+                            <span>${__("物料套件")}</span>
+                            <span>${__("正在加载…")}</span>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const bundleCards = state.bundles.map((bundle, index) => {
+                const safeName = frappe.utils.escape_html(
+                    String(bundle.name || "")
+                );
+                const safeItemName = frappe.utils.escape_html(
+                    String(bundle.item_name || bundle.item || bundle.name || "")
+                );
+                const safeImage = frappe.utils.escape_html(
+                    String(bundle.image || "")
+                );
+                const imageHtml = safeImage
+                    ? `<img src="${safeImage}" alt="" loading="lazy">`
+                    : __("套件");
+
+                return `
+                    <button
+                        type="button"
+                        class="fengjing-bom-option ${
+                            state.selectedBundle === bundle.name ? "is-active" : ""
+                        }"
+                        data-bom-index="${index}"
+                        title="${safeName}"
+                    >
+                        <span class="fengjing-bom-option-image">${imageHtml}</span>
+                        <span class="fengjing-bom-option-info">
+                            <span class="fengjing-bom-option-name">${safeItemName}</span>
+                            <span class="fengjing-bom-option-code">${safeName}</span>
+                        </span>
+                    </button>
+                `;
+            }).join("");
+
+            bundleWrapper.innerHTML = `
+                <div class="fengjing-bom-picker">
+                    <div class="fengjing-bom-picker-title">
+                        <span>${__("物料套件")}</span>
+                        <span>${__("选择后仅显示该套件的组件")}</span>
+                    </div>
+                    <div class="fengjing-bom-picker-list">
+                        <button
+                            type="button"
+                            class="fengjing-bom-option ${
+                                state.selectedBundle ? "" : "is-active"
+                            }"
+                            data-bom-index="-1"
+                        >
+                            <span class="fengjing-bom-option-image">${__("全部")}</span>
+                            <span class="fengjing-bom-option-info">
+                                <span class="fengjing-bom-option-name">${__("全部物料")}</span>
+                                <span class="fengjing-bom-option-code">${__("取消套件筛选")}</span>
+                            </span>
+                        </button>
+                        ${bundleCards || `
+                            <span class="text-muted small">
+                                ${__("暂无已启用的物料套件")}
+                            </span>
+                        `}
+                    </div>
+                </div>
+            `;
+
+            bundleWrapper.querySelectorAll(".fengjing-bom-option").forEach(
+                element => {
+                    element.addEventListener("click", () => {
+                        const index = Number(element.dataset.bomIndex);
+                        state.selectedBundle = index >= 0
+                            ? String(state.bundles[index]?.name || "")
+                            : "";
+                        state.start = 0;
+                        渲染物料套件列表();
+                        加载物料();
+                    });
+                }
+            );
+        }
+
+        async function 加载物料套件列表() {
+            state.bundleLoading = true;
+            渲染物料套件列表();
+            try {
+                const response = await frappe.call({
+                    method: "fengjing_app.api.item_multi_select.get_product_bundle_options",
+                    args: {
+                        txt: dialog.get_value("bundle_search_text") || "",
+                        page_length: 100
+                    }
+                });
+                state.bundles = response.message || [];
+            } catch (error) {
+                console.error("加载物料套件列表失败：", error);
+                state.bundles = [];
+                frappe.show_alert({
+                    message: __("物料套件列表加载失败"),
+                    indicator: "orange"
+                });
+            } finally {
+                state.bundleLoading = false;
+                渲染物料套件列表();
+            }
+        }
+
+        function 刷新已选数量() {
+            const element = listWrapper.querySelector(
+                ".fengjing-item-picker-selected-count"
+            );
+            if (element) {
+                element.textContent = __("已选 {0} 项", [
+                    state.selected.size
+                ]);
+            }
+        }
+
+        function 渲染物料列表() {
+            if (state.loading) {
+                listWrapper.innerHTML = `
+                    <div class="fengjing-item-picker">
+                        <div class="fengjing-item-picker-empty">
+                            ${__("正在加载物料…")}
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const rows = state.items.map(item => {
+                const code = String(item.item_code || "");
+                const selected = state.selected.get(code);
+                const safeCode = frappe.utils.escape_html(code);
+                const safeName = frappe.utils.escape_html(
+                    String(item.item_name || code)
+                );
+                const safeImage = frappe.utils.escape_html(
+                    String(item.image || "")
+                );
+                const safeSupplier = frappe.utils.escape_html(
+                    String(item.default_supplier || __("未设默认供应商"))
+                );
+                const stockQty = format_number(
+                    Number(item.actual_qty || 0),
+                    null,
+                    2
+                );
+                const safeUom = frappe.utils.escape_html(
+                    String(item.stock_uom || "")
+                );
+                const bundleQty = Number(item.bundle_qty || 0);
+                const imageHtml = safeImage
+                    ? `<img src="${safeImage}" alt="" loading="lazy">`
+                    : __("无图");
+
+                return `
+                    <div
+                        class="fengjing-item-picker-row ${
+                            selected ? "is-selected" : ""
+                        }"
+                        data-item-code="${safeCode}"
+                    >
+                        <span class="fengjing-item-picker-image">
+                            ${imageHtml}
+                        </span>
+                        <span class="fengjing-item-picker-info">
+                            <span class="fengjing-item-picker-name" title="${safeName}">
+                                ${safeName}
+                            </span>
+                            <span class="fengjing-item-picker-code" title="${safeCode}">
+                                ${safeCode}
+                            </span>
+                            <span class="fengjing-item-picker-supplier">
+                                ${safeSupplier}
+                            </span>
+                        </span>
+                        <span class="fengjing-item-picker-stock">
+                            ${__("库存")} ${stockQty} ${safeUom}
+                            ${bundleQty > 0 ? ` · ${__("套件用量")} ${format_number(bundleQty, null, 3)}` : ""}
+                        </span>
+                        <input
+                            type="number"
+                            class="fengjing-item-picker-qty"
+                            min="0.000001"
+                            step="any"
+                            value="${selected?.qty ?? (bundleQty || 1)}"
+                            aria-label="${__("数量")}"
+                        >
+                    </div>
+                `;
+            }).join("");
+
+            listWrapper.innerHTML = `
+                <div class="fengjing-item-picker">
+                    <div class="fengjing-item-picker-toolbar">
+                        <span>${__("点击卡片选择；蓝色表示已选，可直接修改数量")}</span>
+                        <strong class="fengjing-item-picker-selected-count">
+                            ${__("已选 {0} 项", [state.selected.size])}
+                        </strong>
+                    </div>
+                    <div class="fengjing-item-picker-list">
+                        ${rows || `
+                            <div class="fengjing-item-picker-empty">
+                                ${__("没有找到符合条件的物料")}
+                            </div>
+                        `}
+                    </div>
+                    <div class="fengjing-item-picker-pager">
+                        <button
+                            type="button"
+                            class="btn btn-default btn-sm fengjing-item-picker-prev"
+                            ${state.start <= 0 ? "disabled" : ""}
+                        >${__("上一页")}</button>
+                        <span>${__("第 {0} 页", [
+                            Math.floor(state.start / state.pageLength) + 1
+                        ])}</span>
+                        <button
+                            type="button"
+                            class="btn btn-default btn-sm fengjing-item-picker-next"
+                            ${state.hasMore ? "" : "disabled"}
+                        >${__("下一页")}</button>
+                    </div>
+                </div>
+            `;
+
+            listWrapper.querySelectorAll(
+                ".fengjing-item-picker-row"
+            ).forEach(rowElement => {
+                const code = rowElement.dataset.itemCode;
+                const item = state.items.find(
+                    current => current.item_code === code
+                );
+                const qtyInput = rowElement.querySelector(
+                    ".fengjing-item-picker-qty"
+                );
+
+                function 设置选中(checked) {
+                    const qty = Math.max(Number(qtyInput.value || 1), 0.000001);
+                    rowElement.classList.toggle("is-selected", checked);
+                    if (checked) {
+                        state.selected.set(code, {
+                            item_code: code,
+                            item_name: item?.item_name || code,
+                            qty
+                        });
+                    } else {
+                        state.selected.delete(code);
+                    }
+                    刷新已选数量();
+                }
+
+                rowElement.addEventListener("click", event => {
+                    if (event.target === qtyInput) {
+                        return;
+                    }
+                    设置选中(!state.selected.has(code));
+                });
+
+                qtyInput.addEventListener("input", () => {
+                    if (state.selected.has(code)) {
+                        const selected = state.selected.get(code);
+                        if (selected) {
+                            selected.qty = Math.max(
+                                Number(qtyInput.value || 1),
+                                0.000001
+                            );
+                        }
+                    }
+                });
+            });
+
+            listWrapper.querySelector(
+                ".fengjing-item-picker-prev"
+            )?.addEventListener("click", () => {
+                state.start = Math.max(0, state.start - state.pageLength);
+                加载物料();
+            });
+
+            listWrapper.querySelector(
+                ".fengjing-item-picker-next"
+            )?.addEventListener("click", () => {
+                if (state.hasMore) {
+                    state.start += state.pageLength;
+                    加载物料();
+                }
+            });
+        }
+
+        async function 加载物料() {
+            if (state.loading) {
+                return;
+            }
+
+            state.loading = true;
+            渲染物料列表();
+
+            try {
+                const response = await frappe.call({
+                    method: "fengjing_app.api.item_multi_select.search_items",
+                    args: {
+                        doctype: frm.doc.doctype,
+                        txt: dialog.get_value("search_text") || "",
+                        start: state.start,
+                        page_length: state.pageLength,
+                        company: frm.doc.company || "",
+                        product_bundle: state.selectedBundle || ""
+                    }
+                });
+                const data = response.message || {};
+                state.items = data.items || [];
+                state.hasMore = Boolean(data.has_more);
+            } catch (error) {
+                console.error("加载批量物料失败：", error);
+                state.items = [];
+                state.hasMore = false;
+                frappe.show_alert({
+                    message: __("物料列表加载失败"),
+                    indicator: "red"
+                });
+            } finally {
+                state.loading = false;
+                渲染物料列表();
+            }
+        }
+
+        const searchInput = dialog.fields_dict.search_text.$input;
+        const bundleSearchInput = dialog.fields_dict.bundle_search_text.$input;
+        let searchTimer = null;
+        let bundleSearchTimer = null;
+        searchInput.on("input", () => {
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(() => {
+                state.start = 0;
+                加载物料();
+            }, 280);
+        });
+
+        searchInput.on("keydown", event => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                window.clearTimeout(searchTimer);
+                state.start = 0;
+                加载物料();
+            }
+        });
+
+        bundleSearchInput.on("input", () => {
+            window.clearTimeout(bundleSearchTimer);
+            bundleSearchTimer = window.setTimeout(() => {
+                加载物料套件列表();
+            }, 280);
+        });
+
+        bundleSearchInput.on("keydown", event => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                window.clearTimeout(bundleSearchTimer);
+                加载物料套件列表();
+            }
+        });
+
+        dialog.show();
+        const leftColumn = $(bundleWrapper).closest(".form-column");
+        const rightColumn = $(listWrapper).closest(".form-column");
+        leftColumn.removeClass("col-sm-6").addClass("col-sm-3");
+        rightColumn.removeClass("col-sm-6").addClass("col-sm-9");
+        加载物料套件列表();
+        加载物料();
+    }
+
+    function 确保批量选择入口(input, dropdown, awesompleteInstance) {
+        const frm = 获取当前物料表单(input);
+
+        if (!frm) {
+            dropdown.querySelector(
+                ".fengjing-multi-select-entry"
+            )?.remove();
+            return;
+        }
+
+        if (dropdown.querySelector(".fengjing-multi-select-entry")) {
+            return;
+        }
+
+        const entry = document.createElement("li");
+        entry.className = "fengjing-multi-select-entry";
+        entry.setAttribute("role", "presentation");
+        entry.innerHTML = `
+            <button type="button" class="fengjing-multi-select-button">
+                <span aria-hidden="true">☑</span>
+                <span>${__("批量选择物料")}</span>
+            </button>
+        `;
+
+        const button = entry.querySelector("button");
+        button.addEventListener("mousedown", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            awesompleteInstance?.close?.();
+            input.blur();
+            window.setTimeout(() => 打开物料多选窗口(frm), 0);
+        });
+        button.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+
+        // 必须放在原生候选项末尾。放在最前面会令 Awesomplete 的
+        // DOM 序号与 suggestions 序号错位：界面点 000039，实际可能
+        // 选择 000034 或 000027。
+        dropdown.append(entry);
+    }
+
     async function 美化物料下拉菜单(input) {
         // 直接取得Frappe正在使用的Awesomplete实例。下拉选项的
         // 物料编号优先从instance.suggestions读取，不再依赖DOM数据。
@@ -1311,16 +2244,30 @@ $(document).on('app_ready', function () {
             return;
         }
 
+        确保批量选择入口(
+            input,
+            dropdown,
+            awesompleteInstance
+        );
+
         // 使用直接子项，兼容不同版本的Awesomplete结构并避免重复。
         const options = Array.from(dropdown.children);
 
         const validOptions = [];
         const itemCodes = [];
 
-        options.forEach((optionElement, optionIndex) => {
+        let suggestionIndex = 0;
+
+        options.forEach(optionElement => {
+            if (optionElement.classList.contains("fengjing-multi-select-entry")) {
+                return;
+            }
+
             const optionData = 获取下拉选项数据(optionElement);
             const suggestion =
-                awesompleteInstance?.suggestions?.[optionIndex];
+                awesompleteInstance?.suggestions?.[suggestionIndex];
+
+            suggestionIndex += 1;
 
             const itemCode =
                 optionData?.value ||
