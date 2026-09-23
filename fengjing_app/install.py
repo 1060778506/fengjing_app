@@ -660,12 +660,6 @@ def create_single_account(company, acc_name, parent, details):
 
 
 
-
-
-
-
-
-
 # 物料增加数量
 @frappe.whitelist()
 def 检测这是第几个物料():
