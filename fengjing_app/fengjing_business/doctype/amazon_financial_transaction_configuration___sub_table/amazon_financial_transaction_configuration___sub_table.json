@@ -7,7 +7,7 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "basic_section", "店铺", "国家", "marketplace_id", "basic_column", "启用自动同步", "增量同步间隔分钟", "启用无站点补漏",
+  "basic_section", "店铺", "国家", "marketplace_id", "basic_column", "启用自动同步", "增量同步间隔分钟",
   "history_section", "历史同步开始时间", "历史同步结束时间", "历史分段天数", "history_column", "同步历史交易", "历史已完整同步到", "历史同步进度", "历史同步摘要",
   "incremental_section", "增量最后完整同步时间", "incremental_column", "增量下次同步时间", "增量同步摘要",
   "recheck_7_section", "启用7天核对", "7天核对间隔天数", "recheck_7_column", "7天最后核对时间", "7天下次核对时间",
@@ -25,8 +25,6 @@
   {"fieldname":"basic_column","fieldtype":"Column Break"},
   {"default":"0","description":"开启后允许执行15分钟增量同步和定期复核；关闭不会删除已经保存的财务交易。","fieldname":"启用自动同步","fieldtype":"Check","in_list_view":1,"label":"启用财务交易自动同步"},
   {"default":"15","description":"日常增量任务的运行间隔。建议保持15分钟。","fieldname":"增量同步间隔分钟","fieldtype":"Int","in_list_view":1,"label":"增量同步间隔分钟","non_negative":1},
-  {"default":"0","description":"仅用于美国站MFN财务交易补漏。启用后会额外执行一次不传Marketplace ID的查询，并按返回站点归类和去重。","fieldname":"启用无站点补漏","fieldtype":"Check","label":"启用无站点补漏（仅美国）"},
-
   {"fieldname":"history_section","fieldtype":"Section Break","label":"首次历史财务交易同步"},
   {"description":"首次同步财务交易的起点，例如2025-04-01 00:00:00。","fieldname":"历史同步开始时间","fieldtype":"Datetime","label":"历史同步开始时间"},
   {"description":"历史同步的结束边界。若需要完整包含某一天，应填写下一天00:00:00，并按店铺当地时区转换后请求。","fieldname":"历史同步结束时间","fieldtype":"Datetime","label":"历史结束／日常增量开始时间"},
