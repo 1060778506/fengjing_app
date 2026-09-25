@@ -1,0 +1,14 @@
+[
+ {
+  "description": "美国亚马逊 Seller Central 下载的付款交易联合报告（Custom Unified Transaction Report）。",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Report Type",
+  "enabled": 1,
+  "modified": "2026-09-25 14:33:47.383503",
+  "name": "mfibbqrqvk",
+  "recognition_fields": "date/time\nsettlement id\ntype\naccount type\nmarketplace withheld tax\nTransaction Status\nTransaction Release Date",
+  "recognition_priority": 100,
+  "report_type_code": "amazon_custom_unified_transaction",
+  "report_type_name": "付款交易联合报告"
+ }
+]

@@ -88,6 +88,13 @@ fixtures = [
         "dt": "Property Setter",
         "filters": [["module", "=", "Fengjing Business"]]
     },
+    # Amazon CSV 离线翻译：报表类型和翻译词典跟随 App 导出。
+    {
+        "dt": "Amazon CSV Report Type"
+    },
+    {
+        "dt": "Amazon CSV Translation Rule"
+    },
     # 2. 导出仪表盘配置 (新增：这一步决定了卡片显示在哪个页面)
     #{
     #    "dt": "Dashboard",
