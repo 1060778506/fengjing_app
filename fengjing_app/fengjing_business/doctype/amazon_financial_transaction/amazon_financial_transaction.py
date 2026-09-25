@@ -30,6 +30,24 @@ class AmazonFinancialTransaction(Document):
 财务接口最小间隔秒 = 2.1
 任务超时秒 = 6 * 60 * 60
 
+# 通过ISO代码查找ERPNext Country主键，避免受界面翻译语言影响。
+MARKETPLACE_COUNTRY_CODES = {
+    "ATVPDKIKX0DER": "us", "A2EUQ1WTGCTBG2": "ca",
+    "A1AM78C64UM0Y8": "mx", "A2Q3Y263D00KWC": "br",
+    # Financial Transactions API may label US off-Amazon activity with this ID.
+    "A2ZV50J4W1RKNI": "us",
+    "A28R8C7NBKEWEA": "ie", "A1RKKUPIHCS9HS": "es",
+    "A1F83G8C2ARO7P": "gb", "A13V1IB3VIYZZH": "fr",
+    "AMEN7PMS3EDWL": "be", "A1805IZSGTT6HS": "nl",
+    "A1PA6795UKMFR9": "de", "APJ6JRA9NG5V4": "it",
+    "A2NODRKZP88ZB9": "se", "AE08WJ6YKNBMC": "za",
+    "A1C3SOZRARQ6R3": "pl", "ARBP9OOSHTCHU": "eg",
+    "A33AVAJ2PDY3EV": "tr", "A17E79C6D8DWNP": "sa",
+    "A2VIGQ35RCS4UG": "ae", "A21TJRUUN4KGV": "in",
+    "A19VAU5U5O7RUS": "sg", "A39IBJ37TRP1C6": "au",
+    "A1VC38T7YXB528": "jp",
+}
+
 
 def _系统时间转utc(时间值):
     if not 时间值:
@@ -280,13 +298,36 @@ def _上下文值(列表, 字段):
     return None
 
 
-def _取国家(站点id, 配置国家=None):
-    if 配置国家 and frappe.db.exists("Country", 配置国家):
-        return 配置国家
-    from fengjing_app.fengjing_business.doctype.amazon_order_synchronization.amazon_order_synchronization import MARKETPLACE_COUNTRIES
+def _取国家(站点id):
+    """Marketplace ID是站点国家的唯一信任源，不接受人工覆盖。"""
+    国家代码 = MARKETPLACE_COUNTRY_CODES.get(str(站点id or "").strip().upper())
+    if not 国家代码:
+        return None
+    return frappe.db.get_value("Country", {"code": 国家代码}, "name")
 
-    国家 = MARKETPLACE_COUNTRIES.get(站点id)
-    return 国家 if 国家 and frappe.db.exists("Country", 国家) else None
+
+def 修复亚马逊财务交易国家():
+    """Migration helper: repair existing rows by Marketplace ID without touching raw JSON."""
+    if not frappe.db.table_exists("Amazon Financial Transaction"):
+        return
+    for 站点id, 国家代码 in MARKETPLACE_COUNTRY_CODES.items():
+        国家 = frappe.db.get_value("Country", {"code": 国家代码}, "name")
+        if not 国家:
+            continue
+        frappe.db.sql(
+            """
+            UPDATE `tabAmazon Financial Transaction`
+               SET country = %s
+             WHERE UPPER(TRIM(COALESCE(marketplace_id, ''))) = %s
+               AND COALESCE(country, '') != %s
+            """,
+            (国家, 站点id, 国家),
+        )
+
+
+def 修复亚马逊财务交易国家_v2():
+    """补充修复Financial Transactions API返回的Non-Amazon US站点。"""
+    修复亚马逊财务交易国家()
 
 
 def _追加历史json(doc):
@@ -313,7 +354,7 @@ def _追加历史json(doc):
     doc.raw_json_history = json.dumps(历史, ensure_ascii=False, sort_keys=True, indent=2)
 
 
-def 保存亚马逊财务交易(交易, 店铺, 配置站点id, api区域, 同步类型, 配置国家=None):
+def 保存亚马逊财务交易(交易, 店铺, 配置站点id, api区域, 同步类型):
     """按“交易ID + SKU”展平保存，一个无SKU交易至少保存一行。"""
     if not isinstance(交易, dict):
         raise ValueError("Amazon财务交易必须是JSON对象")
@@ -349,7 +390,7 @@ def 保存亚马逊财务交易(交易, 店铺, 配置站点id, api区域, 同�
         "settlement_id": 相关标识.get("SETTLEMENT_ID"),
         "invoice_id": 相关标识.get("INVOICE_ID"),
         "store": 店铺,
-        "country": _取国家(站点id, 配置国家),
+        "country": _取国家(站点id),
         "marketplace_id": 站点id,
         "api_region": api区域,
         "sync_type": 同步类型,
@@ -548,7 +589,6 @@ def _同步查询窗口(配置行, api行, 同步类型, 开始utc, 结束utc):
                 站点id,
                 SP_API站点区域.get(站点id, ""),
                 同步类型,
-                配置行.get("国家"),
             )
             汇总["新建"] += 结果["created"]
             汇总["更新"] += 结果["updated"]

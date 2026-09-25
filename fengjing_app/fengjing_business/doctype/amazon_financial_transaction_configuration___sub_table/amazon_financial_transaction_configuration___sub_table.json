@@ -7,7 +7,7 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "basic_section", "店铺", "国家", "marketplace_id", "basic_column", "启用自动同步", "增量同步间隔分钟",
+  "basic_section", "店铺", "marketplace_id", "basic_column", "启用自动同步", "增量同步间隔分钟",
   "history_section", "历史同步开始时间", "历史同步结束时间", "历史分段天数", "history_column", "同步历史交易", "历史已完整同步到", "历史同步进度", "历史同步摘要",
   "incremental_section", "增量最后完整同步时间", "incremental_column", "增量下次同步时间", "增量同步摘要",
   "recheck_7_section", "启用7天核对", "7天核对间隔天数", "recheck_7_column", "7天最后核对时间", "7天下次核对时间",
@@ -20,8 +20,7 @@
  "fields": [
   {"fieldname":"basic_section","fieldtype":"Section Break","label":"基础配置"},
   {"description":"财务交易最终归属的Amazon店铺成本中心。","fieldname":"店铺","fieldtype":"Link","in_list_view":1,"label":"店铺","options":"Cost Center","reqd":1},
-  {"description":"用于识别站点时区、币种和国家。","fieldname":"国家","fieldtype":"Link","in_list_view":1,"label":"国家","options":"Country","reqd":1},
-  {"description":"Amazon站点标识，例如美国站ATVPDKIKX0DER。","fieldname":"marketplace_id","fieldtype":"Data","in_list_view":1,"label":"Marketplace ID","reqd":1},
+  {"description":"Amazon站点标识，例如美国站ATVPDKIKX0DER。国家由程序根据此ID自动判定。","fieldname":"marketplace_id","fieldtype":"Data","in_list_view":1,"label":"Marketplace ID","reqd":1},
   {"fieldname":"basic_column","fieldtype":"Column Break"},
   {"default":"0","description":"开启后允许执行15分钟增量同步和定期复核；关闭不会删除已经保存的财务交易。","fieldname":"启用自动同步","fieldtype":"Check","in_list_view":1,"label":"启用财务交易自动同步"},
   {"default":"15","description":"日常增量任务的运行间隔。建议保持15分钟。","fieldname":"增量同步间隔分钟","fieldtype":"Int","in_list_view":1,"label":"增量同步间隔分钟","non_negative":1},
