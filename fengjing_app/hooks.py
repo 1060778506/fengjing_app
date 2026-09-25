@@ -15,6 +15,15 @@ def run_amazon_orders():
     return 定时执行亚马逊订单同步()
 
 
+def run_amazon_finances():
+    """Short scheduler entry; Scheduled Job Type.method is limited to 140 chars."""
+    from fengjing_app.fengjing_business.doctype.amazon_financial_transaction.amazon_financial_transaction import (
+        定时执行亚马逊财务交易同步,
+    )
+
+    return 定时执行亚马逊财务交易同步()
+
+
 def run_ozon_orders():
     """Short scheduler entry; Scheduled Job Type.method is limited to 140 chars."""
     from fengjing_app.fengjing_business.doctype.fengjing___product_corresponding_platform___configuration.fengjing___product_corresponding_platform___configuration import (
@@ -166,6 +175,7 @@ scheduler_events = {
         # 指向刚才创建的那个入口函数
         "fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log.定时执行亚马逊抓取排名的函数",
         "fengjing_app.hooks.run_amazon_orders",
+        "fengjing_app.hooks.run_amazon_finances",
         "fengjing_app.hooks.run_ozon_orders",
         "fengjing_app.hooks.run_ozon_rankings"
     ],

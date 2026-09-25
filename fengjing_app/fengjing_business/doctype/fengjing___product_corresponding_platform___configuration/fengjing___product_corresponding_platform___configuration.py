@@ -1469,17 +1469,46 @@ def _订单任务锁(行名称):
     )
 
 
+def _订单历史待执行键(行名称):
+    return f"fengjing:amazon-orders-history-pending:{行名称}"
+
+
+def _标记订单历史待执行(行名称):
+    frappe.cache().set_value(
+        _订单历史待执行键(行名称),
+        1,
+        expires_in_sec=30 * 24 * 60 * 60,
+    )
+
+
+def _订单历史正在等待(行名称):
+    return frappe.utils.cint(
+        frappe.cache().get_value(_订单历史待执行键(行名称))
+    ) == 1
+
+
+def _清除订单历史待执行(行名称):
+    frappe.cache().delete_value(_订单历史待执行键(行名称))
+
+
 @frappe.whitelist()
 def 启动亚马逊历史订单同步(配置行名称):
     """Queue the selected child-row history import and return immediately."""
     _, 行 = _取得订单配置行(配置行名称)
     if not 行.get("历史同步开始时间") or not 行.get("历史同步结束时间"):
         frappe.throw("请先填写历史同步开始时间和历史同步结束时间")
+    _标记订单历史待执行(配置行名称)
+    if 行.get("同步状态") == "同步中":
+        return {
+            "status": "waiting",
+            "message": f"当前正在执行{行.get('当前执行类型') or '其他订单同步'}，历史订单已排队，完成后会自动继续。",
+        }
     _更新订单配置状态(
         配置行名称,
         同步状态="等待执行",
         当前执行类型="历史订单",
         最近错误="",
+        下次运行时间=frappe.utils.now_datetime(),
     )
     _订单任务入队(配置行名称, "历史订单")
     return {"status": "queued", "message": "历史订单同步已经进入后台队列"}
@@ -1526,6 +1555,8 @@ def 执行亚马逊订单同步任务(配置行名称, 同步类型):
                         ),
                         历史抓取日志=json.dumps({**汇总, "时间计划": 计划}, ensure_ascii=False),
                     )
+                    if 计划["status"] == "complete":
+                        _清除订单历史待执行(配置行名称)
                     return {"status": 计划["status"], "summary": 汇总, "plan": 计划}
                 开始utc = get_datetime(计划["created_after"].replace("Z", "+00:00"))
                 结束utc = get_datetime(计划["created_before"].replace("Z", "+00:00"))
@@ -1639,9 +1670,13 @@ def 定时执行亚马逊订单同步():
     主表 = frappe.get_single(订单配置主表)
     当前时间 = frappe.utils.now_datetime()
     for 行 in 主表.get("亚马逊抓取订单配置表") or []:
-        if not frappe.utils.cint(行.get("启用自动抓取")):
-            continue
         try:
+            if not frappe.utils.cint(行.get("启用自动抓取")):
+                # 手工点击的历史任务不受自动同步开关限制。
+                if not _订单历史正在等待(行.name):
+                    continue
+            if 行.get("同步状态") == "同步中":
+                continue
             # 失败后至少等待15分钟再重试，避免每分钟连续打满Amazon接口。
             if (
                 行.get("同步状态") == "失败"
@@ -1650,6 +1685,20 @@ def 定时执行亚马逊订单同步():
             ):
                 continue
             _匹配订单api配置(主表, 行)
+            if _订单历史正在等待(行.name):
+                if (
+                    行.get("同步状态") == "等待执行"
+                    and 行.get("下次运行时间")
+                    and get_datetime(行.get("下次运行时间")) > 当前时间
+                ):
+                    continue
+                _更新订单配置状态(
+                    行.name,
+                    同步状态="等待执行",
+                    当前执行类型="历史订单",
+                )
+                _订单任务入队(行.name, "历史订单")
+                continue
             # 手工启动但因未来边界暂停的历史任务，由调度器继续推进。
             if 行.get("同步状态") == "等待执行" and 行.get("历史同步开始时间") and 行.get("历史同步结束时间"):
                 _订单任务入队(行.name, "历史订单")

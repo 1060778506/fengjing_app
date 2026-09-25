@@ -171,6 +171,60 @@ frappe.ui.form.on('Amazon retrieves order configuration - sub-table', {
     }
 });
 
+// --- 子表逻辑：Amazon财务交易同步配置 ---
+frappe.ui.form.on('Amazon Financial Transaction Configuration - Sub-table', {
+    同步历史交易: function (frm, cdt, cdn) {
+        const row = locals[cdt] && locals[cdt][cdn];
+        if (!row) return;
+        if (!row.店铺 || !row.marketplace_id) {
+            frappe.msgprint(__('请先选择店铺并填写 Marketplace ID。'));
+            return;
+        }
+        if (!row.历史同步开始时间 || !row.历史同步结束时间) {
+            frappe.msgprint(__('请先填写历史同步开始时间和历史同步结束时间。'));
+            return;
+        }
+        const rowIndex = row.idx;
+        frappe.confirm(
+            __('确定开始或继续同步店铺 {0} 的Amazon历史财务交易吗？配置会自动保存，任务将在后台运行。', [row.店铺]),
+            async () => {
+                try {
+                    if (frm.is_dirty()) {
+                        await frm.save();
+                    }
+                    const savedRow = (frm.doc.亚马逊财务交易配置表 || [])
+                        .find(item => item.idx === rowIndex);
+                    if (!savedRow || !savedRow.name || savedRow.__islocal) {
+                        throw new Error(__('配置行尚未正确保存，请刷新后重试。'));
+                    }
+                    const response = await frappe.call({
+                        method: 'fengjing_app.fengjing_business.doctype.amazon_financial_transaction.amazon_financial_transaction.启动亚马逊历史财务交易同步',
+                        args: { 配置行名称: savedRow.name },
+                        freeze: true,
+                        freeze_message: __('正在提交Amazon财务交易同步任务...')
+                    });
+                    const result = response && response.message;
+                    frappe.show_alert({
+                        message: (result && result.message) || __('同步任务已进入后台队列'),
+                        indicator: 'green'
+                    });
+                    await frm.reload_doc();
+                } catch (error) {
+                    frappe.dom.unfreeze();
+                    const message = error && (error.message || error.exc)
+                        ? (error.message || error.exc)
+                        : __('提交历史财务交易同步失败。');
+                    frappe.msgprint({
+                        title: __('Amazon财务同步失败'),
+                        indicator: 'red',
+                        message: frappe.utils.escape_html(String(message))
+                    });
+                }
+            }
+        );
+    }
+});
+
 // --- 子表逻辑：AI 配置项 (Fengjing - AI Configuration) ---
 window.fengjingTeamorouterModels = window.fengjingTeamorouterModels || [];
 
