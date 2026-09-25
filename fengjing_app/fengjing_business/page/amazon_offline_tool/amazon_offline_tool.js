@@ -12,7 +12,7 @@ class AmazonOfflineTranslator {
     constructor(page, wrapper) {
         this.page = page;
         this.wrapper = wrapper;
-        this.configuration = { report_types: [], rules: [] };
+        this.configuration = { report_types: [], rules: [], sku_item_mappings: [] };
         this.file = null;
         this.rows = [];
         this.translated_rows = [];
@@ -20,6 +20,10 @@ class AmazonOfflineTranslator {
         this.report_type = null;
         this.country = "";
         this.is_translated = false;
+        this.preview_page = 1;
+        this.preview_page_size = 10000;
+        this.preview_mode = "source";
+        this.column_widths = {};
         this.render();
         this.bind_events();
         this.load_configuration();
@@ -82,7 +86,7 @@ class AmazonOfflineTranslator {
                 <section class="aot-grid">
                     <div class="aot-panel aot-preview-panel">
                         <div class="aot-panel-head">
-                            <div><h3>数据预览</h3><p class="aot-preview-note">最多预览前 100 行，下载文件包含全部数据</p></div>
+                            <div><h3>数据预览</h3><p class="aot-preview-note">每页最多显示 10,000 行，下载文件包含全部数据</p></div>
                             <div class="aot-view-switch">
                                 <button class="is-active" data-view="source">原文</button>
                                 <button data-view="translated">译文</button>
@@ -90,6 +94,10 @@ class AmazonOfflineTranslator {
                         </div>
                         <div class="aot-table-empty">上传文件后在这里预览数据</div>
                         <div class="aot-table-wrap" hidden><table><thead></thead><tbody></tbody></table></div>
+                        <div class="aot-preview-pagination" hidden>
+                            <span class="aot-preview-page-info">—</span>
+                            <div><button class="btn btn-default btn-xs aot-preview-prev">上一页</button><button class="btn btn-default btn-xs aot-preview-next">下一页</button></div>
+                        </div>
                     </div>
                     <aside class="aot-panel aot-unmatched-panel">
                         <div class="aot-panel-head"><div><h3>词典匹配</h3><p>仅检查已有固定值词典的字段</p></div></div>
@@ -142,8 +150,13 @@ class AmazonOfflineTranslator {
         this.$root.on("click", ".aot-view-switch button", (event) => {
             const $button = $(event.currentTarget);
             $button.addClass("is-active").siblings().removeClass("is-active");
-            this.render_preview($button.data("view") === "translated" ? this.translated_rows : this.rows);
+            this.preview_mode = $button.data("view") === "translated" ? "translated" : "source";
+            this.preview_page = 1;
+            this.render_current_preview();
         });
+        this.$root.on("click", ".aot-preview-prev", () => this.change_preview_page(-1));
+        this.$root.on("click", ".aot-preview-next", () => this.change_preview_page(1));
+        this.$root.on("mousedown", ".aot-col-resizer", (event) => this.begin_column_resize(event));
     }
 
     async load_configuration() {
@@ -152,7 +165,7 @@ class AmazonOfflineTranslator {
             const response = await frappe.call({
                 method: "fengjing_app.fengjing_business.page.amazon_offline_tool.amazon_offline_tool.get_translation_configuration",
             });
-            this.configuration = response.message || { report_types: [], rules: [] };
+            this.configuration = response.message || { report_types: [], rules: [], sku_item_mappings: [] };
             this.populate_report_options();
             this.set_status(
                 `词典已就绪，共 ${this.configuration.report_types.length} 种报表、${this.configuration.rules.length} 条规则。`,
@@ -202,6 +215,9 @@ class AmazonOfflineTranslator {
             if (text.startsWith("\uFEFF")) text = text.slice(1);
             this.rows = this.parse_csv(text);
             this.translated_rows = [];
+            this.preview_page = 1;
+            this.preview_mode = "source";
+            this.column_widths = {};
             this.header_index = this.find_header_index(this.rows);
             if (this.header_index < 0) throw new Error("未找到可识别的 CSV 表头");
             this.detect_report();
@@ -347,6 +363,9 @@ class AmazonOfflineTranslator {
             content_rules.set(`${row.file_field_name}\u0000${row.source_text}`, String(row.target_text));
         });
         const source_headers = this.rows[this.header_index];
+        const sku_column = source_headers.indexOf("sku");
+        const description_column = source_headers.indexOf("description");
+        let enriched_descriptions = 0;
         const preamble_rules = new Map(this.applicable_rules("字段内容")
             .filter((row) => row.file_field_name === "__preamble__")
             .map((row) => [String(row.source_text), String(row.target_text)]));
@@ -355,15 +374,26 @@ class AmazonOfflineTranslator {
                 return row.map((cell) => preamble_rules.get(String(cell)) || cell);
             }
             if (row_index === this.header_index) return row.map((cell) => header_rules.get(String(cell)) || cell);
-            return row.map((cell, column) => {
+            const translated_row = row.map((cell, column) => {
                 const field = source_headers[column] || "";
                 return content_rules.get(`${field}\u0000${cell}`) || cell;
             });
+            if (sku_column >= 0 && description_column >= 0) {
+                const mapping = this.find_item_mapping(row[sku_column]);
+                const amazon_title = String(row[description_column] || "").trim();
+                if (mapping?.物料名称 && amazon_title) {
+                    translated_row[description_column] = `${mapping.物料名称}｜${amazon_title}`;
+                    enriched_descriptions += 1;
+                }
+            }
+            return translated_row;
         });
+        this.enriched_description_count = enriched_descriptions;
         this.is_translated = true;
         this.$root.find(".aot-download").prop("disabled", false);
         this.$root.find(".aot-view-switch button[data-view='translated']").trigger("click");
-        const translated_cells = this.count_translated_cells(header_rules, content_rules, preamble_rules, source_headers);
+        const translated_cells = this.count_translated_cells(header_rules, content_rules, preamble_rules, source_headers)
+            + enriched_descriptions;
         this.$root.find("[data-metric='result']").text(`${translated_cells} 处已翻译`);
         this.set_status(`翻译完成，共替换 ${translated_cells} 处内容。文件仍只存在于当前浏览器中。`, "ready", 100);
         frappe.show_alert({ message: `翻译完成：${translated_cells} 处`, indicator: "green" });
@@ -377,6 +407,22 @@ class AmazonOfflineTranslator {
             if (content_rules.has(`${source_headers[column] || ""}\u0000${cell}`)) count += 1;
         }));
         return count;
+    }
+
+    find_item_mapping(sku) {
+        const normalized = String(sku || "").trim().toUpperCase();
+        if (!normalized) return null;
+        const country_sites = {
+            "United States": ["ATVPDKIKX0DER"],
+            "Canada": ["A2EUQ1WTGCTBG2"],
+            "Mexico": ["A1AM78C64UM0Y8"],
+            "Brazil": ["A2Q3Y263D00KWC"],
+        };
+        const allowed_sites = country_sites[this.country] || [];
+        return (this.configuration.sku_item_mappings || []).find((row) =>
+            String(row.平台sku || "").trim().toUpperCase() === normalized &&
+            (!allowed_sites.length || allowed_sites.includes(String(row.站点id || "").trim()))
+        ) || null;
     }
 
     download() {
@@ -408,16 +454,95 @@ class AmazonOfflineTranslator {
         this.$root.find(".aot-clear, .aot-translate").prop("disabled", false);
     }
 
+    render_current_preview() {
+        const rows = this.preview_mode === "translated" && this.translated_rows.length
+            ? this.translated_rows
+            : this.rows;
+        this.render_preview(rows);
+    }
+
     render_preview(rows) {
         const $empty = this.$root.find(".aot-table-empty");
         const $wrap = this.$root.find(".aot-table-wrap");
-        if (!rows?.length || this.header_index < 0) { $empty.show(); $wrap.prop("hidden", true); return; }
+        const $pagination = this.$root.find(".aot-preview-pagination");
+        if (!rows?.length || this.header_index < 0) {
+            $empty.show(); $wrap.prop("hidden", true); $pagination.prop("hidden", true); return;
+        }
         const header = rows[this.header_index] || [];
-        const body = rows.slice(this.header_index + 1, this.header_index + 101);
-        $wrap.find("thead").html(`<tr>${header.map((cell) => `<th>${this.escape_html(cell)}</th>`).join("")}</tr>`);
+        const total_rows = Math.max(0, rows.length - this.header_index - 1);
+        const total_pages = Math.max(1, Math.ceil(total_rows / this.preview_page_size));
+        this.preview_page = Math.min(Math.max(1, this.preview_page), total_pages);
+        const start = this.header_index + 1 + ((this.preview_page - 1) * this.preview_page_size);
+        const end = Math.min(rows.length, start + this.preview_page_size);
+        const body = rows.slice(start, end);
+        this.current_preview_headers = header;
+        const widths = header.map((cell, index) => this.column_widths[index] || this.default_column_width(cell));
+        const table_width = widths.reduce((sum, width) => sum + width, 0);
+        const $table = $wrap.find("table");
+        $table.css("width", `${table_width}px`);
+        $table.children("colgroup").remove();
+        $table.prepend(`<colgroup>${widths.map((width, index) => `<col data-column="${index}" style="width:${width}px">`).join("")}</colgroup>`);
+        $wrap.find("thead").html(`<tr>${header.map((cell, index) => `<th data-column="${index}"><span>${this.escape_html(cell)}</span><i class="aot-col-resizer" title="拖动调整列宽"></i></th>`).join("")}</tr>`);
         $wrap.find("tbody").html(body.map((row) => `<tr>${header.map((_, index) => `<td title="${this.escape_attr(row[index] ?? "")}">${this.escape_html(row[index] ?? "")}</td>`).join("")}</tr>`).join(""));
         $empty.hide();
         $wrap.prop("hidden", false);
+        $pagination.prop("hidden", false);
+        $pagination.find(".aot-preview-page-info").text(
+            `第 ${this.preview_page}/${total_pages} 页 · 当前 ${body.length.toLocaleString()} 行 · 共 ${total_rows.toLocaleString()} 行`
+        );
+        $pagination.find(".aot-preview-prev").prop("disabled", this.preview_page <= 1);
+        $pagination.find(".aot-preview-next").prop("disabled", this.preview_page >= total_pages);
+    }
+
+    default_column_width(header) {
+        const name = String(header || "").toLowerCase();
+        if (name === "description" || name === "描述") return 420;
+        if (name.includes("date") || name.includes("time") || name.includes("时间")) return 190;
+        if (name.includes("order id") || name.includes("订单号")) return 185;
+        if (name === "sku") return 155;
+        if (["quantity", "数量", "total", "合计"].includes(name)) return 105;
+        return 145;
+    }
+
+    begin_column_resize(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const $th = $(event.currentTarget).closest("th");
+        const index = Number($th.data("column"));
+        const start_x = event.clientX;
+        const start_width = this.column_widths[index] || $th.outerWidth();
+        $(document.body).addClass("aot-is-resizing");
+        $(document).off(".aotResize")
+            .on("mousemove.aotResize", (move_event) => {
+                const width = Math.max(70, Math.min(700, start_width + move_event.clientX - start_x));
+                this.column_widths[index] = Math.round(width);
+                this.apply_column_width(index, width);
+            })
+            .on("mouseup.aotResize", () => {
+                $(document).off(".aotResize");
+                $(document.body).removeClass("aot-is-resizing");
+            });
+    }
+
+    apply_column_width(index, width) {
+        const $table = this.$root.find(".aot-table-wrap table");
+        $table.find(`col[data-column='${index}']`).css("width", `${width}px`);
+        const total = (this.current_preview_headers || []).reduce(
+            (sum, header, column) => sum + (this.column_widths[column] || this.default_column_width(header)), 0
+        );
+        $table.css("width", `${total}px`);
+    }
+
+    change_preview_page(step) {
+        const rows = this.preview_mode === "translated" && this.translated_rows.length
+            ? this.translated_rows : this.rows;
+        const total_rows = Math.max(0, rows.length - this.header_index - 1);
+        const total_pages = Math.max(1, Math.ceil(total_rows / this.preview_page_size));
+        const next = Math.min(total_pages, Math.max(1, this.preview_page + step));
+        if (next === this.preview_page) return;
+        this.preview_page = next;
+        this.render_preview(rows);
+        this.$root.find(".aot-table-wrap").scrollTop(0);
     }
 
     clear(reset_status = true) {
@@ -427,6 +552,9 @@ class AmazonOfflineTranslator {
         this.header_index = -1;
         this.report_type = null;
         this.is_translated = false;
+        this.preview_page = 1;
+        this.preview_mode = "source";
+        this.column_widths = {};
         this.$root.find(".aot-file-input").val("");
         this.$root.find(".aot-file-title").text("拖入 CSV 文件，或点击选择");
         this.$root.find(".aot-file-subtitle").text("支持 UTF-8、UTF-8 BOM；不会上传到服务器");
@@ -438,6 +566,7 @@ class AmazonOfflineTranslator {
         this.$root.find("[data-metric='result']").text("尚未处理");
         this.$root.find(".aot-table-empty").show();
         this.$root.find(".aot-table-wrap").prop("hidden", true);
+        this.$root.find(".aot-preview-pagination").prop("hidden", true);
         this.$root.find(".aot-match-summary strong").text("—");
         this.$root.find(".aot-match-summary span").text("等待分析");
         this.$root.find(".aot-unmatched-list").html('<div class="aot-empty-small">暂无分析结果</div>');
@@ -477,7 +606,7 @@ class AmazonOfflineTranslator {
         return `
             .aot-shell{--blue:#2563eb;--ink:#17233c;--muted:#66758f;--line:#dfe7f3;--panel:#fff;max-width:1760px;margin:0 auto;padding:18px 8px 40px;color:var(--ink)}
             .aot-hero{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:30px 34px;border-radius:22px;background:linear-gradient(125deg,#102a63 0%,#174da5 55%,#2478db 100%);color:#fff;box-shadow:0 18px 45px rgba(30,75,150,.2)}
-            .aot-eyebrow{font-size:11px;font-weight:800;letter-spacing:2.2px;color:#9ed8ff}.aot-hero h1{margin:7px 0 8px;font-size:30px;font-weight:800}.aot-hero p{margin:0;color:#dceaff;font-size:14px}
+            .aot-eyebrow{font-size:11px;font-weight:800;letter-spacing:2.2px;color:#9ed8ff}.aot-hero h1{margin:7px 0 8px!important;font-size:30px;font-weight:800;color:#fff!important}.aot-hero p{margin:0;color:#dceaff;font-size:14px}
             .aot-privacy{display:flex;align-items:center;gap:11px;min-width:250px;padding:14px 17px;border:1px solid rgba(255,255,255,.22);border-radius:15px;background:rgba(255,255,255,.1);backdrop-filter:blur(8px)}
             .aot-privacy-icon{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#30cf8b;color:#fff;font-weight:900}.aot-privacy strong,.aot-privacy small{display:block}.aot-privacy small{margin-top:2px;color:#dceaff}
             .aot-workspace,.aot-panel,.aot-metric{background:var(--panel);border:1px solid var(--line);box-shadow:0 8px 24px rgba(45,70,110,.06)}
@@ -487,7 +616,7 @@ class AmazonOfflineTranslator {
             .aot-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}.aot-metric{padding:16px 18px;border-radius:15px;border-top:3px solid #75a4ff}.aot-metric:nth-child(2){border-top-color:#32c5c7}.aot-metric:nth-child(3){border-top-color:#9d79ef}.aot-metric:nth-child(4){border-top-color:#38bd7c}.aot-metric span,.aot-metric strong{display:block}.aot-metric span{color:var(--muted);font-size:12px}.aot-metric strong{margin-top:7px;font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
             .aot-panel{border-radius:17px;overflow:hidden}.aot-status-panel{margin-top:14px;padding:17px 20px}.aot-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.aot-panel-head h3{margin:0;font-size:15px;font-weight:800}.aot-panel-head p{margin:4px 0 0;color:var(--muted);font-size:11px}.aot-status-pill{padding:5px 10px;border-radius:999px;font-size:11px;font-weight:800}.aot-status-pill.is-idle{background:#eef1f6;color:#64748b}.aot-status-pill.is-working{background:#fff3d6;color:#a06400}.aot-status-pill.is-ready{background:#e2f8ed;color:#168255}.aot-status-pill.is-error{background:#ffe7e7;color:#c53737}.aot-progress{height:5px;margin-top:14px;overflow:hidden;border-radius:10px;background:#edf1f7}.aot-progress i{display:block;width:0;height:100%;background:linear-gradient(90deg,#2672f3,#39c8ba);transition:width .3s}.aot-status-message{margin-top:9px;color:var(--muted);font-size:12px}
             .aot-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(280px,1fr);gap:14px;margin-top:14px}.aot-preview-panel,.aot-unmatched-panel{height:570px}.aot-preview-panel>.aot-panel-head,.aot-unmatched-panel>.aot-panel-head{height:66px;padding:0 18px;border-bottom:1px solid var(--line)}.aot-view-switch{display:flex;padding:3px;border-radius:9px;background:#edf2f8}.aot-view-switch button{border:0;padding:5px 12px;border-radius:7px;background:transparent;color:var(--muted);font-size:11px}.aot-view-switch button.is-active{background:#fff;color:var(--blue);box-shadow:0 2px 7px rgba(40,70,110,.14)}
-            .aot-table-empty{display:grid;place-items:center;height:500px;color:#94a0b4}.aot-table-wrap{height:503px;overflow:auto}.aot-table-wrap table{width:max-content;min-width:100%;border-collapse:separate;border-spacing:0}.aot-table-wrap th{position:sticky;top:0;z-index:2;padding:10px 12px;border-right:1px solid #e6ebf3;border-bottom:1px solid #d7e0ed;background:#f3f7fc;color:#3f506b;font-size:11px;white-space:nowrap}.aot-table-wrap td{max-width:260px;padding:8px 12px;border-right:1px solid #edf1f6;border-bottom:1px solid #edf1f6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.aot-table-wrap tbody tr:hover td{background:#f6faff}
+            .aot-table-empty{display:grid;place-items:center;height:460px;color:#94a0b4}.aot-table-wrap{height:454px;overflow:auto}.aot-table-wrap[hidden],.aot-preview-pagination[hidden]{display:none!important}.aot-table-wrap table{min-width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0}.aot-table-wrap th{position:sticky;top:0;z-index:2;padding:10px 16px 10px 12px;border-right:1px solid #e6ebf3;border-bottom:1px solid #d7e0ed;background:#f3f7fc;color:#3f506b;font-size:11px;white-space:nowrap}.aot-table-wrap th>span{display:block;overflow:hidden;text-overflow:ellipsis}.aot-table-wrap td{padding:8px 12px;border-right:1px solid #edf1f6;border-bottom:1px solid #edf1f6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.aot-table-wrap tbody tr:hover td{background:#f6faff}.aot-col-resizer{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;z-index:4}.aot-col-resizer:hover,.aot-is-resizing .aot-col-resizer{background:rgba(37,99,235,.35)}.aot-is-resizing{cursor:col-resize!important;user-select:none!important}.aot-preview-pagination{display:flex;align-items:center;justify-content:space-between;height:49px;padding:0 16px;border-top:1px solid var(--line);background:#fff;color:var(--muted);font-size:11px}.aot-preview-pagination>div{display:flex;gap:7px}
             .aot-match-summary{display:flex;align-items:baseline;gap:8px;margin:15px 16px;padding:14px;border-radius:12px;background:linear-gradient(135deg,#eef5ff,#f5f0ff)}.aot-match-summary strong{font-size:26px;color:var(--blue)}.aot-match-summary span{color:var(--muted);font-size:11px}.aot-unmatched-list{height:410px;padding:0 15px 15px;overflow:auto}.aot-empty-small,.aot-all-matched{display:grid;place-items:center;height:130px;color:#91a0b5}.aot-all-matched{color:#168255;font-weight:700}.aot-unmatched-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 2px;border-bottom:1px solid #edf1f6}.aot-unmatched-item div{min-width:0}.aot-unmatched-item span{display:block;color:#8995a8;font-size:10px}.aot-unmatched-item strong{display:block;max-width:210px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.aot-unmatched-item em{flex:0 0 auto;padding:3px 7px;border-radius:10px;background:#fff0e6;color:#c76520;font-size:10px;font-style:normal}
             @media(max-width:900px){.aot-hero{align-items:flex-start;flex-direction:column}.aot-privacy{width:100%}.aot-controls{grid-template-columns:1fr 1fr}.aot-actions{grid-column:1/-1;justify-content:flex-start}.aot-metrics{grid-template-columns:1fr 1fr}.aot-grid{grid-template-columns:1fr}.aot-unmatched-panel{height:430px}.aot-unmatched-list{height:275px}}
             @media(max-width:560px){.aot-shell{padding-top:8px}.aot-hero{padding:23px 20px}.aot-hero h1{font-size:24px}.aot-controls{grid-template-columns:1fr}.aot-actions{flex-wrap:wrap}.aot-metrics{grid-template-columns:1fr 1fr}.aot-upload{align-items:flex-start;flex-wrap:wrap}.aot-upload-copy{min-width:180px}}

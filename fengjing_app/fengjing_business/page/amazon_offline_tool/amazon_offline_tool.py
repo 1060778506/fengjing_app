@@ -41,9 +41,18 @@ def get_translation_configuration():
             limit_page_length=0,
         )
 
+    sku_item_mappings = frappe.get_all(
+        "Fengjing - Product Corresponding Platform - Main Table",
+        filters={"启用": 1, "平台sku": ["!=", ""], "站点id": ["!=", ""]},
+        fields=["站点id", "平台sku", "物料id", "物料名称"],
+        order_by="站点id asc, 平台sku asc",
+        limit_page_length=0,
+    )
+
     return {
         "report_types": report_types,
         "rules": rules,
+        "sku_item_mappings": sku_item_mappings,
         "privacy": {
             "uploads_are_saved": False,
             "translation_history_is_saved": False,
