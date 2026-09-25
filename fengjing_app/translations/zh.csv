@@ -83,6 +83,8 @@ Default Wiki Space,默认知识库空间
 Ozon Freight Canvas,Ozon 运费画布
 Ozon order storage,Ozon 订单信息
 Ozon ranking storage,Ozon 排名信息
+Amazon Financial Transaction Configuration - Sub-table,亚马逊财务交易同步配置－子表
+Amazon Financial Transaction,亚马逊财务交易
 "Standard with Numbers","标准加数字"
 "Defines the date after which the item can no longer be used in transactions or manufacturing","规定了该物品在交易或生产中不再可使用的日期"
 "After save, please refresh the page to apply the changes.","保存后，请刷新页面以使更改生效。"
