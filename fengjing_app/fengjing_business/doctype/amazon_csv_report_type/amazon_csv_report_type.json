@@ -6,12 +6,70 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_qv4x"
+  "section_break_qv4x",
+  "report_type_name",
+  "report_type_code",
+  "column_break_basic",
+  "enabled",
+  "recognition_priority",
+  "recognition_fields",
+  "description"
  ],
  "fields": [
   {
+   "label": "基本信息",
    "fieldname": "section_break_qv4x",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "report_type_name",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "报表类型名称",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "description": "程序内部使用的稳定编号，例如 amazon_settlement。",
+   "fieldname": "report_type_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "报表类型代码",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "column_break_basic",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "是否启用"
+  },
+  {
+   "default": "0",
+   "description": "多种报表同时匹配时，数值越大越优先。",
+   "fieldname": "recognition_priority",
+   "fieldtype": "Int",
+   "label": "识别优先级"
+  },
+  {
+   "description": "用于自动识别CSV类型的关键表头，每行填写一个原始字段名。",
+   "fieldname": "recognition_fields",
+   "fieldtype": "Small Text",
+   "label": "识别字段"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "说明"
   }
  ],
  "grid_page_length": 50,
@@ -22,6 +80,8 @@
  "module": "Fengjing Business",
  "name": "Amazon CSV Report Type",
  "owner": "Administrator",
+ "search_fields": "report_type_name,report_type_code",
+ "title_field": "report_type_name",
  "permissions": [
   {
    "create": 1,

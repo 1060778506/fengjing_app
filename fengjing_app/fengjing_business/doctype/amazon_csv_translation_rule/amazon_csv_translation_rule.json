@@ -6,12 +6,79 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "section_break_mfx7"
+  "section_break_mfx7",
+  "report_type",
+  "translation_type",
+  "applicable_country",
+  "column_break_control",
+  "enabled",
+  "file_field_name",
+  "source_text",
+  "target_text"
  ],
  "fields": [
   {
+   "label": "翻译规则",
    "fieldname": "section_break_mfx7",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "report_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "报表类型",
+   "options": "Amazon CSV Report Type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "translation_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "翻译类型",
+   "options": "\n表头\n字段内容",
+   "reqd": 1
+  },
+  {
+   "description": "留空表示适用于所有国家站点。",
+   "fieldname": "applicable_country",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "适用国家",
+   "options": "Country"
+  },
+  {
+   "fieldname": "column_break_control",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "是否启用"
+  },
+  {
+   "description": "翻译“字段内容”时填写该内容所在的CSV原始列名；翻译表头时留空。",
+   "fieldname": "file_field_name",
+   "fieldtype": "Data",
+   "label": "文件字段名称",
+   "mandatory_depends_on": "eval:doc.translation_type=='字段内容'"
+  },
+  {
+   "fieldname": "source_text",
+   "fieldtype": "Small Text",
+   "label": "英文原值",
+   "reqd": 1
+  },
+  {
+   "fieldname": "target_text",
+   "fieldtype": "Small Text",
+   "label": "中文译文",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
@@ -22,6 +89,7 @@
  "module": "Fengjing Business",
  "name": "Amazon CSV Translation Rule",
  "owner": "Administrator",
+ "search_fields": "source_text,target_text,file_field_name",
  "permissions": [
   {
    "create": 1,
