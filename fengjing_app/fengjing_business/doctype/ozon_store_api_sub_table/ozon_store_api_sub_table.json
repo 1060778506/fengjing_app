@@ -15,6 +15,9 @@
   "performance_client_id",
   "performance_api_\u79d8\u94a5",
   "\u6d4b\u8bd5api",
+  "\u5f00\u542f\u4ef7\u683c\u8bb0\u5f55",
+  "\u4ef7\u683c\u8bb0\u5f55\u95f4\u9694\u5206\u949f",
+  "\u7acb\u5373\u6293\u53d6\u4ef7\u683c",
   "\u8ba2\u5355\u6293\u53d6\u8303\u56f4_section",
   "\u5f00\u542f\u8ba2\u5355\u540c\u6b65",
   "\u6293\u53d6fbs\u53ca\u8de8\u5883\u8ba2\u5355",
@@ -133,6 +136,28 @@
    "fieldtype": "Button",
    "in_list_view": 1,
    "label": "\u6d4b\u8bd5api"
+  },
+  {
+   "default": "0",
+   "description": "开启后，价格记录定时任务将按照设定间隔读取并保存该店铺的商品价格。",
+   "fieldname": "开启价格记录",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "开启价格记录"
+  },
+  {
+   "default": "60",
+   "description": "商品价格快照的记录间隔，默认每60分钟记录一次。",
+   "fieldname": "价格记录间隔分钟",
+   "fieldtype": "Int",
+   "label": "记录间隔分钟",
+   "non_negative": 1
+  },
+  {
+   "description": "自动保存当前配置并在后台立即抓取一次商品价格；同一商品同一小时不会重复新建。",
+   "fieldname": "立即抓取价格",
+   "fieldtype": "Button",
+   "label": "立即抓取价格"
   },
   {
    "fieldname": "ozon_\u79d8\u94a5",

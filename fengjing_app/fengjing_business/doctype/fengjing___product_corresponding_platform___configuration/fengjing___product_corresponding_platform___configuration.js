@@ -714,6 +714,20 @@ frappe.ui.form.on('Ozon Store API Sub-table', {
                 ? ''
                 : __('请先开启“开启 Ozon 商品排名同步”。')
         });
+    },
+
+    立即抓取价格: async function (frm, cdt, cdn) {
+        await 提交ozon后台任务(frm, cdt, cdn, {
+            method: 'fengjing_app.fengjing_business.doctype.ozon_price_history.ozon_price_history.启动ozon价格抓取',
+            validate: (row) => {
+                if (!row.开启价格记录) return __('请先开启“开启价格记录”。');
+                if ((Number(row.价格记录间隔分钟) || 0) < 5) {
+                    return __('记录间隔分钟不能小于5分钟，建议使用默认的60分钟。');
+                }
+                return '';
+            },
+            confirmMessage: (row) => __('确定立即抓取店铺 {0} 的全部 Ozon 商品价格吗？配置会自动保存，任务将在后台运行。', [row.店铺选项])
+        });
     }
 });
 

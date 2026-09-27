@@ -67,7 +67,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "\u6570\u636e",
-   "link_count": 5,
+   "link_count": 6,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -125,8 +125,18 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Ozon\u4ef7\u683c\u8bb0\u5f55",
+   "link_count": 0,
+   "link_to": "Ozon Price History",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "\u6570\u636e\u5206\u6790",
-   "link_count": 5,
+   "link_count": 6,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -180,9 +190,19 @@
    "link_type": "Page",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Ozon \u5546\u54c1\u4ef7\u683c\u76d1\u63a7",
+   "link_count": 0,
+   "link_to": "ozon-price-monitor",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-09-25 15:32:55.815277",
+ "modified": "2026-09-27 23:48:22.287008",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "\u4e30\u5883\u4e1a\u52a1APP",
