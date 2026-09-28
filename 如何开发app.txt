@@ -98,7 +98,7 @@
 
 	# 查看站点、队列、worker、scheduler 等运行状态
 	cd ~/frappe-bench && bench --site fjnb doctor
-
+ 
 10.访问
 ​	http://localhost:18800/
 ​	Administrator
