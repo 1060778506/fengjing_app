@@ -34,7 +34,7 @@
 	volumes:
 		mariadb-data_v16:
 
-
+ 
 
 3.cmd运行
 ​	docker compose -f docker-compose_v16.yml up -d
