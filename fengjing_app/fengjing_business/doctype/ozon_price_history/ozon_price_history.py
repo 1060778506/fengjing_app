@@ -210,12 +210,27 @@ def _匹配物料(映射表, 商品编号, 货号, sku列表):
 	return max(候选, key=lambda value: value[0])[1] if 候选 else None
 
 
-def _市场价格数据(价格项):
+def _市场价格数据(价格项, 卖家币种=None):
 	indexes = 价格项.get("price_indexes") or {}
 	候选 = []
 	for key in ("external_index_data", "ozon_index_data", "self_marketplaces_index_data"):
 		entry = indexes.get(key) or {}
-		最低价 = _第一个数字(entry.get("minimal_price"), entry.get("min_price"))
+		# Ozon 同时返回卢布价格和按卖家后台币种换算后的价格。
+		# 本单据其它价格均使用卖家币种，因此优先使用 min_price_in_seller。
+		卖家最低价 = _第一个数字(entry.get("min_price_in_seller"))
+		卖家最低价币种 = str(entry.get("min_price_in_seller_currency") or "").upper()
+		原始最低价 = _第一个数字(entry.get("minimal_price"), entry.get("min_price"))
+		原始最低价币种 = str(entry.get("min_price_currency") or "").upper()
+		if 卖家最低价 is not None and 卖家最低价 > 0 and (
+			not 卖家币种 or not 卖家最低价币种 or 卖家最低价币种 == 卖家币种
+		):
+			最低价 = 卖家最低价
+		elif 原始最低价 is not None and 原始最低价 > 0 and (
+			not 卖家币种 or not 原始最低价币种 or 原始最低价币种 == 卖家币种
+		):
+			最低价 = 原始最低价
+		else:
+			最低价 = None
 		指数 = _第一个数字(entry.get("price_index_value"), entry.get("index_value"))
 		if 最低价 is not None and 最低价 > 0:
 			候选.append((最低价, 指数))
@@ -285,7 +300,7 @@ def _保存价格快照(配置行, 价格项, 商品信息, 映射表, 批次id,
 	原价 = _第一个数字(price.get("old_price"))
 	促销价 = _第一个数字(price.get("marketing_seller_price"))
 	币种 = str(price.get("currency_code") or 价格项.get("currency_code") or "").upper()
-	市场最低价, 价格指数 = _市场价格数据(价格项)
+	市场最低价, 价格指数 = _市场价格数据(价格项, 币种)
 	佣金比例 = _佣金比例(价格项)
 	上一价格 = _上一价格(店铺, 商品编号, 时间桶)
 	比较价格 = 买家价格 if 买家价格 is not None else 卖家价格

@@ -13,6 +13,7 @@ def get_products(date_from=None, date_to=None, store=None):
 	date_from = date_from or add_days(nowdate(), -29)
 	date_to = date_to or nowdate()
 	cost_expression = _cost_price_sql("h")
+	market_expression = _market_min_price_sql("h")
 	latest_conditions = []
 	latest_values = {}
 	if store:
@@ -25,7 +26,7 @@ def get_products(date_from=None, date_to=None, store=None):
 			h.corresponding_item, h.corresponding_item_name, h.product_name,
 			h.ozon_image_url, h.currency_code, h.seller_price, h.buyer_price,
 			h.old_price, h.marketing_seller_price, h.minimum_price,
-			h.market_min_price, h.recommended_price,
+			{market_expression} AS market_min_price, h.recommended_price,
 			{cost_expression} AS ozon_cost_price,
 			h.commission_percent,
 			h.has_promotion, h.visibility, h.product_status, h.recorded_at,
@@ -130,6 +131,7 @@ def get_price_series(store, ozon_product_id, date_from=None, date_to=None):
 	)
 	for row in rows:
 		row["ozon_cost_price"] = _cost_from_row(row)
+		row["market_min_price"] = _market_min_from_row(row)
 		row.pop("raw_json", None)
 		_normalize_numbers(row)
 	return {"rows": [dict(row) for row in rows], "limited": len(rows) >= 10000}
@@ -152,6 +154,7 @@ def get_all_price_series(date_from=None, date_to=None, store=None, max_points=24
 		conditions.append("store = %(store)s")
 		values["store"] = store
 	cost_expression = _cost_price_sql()
+	market_expression = _market_min_price_sql()
 	rows = frappe.db.sql(
 		f"""
 		SELECT store, ozon_product_id, recorded_at, currency_code,
@@ -162,7 +165,7 @@ def get_all_price_series(date_from=None, date_to=None, store=None, max_points=24
 		FROM (
 			SELECT store, ozon_product_id, recorded_at, currency_code,
 				seller_price, buyer_price, old_price, marketing_seller_price,
-				minimum_price, market_min_price, recommended_price,
+				minimum_price, {market_expression} AS market_min_price, recommended_price,
 				{cost_expression} AS ozon_cost_price,
 				price_change_amount, price_change_percent, has_promotion,
 				ROW_NUMBER() OVER (
@@ -203,6 +206,21 @@ def _cost_price_sql(alias=None):
 	return raw_value
 
 
+def _market_min_price_sql(alias=None):
+	"""Return market minimum in the seller currency used by the other chart lines."""
+	prefix = f"{alias}." if alias else ""
+	paths = (
+		"$.price_indexes.ozon_index_data.min_price_in_seller",
+		"$.price_indexes.external_index_data.min_price_in_seller",
+		"$.price_indexes.self_marketplaces_index_data.min_price_in_seller",
+	)
+	values = [
+		f"NULLIF(CAST(JSON_UNQUOTE(JSON_EXTRACT({prefix}raw_json, '{path}')) AS DECIMAL(21,9)), 0)"
+		for path in paths
+	]
+	return f"COALESCE({', '.join(values)}, NULLIF({prefix}market_min_price, 0))"
+
+
 def _cost_from_row(row):
 	value = row.get("ozon_cost_price")
 	if value not in (None, "", 0, 0.0):
@@ -211,6 +229,22 @@ def _cost_from_row(row):
 		return (json.loads(row.get("raw_json") or "{}") or {}).get("price", {}).get("net_price")
 	except (TypeError, ValueError, AttributeError):
 		return None
+
+
+def _market_min_from_row(row):
+	try:
+		indexes = (json.loads(row.get("raw_json") or "{}") or {}).get("price_indexes") or {}
+		currency = str(row.get("currency_code") or "").upper()
+		values = []
+		for key in ("external_index_data", "ozon_index_data", "self_marketplaces_index_data"):
+			entry = indexes.get(key) or {}
+			value = flt(entry.get("min_price_in_seller"))
+			value_currency = str(entry.get("min_price_in_seller_currency") or "").upper()
+			if value > 0 and (not currency or not value_currency or value_currency == currency):
+				values.append(value)
+		return min(values) if values else row.get("market_min_price")
+	except (TypeError, ValueError, AttributeError):
+		return row.get("market_min_price")
 
 
 def _normalize_numbers(row):
