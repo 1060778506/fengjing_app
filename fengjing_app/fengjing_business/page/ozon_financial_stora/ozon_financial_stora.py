@@ -1,4 +1,5 @@
 from collections import defaultdict
+import json
 
 import frappe
 from frappe.utils import add_days, cint, flt, getdate, nowdate
@@ -87,6 +88,44 @@ def _enrich_items(rows):
 		row.is_bound = 1 if row.get("corresponding_item") else 0
 
 
+def _amount_value(value):
+	if isinstance(value, dict):
+		value = value.get("amount", value.get("value"))
+	return _money(value)
+
+
+def _posting_breakdown(row):
+	"""Build the sale and commission child rows shown by the Ozon finance UI."""
+	if str(row.get("operation_type") or "") != "POSTING":
+		return []
+	try:
+		products = json.loads(row.get("items_json") or "[]")
+	except (TypeError, ValueError, json.JSONDecodeError):
+		return []
+	if not isinstance(products, list):
+		return []
+	result = []
+	for product in products:
+		if not isinstance(product, dict):
+			continue
+		commission = product.get("commission") or {}
+		sku = str(product.get("sku") or row.get("sku") or "")
+		quantity = flt(product.get("quantity") or 0)
+		sale_amount = _amount_value(commission.get("sale_amount"))
+		commission_amount = _amount_value(commission.get("commission"))
+		if sale_amount:
+			result.append({
+				"label": "销售", "detail": "收入", "amount": sale_amount,
+				"currency": row.get("currency_code"), "sku": sku, "quantity": quantity,
+			})
+		if commission_amount:
+			result.append({
+				"label": "Ozon代理佣金", "detail": "销售代理佣金", "amount": commission_amount,
+				"currency": row.get("currency_code"), "sku": sku, "quantity": quantity,
+			})
+	return result
+
+
 @frappe.whitelist()
 def get_dashboard_data(filters=None, page=1, page_size=50):
 	frappe.has_permission(DOCTYPE, "read", throw=True)
@@ -102,7 +141,7 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 		"delivery_charge", "return_delivery_charge", "services_amount", "advertising_amount",
 		"penalty_amount", "compensation_amount", "discount_points_amount", "other_amount",
 		"net_amount", "operation_date", "order_date", "payment_date", "settlement_period_start",
-		"settlement_period_end", "fetched_at", "data_version", "data_changed", "sync_status",
+		"settlement_period_end", "fetched_at", "data_version", "data_changed", "sync_status", "items_json", "is_booked",
 	]
 	rows = frappe.get_all(
 		DOCTYPE, filters=_db_filters(f), fields=fields,
@@ -110,6 +149,9 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 	)
 	limited = len(rows) >= 50000
 	_enrich_items(rows)
+	for row in rows:
+		row.breakdown = _posting_breakdown(row)
+		row.pop("items_json", None)
 
 	search = str(f.search or "").strip().lower()
 	binding = str(f.binding or "")
@@ -222,6 +264,29 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 		"rows": rows[start:start + page_size], "options": options,
 		"pagination": {"page": page, "page_size": page_size, "total": len(rows), "pages": max(1, (len(rows) + page_size - 1) // page_size)},
 	}
+
+
+@frappe.whitelist()
+def save_booked_status(changes=None):
+	"""保存财务明细页面中发生变化的“已记账”状态。"""
+	frappe.has_permission(DOCTYPE, "write", throw=True)
+	if isinstance(changes, str):
+		changes = frappe.parse_json(changes)
+	if not isinstance(changes, list):
+		frappe.throw("记账状态数据格式不正确")
+	if len(changes) > 200:
+		frappe.throw("一次最多保存200条记账状态")
+
+	updated = 0
+	for change in changes:
+		if not isinstance(change, dict):
+			continue
+		name = str(change.get("name") or "").strip()
+		if not name or not frappe.db.exists(DOCTYPE, name):
+			continue
+		frappe.db.set_value(DOCTYPE, name, "is_booked", 1 if cint(change.get("is_booked")) else 0)
+		updated += 1
+	return {"updated": updated}
 
 
 @frappe.whitelist()

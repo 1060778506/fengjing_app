@@ -63,6 +63,7 @@
   "other_amount",
   "net_amount",
   "time_section",
+  "is_booked",
   "operation_date",
   "order_date",
   "source_updated_at",
@@ -450,6 +451,14 @@
    "fieldname": "time_section",
    "fieldtype": "Section Break",
    "label": "交易、结算与抓取时间"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_booked",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "已记账",
+   "read_only": 1
   },
   {
    "fieldname": "operation_date",
