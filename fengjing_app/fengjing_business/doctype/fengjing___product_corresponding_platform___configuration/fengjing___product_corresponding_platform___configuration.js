@@ -693,6 +693,41 @@ frappe.ui.form.on('Ozon Store API Sub-table', {
         });
     },
 
+    sync_historical_finance: async function (frm, cdt, cdn) {
+        await 提交ozon后台任务(frm, cdt, cdn, {
+            method: 'fengjing_app.fengjing_business.doctype.ozon_financial_storage.ozon_financial_storage.启动ozon历史财务同步',
+            validate: (row) => {
+                if (!row.enable_finance_sync) return __('请先开启“开启财务同步”总开关。');
+                if (!row.finance_history_start_date || !row.finance_history_end_date) {
+                    return __('请先填写历史财务同步开始日期和结束日期。');
+                }
+                return '';
+            },
+            confirmMessage: (row) => __('确定开始同步店铺 {0} 的 Ozon 历史财务数据吗？配置会自动保存，任务将在后台依次运行。', [row.店铺选项])
+        });
+    },
+
+    sync_latest_finance: async function (frm, cdt, cdn) {
+        await 提交ozon后台任务(frm, cdt, cdn, {
+            method: 'fengjing_app.fengjing_business.doctype.ozon_financial_storage.ozon_financial_storage.启动ozon最新财务同步',
+            validate: (row) => row.enable_finance_sync
+                ? ''
+                : __('请先开启“开启财务同步”总开关。')
+        });
+    },
+
+    sync_finance_statements: async function (frm, cdt, cdn) {
+        await 提交ozon后台任务(frm, cdt, cdn, {
+            method: 'fengjing_app.fengjing_business.doctype.ozon_financial_storage.ozon_financial_storage.启动ozon结算报告同步',
+            validate: (row) => {
+                if (!row.enable_finance_sync) return __('请先开启“开启财务同步”总开关。');
+                if (!row.enable_finance_statement_sync) return __('请先开启“开启结算报告同步”。');
+                return '';
+            },
+            confirmMessage: (row) => __('确定同步店铺 {0} 最近的 Ozon 半月结算报告吗？配置会自动保存，任务将在后台运行。', [row.店铺选项])
+        });
+    },
+
     同步历史排名: async function (frm, cdt, cdn) {
         await 提交ozon后台任务(frm, cdt, cdn, {
             method: 'fengjing_app.fengjing_business.doctype.ozon_ranking_storage.ozon_ranking_storage.启动ozon历史排名同步',

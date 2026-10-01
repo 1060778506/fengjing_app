@@ -50,6 +50,15 @@ def run_ozon_prices():
 
     return 定时执行ozon价格记录()
 
+
+def run_ozon_finances():
+    """Short scheduler entry; Scheduled Job Type.method is limited to 140 chars."""
+    from fengjing_app.fengjing_business.doctype.ozon_financial_storage.ozon_financial_storage import (
+        定时执行ozon财务同步,
+    )
+
+    return 定时执行ozon财务同步()
+
 fixtures = [
     # 第一个：导出计量单位 (UOM)
     {
@@ -187,7 +196,8 @@ scheduler_events = {
         "fengjing_app.hooks.run_amazon_finances",
         "fengjing_app.hooks.run_ozon_orders",
         "fengjing_app.hooks.run_ozon_rankings",
-        "fengjing_app.hooks.run_ozon_prices"
+        "fengjing_app.hooks.run_ozon_prices",
+        "fengjing_app.hooks.run_ozon_finances"
     ],
     "daily": [
         "fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log.清理过期排名日志"
