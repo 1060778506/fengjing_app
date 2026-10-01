@@ -1,0 +1,631 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "creation": "2026-10-01 16:54:52.038438",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "transaction_unique_key",
+  "operation_id",
+  "operation_type",
+  "operation_type_name",
+  "identity_column",
+  "store",
+  "ozon_id",
+  "company_id",
+  "sync_type",
+  "classification_section",
+  "transaction_category",
+  "transaction_subcategory",
+  "transaction_direction",
+  "transaction_status",
+  "classification_column",
+  "description",
+  "is_refund",
+  "is_reversal",
+  "is_adjustment",
+  "order_section",
+  "posting_number",
+  "order_number",
+  "order_id",
+  "delivery_schema",
+  "order_column",
+  "warehouse_id",
+  "warehouse_name",
+  "statement_id",
+  "statement_number",
+  "product_section",
+  "sku",
+  "offer_id",
+  "product_id",
+  "product_name",
+  "quantity",
+  "product_column",
+  "corresponding_item",
+  "corresponding_item_name",
+  "corresponding_item_image",
+  "item_count",
+  "amount_section",
+  "currency_code",
+  "transaction_amount",
+  "accruals_for_sale",
+  "sale_commission",
+  "delivery_charge",
+  "return_delivery_charge",
+  "amount_column",
+  "services_amount",
+  "advertising_amount",
+  "penalty_amount",
+  "compensation_amount",
+  "discount_points_amount",
+  "other_amount",
+  "net_amount",
+  "time_section",
+  "operation_date",
+  "order_date",
+  "source_updated_at",
+  "payment_date",
+  "time_column",
+  "settlement_period_start",
+  "settlement_period_end",
+  "first_fetched_at",
+  "fetched_at",
+  "last_changed_at",
+  "sync_section",
+  "raw_json_hash",
+  "data_version",
+  "data_changed",
+  "changed_fields",
+  "sync_column",
+  "sync_status",
+  "last_error",
+  "detail_section",
+  "items_json",
+  "services_json",
+  "raw_section",
+  "raw_json",
+  "raw_json_history"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "交易身份与店铺归属"
+  },
+  {
+   "fieldname": "transaction_unique_key",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "财务交易唯一键",
+   "read_only": 1,
+   "search_index": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "operation_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Ozon交易ID",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "operation_type",
+   "fieldtype": "Data",
+   "label": "交易类型代码",
+   "read_only": 1
+  },
+  {
+   "fieldname": "operation_type_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "交易类型名称",
+   "read_only": 1
+  },
+  {
+   "fieldname": "identity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "store",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "店铺",
+   "options": "Cost Center",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "ozon_id",
+   "fieldtype": "Data",
+   "label": "Ozon ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "company_id",
+   "fieldtype": "Data",
+   "label": "Ozon公司ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_type",
+   "fieldtype": "Select",
+   "label": "同步类型",
+   "options": "历史财务\n最新财务增量\n7天财务核对\n14天财务核对\n30天财务核对\n90天财务核对\n180天财务核对\n半月结算报告",
+   "read_only": 1
+  },
+  {
+   "fieldname": "classification_section",
+   "fieldtype": "Section Break",
+   "label": "财务分类与状态"
+  },
+  {
+   "fieldname": "transaction_category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "财务大类",
+   "options": "\n销售和退货\n收入\n合作伙伴计划\n折扣积分\n推广和广告\n合作伙伴服务\nOzon代理佣金\n其他服务与罚款\n配送服务\n赔偿和赔偿返还\nWHD服务\nOzon配送服务\n其他应计项目\n借贷和托收信贷\n结算与提现\n未分类",
+   "read_only": 1
+  },
+  {
+   "fieldname": "transaction_subcategory",
+   "fieldtype": "Data",
+   "label": "财务细类",
+   "read_only": 1
+  },
+  {
+   "fieldname": "transaction_direction",
+   "fieldtype": "Select",
+   "label": "收支方向",
+   "options": "\n收入\n支出\n中性",
+   "read_only": 1
+  },
+  {
+   "fieldname": "transaction_status",
+   "fieldtype": "Data",
+   "label": "交易状态",
+   "read_only": 1
+  },
+  {
+   "fieldname": "classification_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "交易说明",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_refund",
+   "fieldtype": "Check",
+   "label": "是否退款",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_reversal",
+   "fieldtype": "Check",
+   "label": "是否冲销",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_adjustment",
+   "fieldtype": "Check",
+   "label": "是否调整",
+   "read_only": 1
+  },
+  {
+   "fieldname": "order_section",
+   "fieldtype": "Section Break",
+   "label": "订单、仓库与结算归属"
+  },
+  {
+   "fieldname": "posting_number",
+   "fieldtype": "Data",
+   "label": "发货编号",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "order_number",
+   "fieldtype": "Data",
+   "label": "Ozon订单号",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "order_id",
+   "fieldtype": "Data",
+   "label": "Ozon订单ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "delivery_schema",
+   "fieldtype": "Data",
+   "label": "履约模式",
+   "read_only": 1
+  },
+  {
+   "fieldname": "order_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "warehouse_id",
+   "fieldtype": "Data",
+   "label": "Ozon仓库ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "warehouse_name",
+   "fieldtype": "Data",
+   "label": "Ozon仓库名称",
+   "read_only": 1
+  },
+  {
+   "fieldname": "statement_id",
+   "fieldtype": "Data",
+   "label": "结算报告ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "statement_number",
+   "fieldtype": "Data",
+   "label": "结算报告编号",
+   "read_only": 1
+  },
+  {
+   "fieldname": "product_section",
+   "fieldtype": "Section Break",
+   "label": "商品与ERPNext物料"
+  },
+  {
+   "fieldname": "sku",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Ozon SKU",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "offer_id",
+   "fieldtype": "Data",
+   "label": "商家货号",
+   "read_only": 1
+  },
+  {
+   "fieldname": "product_id",
+   "fieldtype": "Data",
+   "label": "Ozon商品ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "product_name",
+   "fieldtype": "Small Text",
+   "label": "Ozon商品名称",
+   "read_only": 1
+  },
+  {
+   "fieldname": "quantity",
+   "fieldtype": "Float",
+   "label": "数量",
+   "read_only": 1
+  },
+  {
+   "fieldname": "product_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "corresponding_item",
+   "fieldtype": "Link",
+   "label": "对应物料",
+   "options": "Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "corresponding_item_name",
+   "fieldtype": "Data",
+   "label": "对应物料名称",
+   "read_only": 1
+  },
+  {
+   "fieldname": "corresponding_item_image",
+   "fieldtype": "Data",
+   "label": "对应物料图片",
+   "read_only": 1
+  },
+  {
+   "fieldname": "item_count",
+   "fieldtype": "Int",
+   "label": "关联商品种数",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount_section",
+   "fieldtype": "Section Break",
+   "label": "金额与费用拆分"
+  },
+  {
+   "fieldname": "currency_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "币种",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "transaction_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "交易金额",
+   "options": "currency_code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "accruals_for_sale",
+   "fieldtype": "Currency",
+   "label": "销售应计金额",
+   "options": "currency_code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sale_commission",
+   "fieldtype": "Currency",
+   "label": "销售佣金",
+   "options": "currency_code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "delivery_charge",
+   "fieldtype": "Currency",
+   "label": "配送费用",
+   "options": "currency_code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "return_delivery_charge",
+   "fieldtype": "Currency",
+   "label": "退货配送费用",
+   "options": "currency_code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "services_amount",
+   "fieldtype": "Currency",
+   "label": "服务费合计",
+   "options": "currency_code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "advertising_amount",
+   "fieldtype": "Currency",
+   "label": "推广和广告费",
+   "options": "currency_code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "penalty_amount",
+   "fieldtype": "Currency",
+   "label": "罚款金额",
+   "options": "currency_code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "compensation_amount",
+   "fieldtype": "Currency",
+   "label": "赔偿及返还金额",
+   "options": "currency_code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "discount_points_amount",
+   "fieldtype": "Currency",
+   "label": "折扣积分金额",
+   "options": "currency_code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "other_amount",
+   "fieldtype": "Currency",
+   "label": "其他金额",
+   "options": "currency_code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "net_amount",
+   "fieldtype": "Currency",
+   "label": "净额",
+   "options": "currency_code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "time_section",
+   "fieldtype": "Section Break",
+   "label": "交易、结算与抓取时间"
+  },
+  {
+   "fieldname": "operation_date",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "交易发生时间",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "order_date",
+   "fieldtype": "Datetime",
+   "label": "订单时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_updated_at",
+   "fieldtype": "Datetime",
+   "label": "Ozon最后更新时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_date",
+   "fieldtype": "Datetime",
+   "label": "结算或付款时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "time_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "settlement_period_start",
+   "fieldtype": "Datetime",
+   "label": "结算周期开始时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "settlement_period_end",
+   "fieldtype": "Datetime",
+   "label": "结算周期结束时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "first_fetched_at",
+   "fieldtype": "Datetime",
+   "label": "首次抓取时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fetched_at",
+   "fieldtype": "Datetime",
+   "label": "最近抓取时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_changed_at",
+   "fieldtype": "Datetime",
+   "label": "最后数据变更时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_section",
+   "fieldtype": "Section Break",
+   "label": "同步与版本记录"
+  },
+  {
+   "fieldname": "raw_json_hash",
+   "fieldtype": "Data",
+   "label": "原始JSON校验值",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "data_version",
+   "fieldtype": "Int",
+   "label": "数据版本号",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "data_changed",
+   "fieldtype": "Check",
+   "label": "本次数据是否变化",
+   "read_only": 1
+  },
+  {
+   "fieldname": "changed_fields",
+   "fieldtype": "Small Text",
+   "label": "最近变更字段",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sync_status",
+   "fieldtype": "Select",
+   "label": "同步状态",
+   "options": "成功\n失败",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Small Text",
+   "label": "最近错误",
+   "read_only": 1
+  },
+  {
+   "fieldname": "detail_section",
+   "fieldtype": "Section Break",
+   "label": "商品与服务原始明细"
+  },
+  {
+   "fieldname": "items_json",
+   "fieldtype": "Code",
+   "label": "商品明细JSON",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "services_json",
+   "fieldtype": "Code",
+   "label": "服务费用明细JSON",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_section",
+   "fieldtype": "Section Break",
+   "label": "Ozon原始数据与历史版本"
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Code",
+   "label": "当前原始JSON",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "description": "仅在同一财务交易的数据发生实际变化时，追加保存变更前的原始JSON。",
+   "fieldname": "raw_json_history",
+   "fieldtype": "Long Text",
+   "label": "历史原始JSON",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-01 16:54:52.038438",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Ozon Financial Storage",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "operation_id,posting_number,order_number,sku,offer_id,product_name",
+ "sort_field": "operation_date",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "operation_type_name",
+ "track_changes": 1
+}

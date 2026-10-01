@@ -78,6 +78,73 @@
   "\u5f53\u524d\u6267\u884c\u7c7b\u578b",
   "\u5f53\u524d\u4efb\u52a1\u5f00\u59cb\u65f6\u95f4",
   "\u6700\u8fd1\u9519\u8bef",
+  "finance_scope_section",
+  "enable_finance_sync",
+  "finance_history_section",
+  "finance_history_start_date",
+  "finance_history_end_date",
+  "sync_historical_finance",
+  "finance_history_column",
+  "finance_history_status",
+  "finance_history_completed_to",
+  "finance_history_progress",
+  "finance_history_inserted_count",
+  "finance_history_updated_count",
+  "finance_history_last_error",
+  "finance_auto_section",
+  "enable_auto_finance_sync",
+  "finance_latest_interval_minutes",
+  "finance_latest_lookback_days",
+  "sync_latest_finance",
+  "finance_auto_column",
+  "finance_auto_checkpoint",
+  "finance_last_auto_sync_at",
+  "finance_next_auto_sync_at",
+  "finance_last_auto_sync_result",
+  "finance_recheck_7_section",
+  "enable_finance_recheck_7",
+  "finance_recheck_7_interval_days",
+  "finance_recheck_7_column",
+  "finance_recheck_7_last_at",
+  "finance_recheck_7_next_at",
+  "finance_recheck_14_section",
+  "enable_finance_recheck_14",
+  "finance_recheck_14_interval_days",
+  "finance_recheck_14_column",
+  "finance_recheck_14_last_at",
+  "finance_recheck_14_next_at",
+  "finance_recheck_30_section",
+  "enable_finance_recheck_30",
+  "finance_recheck_30_interval_days",
+  "finance_recheck_30_column",
+  "finance_recheck_30_last_at",
+  "finance_recheck_30_next_at",
+  "finance_recheck_90_section",
+  "enable_finance_recheck_90",
+  "finance_recheck_90_interval_days",
+  "finance_recheck_90_column",
+  "finance_recheck_90_last_at",
+  "finance_recheck_90_next_at",
+  "finance_recheck_180_section",
+  "enable_finance_recheck_180",
+  "finance_recheck_180_interval_days",
+  "finance_recheck_180_column",
+  "finance_recheck_180_last_at",
+  "finance_recheck_180_next_at",
+  "finance_statement_section",
+  "enable_finance_statement_sync",
+  "finance_statement_lookback_periods",
+  "sync_finance_statements",
+  "finance_statement_column",
+  "finance_statement_last_sync_at",
+  "finance_statement_next_sync_at",
+  "finance_statement_last_result",
+  "finance_runtime_section",
+  "finance_current_task_status",
+  "finance_current_execution_type",
+  "finance_runtime_column",
+  "finance_current_task_started_at",
+  "finance_last_error",
   "ozon_rank_scope_section",
   "\u5f00\u542fozon\u5546\u54c1\u6392\u540d\u540c\u6b65",
   "\u6392\u540d\u5546\u54c1\u8303\u56f4",
@@ -548,6 +615,230 @@
    "label": "\u6700\u8fd1\u9519\u8bef",
    "read_only": 1
   },
+  {
+   "fieldname": "finance_scope_section",
+   "fieldtype": "Section Break",
+   "label": "Ozon \u8d22\u52a1\u5e94\u8ba1\u4e0e\u5bf9\u8d26\u914d\u7f6e"
+  },
+  {
+   "default": "0",
+   "description": "\u8d22\u52a1\u540c\u6b65\u603b\u5f00\u5173\u3002\u5173\u95ed\u540e\u4e0d\u8fd0\u884c\u5386\u53f2\u3001\u589e\u91cf\u3001\u5468\u671f\u6838\u5bf9\u548c\u7ed3\u7b97\u62a5\u544a\u540c\u6b65\u3002",
+   "fieldname": "enable_finance_sync",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "\u5f00\u542f\u8d22\u52a1\u540c\u6b65"
+  },
+  {
+   "fieldname": "finance_history_section",
+   "fieldtype": "Section Break",
+   "label": "\u5386\u53f2\u8d22\u52a1\u5e94\u8ba1\u540c\u6b65"
+  },
+  {
+   "description": "\u5386\u53f2\u5e94\u8ba1\u7684\u76ee\u6807\u5f00\u59cb\u65e5\u671f\uff0cOzon \u65b0\u5e94\u8ba1\u63a5\u53e3\u6309\u5929\u8bf7\u6c42\u3002",
+   "fieldname": "finance_history_start_date",
+   "fieldtype": "Date",
+   "label": "\u5386\u53f2\u8d22\u52a1\u540c\u6b65\u5f00\u59cb\u65e5\u671f"
+  },
+  {
+   "description": "\u5386\u53f2\u5e94\u8ba1\u7684\u76ee\u6807\u7ed3\u675f\u65e5\u671f\uff0c\u5305\u542b\u5f53\u5929\u3002",
+   "fieldname": "finance_history_end_date",
+   "fieldtype": "Date",
+   "label": "\u5386\u53f2\u8d22\u52a1\u540c\u6b65\u7ed3\u675f\u65e5\u671f"
+  },
+  {
+   "fieldname": "sync_historical_finance",
+   "fieldtype": "Button",
+   "label": "\u540c\u6b65\u5386\u53f2\u8d22\u52a1\u6570\u636e"
+  },
+  {
+   "fieldname": "finance_history_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "finance_history_status",
+   "fieldtype": "Select",
+   "label": "\u5386\u53f2\u8d22\u52a1\u540c\u6b65\u72b6\u6001",
+   "options": "\u672a\u5f00\u59cb\n\u7b49\u5f85\u6267\u884c\n\u8fd0\u884c\u4e2d\n\u5df2\u6682\u505c\n\u5df2\u5b8c\u6210\n\u5931\u8d25",
+   "read_only": 1
+  },
+  {
+   "description": "\u53ea\u6709\u5f53\u5929\u6240\u6709\u6e38\u6807\u5206\u9875\u90fd\u6210\u529f\u540e\u624d\u5411\u524d\u63a8\u8fdb\u3002",
+   "fieldname": "finance_history_completed_to",
+   "fieldtype": "Date",
+   "label": "\u5386\u53f2\u8d22\u52a1\u5df2\u5b8c\u6574\u540c\u6b65\u5230",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finance_history_progress",
+   "fieldtype": "Percent",
+   "label": "\u5386\u53f2\u8d22\u52a1\u540c\u6b65\u8fdb\u5ea6",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "finance_history_inserted_count",
+   "fieldtype": "Int",
+   "label": "\u5386\u53f2\u8d22\u52a1\u65b0\u589e\u6570\u91cf",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "finance_history_updated_count",
+   "fieldtype": "Int",
+   "label": "\u5386\u53f2\u8d22\u52a1\u66f4\u65b0\u6570\u91cf",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finance_history_last_error",
+   "fieldtype": "Small Text",
+   "label": "\u5386\u53f2\u8d22\u52a1\u6700\u8fd1\u9519\u8bef",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finance_auto_section",
+   "fieldtype": "Section Break",
+   "label": "15\u5206\u949f\u8d22\u52a1\u589e\u91cf\u540c\u6b65"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_auto_finance_sync",
+   "fieldtype": "Check",
+   "label": "\u5f00\u542f\u81ea\u52a8\u540c\u6b65\u6700\u65b0\u8d22\u52a1\u6570\u636e"
+  },
+  {
+   "default": "15",
+   "description": "\u68c0\u67e5\u5f53\u5929\u53ca\u8fd1\u671f\u65b0\u5e94\u8ba1\u7684\u95f4\u9694\uff0c\u9ed8\u8ba4 15 \u5206\u949f\u3002",
+   "fieldname": "finance_latest_interval_minutes",
+   "fieldtype": "Int",
+   "label": "\u6700\u65b0\u8d22\u52a1\u540c\u6b65\u95f4\u9694\u5206\u949f",
+   "non_negative": 1
+  },
+  {
+   "default": "2",
+   "description": "\u6bcf\u6b21\u589e\u91cf\u540c\u6b65\u91cd\u65b0\u8bfb\u53d6\u7684\u6700\u8fd1\u5929\u6570\uff0c\u7528\u4e8e\u8865\u5145\u5ef6\u8fdf\u5e94\u8ba1\u3002",
+   "fieldname": "finance_latest_lookback_days",
+   "fieldtype": "Int",
+   "label": "\u6700\u65b0\u8d22\u52a1\u56de\u770b\u5929\u6570",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "sync_latest_finance",
+   "fieldtype": "Button",
+   "label": "\u7acb\u5373\u540c\u6b65\u6700\u65b0\u8d22\u52a1\u6570\u636e"
+  },
+  {
+   "fieldname": "finance_auto_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "\u6700\u8fd1\u4e00\u6b21\u6210\u529f\u5b8c\u6210\u7684\u8d22\u52a1\u65e5\u671f\u65ad\u70b9\u3002",
+   "fieldname": "finance_auto_checkpoint",
+   "fieldtype": "Date",
+   "label": "\u8d22\u52a1\u81ea\u52a8\u540c\u6b65\u65ad\u70b9",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finance_last_auto_sync_at",
+   "fieldtype": "Datetime",
+   "label": "\u4e0a\u6b21\u8d22\u52a1\u81ea\u52a8\u540c\u6b65\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finance_next_auto_sync_at",
+   "fieldtype": "Datetime",
+   "label": "\u4e0b\u6b21\u8d22\u52a1\u81ea\u52a8\u540c\u6b65\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finance_last_auto_sync_result",
+   "fieldtype": "Small Text",
+   "label": "\u4e0a\u6b21\u8d22\u52a1\u81ea\u52a8\u540c\u6b65\u7ed3\u679c",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finance_recheck_7_section",
+   "fieldtype": "Section Break",
+   "label": "\u6700\u8fd17\u5929\u8d22\u52a1\u6838\u5bf9"
+  },
+  {"default":"1","fieldname":"enable_finance_recheck_7","fieldtype":"Check","label":"\u542f\u75287\u5929\u8d22\u52a1\u6838\u5bf9"},
+  {"default":"1","description":"\u6bcf1\u5929\u91cd\u65b0\u8bfb\u53d6\u6700\u8fd17\u5929\u5e94\u8ba1\u660e\u7ec6\u3002","fieldname":"finance_recheck_7_interval_days","fieldtype":"Int","label":"7\u5929\u8d22\u52a1\u6838\u5bf9\u95f4\u9694\u5929\u6570","non_negative":1},
+  {"fieldname":"finance_recheck_7_column","fieldtype":"Column Break"},
+  {"fieldname":"finance_recheck_7_last_at","fieldtype":"Datetime","label":"7\u5929\u8d22\u52a1\u6700\u540e\u6838\u5bf9\u65f6\u95f4","read_only":1},
+  {"fieldname":"finance_recheck_7_next_at","fieldtype":"Datetime","label":"7\u5929\u8d22\u52a1\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4","read_only":1},
+  {
+   "fieldname": "finance_recheck_14_section",
+   "fieldtype": "Section Break",
+   "label": "\u6700\u8fd114\u5929\u8d22\u52a1\u6838\u5bf9"
+  },
+  {"default":"1","fieldname":"enable_finance_recheck_14","fieldtype":"Check","label":"\u542f\u752814\u5929\u8d22\u52a1\u6838\u5bf9"},
+  {"default":"7","description":"\u6bcf7\u5929\u91cd\u65b0\u8bfb\u53d6\u6700\u8fd114\u5929\u5e94\u8ba1\u660e\u7ec6\u3002","fieldname":"finance_recheck_14_interval_days","fieldtype":"Int","label":"14\u5929\u8d22\u52a1\u6838\u5bf9\u95f4\u9694\u5929\u6570","non_negative":1},
+  {"fieldname":"finance_recheck_14_column","fieldtype":"Column Break"},
+  {"fieldname":"finance_recheck_14_last_at","fieldtype":"Datetime","label":"14\u5929\u8d22\u52a1\u6700\u540e\u6838\u5bf9\u65f6\u95f4","read_only":1},
+  {"fieldname":"finance_recheck_14_next_at","fieldtype":"Datetime","label":"14\u5929\u8d22\u52a1\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4","read_only":1},
+  {
+   "fieldname": "finance_recheck_30_section",
+   "fieldtype": "Section Break",
+   "label": "\u6700\u8fd130\u5929\u8d22\u52a1\u6838\u5bf9"
+  },
+  {"default":"1","fieldname":"enable_finance_recheck_30","fieldtype":"Check","label":"\u542f\u752830\u5929\u8d22\u52a1\u6838\u5bf9"},
+  {"default":"14","description":"\u6bcf14\u5929\u91cd\u65b0\u8bfb\u53d6\u6700\u8fd130\u5929\u5e94\u8ba1\u660e\u7ec6\u3002","fieldname":"finance_recheck_30_interval_days","fieldtype":"Int","label":"30\u5929\u8d22\u52a1\u6838\u5bf9\u95f4\u9694\u5929\u6570","non_negative":1},
+  {"fieldname":"finance_recheck_30_column","fieldtype":"Column Break"},
+  {"fieldname":"finance_recheck_30_last_at","fieldtype":"Datetime","label":"30\u5929\u8d22\u52a1\u6700\u540e\u6838\u5bf9\u65f6\u95f4","read_only":1},
+  {"fieldname":"finance_recheck_30_next_at","fieldtype":"Datetime","label":"30\u5929\u8d22\u52a1\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4","read_only":1},
+  {
+   "fieldname": "finance_recheck_90_section",
+   "fieldtype": "Section Break",
+   "label": "\u6700\u8fd190\u5929\u8d22\u52a1\u6838\u5bf9"
+  },
+  {"default":"1","fieldname":"enable_finance_recheck_90","fieldtype":"Check","label":"\u542f\u752890\u5929\u8d22\u52a1\u6838\u5bf9"},
+  {"default":"30","description":"\u6bcf30\u5929\u91cd\u65b0\u8bfb\u53d6\u6700\u8fd190\u5929\u5e94\u8ba1\u660e\u7ec6\u3002","fieldname":"finance_recheck_90_interval_days","fieldtype":"Int","label":"90\u5929\u8d22\u52a1\u6838\u5bf9\u95f4\u9694\u5929\u6570","non_negative":1},
+  {"fieldname":"finance_recheck_90_column","fieldtype":"Column Break"},
+  {"fieldname":"finance_recheck_90_last_at","fieldtype":"Datetime","label":"90\u5929\u8d22\u52a1\u6700\u540e\u6838\u5bf9\u65f6\u95f4","read_only":1},
+  {"fieldname":"finance_recheck_90_next_at","fieldtype":"Datetime","label":"90\u5929\u8d22\u52a1\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4","read_only":1},
+  {
+   "fieldname": "finance_recheck_180_section",
+   "fieldtype": "Section Break",
+   "label": "\u6700\u8fd1180\u5929\u8d22\u52a1\u6838\u5bf9"
+  },
+  {"default":"1","fieldname":"enable_finance_recheck_180","fieldtype":"Check","label":"\u542f\u7528180\u5929\u8d22\u52a1\u6838\u5bf9"},
+  {"default":"60","description":"\u6bcf60\u5929\u91cd\u65b0\u8bfb\u53d6\u6700\u8fd1180\u5929\u5e94\u8ba1\u660e\u7ec6\uff0c\u4f5c\u4e3a\u957f\u671f\u8c03\u6574\u7684\u515c\u5e95\u6838\u5bf9\u3002","fieldname":"finance_recheck_180_interval_days","fieldtype":"Int","label":"180\u5929\u8d22\u52a1\u6838\u5bf9\u95f4\u9694\u5929\u6570","non_negative":1},
+  {"fieldname":"finance_recheck_180_column","fieldtype":"Column Break"},
+  {"fieldname":"finance_recheck_180_last_at","fieldtype":"Datetime","label":"180\u5929\u8d22\u52a1\u6700\u540e\u6838\u5bf9\u65f6\u95f4","read_only":1},
+  {"fieldname":"finance_recheck_180_next_at","fieldtype":"Datetime","label":"180\u5929\u8d22\u52a1\u4e0b\u6b21\u6838\u5bf9\u65f6\u95f4","read_only":1},
+  {
+   "fieldname": "finance_statement_section",
+   "fieldtype": "Section Break",
+   "label": "Ozon \u534a\u6708\u7ed3\u7b97\u62a5\u544a\u540c\u6b65"
+  },
+  {"default":"1","description":"\u540c\u6b65 Ozon 1\u201415 \u65e5\u548c 16\u65e5\u2014\u6708\u5e95\u7684\u8d22\u52a1\u62a5\u544a\u3002","fieldname":"enable_finance_statement_sync","fieldtype":"Check","label":"\u5f00\u542f\u7ed3\u7b97\u62a5\u544a\u540c\u6b65"},
+  {"default":"2","description":"\u6bcf\u6b21\u91cd\u65b0\u6838\u5bf9\u6700\u8fd1\u591a\u5c11\u4e2a\u534a\u6708\u7ed3\u7b97\u5468\u671f\u3002","fieldname":"finance_statement_lookback_periods","fieldtype":"Int","label":"\u7ed3\u7b97\u62a5\u544a\u56de\u770b\u671f\u6570","non_negative":1},
+  {"fieldname":"sync_finance_statements","fieldtype":"Button","label":"\u7acb\u5373\u540c\u6b65\u7ed3\u7b97\u62a5\u544a"},
+  {"fieldname":"finance_statement_column","fieldtype":"Column Break"},
+  {"fieldname":"finance_statement_last_sync_at","fieldtype":"Datetime","label":"\u4e0a\u6b21\u7ed3\u7b97\u62a5\u544a\u540c\u6b65\u65f6\u95f4","read_only":1},
+  {"fieldname":"finance_statement_next_sync_at","fieldtype":"Datetime","label":"\u4e0b\u6b21\u7ed3\u7b97\u62a5\u544a\u540c\u6b65\u65f6\u95f4","read_only":1},
+  {"fieldname":"finance_statement_last_result","fieldtype":"Small Text","label":"\u4e0a\u6b21\u7ed3\u7b97\u62a5\u544a\u540c\u6b65\u7ed3\u679c","read_only":1},
+  {
+   "fieldname": "finance_runtime_section",
+   "fieldtype": "Section Break",
+   "label": "\u8d22\u52a1\u4efb\u52a1\u8fd0\u884c\u4fdd\u62a4\u4e0e\u9519\u8bef"
+  },
+  {
+   "fieldname": "finance_current_task_status",
+   "fieldtype": "Select",
+   "label": "\u8d22\u52a1\u5f53\u524d\u4efb\u52a1\u72b6\u6001",
+   "options": "\u7a7a\u95f2\n\u7b49\u5f85\u6267\u884c\n\u8fd0\u884c\u4e2d\n\u6210\u529f\n\u5931\u8d25",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finance_current_execution_type",
+   "fieldtype": "Select",
+   "label": "\u8d22\u52a1\u5f53\u524d\u6267\u884c\u7c7b\u578b",
+   "options": "\n\u5386\u53f2\u8d22\u52a1\n\u6700\u65b0\u8d22\u52a1\u589e\u91cf\n7\u5929\u8d22\u52a1\u6838\u5bf9\n14\u5929\u8d22\u52a1\u6838\u5bf9\n30\u5929\u8d22\u52a1\u6838\u5bf9\n90\u5929\u8d22\u52a1\u6838\u5bf9\n180\u5929\u8d22\u52a1\u6838\u5bf9\n\u534a\u6708\u7ed3\u7b97\u62a5\u544a",
+   "read_only": 1
+  },
+  {"fieldname":"finance_runtime_column","fieldtype":"Column Break"},
+  {"fieldname":"finance_current_task_started_at","fieldtype":"Datetime","label":"\u8d22\u52a1\u5f53\u524d\u4efb\u52a1\u5f00\u59cb\u65f6\u95f4","read_only":1},
+  {"fieldname":"finance_last_error","fieldtype":"Small Text","label":"\u8d22\u52a1\u6700\u8fd1\u9519\u8bef","read_only":1},
   {
    "fieldname": "ozon_rank_scope_section",
    "fieldtype": "Section Break",
