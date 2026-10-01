@@ -126,6 +126,131 @@ def _posting_breakdown(row):
 	return result
 
 
+def _accrual_type_label(row):
+	key = str(row.get("operation_type_name") or row.get("operation_type") or "")
+	description = str(row.get("description") or "")
+	by_name = {
+		"POSTING": "商品销售与佣金",
+		"Acquiring": "收单服务费",
+		"PayPerClick": "按点击付费",
+		"RfbsGlobalDelivery": "国际配送服务",
+		"RfbsGlobalAgentFee": "Ozon代理佣金",
+		"RfbsGlobalIntermediaryService": "国际运输组织合同服务",
+		"RfbsGlobalPlatformConnectionService": "Ozon物流平台接入服务",
+		"Promotion": "推广服务",
+		"DefectFineErrors": "商品缺陷罚款",
+	}
+	by_description = {
+		"Эквайринг": "收单服务费",
+		"Оплата за клик": "按点击付费",
+		"Услуги международной доставки": "国际配送服务",
+		"Агентское вознаграждение Ozon": "Ozon代理佣金",
+		"Услуги по заключению договора на организацию международной перевозки": "国际运输组织合同服务",
+		"Электронная услуга подключения к логистической Платформе Ozon": "Ozon物流平台接入服务",
+	}
+	return by_name.get(key) or by_description.get(description) or description or key or "未分类应计项目"
+
+
+def _attach_related_products(rows):
+	"""按店铺和应计费用ID关联商品，仅用于展示，不回写费用记录的物料绑定。"""
+	keys = {
+		(str(row.get("store") or ""), str(row.get("posting_number") or ""))
+		for row in rows if row.get("posting_number") and not row.get("sku")
+	}
+	if not keys:
+		return
+
+	posting_numbers = sorted({key[1] for key in keys})
+	source_rows = frappe.get_all(
+		DOCTYPE,
+		filters={"posting_number": ["in", posting_numbers]},
+		fields=[
+			"name", "store", "posting_number", "sku", "offer_id", "product_id", "product_name",
+			"quantity", "corresponding_item", "corresponding_item_name", "corresponding_item_image", "items_json",
+		],
+		limit_page_length=0,
+	)
+	mapping_index = _mapping_index()
+	grouped = defaultdict(dict)
+	item_codes = set()
+
+	for source in source_rows:
+		group_key = (str(source.get("store") or ""), str(source.get("posting_number") or ""))
+		if group_key not in keys:
+			continue
+		try:
+			products = json.loads(source.get("items_json") or "[]")
+		except (TypeError, ValueError, json.JSONDecodeError):
+			products = []
+		if not isinstance(products, list) or not products:
+			products = [{
+				"sku": source.get("sku"), "offer_id": source.get("offer_id"),
+				"product_id": source.get("product_id"), "name": source.get("product_name"),
+				"quantity": source.get("quantity"),
+			}]
+
+		for product in products:
+			if not isinstance(product, dict):
+				continue
+			sku = str(product.get("sku") or source.get("sku") or "").strip()
+			offer_id = str(product.get("offer_id") or source.get("offer_id") or "").strip()
+			product_id = str(product.get("product_id") or source.get("product_id") or "").strip()
+			if not (sku or offer_id or product_id):
+				continue
+
+			item_code = None
+			item_name = None
+			item_image = None
+			if source.get("corresponding_item") and (not source.get("sku") or sku == str(source.get("sku"))):
+				item_code = source.get("corresponding_item")
+				item_name = source.get("corresponding_item_name")
+				item_image = source.get("corresponding_item_image")
+			if not item_code:
+				for identifier in (offer_id, sku, product_id):
+					mapping = mapping_index.get((group_key[0], identifier)) if identifier else None
+					if mapping:
+						item_code = mapping.get("物料id")
+						item_name = mapping.get("物料名称")
+						break
+			if item_code:
+				item_codes.add(item_code)
+
+			product_key = item_code or sku or offer_id or product_id
+			existing = grouped[group_key].get(product_key)
+			candidate = {
+				"sku": sku, "offer_id": offer_id, "product_id": product_id,
+				"product_name": product.get("name") or product.get("product_name") or source.get("product_name"),
+				"quantity": flt(product.get("quantity") or source.get("quantity") or 0),
+				"item": item_code, "item_name": item_name, "image": item_image,
+			}
+			if existing:
+				existing["quantity"] = max(flt(existing.get("quantity")), candidate["quantity"])
+			else:
+				grouped[group_key][product_key] = candidate
+
+	item_details = {}
+	if item_codes:
+		item_details = {
+			item.name: item for item in frappe.get_all(
+				"Item", filters={"name": ["in", list(item_codes)]},
+				fields=["name", "item_name", "image"], limit_page_length=0,
+			)
+		}
+	for products in grouped.values():
+		for product in products.values():
+			item = item_details.get(product.get("item"))
+			if item:
+				product["item_name"] = item.item_name or product.get("item_name")
+				product["image"] = item.image or product.get("image")
+
+	for row in rows:
+		if row.get("sku"):
+			row.related_products = []
+			continue
+		group_key = (str(row.get("store") or ""), str(row.get("posting_number") or ""))
+		row.related_products = list(grouped.get(group_key, {}).values())
+
+
 @frappe.whitelist()
 def get_dashboard_data(filters=None, page=1, page_size=50):
 	frappe.has_permission(DOCTYPE, "read", throw=True)
@@ -173,6 +298,17 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 				continue
 			filtered.append(row)
 		rows = filtered
+
+	# 每条主交易只能归入一个应计项目类型；按钮合计必须严格等于“全部”。
+	type_counts = defaultdict(int)
+	for row in rows:
+		row.accrual_type_label = _accrual_type_label(row)
+		type_counts[row.accrual_type_label] += 1
+	type_total = len(rows)
+	type_sum = sum(type_counts.values())
+	selected_type = str(f.accrual_type or "").strip()
+	if selected_type and selected_type in type_counts:
+		rows = [row for row in rows if row.accrual_type_label == selected_type]
 
 	currencies = defaultdict(lambda: {"inflow": 0.0, "outflow": 0.0, "net": 0.0, "sales": 0.0, "fees": 0.0})
 	daily = defaultdict(lambda: defaultdict(lambda: {"inflow": 0.0, "outflow": 0.0, "net": 0.0, "count": 0}))
@@ -241,6 +377,8 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 	page = max(cint(page), 1)
 	page_size = min(max(cint(page_size), 20), 200)
 	start = (page - 1) * page_size
+	page_rows = rows[start:start + page_size]
+	_attach_related_products(page_rows)
 	options = {
 		"stores": sorted({str(row.store) for row in rows if row.store}),
 		"categories": sorted({str(row.transaction_category) for row in rows if row.transaction_category}),
@@ -261,7 +399,13 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 		"stores": {currency: dict(values) for currency, values in stores.items()},
 		"fees": {currency: dict(values) for currency, values in fees.items()},
 		"products": product_list[:500], "statements": statement_list[:300],
-		"rows": rows[start:start + page_size], "options": options,
+		"rows": page_rows, "options": options,
+		"type_filter": {
+			"total": type_total,
+			"sum": type_sum,
+			"valid": type_sum == type_total,
+			"counts": dict(sorted(type_counts.items(), key=lambda item: (-item[1], item[0]))),
+		},
 		"pagination": {"page": page, "page_size": page_size, "total": len(rows), "pages": max(1, (len(rows) + page_size - 1) // page_size)},
 	}
 
