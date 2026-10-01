@@ -1,43 +1,117 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
- "creation": "2026-03-14 16:22:47.975955",
+ "creation": "2026-08-31 22:44:48.998294",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "启用",
-  "店铺",
-  "站点id",
+  "\u542f\u7528",
+  "\u5e97\u94fa",
+  "\u7ad9\u70b9id",
   "column_break_mapping",
-  "平台asin",
-  "平台sku",
-  "物料id",
-  "物料名称",
-  "平台sku_属性",
-  "平台链接"
+  "\u5e73\u53f0asin",
+  "\u5e73\u53f0sku",
+  "\u7269\u6599id",
+  "\u7269\u6599\u540d\u79f0",
+  "\u5e73\u53f0sku_\u5c5e\u6027",
+  "\u5e73\u53f0\u94fe\u63a5"
  ],
  "fields": [
-  {"default": "1", "fieldname": "启用", "fieldtype": "Check", "in_list_view": 1, "label": "启用"},
-  {"description": "店铺使用ERPNext成本中心识别。", "fieldname": "店铺", "fieldtype": "Link", "in_list_view": 1, "label": "店铺", "options": "Cost Center", "reqd": 1, "search_index": 1},
-  {"description": "Amazon填写Marketplace ID，例如ATVPDKIKX0DER。", "fieldname": "站点id", "fieldtype": "Data", "in_list_view": 1, "label": "站点ID", "search_index": 1},
-  {"fieldname": "column_break_mapping", "fieldtype": "Column Break"},
-  {"description": "ASIN和平台SKU至少填写一个。", "fieldname": "平台asin", "fieldtype": "Data", "in_list_view": 1, "label": "平台ASIN/商品ID", "search_index": 1},
-  {"description": "ASIN和平台SKU至少填写一个。", "fieldname": "平台sku", "fieldtype": "Data", "in_list_view": 1, "label": "平台SKU", "search_index": 1},
-  {"fieldname": "物料id", "fieldtype": "Link", "in_list_view": 1, "label": "物料ID", "options": "Item", "reqd": 1},
-  {"fetch_from": "物料id.item_name", "fieldname": "物料名称", "fieldtype": "Data", "in_list_view": 1, "label": "物料名称", "read_only": 1},
-  {"fieldname": "平台sku_属性", "fieldtype": "Data", "label": "平台SKU属性"},
-  {"fieldname": "平台链接", "fieldtype": "Data", "label": "平台链接", "options": "URL"}
+  {
+   "default": "1",
+   "fieldname": "\u542f\u7528",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "\u542f\u7528"
+  },
+  {
+   "description": "\u5e97\u94fa\u4f7f\u7528ERPNext\u6210\u672c\u4e2d\u5fc3\u8bc6\u522b\u3002",
+   "fieldname": "\u5e97\u94fa",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u5e97\u94fa",
+   "options": "Cost Center",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "description": "Amazon\u586b\u5199Marketplace ID\uff0c\u4f8b\u5982ATVPDKIKX0DER\u3002",
+   "fieldname": "\u7ad9\u70b9id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u7ad9\u70b9ID",
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_mapping",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "ASIN\u548c\u5e73\u53f0SKU\u81f3\u5c11\u586b\u5199\u4e00\u4e2a\u3002",
+   "fieldname": "\u5e73\u53f0asin",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u5e73\u53f0ASIN/\u5546\u54c1ID",
+   "search_index": 1
+  },
+  {
+   "description": "ASIN\u548c\u5e73\u53f0SKU\u81f3\u5c11\u586b\u5199\u4e00\u4e2a\u3002",
+   "fieldname": "\u5e73\u53f0sku",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u5e73\u53f0SKU",
+   "search_index": 1
+  },
+  {
+   "fieldname": "\u7269\u6599id",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u7269\u6599ID",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "\u7269\u6599id.item_name",
+   "fieldname": "\u7269\u6599\u540d\u79f0",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u7269\u6599\u540d\u79f0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "\u5e73\u53f0sku_\u5c5e\u6027",
+   "fieldtype": "Data",
+   "label": "\u5e73\u53f0SKU\u5c5e\u6027"
+  },
+  {
+   "fieldname": "\u5e73\u53f0\u94fe\u63a5",
+   "fieldtype": "Data",
+   "label": "\u5e73\u53f0\u94fe\u63a5",
+   "options": "URL"
+  }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-31 23:30:00.000000",
+ "modified": "2026-10-01 22:41:11.537595",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "Fengjing - Product Corresponding Platform - Main Table",
  "owner": "Administrator",
  "permissions": [
-  {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
