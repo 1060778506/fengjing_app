@@ -219,7 +219,7 @@ def _财务分类(type_id, 类型文本, accrued_category=""):
 	text = f"{类型文本} {accrued_category}".lower()
 	规则 = (
 		("推广和广告", ("advert", "promo", "promotion", "payperclick", "реклам", "продвиж")),
-		("Ozon代理佣金", ("commission", "комисс")),
+		("Ozon代理佣金", ("commission", "agentfee", "agent fee", "комисс", "агентск")),
 		("其他服务与罚款", ("penalty", "fine", "штраф")),
 		("赔偿和赔偿返还", ("compensation", "компенсац")),
 		("折扣积分", ("point", "cashback", "балл", "кешбэк")),
@@ -228,7 +228,7 @@ def _财务分类(type_id, 类型文本, accrued_category=""):
 		("销售和退货", ("return", "refund", "sale", "order", "возврат", "продаж")),
 		("Ozon配送服务", ("delivery", "logistic", "lastmile", "достав", "логист")),
 		("合作伙伴计划", ("partner program", "партнёрск", "партнерск")),
-		("合作伙伴服务", ("service", "placement", "storage", "packing", "услуг", "хранен", "упаков")),
+		("合作伙伴服务", ("service", "placement", "storage", "packing", "acquiring", "услуг", "хранен", "упаков", "эквайринг")),
 	)
 	for 分类, 关键词 in 规则:
 		if any(word in text for word in 关键词):
@@ -239,11 +239,70 @@ def _财务分类(type_id, 类型文本, accrued_category=""):
 		return "Ozon配送服务"
 	if str(type_id) in {"41", "54"}:
 		return "推广和广告"
+	if str(type_id) == "1":
+		return "合作伙伴服务"
+	if str(type_id) == "66":
+		return "Ozon代理佣金"
 	if str(type_id) in {"45", "59"}:
 		return "销售和退货"
 	if "posting" in text:
 		return "销售和退货"
 	return "其他应计项目"
+
+
+def _提取商品明细(accrual):
+	"""Ozon places SKU rows in different branches for POSTING and ITEM accruals."""
+	posting = accrual.get("posting") or {}
+	posting_products = posting.get("products") or []
+	item_fee_products = (accrual.get("item_fees") or {}).get("fees") or []
+	来源 = posting_products if posting_products else item_fee_products
+	return [row for row in 来源 if isinstance(row, dict)]
+
+
+def _主要费用信息(accrual, 类型表, 费用明细):
+	root_type_id = accrual.get("type_id")
+	if root_type_id not in (None, ""):
+		ids = [str(root_type_id)]
+	else:
+		ids = list(dict.fromkeys(str(row.get("type_id")) for row in 费用明细 if row.get("type_id") not in (None, "")))
+
+	names = []
+	descriptions = []
+	分类金额 = {}
+	for type_id in ids:
+		info = 类型表.get(str(type_id), {})
+		name = str(info.get("name") or "").strip()
+		description = str(info.get("description") or name).strip()
+		if name and name not in names:
+			names.append(name)
+		if description and description not in descriptions:
+			descriptions.append(description)
+
+	for fee in 费用明细:
+		text = f"{fee.get('type_name')} {fee.get('type_description')}"
+		category = _财务分类(fee.get("type_id"), text, accrual.get("accrued_category"))
+		分类金额[category] = 分类金额.get(category, 0.0) + abs(_安全数字(fee.get("normalized_amount")))
+
+	root_category = str(accrual.get("accrued_category") or "")
+	if 分类金额:
+		category = max(分类金额, key=分类金额.get)
+	elif root_category == "POSTING":
+		category = "销售和退货"
+	else:
+		category = _财务分类(root_type_id, " ".join(names + descriptions), root_category)
+
+	if names:
+		name = " / ".join(names)
+	elif root_category == "POSTING":
+		name = "商品销售与佣金"
+	else:
+		name = root_category or "未知应计"
+	return {
+		"type_ids": ",".join(ids) or root_category,
+		"name": name,
+		"description": " / ".join(descriptions) or name,
+		"category": category,
+	}
 
 
 def _收支方向(amount):
@@ -327,7 +386,7 @@ def _生成费用明细(accrual, 类型表):
 
 def _金额拆分(accrual, 类型表, 费用明细):
 	posting = accrual.get("posting") or {}
-	products = posting.get("products") or []
+	products = _提取商品明细(accrual)
 	销售金额 = 0.0
 	销售佣金 = 0.0
 	for product in products:
@@ -347,7 +406,6 @@ def _金额拆分(accrual, 类型表, 费用明细):
 	服务合计 = 0.0
 	for fee in 费用明细:
 		amount = _安全数字(fee.get("normalized_amount"))
-		服务合计 += amount
 		category = _财务分类(fee.get("type_id"), f"{fee.get('type_name')} {fee.get('type_description')}")
 		text = f"{fee.get('type_name')} {fee.get('type_description')}".lower()
 		if category == "Ozon配送服务":
@@ -357,12 +415,16 @@ def _金额拆分(accrual, 类型表, 费用明细):
 				拆分["delivery_charge"] += amount
 		elif category == "推广和广告":
 			拆分["advertising_amount"] += amount
+		elif category == "Ozon代理佣金":
+			销售佣金 += amount
 		elif category == "其他服务与罚款":
 			拆分["penalty_amount"] += amount
 		elif category == "赔偿和赔偿返还":
 			拆分["compensation_amount"] += amount
 		elif category == "折扣积分":
 			拆分["discount_points_amount"] += amount
+		elif category in {"合作伙伴服务", "合作伙伴计划", "WHD服务"}:
+			服务合计 += amount
 		else:
 			拆分["other_amount"] += amount
 	总额对象 = accrual.get("total_amount") or accrual.get("amount") or {}
@@ -421,41 +483,39 @@ def 保存ozon财务交易(accrual, 配置行, 类型表, 同步类型):
 		raise ValueError("Ozon 财务应计数据必须是 JSON 对象")
 	store = str(配置行.get("店铺选项") or "").strip()
 	posting = accrual.get("posting") or {}
-	products = posting.get("products") or []
-	products = [row for row in products if isinstance(row, dict)]
+	products = _提取商品明细(accrual)
 	first = products[0] if products else {}
 	sku = str(first.get("sku") or "").strip()
 	offer_id = str(first.get("offer_id") or first.get("offer_code") or "").strip()
 	product_id = str(first.get("product_id") or first.get("id") or sku or "").strip()
 	item_code, item_name, item_image = _查找对应物料(store, sku, offer_id, product_id)
 
-	type_id = accrual.get("type_id")
-	type_info = 类型表.get(str(type_id), {})
-	type_text = _类型文本(type_id, 类型表)
-	category = _财务分类(type_id, type_text, accrual.get("accrued_category"))
 	费用明细 = _生成费用明细(accrual, 类型表)
+	主要费用 = _主要费用信息(accrual, 类型表, 费用明细)
+	type_text = f"{主要费用['name']} {主要费用['description']}"
+	category = 主要费用["category"]
 	金额 = _金额拆分(accrual, 类型表, 费用明细)
 	unique_key = _交易唯一键(store, accrual)
 	raw_text = _json文本(accrual)
 	raw_hash = hashlib.sha256(raw_text.encode("utf-8")).hexdigest()
 	operation_id = accrual.get("id") or accrual.get("accrual_id") or accrual.get("operation_id") or unique_key[:24]
-	posting_number = posting.get("posting_number") or posting.get("number")
+	posting_number = posting.get("posting_number") or posting.get("number") or accrual.get("unit_number")
 	quantity = sum(_安全数字(row.get("quantity")) for row in products)
 
 	values = {
 		"transaction_unique_key": unique_key,
 		"operation_id": _data(operation_id),
-		"operation_type": _data(type_id or accrual.get("accrued_category")),
-		"operation_type_name": _data(type_info.get("name") or type_text or accrual.get("accrued_category") or "未知应计"),
+		"operation_type": _data(主要费用["type_ids"]),
+		"operation_type_name": _data(主要费用["name"]),
 		"store": store,
 		"ozon_id": _data(配置行.get("ozon_id")),
 		"company_id": _data(配置行.get("ozon_id")),
 		"sync_type": 同步类型,
 		"transaction_category": category,
-		"transaction_subcategory": _data(type_info.get("name") or type_info.get("description")),
+		"transaction_subcategory": _data(主要费用["name"]),
 		"transaction_direction": _收支方向(金额["transaction_amount"]),
 		"transaction_status": "已入账",
-		"description": type_info.get("description") or type_info.get("name") or str(accrual.get("accrued_category") or ""),
+		"description": 主要费用["description"],
 		"is_refund": cint(category == "销售和退货" and any(word in type_text.lower() for word in ("return", "refund", "возврат"))),
 		"is_reversal": cint(any(word in type_text.lower() for word in ("reversal", "reverse", "сторно"))),
 		"is_adjustment": cint(any(word in type_text.lower() for word in ("adjust", "correction", "коррект"))),
@@ -888,6 +948,55 @@ def _任务入队(配置行名称, 同步类型):
 		配置行名称=配置行名称,
 		同步类型=同步类型,
 	)
+
+
+@frappe.whitelist()
+def 重新解析已存ozon财务记录(配置行名称=None):
+	"""Backfill structured fields from saved raw JSON without calling historical data again."""
+	主表 = frappe.get_single(配置主表)
+	配置行列表 = [
+		row for row in (主表.get("table_wckx") or [])
+		if not 配置行名称 or row.name == 配置行名称
+	]
+	if 配置行名称 and not 配置行列表:
+		raise ValueError(f"找不到 Ozon 店铺配置行：{配置行名称}")
+
+	汇总 = {"店铺": 0, "处理": 0, "更新": 0, "跳过": 0, "失败": 0}
+	for 配置行 in 配置行列表:
+		store = str(配置行.get("店铺选项") or "").strip()
+		if not store:
+			continue
+		类型表 = _取得应计类型(配置行)
+		rows = frappe.get_all(
+			存储单据,
+			filters={"store": store, "operation_type": ["!=", "cash_flow_statement"]},
+			fields=["name", "raw_json", "sync_type"],
+			limit_page_length=0,
+		)
+		汇总["店铺"] += 1
+		for index, row in enumerate(rows, 1):
+			try:
+				payload = json.loads(row.get("raw_json") or "")
+				if not isinstance(payload, dict):
+					汇总["跳过"] += 1
+					continue
+				保存结果 = 保存ozon财务交易(
+					payload,
+					配置行,
+					类型表,
+					row.get("sync_type") or "历史财务",
+				)
+				汇总["处理"] += 1
+				汇总["更新"] += cint(保存结果.get("updated"))
+			except Exception:
+				汇总["失败"] += 1
+				frappe.logger("ozon_finance", allow_site=True).exception(
+					"重新解析 Ozon 财务记录失败：%s", row.name
+				)
+			if index % 100 == 0:
+				frappe.db.commit()
+		frappe.db.commit()
+	return 汇总
 
 
 def 定时执行ozon财务同步():
