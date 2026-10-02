@@ -1,0 +1,201 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-10-02 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_section",
+  "ozon_store",
+  "enabled",
+  "interval_minutes",
+  "product_scope",
+  "basic_column",
+  "record_cost_price",
+  "record_promotion_price",
+  "record_market_price",
+  "schedule_section",
+  "last_recorded_at",
+  "next_record_at",
+  "last_record_count",
+  "schedule_column",
+  "last_record_result",
+  "runtime_section",
+  "current_task_status",
+  "current_execution_type",
+  "current_task_started_at",
+  "runtime_column",
+  "current_task_completed_at",
+  "last_run_result",
+  "last_error"
+ ],
+ "fields": [
+  {
+   "fieldname": "basic_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Configuration"
+  },
+  {
+   "fieldname": "ozon_store",
+   "fieldtype": "Link",
+   "label": "Ozon Store",
+   "options": "Ozon Store Configuration",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enable Price Recording",
+   "default": "0",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "interval_minutes",
+   "fieldtype": "Int",
+   "label": "Recording Interval Minutes",
+   "default": "60",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "product_scope",
+   "fieldtype": "Select",
+   "label": "Product Scope",
+   "options": "All Active Products\nOnly Bound Items",
+   "default": "All Active Products"
+  },
+  {
+   "fieldname": "basic_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "record_cost_price",
+   "fieldtype": "Check",
+   "label": "Record Cost Price",
+   "default": "1"
+  },
+  {
+   "fieldname": "record_promotion_price",
+   "fieldtype": "Check",
+   "label": "Record Promotion Price",
+   "default": "1"
+  },
+  {
+   "fieldname": "record_market_price",
+   "fieldtype": "Check",
+   "label": "Record Market Price",
+   "default": "1"
+  },
+  {
+   "fieldname": "schedule_section",
+   "fieldtype": "Section Break",
+   "label": "Schedule and Result"
+  },
+  {
+   "fieldname": "last_recorded_at",
+   "fieldtype": "Datetime",
+   "label": "Last Recorded At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "next_record_at",
+   "fieldtype": "Datetime",
+   "label": "Next Record At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_record_count",
+   "fieldtype": "Int",
+   "label": "Last Record Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "schedule_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_record_result",
+   "fieldtype": "Small Text",
+   "label": "Last Record Result",
+   "read_only": 1
+  },
+  {
+   "fieldname": "runtime_section",
+   "fieldtype": "Section Break",
+   "label": "Runtime Status"
+  },
+  {
+   "fieldname": "current_task_status",
+   "fieldtype": "Select",
+   "label": "Current Task Status",
+   "options": "Idle\nWaiting\nRunning\nSuccess\nFailed\nPaused",
+   "read_only": 1
+  },
+  {
+   "fieldname": "current_execution_type",
+   "fieldtype": "Data",
+   "label": "Current Execution Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "current_task_started_at",
+   "fieldtype": "Datetime",
+   "label": "Current Task Started At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "runtime_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "current_task_completed_at",
+   "fieldtype": "Datetime",
+   "label": "Current Task Completed At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_run_result",
+   "fieldtype": "Small Text",
+   "label": "Last Run Result",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Small Text",
+   "label": "Last Error",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-02 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Ozon Price Configuration",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
+
