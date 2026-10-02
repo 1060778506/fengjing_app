@@ -242,12 +242,15 @@ def _wait_for_rate_limit(store, service):
 		time.sleep(wait_seconds)
 
 
-def amazon_api_request(store, service, method, path, *, params=None, timeout=60):
+def amazon_api_request(store, service, method, path, *, params=None, timeout=60, max_retries=None):
 	url = path if str(path).startswith("http") else f"{get_endpoint(store)}{path}"
 	last_response = None
 	refreshed_token = False
 	force_token_refresh = False
-	for attempt, delay in enumerate(RETRY_DELAYS):
+	retry_count = max(cint(max_retries), 0) if max_retries is not None else len(RETRY_DELAYS) - 1
+	attempt_count = min(retry_count + 1, len(RETRY_DELAYS))
+	delays = RETRY_DELAYS[:attempt_count]
+	for attempt, delay in enumerate(delays):
 		_wait_for_rate_limit(store, service)
 		token = get_access_token(store, force_refresh=force_token_refresh)
 		force_token_refresh = False
@@ -264,7 +267,7 @@ def amazon_api_request(store, service, method, path, *, params=None, timeout=60)
 				timeout=timeout,
 			)
 		except requests.RequestException:
-			if attempt == len(RETRY_DELAYS) - 1:
+			if attempt == len(delays) - 1:
 				raise
 			time.sleep(delay)
 			continue
@@ -274,7 +277,7 @@ def amazon_api_request(store, service, method, path, *, params=None, timeout=60)
 			refreshed_token = True
 			force_token_refresh = True
 			continue
-		if response.status_code in RETRYABLE_STATUS_CODES and attempt < len(RETRY_DELAYS) - 1:
+		if response.status_code in RETRYABLE_STATUS_CODES and attempt < len(delays) - 1:
 			retry_after = response.headers.get("Retry-After")
 			try:
 				wait_seconds = max(float(retry_after), delay) if retry_after else delay

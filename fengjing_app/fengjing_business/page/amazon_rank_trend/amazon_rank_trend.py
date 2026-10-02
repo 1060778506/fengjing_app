@@ -65,7 +65,7 @@ def get_rank_dashboard_data(filters=None):
                 limit_page_length=0,
             )
         }
-    # 平台映射表优先，ASIN抓取配置子表作为回退。两者都使用店铺成本中心区分。
+    # 平台映射表优先，新排名商品池作为回退。两者都使用店铺成本中心区分。
     platform_asin_sku_item_map = {}
     platform_asin_item_map = {}
     platform_sku_item_map = {}
@@ -277,19 +277,28 @@ def _get_asin_item_map():
     """Return bindings and active products keyed by (ASIN, Cost Center)."""
     mapping = {}
     active_asins = set()
-    try:
-        parent = frappe.get_single("Fengjing - Product Corresponding Platform - Configuration")
-        for row in parent.get("抓取asin配置的子表") or []:
-            asin = str(row.get("需要抓取数据的asin") or "").upper()
-            store_id = str(row.get("属于哪个店铺") or "")
-            item = str(row.get("asin对应物料") or "")
-            if asin and store_id:
-                key = (asin, store_id)
-                active_asins.add(key)
-                if item:
-                    mapping[key] = item
-    except Exception:
-        pass
+    stores = {
+        row.name: row.cost_center
+        for row in frappe.get_all(
+            "Amazon Store Configuration",
+            fields=["name", "cost_center"],
+            limit_page_length=0,
+        )
+    }
+    for row in frappe.get_all(
+        "Amazon Ranking Product",
+        filters={"enabled": 1, "deleted_from_store": 0},
+        fields=["amazon_store", "asin", "corresponding_item"],
+        limit_page_length=0,
+    ):
+        asin = str(row.asin or "").upper()
+        store_id = str(stores.get(row.amazon_store) or "")
+        item = str(row.corresponding_item or "")
+        if asin and store_id:
+            key = (asin, store_id)
+            active_asins.add(key)
+            if item:
+                mapping[key] = item
     return mapping, active_asins
 
 

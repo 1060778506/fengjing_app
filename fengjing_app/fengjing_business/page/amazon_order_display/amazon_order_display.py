@@ -365,21 +365,30 @@ def _get_postcode_lookup():
 
 
 def sync_asin_item_mappings():
-    """Create missing platform mappings from the ASIN ranking configuration."""
-    parent = frappe.get_single("Fengjing - Product Corresponding Platform - Configuration")
-    marketplace_by_store = {
-        str(row.get("店铺选项") or ""): str(row.get("站点id") or "").upper()
-        for row in parent.get("亚马逊api") or [] if row.get("店铺选项")
+    """Create missing platform mappings from the new Amazon ranking product pool."""
+    stores = {
+        row.name: row
+        for row in frappe.get_all(
+            "Amazon Store Configuration",
+            fields=["name", "cost_center", "marketplace_id"],
+            limit_page_length=0,
+        )
     }
     created = skipped = 0
-    for row in parent.get("抓取asin配置的子表") or []:
-        store = str(row.get("属于哪个店铺") or "")
-        asin = str(row.get("需要抓取数据的asin") or "").upper()
-        item = str(row.get("asin对应物料") or "")
-        marketplace = marketplace_by_store.get(store, "")
+    for row in frappe.get_all(
+        "Amazon Ranking Product",
+        filters={"enabled": 1, "deleted_from_store": 0, "corresponding_item": ["is", "set"]},
+        fields=["amazon_store", "asin", "sku", "corresponding_item"],
+        limit_page_length=0,
+    ):
+        store_config = stores.get(row.amazon_store)
+        store = str(store_config.cost_center or "") if store_config else ""
+        marketplace = str(store_config.marketplace_id or "").upper() if store_config else ""
+        asin = str(row.asin or "").upper()
+        item = str(row.corresponding_item or "")
         if not (store and asin and item and marketplace):
             continue
-        sku = frappe.db.get_value(
+        sku = str(row.sku or "") or frappe.db.get_value(
             "Amazon order synchronization",
             {"store": store, "marketplace_id": marketplace, "asin": asin}, "sku",
             order_by="purchase_date desc",
@@ -399,7 +408,7 @@ def sync_asin_item_mappings():
             "doctype": "Fengjing - Product Corresponding Platform - Main Table",
             "启用": 1, "店铺": store, "站点id": marketplace,
             "平台asin": asin, "平台sku": sku, "物料id": item,
-            "平台sku_属性": "Amazon ASIN抓取配置同步",
+            "平台sku_属性": "Amazon排名商品池同步",
             "平台链接": f"https://www.{domain}/dp/{asin}",
         }).insert(ignore_permissions=True)
         created += 1

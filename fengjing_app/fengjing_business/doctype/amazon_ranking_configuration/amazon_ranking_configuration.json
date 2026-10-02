@@ -17,10 +17,17 @@
   "capture_catalog_images",
   "max_retries",
   "task_timeout_minutes",
+  "discovery_interval_hours",
   "schedule_section",
   "last_fetch_at",
   "next_fetch_at",
   "last_fetch_result",
+  "discovery_schedule_section",
+  "last_discovery_at",
+  "next_discovery_at",
+  "discovery_column",
+  "last_discovery_result",
+  "last_discovery_error",
   "runtime_section",
   "current_task_status",
   "current_execution_type",
@@ -104,6 +111,14 @@
    "non_negative": 1
   },
   {
+   "default": "24",
+   "description": "How often the store listing is refreshed. Manual competitor products are not removed by discovery.",
+   "fieldname": "discovery_interval_hours",
+   "fieldtype": "Int",
+   "label": "Product Discovery Interval Hours",
+   "non_negative": 1
+  },
+  {
    "fieldname": "schedule_section",
    "fieldtype": "Section Break",
    "label": "Schedule and Result"
@@ -124,6 +139,39 @@
    "fieldname": "last_fetch_result",
    "fieldtype": "Small Text",
    "label": "Last Fetch Result",
+   "read_only": 1
+  },
+  {
+   "fieldname": "discovery_schedule_section",
+   "fieldtype": "Section Break",
+   "label": "Product Discovery Result"
+  },
+  {
+   "fieldname": "last_discovery_at",
+   "fieldtype": "Datetime",
+   "label": "Last Product Discovery At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "next_discovery_at",
+   "fieldtype": "Datetime",
+   "label": "Next Product Discovery At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "discovery_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_discovery_result",
+   "fieldtype": "Small Text",
+   "label": "Last Product Discovery Result",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_discovery_error",
+   "fieldtype": "Small Text",
+   "label": "Last Product Discovery Error",
    "read_only": 1
   },
   {
@@ -202,4 +250,3 @@
  "states": [],
  "track_changes": 1
 }
-

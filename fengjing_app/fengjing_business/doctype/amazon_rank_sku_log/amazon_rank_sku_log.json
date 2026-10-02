@@ -5,6 +5,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "ranking_product",
   "\u5546\u54c1\u5217\u8868api_asin",
   "\u6293\u53d6\u6570\u636e\u7684\u65f6\u95f4",
   "\u5c5e\u4e8e\u54ea\u4e2a\u5e97\u94fa",
@@ -55,6 +56,16 @@
   "amended_from"
  ],
  "fields": [
+  {
+   "fieldname": "ranking_product",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Ranking Product",
+   "options": "Amazon Ranking Product",
+   "read_only": 1,
+   "search_index": 1
+  },
   {
    "fieldname": "\u5546\u54c1\u5217\u8868api_asin",
    "fieldtype": "Data",

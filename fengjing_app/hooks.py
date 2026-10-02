@@ -24,6 +24,15 @@ def run_amazon_finances():
     return run_scheduled_financial_sync()
 
 
+def run_amazon_rankings():
+    """Short scheduler entry; Scheduled Job Type.method is limited to 140 chars."""
+    from fengjing_app.fengjing_business.doctype.amazon_ranking_configuration.amazon_ranking_configuration import (
+        run_scheduled_ranking_sync,
+    )
+
+    return run_scheduled_ranking_sync()
+
+
 def run_ozon_orders():
     """Short scheduler entry; Scheduled Job Type.method is limited to 140 chars."""
     from fengjing_app.fengjing_business.doctype.fengjing___product_corresponding_platform___configuration.fengjing___product_corresponding_platform___configuration import (
@@ -187,11 +196,10 @@ app_include_js = "/assets/fengjing_app/js/fengjing_init_check.js?v=20260923-3"
 # 这样系统只会在打开科目表时，才精准加载这个 JS
 
 
-# 定时执行亚马逊抓取排名的函数
+# 各平台后台调度入口
 scheduler_events = {
     "all": [
-        # 指向刚才创建的那个入口函数
-        "fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log.定时执行亚马逊抓取排名的函数",
+        "fengjing_app.hooks.run_amazon_rankings",
         "fengjing_app.hooks.run_amazon_orders",
         "fengjing_app.hooks.run_amazon_finances",
         "fengjing_app.hooks.run_ozon_orders",
