@@ -167,22 +167,23 @@ def _get_store_maps():
     """Map marketplace IDs to store labels and Cost Center document names."""
     labels = {}
     store_ids = {}
-    try:
-        parent = frappe.get_single("Fengjing - Product Corresponding Platform - Configuration")
-        for row in parent.get("亚马逊api") or []:
-            marketplace = row.get("站点id") or row.get("marketplace_id")
-            store_id = row.get("店铺选项") or ""
-            store_label = store_id or row.get("卖家记号")
-            if store_id:
-                store_label = frappe.db.get_value(
-                    "Cost Center", store_id, "cost_center_name"
-                ) or store_label
-            if marketplace and store_label:
-                labels[str(marketplace)] = str(store_label)
-            if marketplace and store_id:
-                store_ids[str(marketplace)] = str(store_id)
-    except Exception:
-        pass
+    for row in frappe.get_all(
+        "Amazon Store Configuration",
+        filters={"enabled": 1},
+        fields=["marketplace_id", "cost_center", "store_name"],
+        limit_page_length=0,
+    ):
+        marketplace = str(row.marketplace_id or "").upper()
+        store_id = str(row.cost_center or "")
+        store_label = str(row.store_name or store_id)
+        if store_id:
+            store_label = frappe.db.get_value(
+                "Cost Center", store_id, "cost_center_name"
+            ) or store_label
+        if marketplace and store_label:
+            labels[marketplace] = str(store_label)
+        if marketplace and store_id:
+            store_ids[marketplace] = store_id
     return labels, store_ids
 
 

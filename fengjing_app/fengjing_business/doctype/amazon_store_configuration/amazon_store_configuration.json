@@ -127,7 +127,7 @@
   },
   {
    "fieldname": "refresh_token",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "Refresh Token",
    "reqd": 1
   },

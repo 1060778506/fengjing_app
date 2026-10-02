@@ -34,26 +34,6 @@ frappe.ui.form.on('Fengjing - Product Corresponding Platform - Configuration', {
     },
 
 
-    开启任务调度器: function (frm) {
-        frappe.call({
-            // 关键：这是从 apps/fengjing_app/ 后面开始算的 Python 路径
-            method: "fengjing_app.fengjing_business.doctype.fengjing___product_corresponding_platform___configuration.fengjing___product_corresponding_platform___configuration.开启任务调度器",
-            freeze: true,
-            freeze_message: "正在开启调度器...",
-            callback: function (r) {
-                if (r.message) {
-                    frappe.msgprint(r.message);
-                }
-            }
-        });
-    },
-
-    查看走势: function (frm) {
-        frappe.set_route("amazon-rank-trend");
-    }
-
-
-
 });
 
 // --- 子表逻辑：AI 配置项 (Fengjing - AI Configuration) ---
@@ -340,34 +320,6 @@ function 填充ai链接(frm, cdt, cdn) {
 
 
 
-
-// 测试亚马逊api
-// 注意：'accounts' 替换为你主表中子表字段的名字
-frappe.ui.form.on('Amazon API configuration', {
-    // 监听子表中的按钮点击，假设按钮字段名为 'test_button'
-    测试api: function (frm, cdt, cdn) {
-        let row = locals[cdt][cdn]; // 获取当前行的数据
-
-        frappe.call({
-            method: "测试亚马逊api", // 调用的函数名
-            doc: frm.doc, // 关键：指向主表文档
-            args: {
-                "account_name": row.name // 把当前子表行的 ID 传过去
-            },
-            freeze: true,
-            callback: function (r) {
-                if (r.message) {
-                    const result = r.message;
-                    frappe.msgprint({
-                        title: result.status === 'success' ? __('Amazon API 测试成功') : __('Amazon API 测试失败'),
-                        message: result.message || __('没有返回测试结果'),
-                        indicator: result.status === 'success' ? 'green' : 'red'
-                    });
-                }
-            }
-        });
-    }
-});
 
 function 确认ozon操作(message) {
     return new Promise((resolve) => {

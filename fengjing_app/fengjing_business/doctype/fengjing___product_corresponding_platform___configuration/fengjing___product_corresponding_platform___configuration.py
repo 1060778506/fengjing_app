@@ -11,7 +11,6 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from frappe.model.document import Document
 from frappe.utils import get_datetime, get_system_timezone
-from frappe.utils.scheduler import enable_scheduler, is_scheduler_disabled
 from frappe import _
 
 
@@ -78,53 +77,8 @@ class FengjingProductCorrespondingPlatformConfiguration(Document):
 
     接下来请你处理以下自然语言：
     """
-    亚马逊站点对应表 = """
-    美国	Amazon.com	ATVPDKIKX0DER
-    加拿大	Amazon.ca	A2EUQ1WTGCTBG2
-    墨西哥	Amazon.com.mx	A1AM78C64UM0Y8
-    巴西	Amazon.com.br	A2Q3Y263D00KWC
-    爱尔兰	Amazon.ie	A28R8C7NBKEWEA
-    西班牙	Amazon.es	A1RKKUPIHCS9HS
-    英国	Amazon.co.uk	A1F83G8C2ARO7P
-    法国	Amazon.fr	A13V1IB3VIYZZH
-    比利时	Amazon.com.be	AMEN7PMS3EDWL
-    荷兰	Amazon.nl	A1805IZSGTT6HS
-    德国	Amazon.de	A1PA6795UKMFR9
-    意大利	Amazon.it	APJ6JRA9NG5V4
-    瑞典	Amazon.se	A2NODRKZP88ZB9
-    南非	Amazon.co.za	AE08WJ6YKNBMC
-    波兰	Amazon.pl	A1C3SOZRARQ6R3
-    埃及	Amazon.eg	ARBP9OOSHTCHU
-    土耳其	Amazon.com.tr	A33AVAJ2PDY3EV
-    沙特阿拉伯	Amazon.sa	A17E79C6D8DWNP
-    阿联酋	Amazon.ae	A2VIGQ35RCS4UG
-    印度	Amazon.in	A21TJRUUN4KGV
-    新加坡	Amazon.sg	A19VAU5U5O7RUS
-    澳大利亚	Amazon.com.au	A39IBJ37TRP1C6
-    日本	Amazon.co.jp	A1VC38T7YXB528
-    """
-
     def validate(self):
-        """保留旧单据的通用配置校验；新排名链路不再读取旧 ASIN 子表。"""
-        已有API组合 = set()
-        for row in self.get("亚马逊api") or []:
-            店铺 = str(row.get("店铺选项") or "").strip()
-            站点id = str(row.get("站点id") or "").strip().upper()
-            卖家记号 = str(row.get("卖家记号") or "").strip()
-            # Marketplace ID 统一大写；Seller ID 只清理误输入的首尾空格。
-            row.站点id = 站点id
-            row.卖家记号 = 卖家记号
-            if not 店铺 or not 站点id:
-                continue
-            组合 = (店铺, 站点id)
-            if 组合 in 已有API组合:
-                frappe.throw(
-                    _("店铺 {0} 与站点ID {1} 的Amazon API配置重复，请只保留一行。").format(
-                        frappe.bold(店铺), frappe.bold(站点id)
-                    )
-                )
-            已有API组合.add(组合)
-
+        """对尚未拆分的 Ozon 店铺子表做唯一性校验。"""
         已有ozon组合 = set()
         for row in self.get("table_wckx") or []:
             店铺 = str(row.get("店铺选项") or "").strip()
@@ -142,13 +96,9 @@ class FengjingProductCorrespondingPlatformConfiguration(Document):
             已有ozon组合.add(组合)
 
     def onload(self):
-        #不管是不是空的都去写入
-        self.站点id对应表 = self.亚马逊站点对应表
         # 2. Python 内部调用
         if not self.丰境_ai生成物料提示词:
             self.丰境_ai生成物料提示词 = self.STANDARD_PROMPT
-        #if not self.站点id对应表:
-        #    self.站点id对应表 = self.亚马逊站点对应表
         if not self.物料命名模版:
             self.物料命名模版 = self.默认物料命名模版
     # 3. 暴露给前端 JS 调用的接口
@@ -169,141 +119,6 @@ class FengjingProductCorrespondingPlatformConfiguration(Document):
         )
 
 
-
-    @frappe.whitelist()
-    def 测试亚马逊api(self, account_name=None):
-        from fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log import (
-            亚马逊请求,
-            获取SP_API区域地址,
-        )
-
-        # 1. 找到被点击的那一行子表数据
-        子表行 = None
-        for row in self.亚马逊api:  # 假设子表字段名是“亚马逊api”
-            if row.name == account_name:
-                子表行 = row
-                break
-        
-        if not 子表行:
-            return {"status": "error", "message": "找不到对应的行数据"}
-
-        # 2. 正确获取中文命名的字段值
-        # 普通 Data 类型的字段直接点出来
-        客户端编码 = 子表行.get_password("客户端编码")
-        
-        # Password 类型的字段必须用 get_password 方法解密
-        客户端密钥 = 子表行.get_password("客户端密钥")
-        刷新令牌 = 子表行.get_password("刷新令牌")
-        站点id = str(子表行.站点id or "").strip().upper()
-        卖家记号 = str(子表行.卖家记号 or "").strip()
-
-        缺少字段 = [
-            字段名 for 字段名, 字段值 in (
-                ("客户端编码", 客户端编码),
-                ("客户端密钥", 客户端密钥),
-                ("刷新令牌", 刷新令牌),
-                ("站点ID", 站点id),
-                ("卖家记号", 卖家记号),
-            )
-            if not 字段值
-        ]
-        if 缺少字段:
-            return {
-                "status": "error",
-                "message": f"无法测试，缺少：{'、'.join(缺少字段)}",
-            }
-
-        sp_api地址 = 获取SP_API区域地址(站点id)
-        if not sp_api地址:
-            return {
-                "status": "error",
-                "message": f"无法识别站点ID {站点id} 所属的 SP-API 区域。",
-            }
-        
-        # 3. 换取 Access Token
-        api链接 = "https://api.amazon.com/auth/o2/token"
-        数据 = {
-            "grant_type": "refresh_token",
-            "refresh_token": 刷新令牌,
-            "client_id": 客户端编码,
-            "client_secret": 客户端密钥
-        }
-        
-        try:
-            # 1. 发送请求
-            响应对象 = 亚马逊请求("POST", api链接, data=数据, timeout=15, retries=3)
-            
-            # 2. 获取 JSON 内容
-            返回结果 = 响应对象.json()
-
-            # 3. 判断响应状态码（要用响应对象的 status_code）
-            if 响应对象.status_code == 200:
-                # 提取临时令牌
-                临时令牌 = 返回结果.get("access_token")
-                if not 临时令牌:
-                    子表行.db_set("是否可用", f"不可用：{frappe.utils.now()}")
-                    return {
-                        "status": "error",
-                        "message": "Amazon 授权响应成功，但没有返回 Access Token。",
-                    }
-
-                # 令牌成功后，再验证当前站点、卖家记号和 Listings API 权限。
-                listings地址 = f"{sp_api地址}/listings/2021-08-01/items/{卖家记号}"
-                listings响应 = 亚马逊请求(
-                    "GET",
-                    listings地址,
-                    headers={
-                        "X-Amz-Access-Token": 临时令牌,
-                        "Accept": "application/json",
-                        "User-Agent": "FengjingAmazonApiTest/1.0",
-                    },
-                    params={
-                        "marketplaceIds": 站点id,
-                        "includedData": "summaries",
-                        "pageSize": 1,
-                    },
-                    timeout=30,
-                    retries=3,
-                )
-                if listings响应.status_code != 200:
-                    子表行.db_set("是否可用", f"不可用：{frappe.utils.now()}")
-                    失败摘要 = frappe.utils.escape_html(
-                        (listings响应.text or "无响应内容")[:500]
-                    )
-                    return {
-                        "status": "error",
-                        "message": (
-                            f"授权令牌可用，但 Listings API 测试失败（HTTP "
-                            f"{listings响应.status_code}）：{失败摘要}"
-                        ),
-                    }
-
-                # 获取当前时间 (格式如: 2026-03-11 21:15:30)
-                当前时间 = frappe.utils.now()
-                显示内容 = f"可用：{当前时间}"
-                
-                # 更新子表当前行的字段
-                子表行.db_set("是否可用", 显示内容) 
-
-                return {
-                    "status": "success",
-                    "message": (
-                        f"✅ 完整测试成功：授权令牌、站点ID、卖家记号和 Listings API 均可用。"
-                        f"<br>站点ID：{站点id}<br>区域地址：{sp_api地址}<br>{显示内容}"
-                    )
-                }
-            else:
-                # 授权失败的情况
-                失败原因 = 返回结果.get("error_description") or 响应对象.text
-                子表行.db_set("是否可用", f"不可用：{frappe.utils.now()}")
-                
-                return {
-                    "status": "error", 
-                    "message": f"授权失败: {失败原因}"
-                }
-
-        except Exception as e:
-            return {"status": "error", "message": f"连接错误: {str(e)}"}
 
     @frappe.whitelist()
     def 测试ozon_api(self, account_name=None):
@@ -1037,23 +852,4 @@ def 定时执行ozon订单同步():
             frappe.logger("ozon_orders", allow_site=True).exception(
                 "Ozon订单定时任务入队失败：配置行=%s", 行.name
             )
-
-
-# 不要缩进
-@frappe.whitelist()
-def 开启任务调度器():
-    if is_scheduler_disabled():
-        try:
-            enable_scheduler() 
-            frappe.db.commit() 
-            # 记录日志方便追溯
-            frappe.log_error("用户通过前端按钮开启了调度器", "系统维护")
-            return "调度器已成功开启！定时任务现在开始排队。"
-        except Exception as e:
-            return f"开启失败: {str(e)}"
-    else:
-        return "调度器已经是开启状态。"
-
-
-
 

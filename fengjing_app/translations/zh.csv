@@ -206,10 +206,8 @@
 "Amazon AWD Import List","亚马逊AWD导入表"
 Import Amazon order settlement details,导入亚马逊订单结算明细
 "Fengjing - Product Corresponding Platform - Main Table","丰境-产品对应平台-主表"
-"Amazon SKU Ranking Configuration Table","亚马逊sku排名配置-子表"
 "Amazon Rank SKU Log","亚马逊sku产品排名"
 "Amazon Settlement Detail","亚马逊结算明细表"
-Amazon API configuration,配置亚马逊api-子表
 Marketplace Store,店铺列表
 Import Amazon and remove orders,导入亚马逊移除订单
 Amazon removes order details,亚马逊移除订单明细
@@ -271,7 +269,6 @@ Default Wiki Space,默认知识库空间
 Ozon Freight Canvas,Ozon 运费画布
 Ozon order storage,Ozon 订单信息
 Ozon ranking storage,Ozon 排名信息
-Amazon Financial Transaction Configuration - Sub-table,亚马逊财务交易同步配置－子表
 Amazon Financial Transaction,亚马逊财务交易
 "Standard with Numbers","标准加数字"
 "Defines the date after which the item can no longer be used in transactions or manufacturing","规定了该物品在交易或生产中不再可使用的日期"
