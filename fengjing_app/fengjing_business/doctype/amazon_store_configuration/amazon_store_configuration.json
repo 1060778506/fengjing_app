@@ -121,13 +121,13 @@
   },
   {
    "fieldname": "client_secret",
-   "fieldtype": "Password",
+   "fieldtype": "Data",
    "label": "Client Secret",
    "reqd": 1
   },
   {
    "fieldname": "refresh_token",
-   "fieldtype": "Password",
+   "fieldtype": "Data",
    "label": "Refresh Token",
    "reqd": 1
   },
@@ -188,4 +188,3 @@
  "track_changes": 1,
  "title_field": "store_name"
 }
-
