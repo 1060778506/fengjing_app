@@ -198,8 +198,11 @@ doc_events = {
 
 # 只有在“整页刷新”或者“重新进入系统”加载初始化数据时，才会调用一次。
 extend_bootinfo = "fengjing_app.install.新系统公司执行的净化科目表"
-# 加载科目表弹窗js
-app_include_js = "/assets/fengjing_app/js/fengjing_init_check.js?v=20260923-3"
+# 加载科目表弹窗 JS 和丰境前端公共组件库
+app_include_js = [
+    "/assets/fengjing_app/js/fengjing_init_check.js?v=20260923-3",
+    "fengjing_libraries.bundle.js",
+]
 
 # 2. 专门针对 Account 列表页的 JS 加载（官方推荐做法）
 # 这样系统只会在打开科目表时，才精准加载这个 JS
