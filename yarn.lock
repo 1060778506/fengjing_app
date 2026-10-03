@@ -41,13 +41,13 @@ dom-align@^1.12.4:
   resolved "https://registry.npmjs.org/dom-align/-/dom-align-1.12.4.tgz"
   integrity sha512-R8LUSEay/68zE5c8/3BDxiTEvgb4xZTF0RKmAHfiEVN3klfIpXfi2/QCoiWPccVQ0J/ZGdz9OjzL4uJEP/MRAw==
 
-echarts@^5.6.0:
-  version "5.6.0"
-  resolved "https://registry.npmmirror.com/echarts/-/echarts-5.6.0.tgz"
-  integrity sha512-oTbVTsXfKuEhxftHqL5xprgLoc0k7uScAwtryCgWF6hPYFLRwOUHiFmHGCBKP5NPFNkDVopOieyUqYGH8Fa3kA==
+echarts@^6.1.0:
+  version "6.1.0"
+  resolved "https://registry.npmjs.org/echarts/-/echarts-6.1.0.tgz"
+  integrity sha512-q0yaFPggC9FUdsWH4blavRWFmxdrIodbkoKNAjJudAI6CA9gNPxHtV2RcZNEepZVlk4yvBYkOkbk6HIVpIyHZA==
   dependencies:
     tslib "2.3.0"
-    zrender "5.6.1"
+    zrender "6.1.0"
 
 lodash-es@^4.17.15:
   version "4.18.1"
@@ -83,7 +83,7 @@ three@^0.160.1:
 
 tslib@2.3.0:
   version "2.3.0"
-  resolved "https://registry.npmmirror.com/tslib/-/tslib-2.3.0.tgz"
+  resolved "https://registry.npmjs.org/tslib/-/tslib-2.3.0.tgz"
   integrity sha512-N82ooyxVNm6h1riLCoyS9e3fuJ3AMG2zIZs2Gd1ATcSFjSA23Q0fzjjZeh0jbJvWVDZ0cJT8yaNNaaXHzueNjg==
 
 utility-types@^3.10.0:
@@ -91,9 +91,9 @@ utility-types@^3.10.0:
   resolved "https://registry.npmjs.org/utility-types/-/utility-types-3.11.0.tgz"
   integrity sha512-6Z7Ma2aVEWisaL6TvBCy7P8rm2LQoPv6dJ7ecIaIixHcwfbJ0x7mWdbcwlIM5IGQxPZSFYeqRCqlOOeKoJYMkw==
 
-zrender@5.6.1:
-  version "5.6.1"
-  resolved "https://registry.npmmirror.com/zrender/-/zrender-5.6.1.tgz"
-  integrity sha512-OFXkDJKcrlx5su2XbzJvj/34Q3m6PvyCZkVPHGYpcCJ52ek4U/ymZyfuV1nKE23AyBJ51E/6Yr0mhZ7xGTO4ag==
+zrender@6.1.0:
+  version "6.1.0"
+  resolved "https://registry.npmjs.org/zrender/-/zrender-6.1.0.tgz"
+  integrity sha512-oEGMDB6pOP2S6OwRR4PdVv610zrjnA3Bh+JnSG12fYJlBKjtNAoEb5fSUoCOOINlH96I2fU38/A2UpRKs67xYQ==
   dependencies:
     tslib "2.3.0"

@@ -126,6 +126,9 @@ cd "/root/桌面/erpnext-os-py/fengjing_app" && git add -A && git commit -m "202
 			# 字段导入到自己的app内
 			bench --site fjnb export-fixtures
 
+			#升级包升级组件
+			npm audit fix --force
+
 			# 查看日志
 			docker logs -f --tail 100 neizhang-backend-1
 
