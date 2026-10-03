@@ -92,6 +92,7 @@ git symbolic-ref HEAD refs/heads/develop
 git reset --mixed FETCH_HEAD
 git status
 
+
 # 如果你在 Docker 外部服务器主机：
 cd "/root/桌面/erpnext-os-py/fengjing_app"
 [ -d ".git" ] || git init
