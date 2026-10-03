@@ -10,6 +10,7 @@
   "\u4e30\u5883_ai\u79d8\u94a5",
   "\u4e30\u5883_api\u94fe\u63a5",
   "\u4e2d\u8f6c\u7ad9\u6a21\u578b",
+  "\u4e2d\u8f6c\u7ad9\u6a21\u578b\u5217\u8868_json",
   "\u83b7\u53d6\u6a21\u578b",
   "\u4e30\u5883_ai\u901a\u8baf\u662f\u5426\u6b63\u5e38",
   "\u4e30\u5883_ai\u6d4b\u8bd5\u94fe\u63a5",
@@ -73,6 +74,15 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "\u4e2d\u8f6c\u7ad9\u6a21\u578b"
+  },
+  {
+   "default": "[]",
+   "fieldname": "\u4e2d\u8f6c\u7ad9\u6a21\u578b\u5217\u8868_json",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "\u4e2d\u8f6c\u7ad9\u6a21\u578b\u5217\u8868\u7f13\u5b58",
+   "options": "JSON",
+   "read_only": 1
   },
   {
    "fieldname": "\u83b7\u53d6\u6a21\u578b",

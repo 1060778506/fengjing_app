@@ -7,6 +7,7 @@ frappe.ui.form.on('Fengjing - Product Corresponding Platform - Configuration', {
     refresh: function (frm) {
         // 在控制台打印刷新日志，方便调试
         console.log("--- 页面已刷新 ---");
+        恢复全部中转站模型选项(frm);
         setTimeout(() => 刷新全部中转站模型状态(frm), 0);
     },
 
@@ -37,7 +38,6 @@ frappe.ui.form.on('Fengjing - Product Corresponding Platform - Configuration', {
 });
 
 // --- 子表逻辑：AI 配置项 (Fengjing - AI Configuration) ---
-window.fengjingTeamorouterModels = window.fengjingTeamorouterModels || [];
 
 frappe.ui.form.on('Fengjing - AI Configuration', {
     // 按钮 1：测试当前行 AI 节点的通讯是否正常
@@ -207,29 +207,31 @@ frappe.ui.form.on('Fengjing - AI Configuration', {
                 throw new Error(data.error?.message || data.message || `HTTP ${response.status}`);
             }
 
-            const models = (data.data || []).map(item => item.id).filter(Boolean);
+            const models = [...new Set(
+                (data.data || [])
+                    .map(item => String(item.id || '').trim())
+                    .filter(Boolean)
+            )];
             if (!models.length) {
                 throw new Error(__('接口没有返回可用模型。'));
             }
 
-            // 缓存本次获取结果，避免子表刷新或重新打开行时选项消失。
-            window.fengjingTeamorouterModels = models;
+            // 每一行独立持久化模型列表；重新打开页面后仍可恢复下拉选项。
+            await frappe.model.set_value(
+                cdt,
+                cdn,
+                '中转站模型列表_json',
+                JSON.stringify(models)
+            );
+            恢复全部中转站模型选项(frm);
+            设置中转站模型状态(frm, cdt, cdn);
 
-            const control = 获取子表字段控件(frm, cdn, '中转站模型');
-            if (control && typeof control.set_data === 'function') {
-                control.set_data(['', ...models]);
-                control.refresh();
-            } else if (control) {
-                control.df.options = ['', ...models].join('\n');
-                control.refresh();
-            }
-
-            if (row.中转站模型 && !models.includes(row.中转站模型)) {
-                await frappe.model.set_value(cdt, cdn, '中转站模型', '');
-            }
+            const selected_missing = row.中转站模型 && !models.includes(row.中转站模型);
             frappe.show_alert({
-                message: __('已获取 {0} 个可用模型，请在“中转站模型”中选择。', [models.length]),
-                indicator: 'green'
+                message: selected_missing
+                    ? __('已获取 {0} 个模型；原选择“{1}”暂不在新列表中，系统已保留，请确认后保存。', [models.length, row.中转站模型])
+                    : __('已获取 {0} 个可用模型，请选择“中转站模型”并保存。', [models.length]),
+                indicator: selected_missing ? 'orange' : 'green'
             });
         } catch (err) {
             console.error('获取 TeamoRouter 模型失败:', err);
@@ -253,6 +255,56 @@ function 获取子表字段控件(frm, cdn, fieldname) {
         || null;
 }
 
+function 读取中转站模型列表(row) {
+    const raw = row && row.中转站模型列表_json;
+    if (!raw) return [];
+    try {
+        const parsed = Array.isArray(raw) ? raw : JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return [...new Set(parsed.map(model => String(model || '').trim()).filter(Boolean))];
+    } catch (error) {
+        console.warn('中转站模型列表缓存不是有效 JSON：', row && row.name, error);
+        return [];
+    }
+}
+
+function 当前行中转站模型选项(row) {
+    return [...new Set([
+        row && row.中转站模型,
+        ...读取中转站模型列表(row)
+    ].map(model => String(model || '').trim()).filter(Boolean))];
+}
+
+function 应用中转站模型选项(frm, cdn, models) {
+    const control = 获取子表字段控件(frm, cdn, '中转站模型');
+    if (!control) return;
+    const options = ['', ...models];
+    if (typeof control.set_data === 'function') {
+        control.set_data(options);
+    } else {
+        control.df.options = options.join('\n');
+    }
+    control.refresh();
+}
+
+function 恢复全部中转站模型选项(frm) {
+    const table = frm.fields_dict['丰境_ai配置页面'];
+    if (!table || !table.grid) return;
+
+    // Grid 的字段定义是共享的，先放入所有行的缓存作为未展开行的显示兜底；
+    // 行控件渲染后，再由“设置中转站模型状态”替换成该行自己的列表。
+    const all_models = [...new Set(
+        (frm.doc.丰境_ai配置页面 || []).flatMap(row => 当前行中转站模型选项(row))
+    )];
+    table.grid.update_docfield_property(
+        '中转站模型',
+        'options',
+        ['', ...all_models].join('\n')
+    );
+    // update_docfield_property 会延迟刷新 Grid；刷新完成后再次按行收窄选项。
+    setTimeout(() => 刷新全部中转站模型状态(frm), 200);
+}
+
 function 设置中转站模型状态(frm, cdt, cdn) {
     const row = locals[cdt] && locals[cdt][cdn];
     if (!row) return;
@@ -264,16 +316,7 @@ function 设置中转站模型状态(frm, cdt, cdn) {
     grid_row.toggle_editable('中转站模型', enabled);
     grid_row.toggle_editable('获取模型', enabled);
     if (enabled) {
-        const cached = window.fengjingTeamorouterModels || [];
-        const models = [...new Set([row.中转站模型, ...cached].filter(Boolean))];
-        const model_control = 获取子表字段控件(frm, cdn, '中转站模型');
-        if (model_control && typeof model_control.set_data === 'function') {
-            model_control.set_data(['', ...models]);
-            model_control.refresh();
-        } else if (model_control) {
-            model_control.df.options = ['', ...models].join('\n');
-            model_control.refresh();
-        }
+        应用中转站模型选项(frm, cdn, 当前行中转站模型选项(row));
     }
     ['中转站模型', '获取模型'].forEach((fieldname) => {
         const control = 获取子表字段控件(frm, cdn, fieldname);
