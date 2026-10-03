@@ -7,7 +7,6 @@
  "field_order": [
   "\u4e30\u5883_ai\u914d\u7f6e\u9875\u9762",
   "section_break_acsf",
-  "table_wckx",
   "section_break_hvkg",
   "\u4e30\u5883_ai\u751f\u6210\u7269\u6599\u63d0\u793a\u8bcd",
   "\u7269\u6599\u547d\u540d\u6a21\u7248",
@@ -45,11 +44,6 @@
   {
    "fieldname": "section_break_acsf",
    "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "table_wckx",
-   "fieldtype": "Table",
-   "options": "Ozon Store API Sub-table"
   }
  ],
  "grid_page_length": 50,

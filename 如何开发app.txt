@@ -119,13 +119,12 @@ cd "/root/桌面/erpnext-os-py/fengjing_app" && git add -A && git commit -m "202
 			bench --site fjnb install-app fengjing_app
 			# 卸载app
 			bench --site fjnb uninstall-app erpnext_china
+			# 登录docker内部
+			docker exec -it neizhang-backend-1 bash
 			# 更新   刷新   重启所有服务  仅编译我的app
 			bench --site fjnb migrate && bench --site fjnb clear-cache && bench restart && bench build --app fengjing_app --force
 			# 字段导入到自己的app内
 			bench --site fjnb export-fixtures
-
-			# 登录docker内部
-			docker exec -it neizhang-backend-1 bash
 
 			# 查看日志
 			docker logs -f --tail 100 neizhang-backend-1
