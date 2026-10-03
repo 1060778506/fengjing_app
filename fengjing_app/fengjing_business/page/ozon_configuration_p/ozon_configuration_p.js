@@ -32,12 +32,16 @@ class OzonConfigurationCenter {
 		this.creatingStore = false;
 		this.storeSearch = "";
 		this.controls = new Map();
+		this.initialValues = new Map();
+		this.controlMountId = 0;
 		this.loaded = false;
 		this.loading = false;
 		this.dirty = false;
 		this.mountingControls = false;
 		this.data = null;
 		this.root = $(`<div class="pc-root pc-${this.platform}"></div>`).appendTo(this.page.main);
+		this.resizeEvent = `resize.pc-${this.platform}-configuration`;
+		$(window).off(this.resizeEvent).on(this.resizeEvent, () => this.fitViewport());
 		this.page.set_primary_action(__("刷新配置"), () => this.refreshWithGuard(), "refresh");
 		this.page.add_inner_button(__("新建店铺"), () => this.startNewStore());
 		this.bindEvents();
@@ -121,6 +125,14 @@ class OzonConfigurationCenter {
 			</div>
 		`);
 		this.mountEditorControls();
+		window.requestAnimationFrame(() => this.fitViewport());
+	}
+
+	fitViewport() {
+		if (!this.root?.length || window.innerWidth <= 900) return;
+		const top = this.root[0].getBoundingClientRect().top;
+		const height = Math.max(560, Math.floor(window.innerHeight - top - 6));
+		this.root.css("--pc-viewport-height", `${height}px`);
 	}
 
 	storeListHtml() {
@@ -166,8 +178,7 @@ class OzonConfigurationCenter {
 			: `${this.storeLabel(store)} · ${section.title}`;
 		return `
 			<div class="pc-editor-head"><div class="pc-editor-title"><span class="pc-editor-icon">${this.icon(section.key)}</span><div><small>${this.escape(context)}</small><h3>${this.escape(title)}</h3><p>${this.escape(section.description || "")}</p></div></div><div class="pc-editor-status">${this.statusHtml(section, document)}</div></div>
-			${document && (section.actions || []).length ? `<div class="pc-taskbar"><div>${section.actions.map((action) => `<button type="button" data-action="run" data-task="${action.key}" class="pc-task-${action.style || "ghost"}">${this.icon(this.actionIcon(action.key))}${this.escape(action.label)}</button>`).join("")}</div></div>` : ""}
-				<div class="pc-editor-scroll">
+			<div class="pc-editor-scroll">
 				${isNew && section.key !== "stores" ? `<div class="pc-notice">${this.icon("info")}<div><b>${__("尚未建立这项配置")}</b><span>${__("下面已经关联当前店铺，填写后保存即可创建。")}</span></div></div>` : ""}
 				${this.errorHtml(section, document)}
 				<div class="pc-form-sections">${this.formSectionsHtml(section)}</div>
@@ -193,29 +204,60 @@ class OzonConfigurationCenter {
 
 	fieldGroups(section) {
 		const groups = [];
-		let current = { title: __("基础设置"), fields: [] };
+		let current = { key: "basic", title: __("基础设置"), fields: [] };
 		(section.fields || []).forEach((field) => {
 			if (field.fieldtype === "Section Break") {
-				if (current.fields.length) groups.push(current);
-				current = { title: this.translateSection(field.label || __("配置选项")), fields: [] };
+				if (current.fields.length || this.actionsForGroup(section, current).length) groups.push(current);
+				current = { key: field.fieldname || "section", title: this.translateSection(field.label || __("配置选项")), fields: [] };
 				return;
 			}
 			if (field.fieldtype === "Column Break" || field.read_only) return;
 			if (section.key === "stores" && this.currentStore() && field.fieldname === section.primary_field) return;
 			current.fields.push(field);
 		});
-		if (current.fields.length) groups.push(current);
+		if (current.fields.length || this.actionsForGroup(section, current).length) groups.push(current);
 		return groups;
+	}
+
+	actionGroup(actionKey, sectionKey) {
+		if (actionKey === "test") return "connection";
+		if (actionKey === "history") return "history";
+		if (actionKey === "discover") return "discovery";
+		if (actionKey === "full") return "schedule";
+		if (String(actionKey).startsWith("recheck_")) return actionKey;
+		if (actionKey === "latest") {
+			if (["orders", "finances"].includes(sectionKey)) return "incremental";
+			if (sectionKey === "ranking" && this.platform === "ozon") return "automatic";
+			return "schedule";
+		}
+		return "basic";
+	}
+
+	actionsForGroup(section, group) {
+		if (!this.currentDocument(section)) return [];
+		const groupKey = String(group.key || "").toLowerCase();
+		return (section.actions || []).filter((action) => groupKey.includes(this.actionGroup(action.key, section.key)));
+	}
+
+	actionButtonsHtml(actions) {
+		if (!actions.length) return "";
+		return `<div class="pc-section-actions">${actions.map((action) => `<button type="button" data-action="run" data-task="${action.key}" class="pc-task-${action.style || "ghost"}">${this.icon(this.actionIcon(action.key))}${this.escape(action.label)}</button>`).join("")}</div>`;
 	}
 
 	formSectionsHtml(section) {
 		const groups = this.fieldGroups(section);
 		if (!groups.length) return `<div class="pc-no-fields">${__("这项配置没有可编辑字段。")}</div>`;
-		return groups.map((group, index) => `<section class="pc-form-section"><header><span>${String(index + 1).padStart(2, "0")}</span><h4>${this.escape(group.title)}</h4></header><div class="pc-form-grid">${group.fields.map((field) => `<div class="pc-form-slot ${this.isWideField(field) ? "wide" : ""}" data-fieldname="${this.escape(field.fieldname)}"></div>`).join("")}</div></section>`).join("");
+		return groups.map((group, index) => {
+			const actions = this.actionsForGroup(section, group);
+			return `<section class="pc-form-section"><header><div class="pc-section-title"><span>${String(index + 1).padStart(2, "0")}</span><h4>${this.escape(group.title)}</h4></div>${this.actionButtonsHtml(actions)}</header>${group.fields.length ? `<div class="pc-form-grid">${group.fields.map((field) => `<div class="pc-form-slot ${this.isWideField(field) ? "wide" : ""}" data-fieldname="${this.escape(field.fieldname)}"></div>`).join("")}</div>` : ""}</section>`;
+		}).join("");
 	}
 
 	mountEditorControls() {
 		this.controls.clear();
+		this.initialValues.clear();
+		const mountId = ++this.controlMountId;
+		const pendingValues = [];
 		const section = this.active;
 		if (!section || (!this.currentStore() && !this.creatingStore)) return;
 		const document = this.currentDocument(section);
@@ -233,12 +275,17 @@ class OzonConfigurationCenter {
 				return;
 			}
 			const control = frappe.ui.form.make_control({ parent, df, render_input: true });
-			control.set_value(value);
+			pendingValues.push(Promise.resolve(control.set_value(value)));
 			if (isStoredSecret && control.$input) control.$input.attr("placeholder", __("已保存，留空保持不变"));
 			control.$wrapper.off(".pc-editor").on("input.pc-editor change.pc-editor", ":input", () => this.markDirty());
 			this.controls.set(field.fieldname, control);
 		});
-		window.setTimeout(() => { this.mountingControls = false; }, 0);
+		Promise.all(pendingValues).then(() => {
+			if (mountId !== this.controlMountId) return;
+			this.initialValues = new Map([...this.controls].map(([fieldname, control]) => [fieldname, this.controlValue(control)]));
+			this.mountingControls = false;
+			this.setDirtyState(false);
+		});
 	}
 
 	makeCheckControl(parent, df, value) {
@@ -256,10 +303,22 @@ class OzonConfigurationCenter {
 	}
 
 	markDirty() {
-		if (this.mountingControls || this.dirty) return;
-		this.dirty = true;
-		this.root.find("[data-role='save-state']").addClass("dirty").html(`<i></i>${__("有未保存修改")}`);
-		this.root.find("[data-action='save']").addClass("is-dirty");
+		if (this.mountingControls) return;
+		const dirty = [...this.controls].some(([fieldname, control]) => this.controlValue(control) !== this.initialValues.get(fieldname));
+		this.setDirtyState(dirty);
+	}
+
+	controlValue(control) {
+		const value = control.get_value();
+		if (control.df.fieldtype === "Check") return this.isChecked(value) ? "1" : "0";
+		return value === null || value === undefined ? "" : String(value);
+	}
+
+	setDirtyState(dirty) {
+		this.dirty = dirty;
+		const state = this.root.find("[data-role='save-state']");
+		state.toggleClass("dirty", dirty).html(`<i></i>${dirty ? __("有未保存修改") : __("配置已同步")}`);
+		this.root.find("[data-action='save']").toggleClass("is-dirty", dirty);
 	}
 
 	async saveCurrent() {
@@ -336,8 +395,17 @@ class OzonConfigurationCenter {
 		if (task.confirm) frappe.confirm(__("确定执行“{0}”吗？任务将在后台运行。", [task.label]), execute); else execute();
 	}
 
-	toggleFullscreen() { this.root.toggleClass("pc-fullscreen"); $("body").toggleClass("pc-fullscreen-open", this.root.hasClass("pc-fullscreen")); }
-	exitFullscreen() { this.root.removeClass("pc-fullscreen"); $("body").removeClass("pc-fullscreen-open"); }
+	toggleFullscreen() {
+		this.root.toggleClass("pc-fullscreen");
+		const fullscreen = this.root.hasClass("pc-fullscreen");
+		$("body").toggleClass("pc-fullscreen-open", fullscreen);
+		if (!fullscreen) window.requestAnimationFrame(() => this.fitViewport());
+	}
+	exitFullscreen() {
+		this.root.removeClass("pc-fullscreen");
+		$("body").removeClass("pc-fullscreen-open");
+		window.requestAnimationFrame(() => this.fitViewport());
+	}
 	storeLabel(store) { return store?.values?.[this.storeSection?.primary_field] || store?.name || __("未命名店铺"); }
 
 	isFailed(section, document) {
