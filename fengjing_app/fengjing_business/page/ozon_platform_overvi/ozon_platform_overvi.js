@@ -1,6 +1,6 @@
 frappe.pages["ozon-platform-overvi"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({ parent: wrapper, title: "Ozon 店铺概况", single_column: true });
-	frappe.require("assets/fengjing_app/js/Amazon_Order_Map/主体-echarts.js", () => new OzonPlatformOverview(page, wrapper));
+	frappe.require("assets/fengjing_app/js/图表-echarts.js", () => new OzonPlatformOverview(page, wrapper));
 };
 
 class OzonPlatformOverview {

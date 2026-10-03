@@ -1,6 +1,6 @@
 frappe.pages["amazon-order-display"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({ parent: wrapper, title: "Amazon 订单概况中心", single_column: true });
-	frappe.require(["assets/fengjing_app/js/Amazon_Order_Map/主体-echarts.js","assets/fengjing_app/js/Amazon_Order_Map/amazon-order-map.js"], () => new AmazonOrderDashboard(page, wrapper));
+	frappe.require(["assets/fengjing_app/js/图表-echarts.js","assets/fengjing_app/js/Amazon_Order_Map/amazon-order-map.js"], () => new AmazonOrderDashboard(page, wrapper));
 };
 
 class AmazonOrderDashboard {

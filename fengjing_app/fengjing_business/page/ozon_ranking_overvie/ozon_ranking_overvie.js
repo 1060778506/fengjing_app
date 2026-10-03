@@ -1,6 +1,6 @@
 frappe.pages["ozon-ranking-overvie"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({ parent: wrapper, title: "Ozon 商品排名", single_column: true });
-	frappe.require("assets/fengjing_app/js/Amazon_Order_Map/主体-echarts.js", () => new OzonRankingOverview(page, wrapper));
+	frappe.require("assets/fengjing_app/js/图表-echarts.js", () => new OzonRankingOverview(page, wrapper));
 };
 
 class OzonRankingOverview {
