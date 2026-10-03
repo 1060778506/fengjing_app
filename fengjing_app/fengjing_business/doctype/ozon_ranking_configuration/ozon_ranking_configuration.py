@@ -10,7 +10,7 @@ from datetime import timedelta
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import cint, get_datetime, getdate, now_datetime, today
+from frappe.utils import cint, flt, get_datetime, getdate, now_datetime, today
 
 from fengjing_app.fengjing_business.doctype.ozon_store_configuration.ozon_store_configuration import (
 	ensure_database_connection,
@@ -168,6 +168,153 @@ def _storage_context(store):
 	return frappe._dict({"店铺选项": store.cost_center, "ozon_id": store.ozon_id})
 
 
+def _find_corresponding_item(store, sku, offer_id=None, product_id=None):
+	base = {"启用": 1, "店铺": store}
+	lookups = []
+	for value in (offer_id, sku):
+		value = str(value or "").strip()
+		if value:
+			lookups.append({**base, "平台sku": value})
+	for value in (product_id, sku):
+		value = str(value or "").strip()
+		if value:
+			lookups.append({**base, "平台asin": value})
+	item_code = None
+	for filters in lookups:
+		item_code = frappe.db.get_value(MAPPING_DOCTYPE, filters, "物料id")
+		if item_code:
+			break
+	if not item_code:
+		return None, None, None
+	item = frappe.db.get_value("Item", item_code, ["item_name", "image"], as_dict=True) or {}
+	return item_code, item.get("item_name"), item.get("image")
+
+
+def _safe_json_array(value):
+	try:
+		result = json.loads(value or "[]")
+		return result if isinstance(result, list) else []
+	except (TypeError, ValueError, json.JSONDecodeError):
+		return []
+
+
+def _archive_previous_json(doc, new_hash):
+	old_json = str(doc.get("raw_json") or "").strip()
+	old_hash = str(doc.get("raw_json_hash") or "").strip()
+	if not old_json or not old_hash or old_hash == new_hash:
+		return False
+	history = _safe_json_array(doc.get("raw_json_history"))
+	try:
+		old_payload = json.loads(old_json)
+	except (TypeError, ValueError, json.JSONDecodeError):
+		old_payload = old_json
+	history.append(
+		{
+			"archived_at": str(now_datetime()),
+			"position": doc.get("position"),
+			"sync_type": doc.get("sync_type"),
+			"raw_json_hash": old_hash,
+			"raw_json": old_payload,
+		}
+	)
+	doc.raw_json_history = json.dumps(history, ensure_ascii=False, sort_keys=True, indent=2)
+	return True
+
+
+def _ranking_key(store, sku, query, period_start, period_end, data_level):
+	identity = "|".join(
+		str(value or "").strip()
+		for value in (store, sku, query, period_start, period_end, data_level)
+	)
+	return hashlib.sha256(identity.encode("utf-8")).hexdigest()
+
+
+def _valid_currency(value):
+	currency = str(value or "").strip().upper()
+	return currency if currency and frappe.db.exists("Currency", currency) else None
+
+
+def _save_ranking_record(
+	data,
+	data_level,
+	context,
+	sync_type,
+	period_start,
+	period_end,
+	product_info=None,
+	analytics_period=None,
+):
+	"""Upsert a ranking row without depending on the legacy ranking controller."""
+	if not isinstance(data, dict):
+		raise ValueError("Ozon 排名数据必须是 JSON 对象")
+	product_info = product_info or {}
+	analytics_period = analytics_period or {}
+	sku = str(data.get("sku") or product_info.get("sku") or "").strip()
+	if not sku:
+		raise ValueError("Ozon 排名记录缺少 SKU")
+	query = str(data.get("query") or "").strip()
+	store = str(context.get("店铺选项") or "").strip()
+	period_from = str(analytics_period.get("date_from") or period_start)
+	period_to = str(analytics_period.get("date_to") or period_end)
+	unique_key = _ranking_key(store, sku, query, period_from, period_to, data_level)
+	raw_payload = {"analytics_period": analytics_period, "data_level": data_level, "data": data}
+	raw_json = json.dumps(raw_payload, ensure_ascii=False, sort_keys=True, indent=2)
+	raw_hash = hashlib.sha256(raw_json.encode("utf-8")).hexdigest()
+	offer_id = str(data.get("offer_id") or product_info.get("offer_id") or "").strip()
+	product_id = str(data.get("product_id") or product_info.get("product_id") or "").strip()
+	item_code, item_name, item_image = _find_corresponding_item(store, sku, offer_id, product_id)
+	source_endpoint = (
+		"/v1/analytics/product-queries/details"
+		if data_level == "关键词明细"
+		else "/v1/analytics/product-queries"
+	)
+	values = {
+		"ranking_record_key": unique_key,
+		"store": store,
+		"ozon_id": str(context.get("ozon_id") or "").strip(),
+		"data_level": data_level,
+		"sku": sku,
+		"offer_id": offer_id,
+		"product_id": product_id,
+		"product_name": data.get("name") or product_info.get("name"),
+		"category": data.get("category") or product_info.get("category"),
+		"ozon_product_image": data.get("image") or product_info.get("image"),
+		"corresponding_item": item_code,
+		"corresponding_item_name": item_name,
+		"corresponding_item_image": item_image,
+		"statistics_date": period_end,
+		"analytics_period_from": f"{period_start} 00:00:00",
+		"analytics_period_to": f"{period_end} 23:59:59",
+		"fetched_at": now_datetime(),
+		"search_query": query[:140],
+		"position": flt(data.get("position")),
+		"query_index": flt(data.get("query_index")),
+		"unique_search_users": cint(data.get("unique_search_users")),
+		"unique_view_users": cint(data.get("unique_view_users")),
+		"view_conversion": flt(data.get("view_conversion")),
+		"currency_code": _valid_currency(data.get("currency")),
+		"gmv": flt(data.get("gmv")),
+		"order_count": cint(data.get("order_count")),
+		"source_endpoint": source_endpoint,
+		"sync_type": sync_type,
+		"raw_json_hash": raw_hash,
+		"sync_status": "成功",
+		"last_error": None,
+		"raw_json": raw_json,
+	}
+	values = {key: value for key, value in values.items() if value not in (None, "")}
+	existing_name = frappe.db.get_value(STORAGE_DOCTYPE, {"ranking_record_key": unique_key}, "name")
+	if existing_name:
+		doc = frappe.get_doc(STORAGE_DOCTYPE, existing_name)
+		archived = _archive_previous_json(doc, raw_hash)
+		doc.update(values)
+		doc.save(ignore_permissions=True)
+		return {"created": 0, "updated": 1, "archived": cint(archived)}
+	doc = frappe.get_doc({"doctype": STORAGE_DOCTYPE, **values})
+	doc.insert(ignore_permissions=True)
+	return {"created": 1, "updated": 0, "archived": 0}
+
+
 def _date_range(start_date, end_date):
 	return (
 		f"{start_date.isoformat()}T00:00:00Z",
@@ -195,10 +342,6 @@ def _paged_request(store, path, base_body, result_field, api_name, page_size=100
 
 
 def _sync_period(config, store, sync_label, start_date, end_date, products):
-	from fengjing_app.fengjing_business.doctype.ozon_ranking_storage.ozon_ranking_storage import (
-		_保存排名记录,
-	)
-
 	date_from, date_to = _date_range(start_date, end_date)
 	context = _storage_context(store)
 	summary = {
@@ -231,7 +374,7 @@ def _sync_period(config, store, sync_label, start_date, end_date, products):
 					sku = str(row.get("sku") or "").strip()
 					product_info = {**products.get(sku, {}), **row}
 					product_summaries[sku] = product_info
-					result = _保存排名记录(
+					result = _save_ranking_record(
 						row,
 						"商品汇总",
 						context,
@@ -264,7 +407,7 @@ def _sync_period(config, store, sync_label, start_date, end_date, products):
 				for row in rows:
 					sku = str(row.get("sku") or "").strip()
 					product_info = product_summaries.get(sku) or products.get(sku) or {}
-					result = _保存排名记录(
+					result = _save_ranking_record(
 						row,
 						"关键词明细",
 						context,

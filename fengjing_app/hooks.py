@@ -35,38 +35,47 @@ def run_amazon_rankings():
 
 def run_ozon_orders():
     """Short scheduler entry; Scheduled Job Type.method is limited to 140 chars."""
-    from fengjing_app.fengjing_business.doctype.fengjing___product_corresponding_platform___configuration.fengjing___product_corresponding_platform___configuration import (
-        定时执行ozon订单同步,
+    from fengjing_app.fengjing_business.doctype.ozon_order_configuration.ozon_order_configuration import (
+        run_scheduled_order_sync,
     )
 
-    return 定时执行ozon订单同步()
+    return run_scheduled_order_sync()
 
 
 def run_ozon_rankings():
     """Short scheduler entry; Scheduled Job Type.method is limited to 140 chars."""
-    from fengjing_app.fengjing_business.doctype.ozon_ranking_storage.ozon_ranking_storage import (
-        定时执行ozon排名同步,
+    from fengjing_app.fengjing_business.doctype.ozon_ranking_configuration.ozon_ranking_configuration import (
+        run_scheduled_ranking_sync,
     )
 
-    return 定时执行ozon排名同步()
+    return run_scheduled_ranking_sync()
 
 
 def run_ozon_prices():
     """Short scheduler entry; Scheduled Job Type.method is limited to 140 chars."""
-    from fengjing_app.fengjing_business.doctype.ozon_price_history.ozon_price_history import (
-        定时执行ozon价格记录,
+    from fengjing_app.fengjing_business.doctype.ozon_price_configuration.ozon_price_configuration import (
+        run_scheduled_price_recording,
     )
 
-    return 定时执行ozon价格记录()
+    return run_scheduled_price_recording()
 
 
 def run_ozon_finances():
     """Short scheduler entry; Scheduled Job Type.method is limited to 140 chars."""
-    from fengjing_app.fengjing_business.doctype.ozon_financial_storage.ozon_financial_storage import (
-        定时执行ozon财务同步,
+    from fengjing_app.fengjing_business.doctype.ozon_financial_configuration.ozon_financial_configuration import (
+        run_scheduled_financial_sync,
     )
 
-    return 定时执行ozon财务同步()
+    return run_scheduled_financial_sync()
+
+
+def run_ozon_settlement_statements():
+    """Short scheduler entry for independent Ozon settlement statements."""
+    from fengjing_app.fengjing_business.doctype.ozon_settlement_statement_configuration.ozon_settlement_statement_configuration import (
+        run_scheduled_statement_sync,
+    )
+
+    return run_scheduled_statement_sync()
 
 fixtures = [
     # 第一个：导出计量单位 (UOM)
@@ -205,7 +214,8 @@ scheduler_events = {
         "fengjing_app.hooks.run_ozon_orders",
         "fengjing_app.hooks.run_ozon_rankings",
         "fengjing_app.hooks.run_ozon_prices",
-        "fengjing_app.hooks.run_ozon_finances"
+        "fengjing_app.hooks.run_ozon_finances",
+        "fengjing_app.hooks.run_ozon_settlement_statements"
     ],
     "daily": [
         "fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log.清理过期排名日志"
