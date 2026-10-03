@@ -235,6 +235,22 @@ def start_incremental_sync(name):
 	return {"status": "queued", "message": "Amazon financial incremental sync has been queued"}
 
 
+@frappe.whitelist()
+def start_recheck_sync(name, days):
+	days = cint(days)
+	if days not in RECHECK_DAYS:
+		frappe.throw("Unsupported Amazon financial recheck range")
+	config = _get_configuration(name)
+	if not cint(config.enabled):
+		frappe.throw("Please enable financial sync first")
+	get_store(config.amazon_store)
+	_enqueue(name, f"recheck_{days}")
+	return {
+		"status": "queued",
+		"message": f"Amazon financial {days}-day recheck has been queued",
+	}
+
+
 def _next_recheck(now, interval_days):
 	return get_datetime(now).replace(hour=2, minute=59, second=0, microsecond=0) + timedelta(
 		days=max(cint(interval_days), 1)

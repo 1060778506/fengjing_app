@@ -23,6 +23,7 @@
   "client_secret",
   "refresh_token",
   "connection_section",
+  "test_api_connection",
   "api_status",
   "last_tested_at",
   "last_error"
@@ -135,6 +136,11 @@
    "fieldname": "connection_section",
    "fieldtype": "Section Break",
    "label": "Connection Status"
+  },
+  {
+   "fieldname": "test_api_connection",
+   "fieldtype": "Button",
+   "label": "Test API Connection"
   },
   {
    "fieldname": "api_status",

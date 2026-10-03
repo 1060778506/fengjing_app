@@ -57,6 +57,16 @@
   "recheck_180_last_at",
   "recheck_180_column",
   "recheck_180_next_at",
+  "manual_actions_section",
+  "sync_latest_now",
+  "sync_history_now",
+  "manual_actions_column_1",
+  "recheck_7_now",
+  "recheck_14_now",
+  "recheck_30_now",
+  "manual_actions_column_2",
+  "recheck_90_now",
+  "recheck_180_now",
   "runtime_section",
   "current_task_status",
   "current_execution_type",
@@ -363,6 +373,54 @@
    "fieldtype": "Datetime",
    "label": "180 Days Next Recheck",
    "read_only": 1
+  },
+  {
+   "fieldname": "manual_actions_section",
+   "fieldtype": "Section Break",
+   "label": "Manual Sync Actions"
+  },
+  {
+   "fieldname": "sync_latest_now",
+   "fieldtype": "Button",
+   "label": "Sync Latest Finances Now"
+  },
+  {
+   "fieldname": "sync_history_now",
+   "fieldtype": "Button",
+   "label": "Start Historical Financial Sync"
+  },
+  {
+   "fieldname": "manual_actions_column_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_7_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 7 Days"
+  },
+  {
+   "fieldname": "recheck_14_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 14 Days"
+  },
+  {
+   "fieldname": "recheck_30_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 30 Days"
+  },
+  {
+   "fieldname": "manual_actions_column_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_90_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 90 Days"
+  },
+  {
+   "fieldname": "recheck_180_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 180 Days"
   },
   {
    "fieldname": "runtime_section",

@@ -19,6 +19,7 @@
   "seller_api_key",
   "performance_client_id",
   "performance_api_key",
+  "test_api_connection",
   "connection_section",
   "seller_api_status",
   "performance_api_status",
@@ -112,6 +113,11 @@
    "fieldname": "performance_api_key",
    "fieldtype": "Password",
    "label": "Performance API Key"
+  },
+  {
+   "fieldname": "test_api_connection",
+   "fieldtype": "Button",
+   "label": "Test API Connection"
   },
   {
    "fieldname": "connection_section",

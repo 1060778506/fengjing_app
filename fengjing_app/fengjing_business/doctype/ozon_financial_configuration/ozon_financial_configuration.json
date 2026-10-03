@@ -9,9 +9,18 @@
   "basic_section",
   "ozon_store",
   "enabled",
-  "auto_sync_enabled",
   "incremental_interval_minutes",
   "incremental_lookback_days",
+  "manual_section",
+  "sync_latest_now",
+  "sync_history_now",
+  "manual_column_1",
+  "recheck_7_now",
+  "recheck_14_now",
+  "recheck_30_now",
+  "manual_column_2",
+  "recheck_90_now",
+  "recheck_180_now",
   "history_section",
   "history_start_date",
   "history_end_date",
@@ -21,6 +30,8 @@
   "history_progress",
   "history_inserted_count",
   "history_updated_count",
+  "history_archived_count",
+  "history_summary",
   "history_last_error",
   "incremental_section",
   "incremental_checkpoint",
@@ -58,13 +69,6 @@
   "finance_recheck_180_last_at",
   "finance_recheck_180_column",
   "finance_recheck_180_next_at",
-  "statement_section",
-  "statement_sync_enabled",
-  "statement_lookback_periods",
-  "statement_last_sync_at",
-  "statement_column",
-  "statement_next_sync_at",
-  "statement_last_result",
   "runtime_section",
   "current_task_status",
   "current_execution_type",
@@ -98,12 +102,6 @@
    "in_list_view": 1
   },
   {
-   "fieldname": "auto_sync_enabled",
-   "fieldtype": "Check",
-   "label": "Enable Automatic Sync",
-   "default": "0"
-  },
-  {
    "fieldname": "incremental_interval_minutes",
    "fieldtype": "Int",
    "label": "Incremental Interval Minutes",
@@ -116,6 +114,54 @@
    "label": "Incremental Lookback Days",
    "default": "3",
    "non_negative": 1
+  },
+  {
+   "fieldname": "manual_section",
+   "fieldtype": "Section Break",
+   "label": "Manual Sync Actions"
+  },
+  {
+   "fieldname": "sync_latest_now",
+   "fieldtype": "Button",
+   "label": "Sync Latest Finances Now"
+  },
+  {
+   "fieldname": "sync_history_now",
+   "fieldtype": "Button",
+   "label": "Start Historical Financial Sync"
+  },
+  {
+   "fieldname": "manual_column_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_7_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 7 Days"
+  },
+  {
+   "fieldname": "recheck_14_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 14 Days"
+  },
+  {
+   "fieldname": "recheck_30_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 30 Days"
+  },
+  {
+   "fieldname": "manual_column_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_90_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 90 Days"
+  },
+  {
+   "fieldname": "recheck_180_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 180 Days"
   },
   {
    "fieldname": "history_section",
@@ -166,6 +212,18 @@
    "fieldname": "history_updated_count",
    "fieldtype": "Int",
    "label": "History Updated Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_archived_count",
+   "fieldtype": "Int",
+   "label": "History Archived Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_summary",
+   "fieldtype": "Small Text",
+   "label": "History Summary",
    "read_only": 1
   },
   {
@@ -378,51 +436,12 @@
    "read_only": 1
   },
   {
-   "fieldname": "statement_section",
-   "fieldtype": "Section Break",
-   "label": "Settlement Statement Sync"
-  },
-  {
-   "fieldname": "statement_sync_enabled",
-   "fieldtype": "Check",
-   "label": "Enable Statement Sync",
-   "default": "0"
-  },
-  {
-   "fieldname": "statement_lookback_periods",
-   "fieldtype": "Int",
-   "label": "Statement Lookback Periods",
-   "default": "2",
-   "non_negative": 1
-  },
-  {
-   "fieldname": "statement_last_sync_at",
-   "fieldtype": "Datetime",
-   "label": "Last Statement Sync",
-   "read_only": 1
-  },
-  {
-   "fieldname": "statement_column",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "statement_next_sync_at",
-   "fieldtype": "Datetime",
-   "label": "Next Statement Sync",
-   "read_only": 1
-  },
-  {
-   "fieldname": "statement_last_result",
-   "fieldtype": "Small Text",
-   "label": "Last Statement Result",
-   "read_only": 1
-  },
-  {
    "fieldname": "runtime_section",
    "fieldtype": "Section Break",
    "label": "Runtime Status"
   },
   {
+   "default": "Idle",
    "fieldname": "current_task_status",
    "fieldtype": "Select",
    "label": "Current Task Status",

@@ -17,6 +17,10 @@
   "max_keywords_per_product",
   "retention_days",
   "premium_analytics_available",
+  "manual_section",
+  "sync_latest_now",
+  "manual_column",
+  "sync_history_now",
   "history_section",
   "history_start_date",
   "history_end_date",
@@ -26,9 +30,10 @@
   "history_progress",
   "history_inserted_count",
   "history_updated_count",
+  "history_archived_count",
+  "history_summary",
   "history_last_error",
   "automatic_section",
-  "auto_sync_enabled",
   "sync_interval_hours",
   "data_delay_days",
   "lookback_days",
@@ -118,6 +123,25 @@
    "read_only": 1
   },
   {
+   "fieldname": "manual_section",
+   "fieldtype": "Section Break",
+   "label": "Manual Sync Actions"
+  },
+  {
+   "fieldname": "sync_latest_now",
+   "fieldtype": "Button",
+   "label": "Sync Latest Rankings Now"
+  },
+  {
+   "fieldname": "manual_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sync_history_now",
+   "fieldtype": "Button",
+   "label": "Start Historical Ranking Sync"
+  },
+  {
    "fieldname": "history_section",
    "fieldtype": "Section Break",
    "label": "Historical Ranking Sync"
@@ -169,6 +193,18 @@
    "read_only": 1
   },
   {
+   "fieldname": "history_archived_count",
+   "fieldtype": "Int",
+   "label": "History Archived Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_summary",
+   "fieldtype": "Small Text",
+   "label": "History Summary",
+   "read_only": 1
+  },
+  {
    "fieldname": "history_last_error",
    "fieldtype": "Small Text",
    "label": "History Last Error",
@@ -178,12 +214,6 @@
    "fieldname": "automatic_section",
    "fieldtype": "Section Break",
    "label": "Automatic Ranking Sync"
-  },
-  {
-   "fieldname": "auto_sync_enabled",
-   "fieldtype": "Check",
-   "label": "Enable Automatic Sync",
-   "default": "0"
   },
   {
    "fieldname": "sync_interval_hours",
@@ -234,6 +264,7 @@
    "label": "Runtime Status"
   },
   {
+   "default": "Idle",
    "fieldname": "current_task_status",
    "fieldtype": "Select",
    "label": "Current Task Status",

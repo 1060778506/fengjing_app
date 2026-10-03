@@ -9,20 +9,29 @@
   "basic_section",
   "ozon_store",
   "enabled",
-  "interval_minutes",
-  "product_scope",
-  "basic_column",
-  "record_cost_price",
-  "record_promotion_price",
-  "record_market_price",
+  "sync_interval_hours",
+  "latest_lookback_periods",
   "manual_section",
-  "record_now",
+  "sync_latest_now",
+  "manual_column",
+  "sync_history_now",
+  "history_section",
+  "history_start_date",
+  "history_end_date",
+  "history_checkpoint",
+  "history_status",
+  "history_column",
+  "history_progress",
+  "history_inserted_count",
+  "history_updated_count",
+  "history_archived_count",
+  "history_summary",
+  "history_last_error",
   "schedule_section",
-  "last_recorded_at",
-  "next_record_at",
-  "last_record_count",
+  "last_sync_at",
+  "next_sync_at",
   "schedule_column",
-  "last_record_result",
+  "last_sync_result",
   "runtime_section",
   "current_task_status",
   "current_execution_type",
@@ -51,45 +60,23 @@
   {
    "fieldname": "enabled",
    "fieldtype": "Check",
-   "label": "Enable Price Recording",
+   "label": "Enable Settlement Statement Sync",
    "default": "0",
    "in_list_view": 1
   },
   {
-   "fieldname": "interval_minutes",
+   "fieldname": "sync_interval_hours",
    "fieldtype": "Int",
-   "label": "Recording Interval Minutes",
-   "default": "60",
+   "label": "Sync Interval Hours",
+   "default": "24",
    "non_negative": 1
   },
   {
-   "fieldname": "product_scope",
-   "fieldtype": "Select",
-   "label": "Product Scope",
-   "options": "All Active Products\nOnly Bound Items",
-   "default": "All Active Products"
-  },
-  {
-   "fieldname": "basic_column",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "record_cost_price",
-   "fieldtype": "Check",
-   "label": "Record Cost Price",
-   "default": "1"
-  },
-  {
-   "fieldname": "record_promotion_price",
-   "fieldtype": "Check",
-   "label": "Record Promotion Price",
-   "default": "1"
-  },
-  {
-   "fieldname": "record_market_price",
-   "fieldtype": "Check",
-   "label": "Record Market Price",
-   "default": "1"
+   "fieldname": "latest_lookback_periods",
+   "fieldtype": "Int",
+   "label": "Latest Statement Lookback Periods",
+   "default": "6",
+   "non_negative": 1
   },
   {
    "fieldname": "manual_section",
@@ -97,9 +84,87 @@
    "label": "Manual Sync Actions"
   },
   {
-   "fieldname": "record_now",
+   "fieldname": "sync_latest_now",
    "fieldtype": "Button",
-   "label": "Record Prices Now"
+   "label": "Sync Latest Settlement Statements Now"
+  },
+  {
+   "fieldname": "manual_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sync_history_now",
+   "fieldtype": "Button",
+   "label": "Start Historical Settlement Statement Sync"
+  },
+  {
+   "fieldname": "history_section",
+   "fieldtype": "Section Break",
+   "label": "Historical Settlement Statement Sync"
+  },
+  {
+   "fieldname": "history_start_date",
+   "fieldtype": "Date",
+   "label": "History Start Date"
+  },
+  {
+   "fieldname": "history_end_date",
+   "fieldtype": "Date",
+   "label": "History End Date"
+  },
+  {
+   "fieldname": "history_checkpoint",
+   "fieldtype": "Date",
+   "label": "History Checkpoint",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_status",
+   "fieldtype": "Select",
+   "label": "History Status",
+   "options": "Not Started\nWaiting\nRunning\nPaused\nCompleted\nFailed",
+   "default": "Not Started",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "history_progress",
+   "fieldtype": "Percent",
+   "label": "History Progress",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_inserted_count",
+   "fieldtype": "Int",
+   "label": "History Inserted Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_updated_count",
+   "fieldtype": "Int",
+   "label": "History Updated Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_archived_count",
+   "fieldtype": "Int",
+   "label": "History Archived Count",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_summary",
+   "fieldtype": "Small Text",
+   "label": "History Summary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_last_error",
+   "fieldtype": "Small Text",
+   "label": "History Last Error",
+   "read_only": 1
   },
   {
    "fieldname": "schedule_section",
@@ -107,21 +172,15 @@
    "label": "Schedule and Result"
   },
   {
-   "fieldname": "last_recorded_at",
+   "fieldname": "last_sync_at",
    "fieldtype": "Datetime",
-   "label": "Last Recorded At",
+   "label": "Last Sync At",
    "read_only": 1
   },
   {
-   "fieldname": "next_record_at",
+   "fieldname": "next_sync_at",
    "fieldtype": "Datetime",
-   "label": "Next Record At",
-   "read_only": 1
-  },
-  {
-   "fieldname": "last_record_count",
-   "fieldtype": "Int",
-   "label": "Last Record Count",
+   "label": "Next Sync At",
    "read_only": 1
   },
   {
@@ -129,9 +188,9 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "last_record_result",
+   "fieldname": "last_sync_result",
    "fieldtype": "Small Text",
-   "label": "Last Record Result",
+   "label": "Last Sync Result",
    "read_only": 1
   },
   {
@@ -188,7 +247,7 @@
  "modified": "2026-10-02 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
- "name": "Ozon Price Configuration",
+ "name": "Ozon Settlement Statement Configuration",
  "owner": "Administrator",
  "permissions": [
   {
@@ -211,4 +270,3 @@
  "states": [],
  "track_changes": 1
 }
-
