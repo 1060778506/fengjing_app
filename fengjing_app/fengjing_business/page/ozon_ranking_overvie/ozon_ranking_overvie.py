@@ -3,8 +3,22 @@ import json
 import frappe
 from frappe.utils import add_days, flt, nowdate
 
+from fengjing_app.fengjing_business.doctype.ozon_store_configuration.ozon_store_configuration import (
+	get_store,
+	ozon_seller_request,
+)
+
 
 DOCTYPE = "Ozon ranking storage"
+STATUS_LABELS = {
+	"Idle": "空闲", "Waiting": "等待执行", "Running": "运行中",
+	"Success": "成功", "Failed": "失败", "Not Started": "未开始",
+	"Completed": "已完成",
+}
+
+
+def _status_label(value):
+	return STATUS_LABELS.get(str(value or ""), str(value or ""))
 
 
 @frappe.whitelist()
@@ -126,19 +140,18 @@ def _enrich_items(rows):
 
 def _enrich_ozon_images(rows):
 	"""Fill missing Ozon images from Seller API and reuse the six-hour cache."""
-	from fengjing_app.fengjing_business.doctype.fengjing___product_corresponding_platform___configuration.fengjing___product_corresponding_platform___configuration import (
-		_发送ozon订单请求,
-	)
-
 	missing = [row for row in rows if not row.get("ozon_product_image")]
 	if not missing:
 		return
-	parent = frappe.get_single("Fengjing - Product Corresponding Platform - Configuration")
-	configs = {
-		str(row.get("店铺选项") or ""): row
-		for row in (parent.get("table_wckx") or [])
-		if row.get("店铺选项") and row.get("ozon_id") and row.get("ozon_秘钥")
-	}
+	configs = {}
+	for row in frappe.get_all(
+		"Ozon Store Configuration",
+		filters={"enabled": 1},
+		fields=["name", "cost_center"],
+		limit_page_length=0,
+	):
+		if row.cost_center:
+			configs[str(row.cost_center)] = get_store(row.name)
 	grouped = {}
 	for row in missing:
 		store = str(row.get("store") or "")
@@ -150,7 +163,7 @@ def _enrich_ozon_images(rows):
 	cache = frappe.cache
 	for store, offer_ids in grouped.items():
 		config = configs[store]
-		ozon_id = str(config.get("ozon_id") or "")
+		ozon_id = str(config.ozon_id or "")
 		uncached = []
 		for offer_id in offer_ids:
 			cached = cache.get_value(f"fengjing:ozon-product-image:{ozon_id}:{offer_id}")
@@ -162,10 +175,12 @@ def _enrich_ozon_images(rows):
 		for offset in range(0, len(uncached), 500):
 			chunk = uncached[offset:offset + 500]
 			try:
-				response = _发送ozon订单请求(
+				response = ozon_seller_request(
 					config,
-					"https://api-seller.ozon.ru/v3/product/info/list",
-					{"offer_id": chunk},
+					"POST",
+					"/v3/product/info/list",
+					json_data={"offer_id": chunk},
+					timeout=60,
 				)
 				if response.status_code != 200:
 					continue
@@ -228,19 +243,34 @@ def _get_options():
 def _get_sync_health():
 	result = []
 	try:
-		parent = frappe.get_single("Fengjing - Product Corresponding Platform - Configuration")
-		for row in parent.get("table_wckx") or []:
+		stores = {
+			row.name: row.cost_center
+			for row in frappe.get_all(
+				"Ozon Store Configuration",
+				fields=["name", "cost_center"],
+				limit_page_length=0,
+			)
+		}
+		for row in frappe.get_all(
+			"Ozon Ranking Configuration",
+			fields=[
+				"ozon_store", "enabled", "current_task_status", "history_status",
+				"history_progress", "history_checkpoint", "last_sync_at",
+				"next_sync_at", "last_sync_result", "last_error",
+			],
+			limit_page_length=0,
+		):
 			result.append({
-				"store": row.get("店铺选项") or "",
-				"enabled": bool(row.get("开启ozon商品排名同步")),
-				"task_status": row.get("排名当前任务状态") or "",
-				"history_status": row.get("排名历史同步状态") or "",
-				"history_progress": flt(row.get("排名历史同步进度")),
-				"complete_to": row.get("排名历史已完整同步到"),
-				"last_sync": row.get("上次排名同步时间"),
-				"next_sync": row.get("下次排名同步时间"),
-				"last_result": row.get("上次排名同步结果") or "",
-				"error": row.get("排名最近错误") or "",
+				"store": stores.get(row.ozon_store) or row.ozon_store or "",
+				"enabled": bool(row.enabled),
+				"task_status": _status_label(row.current_task_status),
+				"history_status": _status_label(row.history_status),
+				"history_progress": flt(row.history_progress),
+				"complete_to": row.history_checkpoint,
+				"last_sync": row.last_sync_at,
+				"next_sync": row.next_sync_at,
+				"last_result": row.last_sync_result or "",
+				"error": row.last_error or "",
 			})
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "Ozon排名概览：读取同步状态失败")

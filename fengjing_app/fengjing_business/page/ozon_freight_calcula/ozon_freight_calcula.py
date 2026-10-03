@@ -7,6 +7,12 @@ import frappe
 import requests
 from frappe.utils import nowdate, flt
 
+from fengjing_app.fengjing_business.doctype.ozon_store_configuration.ozon_store_configuration import (
+    get_store,
+    ozon_seller_request,
+    response_error_summary,
+)
+
 DOCTYPE = "Ozon Freight Canvas"
 
 HISTORY = "Ozon Competitor Price History"
@@ -393,15 +399,83 @@ def bootstrap():
                 canvases=frappe.get_list(DOCTYPE, fields=["name", "canvas_title", "modified"], order_by="modified desc", limit_page_length=200), defaults=default_config(), exchange=exchange_info())
 
 
+def _saved_daily_exchange_rate(rate_date):
+    return flt(
+        frappe.db.get_value(
+            "Currency Exchange",
+            {"date": rate_date, "from_currency": "RUB", "to_currency": "CNY"},
+            "exchange_rate",
+        )
+    )
+
+
+def _fetch_daily_exchange_rate(rate_date):
+    from erpnext.setup.utils import format_ces_api
+
+    settings = frappe.get_cached_doc("Currency Exchange Settings")
+    if settings.disabled:
+        return 0
+    request_values = {
+        "transaction_date": rate_date,
+        "from_currency": "RUB",
+        "to_currency": "CNY",
+    }
+    params = {
+        row.key: format_ces_api(row.value, request_values)
+        for row in settings.req_params
+    }
+    response = requests.get(
+        format_ces_api(settings.api_endpoint, request_values),
+        params=params,
+        timeout=(10, 20),
+    )
+    response.raise_for_status()
+    value = response.json()
+    for row in settings.result_key:
+        value = value[format_ces_api(str(row.key), request_values)]
+    return flt(value)
+
+
+def _save_daily_exchange_rate(rate_date, rate):
+    if rate <= 0 or _saved_daily_exchange_rate(rate_date):
+        return
+    frappe.get_doc(
+        {
+            "doctype": "Currency Exchange",
+            "date": rate_date,
+            "from_currency": "RUB",
+            "to_currency": "CNY",
+            "exchange_rate": rate,
+            "for_buying": 1,
+            "for_selling": 1,
+        }
+    ).insert(ignore_permissions=True, ignore_if_duplicate=True)
+
+
 @frappe.whitelist()
 def exchange_info():
     frappe.has_permission(DOCTYPE, "read", throw=True)
-    try:
-        from erpnext.setup.utils import get_exchange_rate
-        rate = flt(get_exchange_rate("RUB", "CNY", nowdate()))
-    except Exception:
-        rate = 0
-    return {"cny_per_rub": rate if rate > 0 else 0, "date": nowdate(), "source": "ERPNext 汇率（参考换算）" if rate > 0 else "未取得汇率，请手动填写"}
+    rate_date = nowdate()
+    rate = _saved_daily_exchange_rate(rate_date)
+    source = "ERPNext 当日已保存汇率"
+    if rate <= 0:
+        try:
+            rate = _fetch_daily_exchange_rate(rate_date)
+            if rate > 0:
+                _save_daily_exchange_rate(rate_date, rate)
+                source = "Ozon运费计算自动抓取并保存"
+        except Exception:
+            rate = 0
+            frappe.log_error(title="Ozon运费计算：无法取得RUB到CNY汇率")
+    if rate <= 0:
+        frappe.msgprint(
+            f"来源：Ozon运费计算。无法为关键日期 {rate_date} 查找 RUB 到 CNY 的汇率。"
+            "请手动创建汇率记录，或在本页面手动填写汇率。",
+            title="Ozon运费计算：汇率未取得",
+            indicator="orange",
+        )
+        source = "未取得汇率，请手动填写"
+    return {"cny_per_rub": rate if rate > 0 else 0, "date": rate_date, "source": source}
 
 
 def _valuation(item, visited=None):
@@ -461,16 +535,23 @@ def _valuation(item, visited=None):
     return result
 
 
-def _seller_read(row, path, payload):
+def _seller_read(store_config, path, payload):
     # Only these price/product read endpoints are permitted; never mutate Ozon prices.
     if path not in ("/v3/product/info/list", "/v5/product/info/prices", "/v3/product/list", "/v2/warehouse/list", "/v2/delivery-method/list", "/v2/product/info/stocks-by-warehouse/fbs"):
         raise ValueError("Unsupported read endpoint")
-    response = requests.post("https://api-seller.ozon.ru" + path, headers={
-        "Client-Id": str(row.get("ozon_id") or "").strip(),
-        "Api-Key": str(row.get("ozon_秘钥") or "").strip(),
-    }, json=payload, timeout=(5, 15))
+    response = ozon_seller_request(
+        store_config,
+        "POST",
+        path,
+        json_data=payload,
+        timeout=20,
+        max_retries=2,
+    )
     if response.status_code != 200:
-        raise ValueError(f"Ozon 只读查询失败：HTTP {response.status_code}")
+        raise ValueError(
+            f"Ozon 只读查询失败：HTTP {response.status_code}："
+            f"{response_error_summary(response)}"
+        )
     return response.json()
 
 
@@ -532,15 +613,14 @@ def _warehouse_stocks(row, store, skus):
 
 @frappe.whitelist()
 def warehouse_stocks(products, force=0):
-    parent = _ozon_access()
+    stores = _ozon_access()
     if isinstance(products, str):
         products = json.loads(products)
     if not isinstance(products, list) or len(products) > 1500:
         frappe.throw("分仓库存查询最多1500组商品")
     configs = {}
-    for row in parent.get("table_wckx") or []:
-        if row.get("店铺选项") and row.get("ozon_id") and row.get("ozon_秘钥"):
-            configs.setdefault(str(row.get("店铺选项")), []).append(row)
+    for store_config in stores:
+        configs.setdefault(str(store_config.cost_center or ""), []).append(store_config)
     grouped = {}
     for p in products:
         if not isinstance(p, dict) or not isinstance(p.get("skus"), list) or len(p["skus"]) > 20:
@@ -554,15 +634,17 @@ def warehouse_stocks(products, force=0):
             grouped.setdefault(store, set()).add(str(sku))
     output, errors = [], []
     for store, values in grouped.items():
-        row = configs[store][0]
+        store_config = configs[store][0]
         values = sorted(values)
         for start in range(0, len(values), 100):
             skus = values[start:start + 100]
-            digest = hashlib.sha256(json.dumps([row.get("ozon_id"), row.get("ozon_秘钥"), skus]).encode()).hexdigest()
+            digest = hashlib.sha256(
+                json.dumps([store_config.name, str(store_config.modified), skus]).encode()
+            ).hexdigest()
             key = "ozfc:warehouse-stock:" + digest
             cached = None if int(force) else frappe.cache.get_value(key)
             try:
-                records = cached if cached is not None else _warehouse_stocks(row, store, skus)
+                records = cached if cached is not None else _warehouse_stocks(store_config, store, skus)
                 if cached is None:
                     frappe.cache.set_value(key, records, expires_in_sec=300)
                 output.extend({**record, "store": store} for record in records)
@@ -573,18 +655,19 @@ def warehouse_stocks(products, force=0):
 
 @frappe.whitelist()
 def warehouse_channels(force=0):
-    parent = _ozon_access()
-    rows = [r for r in parent.get("table_wckx") or [] if r.get("ozon_id") and r.get("ozon_秘钥")]
-    names = [str(r.get("店铺选项") or "") for r in rows]
+    rows = _ozon_access()
+    names = [str(row.cost_center or "") for row in rows]
     if any(not s for s in names) or len(set(names)) != len(names):
         frappe.throw("Ozon 店铺配置必须唯一且非空")
     output, errors = [], []
-    for row, store in zip(rows, names):
-        credential = hashlib.sha256(str(row.get("ozon_秘钥")).encode()).hexdigest()[:16]
-        key = "ozfc:warehouse:" + str(row.get("ozon_id")) + ":" + credential
+    for store_config, store in zip(rows, names):
+        credential = hashlib.sha256(
+            f"{store_config.name}|{store_config.modified}".encode()
+        ).hexdigest()[:16]
+        key = "ozfc:warehouse:" + str(store_config.ozon_id) + ":" + credential
         cached = None if int(force) else frappe.cache.get_value(key)
         try:
-            channels = cached if cached is not None else _warehouse_channels(row, store)
+            channels = cached if cached is not None else _warehouse_channels(store_config, store)
             if cached is None:
                 frappe.cache.set_value(key, channels, expires_in_sec=300)
             output.extend({**channel, "store": store} for channel in channels)
@@ -597,22 +680,29 @@ def _ozon_access():
     frappe.has_permission(DOCTYPE, "write", throw=True)
     if frappe.session.user != "Administrator" and "System Manager" not in frappe.get_roles():
         frappe.throw("仅系统管理员可以管理 Ozon 后台登录凭证和查询店铺商品")
-    parent = frappe.get_single("Fengjing - Product Corresponding Platform - Configuration")
-    parent.check_permission("read")
-    return parent
+    frappe.has_permission("Ozon Store Configuration", "read", throw=True)
+    return [
+        get_store(name)
+        for name in frappe.get_all(
+            "Ozon Store Configuration",
+            filters={"enabled": 1},
+            pluck="name",
+            order_by="store_name asc",
+            limit_page_length=0,
+        )
+    ]
 
 
 @frappe.whitelist()
 def competitor_collection_manifest(products):
     """Resolve account IDs only for the current canvas's explicit product list."""
-    parent = _ozon_access()
+    stores = _ozon_access()
     products = json.loads(products) if isinstance(products, str) else products
     if not isinstance(products, list) or len(products) > 1500:
         frappe.throw("当前画布商品列表格式不正确，最多1500个绑定商品")
     configs = {}
-    for row in parent.get("table_wckx") or []:
-        if row.get("ozon_id") and row.get("ozon_秘钥"):
-            configs.setdefault(str(row.get("店铺选项") or ""), []).append(row)
+    for store_config in stores:
+        configs.setdefault(str(store_config.cost_center or ""), []).append(store_config)
     output, seen = [], set()
     for product in products:
         if not isinstance(product, dict):
@@ -623,7 +713,7 @@ def competitor_collection_manifest(products):
         rows = configs.get(store, [])
         if len(rows) != 1:
             frappe.throw("卡片对应 Ozon 店铺配置不存在或重复")
-        company = str(rows[0].get("ozon_id") or "")
+        company = str(rows[0].ozon_id or "")
         if not company.isdigit():
             frappe.throw("Ozon 店铺 Client ID 格式不正确")
         if (store, item_id) in seen:
@@ -635,14 +725,13 @@ def competitor_collection_manifest(products):
 
 @frappe.whitelist()
 def list_ozon_canvas_products(store="", last_id=""):
-    parent = _ozon_access()
-    configs = [r for r in parent.get("table_wckx") or [] if r.get("ozon_id") and r.get("ozon_秘钥")]
-    stores = [str(r.get("店铺选项") or "") for r in configs]
+    configs = _ozon_access()
+    stores = [str(row.cost_center or "") for row in configs]
     if not store:
         if not stores or any(not s for s in stores) or len(set(stores)) != len(stores):
             frappe.throw("请先配置唯一且非空的 Ozon 店铺")
         return {"stores": stores}
-    rows = [r for r in configs if str(r.get("店铺选项")) == store]
+    rows = [row for row in configs if str(row.cost_center or "") == store]
     if len(rows) != 1:
         frappe.throw("Ozon 店铺配置不存在或重复")
     row = rows[0]
@@ -760,14 +849,13 @@ def item_details(item_code, force=0):
         result["errors"].append("没有平台物料绑定表读取权限")
         return result
     bindings = frappe.get_list(mapping_type, filters={"物料id": item_code, "启用": 1}, fields=["店铺", "平台sku"], limit_page_length=100)
-    parent = frappe.get_single("Fengjing - Product Corresponding Platform - Configuration")
-    if not frappe.has_permission(parent.doctype, "read", doc=parent):
+    if not frappe.has_permission("Ozon Store Configuration", "read"):
         result["errors"].append("没有 API 配置读取权限")
         return result
     configs = {}
-    for row in parent.get("table_wckx") or []:
-        if row.get("店铺选项"):
-            configs.setdefault(str(row.get("店铺选项")), []).append(row)
+    for store_config in _ozon_access():
+        if store_config.cost_center:
+            configs.setdefault(str(store_config.cost_center), []).append(store_config)
     seen = set()
     ozon_bindings = [b for b in bindings if str(b.get("店铺")) in configs]
     if len(ozon_bindings) > 5:
@@ -780,15 +868,12 @@ def item_details(item_code, force=0):
         if len(configs[store]) != 1:
             result["errors"].append(f"{store} 的 API 行不唯一，未自动选用")
             continue
-        row = configs[store][0]
-        if not row.get("ozon_id") or not row.get("ozon_秘钥"):
-            result["errors"].append(f"{store} 缺少 Seller API 凭据")
-            continue
-        key = "ozfc:price:" + str(row.get("ozon_id")) + ":" + sku
+        store_config = configs[store][0]
+        key = "ozfc:price:" + str(store_config.ozon_id) + ":" + sku
         cached = None if int(force) else frappe.cache.get_value(key)
         if cached and ("commissions" not in cached or "ozon_sku_ids" not in cached): cached = None
         try:
-            price = cached or _product_price(row, sku)
+            price = cached or _product_price(store_config, sku)
             if not cached: frappe.cache.set_value(key, price, expires_in_sec=300)
             result["prices"].append({**price, "store": store, "sku": sku})
         except (ValueError, requests.RequestException) as exc:
