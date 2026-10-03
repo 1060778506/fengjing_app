@@ -109,14 +109,14 @@ class OzonConfigurationCenter {
 				<div class="pc-brand"><div class="pc-brand-mark">${this.escape(this.brandMark || this.brand?.slice(0, 1) || "F")}</div><div><span>${this.escape(this.brand)} · CONFIGURATION</span><h2>${this.escape(this.data.title)}</h2><p>${store ? `${this.escape(this.storeLabel(store))} · ${this.escape(this.active?.title || "")}` : this.escape(this.data.subtitle)}</p></div></div>
 				<div class="pc-top-actions"><span class="pc-saved-state" data-role="save-state"><i></i>${__("配置已同步")}</span><button type="button" data-action="refresh" title="${__("刷新配置")}">${this.icon("refresh")}</button><button type="button" data-action="fullscreen" title="${__("页面内全屏")}">${this.icon("expand")}</button></div>
 			</header>
-			<div class="pc-console">
+				<div class="pc-console">
 				<aside class="pc-store-rail">
-					<div class="pc-rail-head"><div><span>${__("第一步")}</span><h3>${__("选择店铺")}</h3></div><button type="button" data-action="new-store" title="${__("新建店铺")}">${this.icon("plus")}</button></div>
+						<div class="pc-rail-head"><h3>${__("选择店铺")}</h3><button type="button" data-action="new-store" title="${__("新建店铺")}">${this.icon("plus")}</button></div>
 					<label class="pc-store-search">${this.icon("search")}<input data-role="store-search" value="${this.escape(this.storeSearch)}" placeholder="${__("搜索店铺")}"></label>
 					<div class="pc-store-list" data-role="store-list">${this.storeListHtml()}</div>
 					<div class="pc-rail-foot"><span></span>${__("凭证仅在保存时传输")}</div>
 				</aside>
-				<nav class="pc-config-rail"><div class="pc-config-head"><span>${__("第二步")}</span><h3>${__("配置菜单")}</h3><p>${__("选择要维护的业务配置")}</p></div><div class="pc-config-menu">${this.configMenuHtml()}</div></nav>
+					<nav class="pc-config-rail"><div class="pc-config-head"><h3>${__("配置菜单")}</h3><p>${__("选择要维护的业务配置")}</p></div><div class="pc-config-menu">${this.configMenuHtml()}</div></nav>
 				<main class="pc-editor-pane" data-role="editor">${this.editorHtml()}</main>
 			</div>
 		`);
@@ -130,7 +130,7 @@ class OzonConfigurationCenter {
 		if (!stores.length && !createItem) return `<div class="pc-store-empty"><p>${query ? __("没有匹配的店铺") : __("还没有店铺")}</p><button type="button" data-action="new-store">${__("新建店铺")}</button></div>`;
 		return createItem + stores.map((store) => {
 			const enabled = !this.storeSection.enabled_field || Number(store.values?.[this.storeSection.enabled_field]);
-			const status = store.values?.[this.storeSection.status_field] || (enabled ? __("已启用") : __("已停用"));
+			const status = this.translateStatus(store.values?.[this.storeSection.status_field] || (enabled ? "Enabled" : "Disabled"));
 			return `<button type="button" class="pc-store-item ${store.name === this.selectedStoreName && !this.creatingStore ? "active" : ""}" data-action="select-store" data-name="${this.escape(store.name)}"><span class="pc-store-avatar">${this.initials(this.storeLabel(store))}</span><span><b>${this.escape(this.storeLabel(store))}</b><small><i class="${enabled ? "on" : "off"}"></i>${this.escape(status)}</small></span>${this.icon("chevron")}</button>`;
 		}).join("");
 	}
@@ -161,10 +161,12 @@ class OzonConfigurationCenter {
 		const document = this.currentDocument(section);
 		const isNew = !document;
 		const title = section.key === "stores" && isNew ? __("建立新店铺") : section.title;
-		const context = section.key === "stores" && isNew ? __("填写店铺身份与API连接信息") : `${this.storeLabel(store)} · ${section.doctype}`;
+		const context = section.key === "stores"
+			? (isNew ? __("填写店铺身份与 API 连接信息") : __("店铺连接与凭证"))
+			: `${this.storeLabel(store)} · ${section.title}`;
 		return `
 			<div class="pc-editor-head"><div class="pc-editor-title"><span class="pc-editor-icon">${this.icon(section.key)}</span><div><small>${this.escape(context)}</small><h3>${this.escape(title)}</h3><p>${this.escape(section.description || "")}</p></div></div><div class="pc-editor-status">${this.statusHtml(section, document)}</div></div>
-			${document && (section.actions || []).length ? `<div class="pc-taskbar"><span>${__("手动操作")}</span><div>${section.actions.map((action) => `<button type="button" data-action="run" data-task="${action.key}" class="pc-task-${action.style || "ghost"}">${this.escape(action.label)}</button>`).join("")}</div></div>` : ""}
+			${document && (section.actions || []).length ? `<div class="pc-taskbar"><div>${section.actions.map((action) => `<button type="button" data-action="run" data-task="${action.key}" class="pc-task-${action.style || "ghost"}">${this.icon(this.actionIcon(action.key))}${this.escape(action.label)}</button>`).join("")}</div></div>` : ""}
 				<div class="pc-editor-scroll">
 				${isNew && section.key !== "stores" ? `<div class="pc-notice">${this.icon("info")}<div><b>${__("尚未建立这项配置")}</b><span>${__("下面已经关联当前店铺，填写后保存即可创建。")}</span></div></div>` : ""}
 				${this.errorHtml(section, document)}
@@ -177,8 +179,9 @@ class OzonConfigurationCenter {
 		if (!document) return `<span class="pc-status neutral"><i></i>${__("新配置")}</span>`;
 		const values = document.values || {};
 		const enabled = !section.enabled_field || Number(values[section.enabled_field]);
-		const status = values[section.status_field] || (enabled ? __("已启用") : __("已停用"));
-		const tone = this.isFailed(section, document) ? "danger" : /running|waiting|运行|等待/i.test(status) ? "running" : enabled ? "success" : "neutral";
+		const rawStatus = values[section.status_field] || (enabled ? "Enabled" : "Disabled");
+		const status = this.translateStatus(rawStatus);
+		const tone = this.isFailed(section, document) ? "danger" : /running|waiting|运行|等待/i.test(rawStatus) ? "running" : enabled ? "success" : "neutral";
 		return `<span class="pc-status ${tone}"><i></i>${this.escape(status)}</span>${section.last_field ? `<span class="pc-runtime"><small>${__("最近执行")}</small><b>${this.formatTime(values[section.last_field])}</b></span>` : ""}${section.next_field ? `<span class="pc-runtime"><small>${__("下次执行")}</small><b>${this.formatTime(values[section.next_field])}</b></span>` : ""}`;
 	}
 
@@ -198,6 +201,7 @@ class OzonConfigurationCenter {
 				return;
 			}
 			if (field.fieldtype === "Column Break" || field.read_only) return;
+			if (section.key === "stores" && this.currentStore() && field.fieldname === section.primary_field) return;
 			current.fields.push(field);
 		});
 		if (current.fields.length) groups.push(current);
@@ -223,14 +227,32 @@ class OzonConfigurationCenter {
 			const isStoredSecret = field.sensitive && document?.password_set?.[field.fieldname];
 			const isStoreLink = section.key !== "stores" && field.fieldname === section.primary_field;
 			const df = { ...field, read_only: isStoreLink || (document && field.set_only_once) ? 1 : 0, reqd: isStoredSecret ? 0 : field.reqd, description: isStoredSecret ? __("密钥已安全保存；留空表示保持原值。") : field.description, change: () => this.markDirty() };
-			const control = frappe.ui.form.make_control({ parent, df, render_input: true });
 			const value = document ? document.values?.[field.fieldname] : (prefill[field.fieldname] ?? field.default ?? null);
+			if (field.fieldtype === "Check") {
+				this.controls.set(field.fieldname, this.makeCheckControl(parent, df, value));
+				return;
+			}
+			const control = frappe.ui.form.make_control({ parent, df, render_input: true });
 			control.set_value(value);
 			if (isStoredSecret && control.$input) control.$input.attr("placeholder", __("已保存，留空保持不变"));
 			control.$wrapper.off(".pc-editor").on("input.pc-editor change.pc-editor", ":input", () => this.markDirty());
 			this.controls.set(field.fieldname, control);
 		});
 		window.setTimeout(() => { this.mountingControls = false; }, 0);
+	}
+
+	makeCheckControl(parent, df, value) {
+		const checked = this.isChecked(value);
+		parent.html(`<label class="pc-check-control"><input type="checkbox" ${checked ? "checked" : ""}><span class="pc-check-box">${this.icon("check")}</span><span class="pc-check-copy"><b>${this.escape(df.label || df.fieldname)}</b>${df.description ? `<small>${this.escape(df.description)}</small>` : ""}</span></label>`);
+		const $input = parent.find("input[type='checkbox']");
+		$input.on("change.pc-editor", () => this.markDirty());
+		return {
+			df,
+			$input,
+			$wrapper: parent,
+			get_value: () => ($input.prop("checked") ? 1 : 0),
+			set_value: (nextValue) => $input.prop("checked", this.isChecked(nextValue)),
+		};
 	}
 
 	markDirty() {
@@ -325,6 +347,22 @@ class OzonConfigurationCenter {
 	}
 
 	isWideField(field) { return ["Long Text", "Small Text", "Text"].includes(field.fieldtype); }
+	isChecked(value) { return value === true || ["1", "true", "yes"].includes(String(value ?? "").toLowerCase()); }
+
+	translateStatus(value) {
+		const status = String(value || "").trim();
+		const labels = {
+			"Not Tested": __("未测试"), Available: __("连接正常"), Unavailable: __("连接不可用"),
+			Enabled: __("已启用"), Disabled: __("已停用"), Idle: __("空闲"),
+			Running: __("运行中"), Waiting: __("等待中"), Failed: __("失败"), Success: __("成功"),
+		};
+		return labels[status] || status;
+	}
+
+	actionIcon(action) {
+		if (String(action).startsWith("recheck_")) return "recheck";
+		return action;
+	}
 
 	translateSection(label) {
 		const labels = {
@@ -347,10 +385,12 @@ class OzonConfigurationCenter {
 	escape(value) { return frappe.utils.escape_html(String(value ?? "")); }
 
 	icon(name) {
-		const paths = {
-			stores: '<path d="M4 10h16M5 10v10h14V10M3 10l2-6h14l2 6M9 20v-6h6v6"/>', ranking: '<path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/>', orders: '<path d="M4 7l8-4 8 4-8 4-8-4Zm0 0v10l8 4 8-4V7M12 11v10"/>', finances: '<path d="M3 7h18v12H3zM3 10h18M7 15h3"/>', prices: '<path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9-9-9Zm5-4h.01"/>', settlements: '<path d="M6 3h12v18H6zM9 8h6m-6 4h6m-6 4h4"/>',
-			refresh: '<path d="M20 6v5h-5M4 18v-5h5M6.1 9A7 7 0 0 1 18 6l2 5M4 13l2 5a7 7 0 0 0 11.9-3"/>', expand: '<path d="M8 3H3v5m13-5h5v5M8 21H3v-5m13 5h5v-5"/>', plus: '<path d="M12 5v14M5 12h14"/>', search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>', chevron: '<path d="m9 18 6-6-6-6"/>', info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10h.01"/>', warning: '<path d="M12 3 2.5 20h19L12 3Zm0 6v5m0 3h.01"/>', trash: '<path d="M4 7h16M9 7V4h6v3m3 0-1 14H7L6 7m4 4v6m4-6v6"/>', save: '<path d="M4 4h13l3 3v13H4zM8 4v6h8V4M8 20v-6h8v6"/>',
+		const icons = {
+			stores: "shop-window", ranking: "bar-chart-line", orders: "box-seam", finances: "wallet2", prices: "tags", settlements: "receipt",
+			refresh: "arrow-clockwise", expand: "arrows-fullscreen", plus: "plus-lg", search: "search", chevron: "chevron-right",
+			info: "info-circle", warning: "exclamation-triangle", trash: "trash3", save: "check2-circle", check: "check-lg",
+			test: "plug", latest: "arrow-repeat", history: "clock-history", discover: "search", full: "cloud-download", recheck: "calendar-check",
 		};
-		return `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.info}</svg>`;
+		return `<i class="bi bi-${icons[name] || icons.info}" aria-hidden="true"></i>`;
 	}
 }

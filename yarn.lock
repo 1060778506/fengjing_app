@@ -12,6 +12,11 @@
     mousetrap "^1.6.5"
     utility-types "^3.10.0"
 
+bootstrap-icons@^1.13.1:
+  version "1.13.1"
+  resolved "https://registry.npmjs.org/bootstrap-icons/-/bootstrap-icons-1.13.1.tgz"
+  integrity sha512-ijombt4v6bv5CLeXvRWKy7CuM3TRTuPEuGaGKvTV5cz65rQSY8RQ2JcHt6b90cBBAC7s8fsf2EkQDldzCoXUjw==
+
 bootstrap@^5.3.8:
   version "5.3.8"
   resolved "https://registry.npmjs.org/bootstrap/-/bootstrap-5.3.8.tgz"
