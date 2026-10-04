@@ -43,7 +43,7 @@ cd ~/frappe-bench/apps/fengjing_app && \
 # 已经提交过代码,仅需要一句命令
 cd ~/frappe-bench/apps/fengjing_app && git add . && git commit -m "新的" && git push
 # 在docker外部推送
-cd "/root/桌面/erpnext-os-py/fengjing_app" && git add -A && git commit -m "2026-9-25-1" && git push -u origin develop --force
+cd "/root/Desktop/erpnext-os-py/fengjing_app" && git add -A && git commit -m "2026-10-4-1" && git push -u origin develop --force
 
  
 			#测试代码,就是直接在erpnext内部运行py代码
@@ -94,7 +94,7 @@ git status
 
 
 # 如果你在 Docker 外部服务器主机：
-cd "/root/桌面/erpnext-os-py/fengjing_app"
+cd "/root/Desktop/erpnext-os-py/fengjing_app"
 [ -d ".git" ] || git init
 git remote set-url origin https://github.com/1060778506/fengjing_app.git 2>/dev/null || \
 git remote add origin https://github.com/1060778506/fengjing_app.git
