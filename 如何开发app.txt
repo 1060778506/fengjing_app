@@ -11,7 +11,7 @@ cd ~/frappe-bench/apps/fengjing_app && \
   yarn install --frozen-lockfile && \
   cd ~/frappe-bench && \
   bench new-site fjnb \
-    --db-host mariadb \
+    --db-host db \
     --db-root-password 123 \
     --admin-password Aa123456789 \
     --mariadb-user-host-login-scope='%' && \

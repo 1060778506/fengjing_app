@@ -27,6 +27,14 @@ TASK_TIMEOUT = 6 * 60 * 60
 BATCH_SIZE = 1000
 
 
+class OzonAPIError(RuntimeError):
+	def __init__(self, api_name, status, details):
+		self.api_name = api_name
+		self.status = status
+		self.details = str(details or "")
+		super().__init__(f"Ozon {api_name} failed (HTTP {status}): {self.details}")
+
+
 class OzonRankingConfiguration(Document):
 	def validate(self):
 		if self.ozon_store:
@@ -64,7 +72,7 @@ def _request_json(store, path, body, api_name):
 	ensure_database_connection()
 	if response is None or response.status_code != 200:
 		status = response.status_code if response is not None else "no response"
-		raise RuntimeError(f"Ozon {api_name} failed (HTTP {status}): {response_error_summary(response, 1800)}")
+		raise OzonAPIError(api_name, status, response_error_summary(response, 1800))
 	try:
 		payload = response.json()
 	except ValueError as exc:
@@ -430,6 +438,33 @@ def _merge_summary(target, source):
 		target[key] = cint(target.get(key)) + cint(value)
 
 
+def _is_premium_history_unavailable(exc):
+	if not isinstance(exc, OzonAPIError) or exc.status != 403:
+		return False
+	details = exc.details.lower()
+	return "premium subscription" in details and "specified period" in details
+
+
+def _mark_history_period_complete(configuration_name, config, completed_date, summary, premium_available=False):
+	values = {
+		"history_checkpoint": completed_date,
+		"history_progress": _history_progress(config, completed_date),
+		"history_inserted_count": summary["created"],
+		"history_updated_count": summary["updated"],
+		"history_archived_count": summary["archived"],
+		"history_summary": json.dumps(summary, ensure_ascii=False),
+	}
+	if premium_available:
+		values["premium_analytics_available"] = 1
+	_update_configuration(configuration_name, **values)
+
+
+def _skip_unavailable_history_period(summary, start_date, end_date):
+	summary["skipped_periods"] += 1
+	summary["skipped_days"] += (end_date - start_date).days + 1
+	summary["premium_unavailable_through"] = end_date.isoformat()
+
+
 def _available_end_date(config):
 	return getdate(today()) - timedelta(days=max(cint(config.data_delay_days), 0))
 
@@ -561,6 +596,9 @@ def execute_ranking_sync(configuration_name, sync_type):
 		"pages": 0,
 		"periods": 0,
 		"products": 0,
+		"skipped_periods": 0,
+		"skipped_days": 0,
+		"premium_unavailable_through": "",
 	}
 	try:
 		_update_configuration(
@@ -594,26 +632,86 @@ def execute_ranking_sync(configuration_name, sync_type):
 						history_status="Completed" if completed else "Waiting",
 						history_progress=100 if completed else config.history_progress,
 						history_summary=text,
+						history_last_error="",
 						current_task_status="Success" if completed else "Waiting",
 						current_execution_type="",
 						current_task_completed_at=now_datetime(),
 						last_run_result=text,
+						last_error="",
 					)
 					return {"status": plan["status"], "summary": summary}
-				period = _sync_period(
-					config, store, "历史排名", plan["start"], plan["end"], products
-				)
+				try:
+					period = _sync_period(
+						config, store, "历史排名", plan["start"], plan["end"], products
+					)
+				except OzonAPIError as exc:
+					if not _is_premium_history_unavailable(exc):
+						raise
+					if plan["start"] == plan["end"]:
+						_skip_unavailable_history_period(summary, plan["start"], plan["end"])
+						frappe.logger("ozon_ranking_v2", allow_site=True).warning(
+							"Skipped Ozon ranking history before Premium availability: "
+							"configuration=%s date=%s",
+							configuration_name,
+							plan["start"],
+						)
+						_mark_history_period_complete(
+							configuration_name, config, plan["end"], summary
+						)
+						continue
+					try:
+						last_day_period = _sync_period(
+							config, store, "历史排名", plan["end"], plan["end"], products
+						)
+					except OzonAPIError as last_day_exc:
+						if not _is_premium_history_unavailable(last_day_exc):
+							raise
+						_skip_unavailable_history_period(summary, plan["start"], plan["end"])
+						frappe.logger("ozon_ranking_v2", allow_site=True).warning(
+							"Skipped Ozon ranking history before Premium availability: "
+							"configuration=%s dates=%s..%s",
+							configuration_name,
+							plan["start"],
+							plan["end"],
+						)
+						_mark_history_period_complete(
+							configuration_name, config, plan["end"], summary
+						)
+						continue
+					cursor = plan["start"]
+					while cursor < plan["end"]:
+						try:
+							period = _sync_period(config, store, "历史排名", cursor, cursor, products)
+						except OzonAPIError as day_exc:
+							if not _is_premium_history_unavailable(day_exc):
+								raise
+							_skip_unavailable_history_period(summary, cursor, cursor)
+							frappe.logger("ozon_ranking_v2", allow_site=True).warning(
+								"Skipped Ozon ranking history before Premium availability: "
+								"configuration=%s date=%s",
+								configuration_name,
+								cursor,
+							)
+							_mark_history_period_complete(
+								configuration_name, config, cursor, summary
+							)
+						else:
+							_merge_summary(summary, period)
+							summary["periods"] += 1
+							_mark_history_period_complete(
+								configuration_name, config, cursor, summary, premium_available=True
+							)
+						cursor += timedelta(days=1)
+					_merge_summary(summary, last_day_period)
+					summary["periods"] += 1
+					_mark_history_period_complete(
+						configuration_name, config, plan["end"], summary, premium_available=True
+					)
+					continue
 				_merge_summary(summary, period)
 				summary["periods"] += 1
-				_update_configuration(
-					configuration_name,
-					premium_analytics_available=1,
-					history_checkpoint=plan["end"],
-					history_progress=_history_progress(config, plan["end"]),
-					history_inserted_count=summary["created"],
-					history_updated_count=summary["updated"],
-					history_archived_count=summary["archived"],
-					history_summary=json.dumps(summary, ensure_ascii=False),
+				_mark_history_period_complete(
+					configuration_name, config, plan["end"], summary, premium_available=True
 				)
 
 		config = _get_configuration(configuration_name)
@@ -712,4 +810,3 @@ def run_scheduled_ranking_sync():
 启动Ozon历史排名同步 = start_history_sync
 启动Ozon最新排名同步 = start_latest_sync
 定时执行Ozon排名同步 = run_scheduled_ranking_sync
-
