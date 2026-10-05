@@ -79,13 +79,13 @@
                     "account_type": "Receivable",
                     "account_currency": "CNY"
                 },
-                "应收账款-RUB": {
+                "应收账款-USD": {
                     "account_number": "112202_fj",
                     "is_group": 0,
                     "account_type": "Receivable",
                     "account_currency": "USD"
                 },
-                "应收账款-USD": {
+                "应收账款-RUB": {
                     "account_number": "112203_fj",
                     "is_group": 0,
                     "account_type": "Receivable",
@@ -247,19 +247,19 @@
                 "is_group": 1,
                 "account_type": "Payable",
                 "应付账款-CNY": {
-                    "account_number": "112201_fj",
+                    "account_number": "220201_fj",
                     "is_group": 0,
                     "account_type": "Payable",
                     "account_currency": "CNY"
                 },
-                "应付账款-RUB": {
-                    "account_number": "112202_fj",
+                "应付账款-USD": {
+                    "account_number": "220202_fj",
                     "is_group": 0,
                     "account_type": "Payable",
                     "account_currency": "USD"
                 },
-                "应付账款-USD": {
-                    "account_number": "112203_fj",
+                "应付账款-RUB": {
+                    "account_number": "220203_fj",
                     "is_group": 0,
                     "account_type": "Payable",
                     "account_currency": "RUB"
