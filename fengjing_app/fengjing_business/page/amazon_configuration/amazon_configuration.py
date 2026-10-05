@@ -181,6 +181,26 @@ def _section_payload(section_key, section):
 		doc = frappe.get_doc(doctype, name)
 		doc.check_permission("read")
 		documents.append(_document_payload(doc, schema))
+	if section_key == "ranking" and documents:
+		frappe.has_permission("Amazon Ranking Product", "read", throw=True)
+		products = frappe.get_list(
+			"Amazon Ranking Product",
+			filters={"ranking_configuration": ["in", [row["name"] for row in documents]]},
+			fields=[
+				"name", "ranking_configuration", "asin", "sku", "product_title",
+				"amazon_image_url", "listing_status", "corresponding_item", "enabled",
+				"is_competitor", "source", "deleted_from_store", "last_discovered_at",
+				"last_fetch_status", "last_fetch_at", "next_fetch_at", "last_error",
+			],
+			order_by="enabled desc, deleted_from_store asc, product_title asc, asin asc",
+			limit_page_length=0,
+		)
+		by_configuration = {}
+		for product in products:
+			row = {key: _serialise_value(value) for key, value in product.items()}
+			by_configuration.setdefault(product.ranking_configuration, []).append(row)
+		for document in documents:
+			document["products"] = by_configuration.get(document["name"], [])
 	return {
 		"key": section_key,
 		"title": section["title"],

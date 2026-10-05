@@ -31,6 +31,7 @@ class AmazonConfigurationCenter {
 		this.selectedStoreName = null;
 		this.creatingStore = false;
 		this.storeSearch = "";
+		this.rankingProductSearch = "";
 		this.controls = new Map();
 		this.initialValues = new Map();
 		this.controlMountId = 0;
@@ -54,6 +55,10 @@ class AmazonConfigurationCenter {
 		this.root.on("input", "[data-role='store-search']", (event) => {
 			this.storeSearch = event.currentTarget.value || "";
 			this.renderStoreList();
+		});
+		this.root.on("input", "[data-role='ranking-product-search']", (event) => {
+			this.rankingProductSearch = event.currentTarget.value || "";
+			this.renderRankingProductRows();
 		});
 	}
 
@@ -236,6 +241,10 @@ class AmazonConfigurationCenter {
 	actionsForGroup(section, group) {
 		if (!this.currentDocument(section)) return [];
 		const groupKey = String(group.key || "").toLowerCase();
+		if (section.key === "ranking" && this.platform === "amazon") {
+			const targets = { discover: "discovery_schedule_section", latest: "schedule_section", full: "schedule_section" };
+			return (section.actions || []).filter((action) => targets[action.key] === groupKey);
+		}
 		return (section.actions || []).filter((action) => groupKey.includes(this.actionGroup(action.key, section.key)));
 	}
 
@@ -247,10 +256,73 @@ class AmazonConfigurationCenter {
 	formSectionsHtml(section) {
 		const groups = this.fieldGroups(section);
 		if (!groups.length) return `<div class="pc-no-fields">${__("这项配置没有可编辑字段。")}</div>`;
-		return groups.map((group, index) => {
+		const mergedRankingKeys = new Set(["schedule_section", "discovery_schedule_section"]);
+		const renderedGroups = section.key === "ranking" && this.platform === "amazon"
+			? groups.filter((group) => !mergedRankingKeys.has(group.key))
+			: groups;
+		let html = renderedGroups.map((group, index) => {
 			const actions = this.actionsForGroup(section, group);
 			return `<section class="pc-form-section"><header><div class="pc-section-title"><span>${String(index + 1).padStart(2, "0")}</span><h4>${this.escape(group.title)}</h4></div>${this.actionButtonsHtml(actions)}</header>${group.fields.length ? `<div class="pc-form-grid">${group.fields.map((field) => `<div class="pc-form-slot ${this.isWideField(field) ? "wide" : ""}" data-fieldname="${this.escape(field.fieldname)}"></div>`).join("")}</div>` : ""}</section>`;
 		}).join("");
+		if (section.key === "ranking" && this.platform === "amazon" && this.currentDocument(section)) {
+			html += this.rankingProductsSectionHtml(section, renderedGroups.length + 1);
+		}
+		return html;
+	}
+
+	rankingProductsSectionHtml(section, index) {
+		const document = this.currentDocument(section);
+		const values = document?.values || {};
+		const products = document?.products || [];
+		const enabled = products.filter((row) => Number(row.enabled) && !Number(row.deleted_from_store)).length;
+		const failed = products.filter((row) => String(row.last_fetch_status || "").toLowerCase() === "failed").length;
+		const metric = (label, value, tone = "") => `<div class="pc-ranking-metric ${tone}"><small>${this.escape(label)}</small><b>${this.escape(value || "—")}</b></div>`;
+		return `<section class="pc-form-section pc-ranking-products"><header><div class="pc-section-title"><span>${String(index).padStart(2, "0")}</span><div><h4>${__("排名商品与同步")}</h4><small>${__("三个操作按钮共同使用下方已启用的商品清单")}</small></div></div>${this.actionButtonsHtml(section.actions || [])}</header>
+			<div class="pc-ranking-summary">
+				${metric(__("商品总数"), products.length)}
+				${metric(__("启用商品"), enabled, "success")}
+				${metric(__("抓取失败"), failed, failed ? "danger" : "success")}
+				${metric(__("上次发现商品"), this.formatTime(values.last_discovery_at))}
+				${metric(__("上次抓取排名"), this.formatTime(values.last_fetch_at))}
+				${metric(__("下次自动抓取"), this.formatTime(values.next_fetch_at))}
+			</div>
+			<div class="pc-ranking-results">
+				<div><small>${__("商品发现结果")}</small><b>${this.escape(values.last_discovery_result || __("尚无记录"))}</b>${values.last_discovery_error ? `<em>${this.escape(values.last_discovery_error)}</em>` : ""}</div>
+				<div><small>${__("排名抓取结果")}</small><b>${this.escape(values.last_fetch_result || __("尚无记录"))}</b></div>
+			</div>
+			<div class="pc-ranking-toolbar"><label>${this.icon("search")}<input data-role="ranking-product-search" value="${this.escape(this.rankingProductSearch)}" placeholder="${__("搜索 ASIN、SKU、商品名称或对应物料")}"></label><span data-role="ranking-product-count">${products.length} ${__("个商品")}</span></div>
+			<div class="pc-ranking-table-wrap"><table class="pc-ranking-table"><thead><tr><th>${__("商品")}</th><th>ASIN / SKU</th><th>${__("状态")}</th><th>${__("对应物料")}</th><th>${__("排名抓取")}</th><th>${__("最近错误")}</th></tr></thead><tbody data-role="ranking-product-list">${this.rankingProductRowsHtml()}</tbody></table></div>
+		</section>`;
+	}
+
+	rankingProductRowsHtml() {
+		const document = this.activeSection === "ranking" ? this.currentDocument(this.active) : null;
+		const query = this.rankingProductSearch.trim().toLowerCase();
+		const products = (document?.products || []).filter((row) => !query || [row.asin, row.sku, row.product_title, row.corresponding_item, row.listing_status].some((value) => String(value || "").toLowerCase().includes(query)));
+		if (!products.length) return `<tr><td colspan="6" class="pc-ranking-empty">${query ? __("没有匹配的商品") : __("尚未发现商品，请先点击“发现商品”或“完整同步”")}</td></tr>`;
+		return products.map((row) => {
+			const image = this.safeImageUrl(row.amazon_image_url);
+			const enabled = Number(row.enabled) && !Number(row.deleted_from_store);
+			const fetchStatus = this.translateStatus(row.last_fetch_status || "Not Fetched");
+			const fetchTone = String(row.last_fetch_status || "").toLowerCase() === "failed" ? "danger" : String(row.last_fetch_status || "").toLowerCase() === "success" ? "success" : "neutral";
+			const productUrl = `/app/amazon-ranking-product/${encodeURIComponent(row.name || "")}`;
+			return `<tr>
+				<td><div class="pc-ranking-product">${image ? `<img src="${image}" alt="">` : `<span>${this.icon("ranking")}</span>`}<div><a href="${productUrl}">${this.escape(row.product_title || row.asin || __("未命名商品"))}</a><small>${this.escape(row.source || "")}${Number(row.is_competitor) ? ` · ${__("竞品")}` : ""}</small></div></div></td>
+				<td><a class="pc-ranking-asin" href="${productUrl}">${this.escape(row.asin || "—")}</a><small>${this.escape(row.sku || "—")}</small></td>
+				<td><span class="pc-product-state ${enabled ? "success" : "neutral"}">${enabled ? __("已启用") : __("已停用")}</span><small>${this.escape(row.listing_status || (Number(row.deleted_from_store) ? __("店铺已删除") : "—"))}</small></td>
+				<td>${row.corresponding_item ? `<a href="/app/item/${encodeURIComponent(row.corresponding_item)}">${this.escape(row.corresponding_item)}</a>` : "—"}</td>
+				<td><span class="pc-product-state ${fetchTone}">${this.escape(fetchStatus)}</span><small>${this.formatTime(row.last_fetch_at)}<br>${__("下次")}：${this.formatTime(row.next_fetch_at)}</small></td>
+				<td class="pc-ranking-error">${this.escape(row.last_error || "—")}</td>
+			</tr>`;
+		}).join("");
+	}
+
+	renderRankingProductRows() {
+		const rows = this.root.find("[data-role='ranking-product-list']");
+		if (!rows.length) return;
+		rows.html(this.rankingProductRowsHtml());
+		const count = (this.currentDocument(this.active)?.products || []).filter((row) => !this.rankingProductSearch.trim() || [row.asin, row.sku, row.product_title, row.corresponding_item, row.listing_status].some((value) => String(value || "").toLowerCase().includes(this.rankingProductSearch.trim().toLowerCase()))).length;
+		this.root.find("[data-role='ranking-product-count']").text(`${count} ${__("个商品")}`);
 	}
 
 	mountEditorControls() {
@@ -345,8 +417,8 @@ class AmazonConfigurationCenter {
 	async handleAction(event) {
 		const button = event.currentTarget;
 		const action = button.dataset.action;
-		if (action === "select-store") return this.navigate(() => { this.creatingStore = false; this.selectedStoreName = button.dataset.name; this.render(); });
-		if (action === "select-section") return this.navigate(() => { this.activeSection = button.dataset.section; this.render(); });
+		if (action === "select-store") return this.navigate(() => { this.creatingStore = false; this.selectedStoreName = button.dataset.name; this.rankingProductSearch = ""; this.render(); });
+		if (action === "select-section") return this.navigate(() => { this.activeSection = button.dataset.section; this.rankingProductSearch = ""; this.render(); });
 		if (action === "new-store") return this.startNewStore();
 		if (action === "refresh") return this.refreshWithGuard();
 		if (action === "fullscreen") return this.toggleFullscreen();
@@ -446,6 +518,13 @@ class AmazonConfigurationCenter {
 	formatTime(value) {
 		if (!value) return "—";
 		try { return frappe.datetime.str_to_user(String(value).split(".")[0]); } catch (error) { return this.escape(value); }
+	}
+	safeImageUrl(value) {
+		if (!value) return "";
+		try {
+			const url = new URL(String(value), window.location.origin);
+			return ["http:", "https:"].includes(url.protocol) ? this.escape(url.href) : "";
+		} catch (error) { return ""; }
 	}
 
 	initials(value) { const text = String(value || this.brand || "F").replace(/[^A-Za-z0-9\u4e00-\u9fa5]/g, ""); return this.escape(text.slice(0, 2).toUpperCase() || (this.platform === "ozon" ? "OZ" : "AM")); }
