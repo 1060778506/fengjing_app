@@ -74,22 +74,22 @@
                 "is_group": 1,
                 "account_type": "Receivable",
                 "应收账款-CNY": {
-                    "account_number": "112299_fj",
+                    "account_number": "112201_fj",
                     "is_group": 0,
                     "account_type": "Receivable",
                     "account_currency": "CNY"
                 },
                 "应收账款-RUB": {
-                    "account_number": "112201_fj",
-                    "is_group": 0,
-                    "account_type": "Receivable",
-                    "account_currency": "RUB"
-                },
-                "应收账款-USD": {
                     "account_number": "112202_fj",
                     "is_group": 0,
                     "account_type": "Receivable",
                     "account_currency": "USD"
+                },
+                "应收账款-USD": {
+                    "account_number": "112203_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "RUB"
                 }
             },
             "预付账款": {
@@ -247,9 +247,22 @@
                 "is_group": 1,
                 "account_type": "Payable",
                 "应付账款-CNY": {
-                    "account_number": "220299_fj",
+                    "account_number": "112201_fj",
                     "is_group": 0,
-                    "account_type": "Payable"
+                    "account_type": "Payable",
+                    "account_currency": "CNY"
+                },
+                "应付账款-RUB": {
+                    "account_number": "112202_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "USD"
+                },
+                "应付账款-USD": {
+                    "account_number": "112203_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "RUB"
                 }
             },
             "预收账款": {
