@@ -251,6 +251,73 @@ def _attach_related_products(rows):
 		row.related_products = list(grouped.get(group_key, {}).values())
 
 
+def _filtered_type_summary(rows, selected_type):
+	"""汇总当前筛选类型的全部记录，并按币种和可明确归属的物料分组。"""
+	if not selected_type:
+		return None
+
+	currencies = {}
+	for row in rows:
+		currency = row.get("currency_code") or "未知"
+		amount = _money(row.get("net_amount") if row.get("net_amount") is not None else row.get("transaction_amount"))
+		bucket = currencies.setdefault(currency, {
+			"total": 0.0, "count": 0, "unassigned": 0.0,
+			"unassigned_count": 0, "items": {},
+		})
+		bucket["total"] += amount
+		bucket["count"] += 1
+
+		item = None
+		if row.get("corresponding_item"):
+			item = {
+				"item": row.get("corresponding_item"),
+				"item_name": row.get("corresponding_item_name"),
+				"image": row.get("corresponding_item_image"),
+			}
+		else:
+			# 店铺级费用只有在能唯一对应一个物料时才归入该物料，避免一笔费用重复计算。
+			related = {}
+			for product in row.get("related_products") or []:
+				if product.get("item"):
+					related[product.get("item")] = product
+			if len(related) == 1:
+				product = next(iter(related.values()))
+				item = {
+					"item": product.get("item"),
+					"item_name": product.get("item_name"),
+					"image": product.get("image"),
+				}
+
+		if not item:
+			bucket["unassigned"] += amount
+			bucket["unassigned_count"] += 1
+			continue
+
+		item_bucket = bucket["items"].setdefault(item["item"], {
+			**item, "amount": 0.0, "count": 0,
+		})
+		item_bucket["amount"] += amount
+		item_bucket["count"] += 1
+
+	result = []
+	for currency, bucket in currencies.items():
+		bucket["total"] = _money(bucket["total"])
+		bucket["unassigned"] = _money(bucket["unassigned"])
+		items = sorted(
+			bucket.pop("items").values(),
+			key=lambda item: abs(item["amount"]),
+			reverse=True,
+		)
+		for item in items:
+			item["amount"] = _money(item["amount"])
+		bucket["currency"] = currency
+		bucket["items"] = items
+		bucket["has_items"] = bool(items)
+		result.append(bucket)
+	result.sort(key=lambda row: row["currency"])
+	return {"type": selected_type, "count": len(rows), "currencies": result}
+
+
 @frappe.whitelist()
 def get_dashboard_data(filters=None, page=1, page_size=50):
 	frappe.has_permission(DOCTYPE, "read", throw=True)
@@ -309,6 +376,8 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 	selected_type = str(f.accrual_type or "").strip()
 	if selected_type and selected_type in type_counts:
 		rows = [row for row in rows if row.accrual_type_label == selected_type]
+		_attach_related_products(rows)
+	filtered_type_summary = _filtered_type_summary(rows, selected_type)
 
 	currencies = defaultdict(lambda: {"inflow": 0.0, "outflow": 0.0, "net": 0.0, "sales": 0.0, "fees": 0.0})
 	daily = defaultdict(lambda: defaultdict(lambda: {"inflow": 0.0, "outflow": 0.0, "net": 0.0, "count": 0}))
@@ -378,7 +447,8 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 	page_size = min(max(cint(page_size), 20), 200)
 	start = (page - 1) * page_size
 	page_rows = rows[start:start + page_size]
-	_attach_related_products(page_rows)
+	if not selected_type:
+		_attach_related_products(page_rows)
 	options = {
 		"stores": sorted({str(row.store) for row in rows if row.store}),
 		"categories": sorted({str(row.transaction_category) for row in rows if row.transaction_category}),
@@ -399,7 +469,7 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 		"stores": {currency: dict(values) for currency, values in stores.items()},
 		"fees": {currency: dict(values) for currency, values in fees.items()},
 		"products": product_list[:500], "statements": statement_list[:300],
-		"rows": page_rows, "options": options,
+		"rows": page_rows, "options": options, "filtered_type_summary": filtered_type_summary,
 		"type_filter": {
 			"total": type_total,
 			"sum": type_sum,
