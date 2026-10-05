@@ -8,3 +8,4 @@ execute:frappe.get_attr("fengjing_app.fengjing_business.doctype.amazon_order_syn
 execute:frappe.get_attr("fengjing_app.fengjing_business.doctype.amazon_financial_transaction.amazon_financial_transaction.修复亚马逊财务交易国家")()
 execute:frappe.get_attr("fengjing_app.fengjing_business.doctype.amazon_financial_transaction.amazon_financial_transaction.修复亚马逊财务交易国家_v2")()
 fengjing_app.patches.remove_legacy_ozon_store_api_sub_table
+fengjing_app.patches.deduplicate_ozon_order_and_financial_records

@@ -320,6 +320,19 @@ def _交易唯一键(store, accrual):
 	return hashlib.sha256(source.encode("utf-8")).hexdigest()
 
 
+def _查找已有财务交易(unique_key, store, operation_id):
+	"""Find both current-key rows and rows created by an older key algorithm."""
+	existing_name = frappe.db.get_value(STORAGE_DOCTYPE, {"transaction_unique_key": unique_key}, "name")
+	if existing_name or not operation_id:
+		return existing_name
+	return frappe.db.get_value(
+		STORAGE_DOCTYPE,
+		{"store": store, "operation_id": str(operation_id).strip()},
+		"name",
+		order_by="fetched_at desc, modified desc",
+	)
+
+
 def _生成费用明细(accrual, type_map):
 	fees = _遍历费用(
 		{
@@ -507,7 +520,7 @@ def 保存ozon财务交易(accrual, context, type_map, sync_type):
 		"raw_json": raw_text,
 	}
 	values = {key: value for key, value in values.items() if value not in (None, "")}
-	existing_name = frappe.db.get_value(STORAGE_DOCTYPE, {"transaction_unique_key": unique_key}, "name")
+	existing_name = _查找已有财务交易(unique_key, store, operation_id)
 	if existing_name:
 		doc = frappe.get_doc(STORAGE_DOCTYPE, existing_name)
 		changed_fields = _发生变化的字段(doc, values)

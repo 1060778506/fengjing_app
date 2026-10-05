@@ -260,6 +260,23 @@ def _line_key(store, fulfillment_type, posting_number, sku, offer_id, product_id
 	return hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
 
+def _find_existing_order_line(unique_key, store, fulfillment_type, posting_number, sku, offer_id, product_id):
+	"""Find both current-key rows and rows created by an older key algorithm."""
+	existing_name = frappe.db.get_value(STORAGE_DOCTYPE, {"order_line_key": unique_key}, "name")
+	if existing_name:
+		return existing_name
+
+	product_field = "sku" if sku else "offer_id" if offer_id else "product_id"
+	product_value = sku or offer_id or product_id
+	filters = {
+		"store": store,
+		"fulfillment_type": fulfillment_type,
+		"posting_number": posting_number,
+		product_field: product_value,
+	}
+	return frappe.db.get_value(STORAGE_DOCTYPE, filters, "name", order_by="fetched_at desc, modified desc")
+
+
 def _save_order(posting, store, ozon_id, fulfillment_type, sync_type):
 	"""Upsert one row per Ozon posting and SKU using the new order controller."""
 	if not isinstance(posting, dict):
@@ -357,7 +374,9 @@ def _save_order(posting, store, ozon_id, fulfillment_type, sync_type):
 			"payout_amount": flt(financial.get("payout")) if "payout" in financial else None,
 		}
 		line_data = {key: value for key, value in line_data.items() if value not in (None, "")}
-		existing_name = frappe.db.get_value(STORAGE_DOCTYPE, {"order_line_key": unique_key}, "name")
+		existing_name = _find_existing_order_line(
+			unique_key, store, fulfillment_type, posting_number, sku, offer_id, product_id
+		)
 		if existing_name:
 			doc = frappe.get_doc(STORAGE_DOCTYPE, existing_name)
 			if _append_previous_json(doc, raw_hash):
