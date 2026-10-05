@@ -262,7 +262,7 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 		"posting_number", "order_number", "delivery_schema", "warehouse_name", "statement_id",
 		"statement_number", "sku", "offer_id", "product_id", "product_name", "quantity",
 		"corresponding_item", "corresponding_item_name", "corresponding_item_image", "item_count",
-		"currency_code", "transaction_amount", "accruals_for_sale", "sale_commission",
+		"currency_code", "transaction_amount", "accruals_for_sale", "coinvestment_amount", "sale_commission",
 		"delivery_charge", "return_delivery_charge", "services_amount", "advertising_amount",
 		"penalty_amount", "compensation_amount", "discount_points_amount", "other_amount",
 		"net_amount", "operation_date", "order_date", "payment_date", "settlement_period_start",

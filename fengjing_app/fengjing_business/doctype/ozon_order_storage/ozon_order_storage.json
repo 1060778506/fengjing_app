@@ -7,7 +7,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "identity_section", "order_line_key", "store", "ozon_id", "fulfillment_type", "posting_number", "parent_posting_number", "order_id", "identity_column", "order_number", "product_id", "sku", "offer_id", "is_multibox", "multi_box_qty",
+  "identity_section", "order_line_key", "overview_processing_status", "overview_checked", "store", "ozon_id", "fulfillment_type", "posting_number", "parent_posting_number", "order_id", "identity_column", "order_number", "product_id", "sku", "offer_id", "is_multibox", "multi_box_qty",
   "product_section", "product_name", "corresponding_item", "product_column", "corresponding_item_name", "corresponding_item_image",
   "status_section", "ozon_status", "ozon_substatus", "cancellation_reason", "status_column", "is_cancelled", "is_express", "sync_type",
   "time_section", "order_created_at", "in_process_at", "source_updated_at", "time_column", "shipment_date", "delivering_date", "delivery_date",
@@ -19,6 +19,8 @@
  "fields": [
   {"fieldname":"identity_section","fieldtype":"Section Break","label":"订单与商品标识"},
   {"description":"程序生成：店铺 + 履约方式 + 发货编号 + SKU/商品ID，用于防止同一商品明细重复写入。","fieldname":"order_line_key","fieldtype":"Data","hidden":1,"label":"订单商品唯一键","read_only":1,"unique":1},
+  {"default":"未处理","description":"保存Ozon店铺概况页面中人工选择的订单处理状态。","fieldname":"overview_processing_status","fieldtype":"Select","label":"订单处理状态","options":"未处理\n已记账\n卖家取消\n买家取消\n已在WHD仓库\n已销毁"},
+  {"description":"旧版概况页勾选状态，仅用于兼容已有数据。","fieldname":"overview_checked","fieldtype":"Check","hidden":1,"label":"旧版概况页已勾选"},
   {"fieldname":"store","fieldtype":"Link","in_list_view":1,"label":"店铺","options":"Cost Center","read_only":1,"search_index":1},
   {"description":"保存抓取时使用的Ozon Client-Id快照，即使以后调整店铺配置仍能追溯数据来源。","fieldname":"ozon_id","fieldtype":"Data","label":"Ozon ID","read_only":1,"search_index":1},
   {"fieldname":"fulfillment_type","fieldtype":"Select","in_list_view":1,"label":"履约方式","options":"\nFBO\nFBP\nFBS\nrealFBS\n未知","read_only":1,"search_index":1},

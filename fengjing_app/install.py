@@ -201,9 +201,9 @@ def 页面触发的强制净化逻辑(company_name=None):
             查询科目表名称("540199_fj", company_name),#默认销货成本科目
             查询科目表名称("1001_fj", company_name),#默认现金科目
             查询科目表名称("5001_fj", company_name),#默认收入科目
-            查询科目表名称("1122_fj", company_name),#默认应收科目
+            查询科目表名称("112201_fj", company_name),#默认应收科目
             查询科目表名称("560303_fj", company_name),#默认付款折扣科目
-            查询科目表名称("2202_fj", company_name),#默认应付科目
+            查询科目表名称("220201_fj", company_name),#默认应付科目
             查询科目表名称("560198_fj", company_name),#销账科目
             查询科目表名称("560304_fj", company_name),#未实现损益科目
             查询科目表名称("560301_fj", company_name),#汇兑损益科目

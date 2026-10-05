@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import add_days, flt, nowdate
+from frappe.utils import add_days, cint, flt, nowdate
 
 from fengjing_app.fengjing_business.doctype.ozon_store_configuration.ozon_store_configuration import (
 	get_store,
@@ -8,6 +8,14 @@ from fengjing_app.fengjing_business.doctype.ozon_store_configuration.ozon_store_
 
 
 DOCTYPE = "Ozon order storage"
+PROCESSING_STATUSES = (
+	"未处理",
+	"已记账",
+	"卖家取消",
+	"买家取消",
+	"已在WHD仓库",
+	"已销毁",
+)
 STATUS_LABELS = {
 	"Idle": "空闲", "Waiting": "等待执行", "Running": "运行中",
 	"Success": "成功", "Failed": "失败", "Not Started": "未开始",
@@ -42,7 +50,7 @@ def get_dashboard_data(filters=None):
 			db_filters.append([fieldname, "=", filters[key]])
 
 	fields = [
-		"name", "store", "ozon_id", "fulfillment_type", "posting_number",
+		"name", "overview_processing_status", "overview_checked", "store", "ozon_id", "fulfillment_type", "posting_number",
 		"parent_posting_number", "order_id", "order_number", "product_id",
 		"sku", "offer_id", "product_name", "corresponding_item",
 		"corresponding_item_name", "corresponding_item_image", "ozon_status",
@@ -91,7 +99,57 @@ def _serialise(row):
 	):
 		data[fieldname] = flt(data.get(fieldname))
 	data["quantity"] = int(data.get("quantity") or 0)
+	status = str(data.get("overview_processing_status") or "").strip()
+	if status not in PROCESSING_STATUSES:
+		status = "已记账" if cint(data.get("overview_checked")) else "未处理"
+	data["overview_processing_status"] = status
 	return data
+
+
+@frappe.whitelist()
+def save_order_statuses(selections=None):
+	"""Persist manually selected processing statuses from the order detail table."""
+	frappe.has_permission(DOCTYPE, "write", throw=True)
+	selections = frappe.parse_json(selections) if isinstance(selections, str) else selections
+	if not isinstance(selections, list):
+		frappe.throw("订单处理状态的数据格式不正确")
+	if len(selections) > 5000:
+		frappe.throw("一次最多保存 5000 条订单处理状态")
+
+	values = {}
+	for row in selections:
+		if not isinstance(row, dict) or not row.get("name"):
+			continue
+		status = str(row.get("status") or "").strip()
+		if status not in PROCESSING_STATUSES:
+			frappe.throw(f"不支持的订单处理状态：{status or '空值'}")
+		values[str(row["name"])] = status
+	if not values:
+		return {"saved": 0}
+
+	existing = set(
+		frappe.get_all(
+			DOCTYPE,
+			filters={"name": ["in", list(values)]},
+			pluck="name",
+			limit_page_length=0,
+		)
+	)
+	missing = set(values) - existing
+	if missing:
+		frappe.throw("部分订单已经不存在，请刷新页面后重试")
+
+	for name, status in values.items():
+		frappe.db.set_value(
+			DOCTYPE,
+			name,
+			{
+				"overview_processing_status": status,
+				"overview_checked": cint(status == "已记账"),
+			},
+			update_modified=False,
+		)
+	return {"saved": len(values)}
 
 
 def _enrich_items(rows):

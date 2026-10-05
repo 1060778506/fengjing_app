@@ -51,6 +51,7 @@
   "currency_code",
   "transaction_amount",
   "accruals_for_sale",
+  "coinvestment_amount",
   "sale_commission",
   "delivery_charge",
   "return_delivery_charge",
@@ -370,6 +371,13 @@
    "fieldname": "accruals_for_sale",
    "fieldtype": "Currency",
    "label": "销售应计金额",
+   "options": "currency_code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "coinvestment_amount",
+   "fieldtype": "Currency",
+   "label": "合作伙伴计划应计金额",
    "options": "currency_code",
    "read_only": 1
   },

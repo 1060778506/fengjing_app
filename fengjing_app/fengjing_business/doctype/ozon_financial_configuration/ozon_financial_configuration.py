@@ -360,10 +360,13 @@ def _生成费用明细(accrual, type_map):
 def _金额拆分(accrual, type_map, fee_details):
 	products = _提取商品明细(accrual)
 	sale_amount = 0.0
+	coinvestment_amount = 0.0
 	sale_commission = 0.0
 	for product in products:
 		commission = (product or {}).get("commission") or {}
-		sale_amount += _安全数字(commission.get("seller_price"))
+		quantity = _安全数字((product or {}).get("quantity")) or 1.0
+		sale_amount += _安全数字(commission.get("seller_price")) * quantity
+		coinvestment_amount += _安全数字(commission.get("coinvestment"))
 		sale_commission += _安全数字(commission.get("sale_commission"))
 	parts = {
 		"delivery_charge": 0.0,
@@ -404,6 +407,7 @@ def _金额拆分(accrual, type_map, fee_details):
 		"currency_code": _币种(total_amount_object),
 		"transaction_amount": total_amount,
 		"accruals_for_sale": sale_amount,
+		"coinvestment_amount": coinvestment_amount,
 		"sale_commission": sale_commission,
 		"services_amount": services_amount,
 		"net_amount": total_amount,
