@@ -7,14 +7,22 @@
  "engine": "InnoDB",
  "field_order": [
   "canvas_title",
+  "cost_center",
   "canvas_json",
-  "freight_config_json"
+  "freight_config_json",
+  "default_freight_config_json"
  ],
  "fields": [
   {
    "fieldname": "canvas_title",
    "fieldtype": "Data",
    "label": "canvas_title"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "成本中心",
+   "options": "Cost Center"
   },
   {
    "fieldname": "canvas_json",
@@ -25,6 +33,12 @@
    "fieldname": "freight_config_json",
    "fieldtype": "JSON",
    "label": "freight_config_json"
+  },
+  {
+   "fieldname": "default_freight_config_json",
+   "fieldtype": "JSON",
+   "label": "全局默认物流配置 JSON",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,

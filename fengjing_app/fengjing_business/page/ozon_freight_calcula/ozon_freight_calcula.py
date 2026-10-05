@@ -2,7 +2,11 @@
 import json
 import hashlib
 import math
+import os
 import re
+import tempfile
+from pathlib import Path
+
 import frappe
 import requests
 from frappe.utils import nowdate, flt
@@ -16,6 +20,8 @@ from fengjing_app.fengjing_business.doctype.ozon_store_configuration.ozon_store_
 DOCTYPE = "Ozon Freight Canvas"
 
 HISTORY = "Ozon Competitor Price History"
+
+DEFAULT_CONFIG_PATH = Path(__file__).with_name("default_freight_config.json")
 
 
 def _history_access(canvas, write=False):
@@ -235,99 +241,39 @@ PACKAGE_FIELDS = {
 
 
 def default_config():
-    # Snapshot of the supplied tariff sheets, not a live spreadsheet dependency.
-    groups = [
-        ("Extra Small", 3.37, 0.001, .5, 1, 1500, 60, 90, 0, 0),
-        ("Budget", 25.83, .5, 30, 1, 1500, 60, 150, 0, 0),
-        ("Small", 17.97, .001, 2, 1500, 7000, 60, 150, 0, 0),
-        ("Big", 40.44, 2, 30, 1500, 7000, 150, 310, 12000, 31),
-        ("Premium Small", 24.71, .001, 5, 7000, 250000, 150, 250, 0, 0),
-        ("Premium Big", 69.64, 5, 30, 7000, 250000, 150, 310, 12000, 80),
-    ]
-    routes = []
-    for provider in ("CEL", "兴远", "RETS"):
-        for group, fixed, lo, hi, vlo, vhi, side, total, divisor, billmax in groups:
-            for speed in ("Express", "Standard", "Economy"):
-                if provider == "兴远" and speed == "Express":
-                    continue
-                if provider == "RETS" and ((group in ("Budget", "Big", "Premium Big") and speed == "Express") or (group == "Big" and speed == "Economy") or (group == "Premium Big" and speed == "Standard")):
-                    continue
-                rates = [50.5, 39.3, 28.1] if group in ("Extra Small", "Small", "Premium Small") else [37.1, 28.1, 19.1]
-                if group == "Premium Big":
-                    rates = [37.1, 31.4, 25.8]
-                low, high = lo, hi
-                if provider == "CEL":
-                    low = {"Budget": .501, "Big": 2.001, "Premium Big": 5.001}.get(group, lo)
-                if provider == "兴远":
-                    low = {"Budget": .55, "Big": 2.2, "Premium Big": 5.5}.get(group, lo)
-                    high = {"Extra Small": .55, "Small": 2.2, "Premium Small": 5.5}.get(group, hi)
-                    billmax = 0
-                elif provider == "RETS":
-                    divisor = billmax = 0  # RETS supplied calculator uses actual weight.
-                    if group == "Big": total = 250
-                routes.append(dict(
-                    id=f"{provider}-{group}-{speed}", provider=provider, name=f"{group} · {speed}",
-                    enabled=True, destination="俄罗斯", mode="rFBS" if provider == "兴远" else "FBP" if provider == "CEL" else "RETS",
-                    fixed=fixed, rate=rates[("Express", "Standard", "Economy").index(speed)],
-                    min_weight=low, max_weight=high, min_exclusive=provider != "CEL" and group in ("Budget", "Big", "Premium Big"),
-                    min_value=vlo + 1 if vlo in (1500, 7000) else vlo, max_value=vhi, value_exclusive=False,
-                    max_side=side, max_sum=total, divisor=divisor, max_billable=billmax,
-                    sorted_sides=[150, 80, 80] if provider == "CEL" and group == "Premium Big" else [],
-                    step=0, surcharge=0, battery=provider == "兴远" or (provider == "RETS" and speed != "Express"), liquid=provider == "兴远",
-                    days=({"Express":"4–8天", "Standard":"8–12天", "Economy":"11–15天"} if provider == "CEL" else {"Express":"4–9天", "Standard":"7–19天" if provider == "兴远" else "10–15天", "Economy":("12–24天" if group in ("Small", "Premium Small") else "17–29天") if provider == "兴远" else "15–20天"})[speed],
-                    source="CEL产品资费表 V7.24 / OZON-FBP" if provider == "CEL" else "20260903XY兴远 / OZON-RFBS运费" if provider == "兴远" else "RETS 2026.07.24 / 俄罗斯主表",
-                    note="历史运价快照，使用前请确认最新报价。未明确的带电、液体条件默认不放行；请向承运商核实后编辑。"))
-    # July sheet duplicates the twelve September XY lanes: keep the newer
-    # bounds/transit times, while recording both sources rather than quoting twice.
-    for route in routes:
-        if route["provider"] == "兴远":
-            route["source"] += " / 兴远rFBS全渠道计算器临沂 · 兴远渠道计算（2026.07.17）"
-            route["note"] += " 7月表同渠道单价一致，部分货值上限和时效不同，保留9月版参数。"
-    for suffix, name, destination, fixed, rate, days in (
-        ("ePacket", "ePacket Economy Track", "俄罗斯", 12, 30, "25–30天"),
-        ("CIS", "China Post ePacket Economy Track CIS", "哈萨克斯坦", 1.6, 33, "15–20天"),
-        ("Belarus", "China Post ePacket Economy Belarus", "白俄罗斯", 13, 30, "20–30天"),
-    ):
-        routes.append(dict(
-            id=f"兴远-Post-{suffix}", provider="兴远", name=name,
-            enabled=True, destination=destination, mode="rFBS",
-            fixed=fixed, rate=rate, min_weight=.001, max_weight=5,
-            min_exclusive=False, min_value=0, max_value=1000,
-            value_currency="CNY", value_exclusive=False, max_side=60,
-            max_sum=90, divisor=0, max_billable=0, sorted_sides=[],
-            step=0, surcharge=0, battery=False, liquid=False, days=days,
-            source="兴远rFBS全渠道计算器临沂 / 兴远渠道计算 · 2026.07.17",
-            note="中国邮政渠道；按实重计费，货值上限1000人民币。原表H15:H17、I15:I17、J15:J17为合并限制。自送，不适用免费顺丰揽收；带电、液体未确认。请核对目的国和实时运价。",
-        ))
-    # Independent rFBS sheet: same mainland rates/bounds, different transit
-    # times and no Express service for Big / Premium Big. Keep FBP untouched.
-    for original in list(routes):
-        if original["provider"] != "CEL":
-            continue
-        if original["id"] in ("CEL-Big-Express", "CEL-Premium Big-Express"):
-            continue
-        route = dict(original)
-        speed = original["name"].split(" · ")[-1]
-        route.update(id="CEL-RFBS-" + original["id"][4:], mode="RFBS", speed=speed,
-                     days={"Express": "5–10天", "Standard": "10–15天", "Economy": "15–25天"}[speed],
-                     source="CEL产品资费表 V7.24 / OZON-rFBS",
-                     note="原表支持到取货点或到门。轻小件/低客单价件免费销毁、不改派、不退回；其余大陆渠道支持改派，退回收取正向运价1.5倍。带电、液体未明确，默认不放行。")
-        routes.append(route)
-    routes.append(dict(
-        id="CEL-RFBS-HK-Express", provider="CEL", name="香港空运 · Express",
-        enabled=True, destination="俄罗斯", mode="RFBS", speed="Express",
-        fixed=19, rate=96, min_weight=.001, max_weight=25,
-        min_value=1, max_value=500000, max_side=150, max_sum=310,
-        divisor=6000, volumetric_min_sum=60, step=.1, max_billable=0,
-        surcharge=0, sorted_sides=[], battery=False, liquid=False,
-        days="7–12天", source="CEL产品资费表 V7.24 / OZON-rFBS / 香港空运",
-        note="三边和超过60cm才计体积重，实重与体积重取大；百克向上进位。免费销毁、支持改派，退运收取正向运价1.5倍。带电、液体需另行确认。"))
-    from .guoo_tariffs import routes as guoo_routes
-    routes.extend(guoo_routes())
-    from .xy_tariffs import routes as xy_routes
-    routes.extend(xy_routes())
-    return {"version": 2, "xy_post_snapshot": 2, "guoo_snapshot": 1, "cel_rfbs_snapshot": 1, "xy_extra_snapshot": 1, "routes": routes}
+    """Read the editable global logistics defaults from the app JSON file."""
+    try:
+        with DEFAULT_CONFIG_PATH.open(encoding="utf-8") as handle:
+            config = json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        frappe.throw(f"默认物流配置 JSON 无法读取：{exc}")
+    return validate_config(config)
 
+
+def _write_default_config(config):
+    """Atomically replace the editable global defaults after validation."""
+    config = validate_config(config)
+    payload = json.dumps(config, ensure_ascii=False, indent=2) + "\n"
+    temporary = None
+    try:
+        descriptor, temporary = tempfile.mkstemp(
+            prefix=".default_freight_config.",
+            suffix=".tmp",
+            dir=str(DEFAULT_CONFIG_PATH.parent),
+        )
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(temporary, 0o644)
+        os.replace(temporary, DEFAULT_CONFIG_PATH)
+    except OSError as exc:
+        if temporary:
+            try:
+                os.unlink(temporary)
+            except OSError:
+                pass
+        frappe.throw(f"默认物流配置 JSON 保存失败：{exc}")
 
 def _object(value):
     if isinstance(value, str):
@@ -337,6 +283,50 @@ def _object(value):
     if len(json.dumps(value, ensure_ascii=False).encode()) > 2_000_000:
         frappe.throw("单份画布或配置不能超过 2MB")
     return value
+
+
+def _canvas_stores(canvas):
+    stores = set()
+    for node in canvas.get("nodes") or []:
+        for price in (node.get("meta") or {}).get("prices") or []:
+            if price.get("store"):
+                stores.add(str(price["store"]))
+        for product in (node.get("competitors") or {}).get("products") or []:
+            if product.get("store"):
+                stores.add(str(product["store"]))
+    return stores
+
+
+def _resolve_canvas_cost_center(canvas, current=None):
+    if current:
+        if not frappe.db.exists("Cost Center", current):
+            frappe.throw(f"画布关联的成本中心不存在：{current}")
+        return str(current)
+    stores = _canvas_stores(canvas)
+    if len(stores) > 1:
+        frappe.throw("一个运费画布只能关联一个成本中心")
+    if not stores:
+        return None
+    cost_center = next(iter(stores))
+    if not frappe.db.exists("Cost Center", cost_center):
+        frappe.throw(f"画布中的成本中心不存在：{cost_center}")
+    return cost_center
+
+
+def _apply_canvas_cost_center(canvas, cost_center):
+    if not cost_center:
+        return 0
+    changed = 0
+    for node in canvas.get("nodes") or []:
+        for price in (node.get("meta") or {}).get("prices") or []:
+            if price.get("store") and price.get("store") != cost_center:
+                price["store"] = cost_center
+                changed += 1
+        for product in (node.get("competitors") or {}).get("products") or []:
+            if product.get("store") and product.get("store") != cost_center:
+                product["store"] = cost_center
+                changed += 1
+    return changed
 
 
 def validate_config(config):
@@ -396,7 +386,7 @@ def validate_config(config):
 def bootstrap():
     frappe.has_permission(DOCTYPE, "read", throw=True)
     return dict(can_write=frappe.has_permission(DOCTYPE, "write"), can_create=frappe.has_permission(DOCTYPE, "create"),
-                canvases=frappe.get_list(DOCTYPE, fields=["name", "canvas_title", "modified"], order_by="modified desc", limit_page_length=200), defaults=default_config(), exchange=exchange_info())
+                canvases=frappe.get_list(DOCTYPE, fields=["name", "canvas_title", "cost_center", "modified"], order_by="modified desc", limit_page_length=200), defaults=default_config(), exchange=exchange_info())
 
 
 def _saved_daily_exchange_rate(rate_date):
@@ -897,7 +887,38 @@ def search_items(query="", start=0):
 def load_canvas(name):
     doc = frappe.get_doc(DOCTYPE, name)
     doc.check_permission("read")
-    return dict(name=doc.name, title=doc.canvas_title, canvas=doc.canvas_json, config=doc.freight_config_json, modified=str(doc.modified))
+    canvas = _object(doc.canvas_json)
+    cost_center = _resolve_canvas_cost_center(canvas, doc.cost_center)
+    _apply_canvas_cost_center(canvas, cost_center)
+    return dict(name=doc.name, title=doc.canvas_title, cost_center=cost_center,
+                canvas=canvas, config=doc.freight_config_json, modified=str(doc.modified))
+
+
+def backfill_canvas_cost_centers():
+    """Idempotently fill fields added after the original canvas schema."""
+    cost_centers_updated = []
+    default_config_updated = []
+    global_default = default_config()
+    for name in frappe.get_all(DOCTYPE, pluck="name", order_by="name"):
+        doc = frappe.get_doc(DOCTYPE, name)
+        canvas = _object(doc.canvas_json)
+        cost_center = _resolve_canvas_cost_center(canvas, doc.cost_center)
+        if cost_center and doc.cost_center != cost_center:
+            frappe.db.set_value(DOCTYPE, name, "cost_center", cost_center, update_modified=False)
+            cost_centers_updated.append(name)
+        if not doc.default_freight_config_json:
+            frappe.db.set_value(
+                DOCTYPE,
+                name,
+                "default_freight_config_json",
+                json.dumps(global_default, ensure_ascii=False),
+                update_modified=False,
+            )
+            default_config_updated.append(name)
+    return {
+        "cost_centers_updated": cost_centers_updated,
+        "default_config_updated": default_config_updated,
+    }
 
 
 def validate_packing(node):
@@ -1023,9 +1044,13 @@ def save_canvas(title, canvas, config, name=None, modified=None, quote_batch=Non
     else:
         doc = frappe.new_doc(DOCTYPE)
         doc.check_permission("create")
+    cost_center = _resolve_canvas_cost_center(canvas, doc.cost_center)
+    _apply_canvas_cost_center(canvas, cost_center)
     doc.canvas_title = title
+    doc.cost_center = cost_center
     doc.canvas_json = canvas
     doc.freight_config_json = config
+    doc.default_freight_config_json = config
     doc.save()
     has_legacy = any((node.get("competitors") or {}).get("products") and not (node.get("competitors") or {}).get("fromHistoryStore") for node in canvas["nodes"])
     summary = None
@@ -1036,4 +1061,6 @@ def save_canvas(title, canvas, config, name=None, modified=None, quote_batch=Non
             summary = _import_quote_batch(doc.name, canvas, quote_batch)
         doc.canvas_json = canvas
         doc.save()
-    return dict(name=doc.name, modified=str(doc.modified), quote_summary=summary)
+    _write_default_config(config)
+    return dict(name=doc.name, cost_center=doc.cost_center,
+                modified=str(doc.modified), quote_summary=summary)
