@@ -8,8 +8,12 @@
 .ozfc .fc-stage.fc-panning,.ozfc .fc-stage.fc-panning *{cursor:grabbing!important;user-select:none!important;-webkit-user-select:none!important}
 .ozfc .fc-stage.fc-panning .fc-world{will-change:transform}
 .ozfc .fc-stage.fc-dragging-cards .fc-lines{visibility:hidden}
+/* Keep card titles during a pan; restore the details on release. */
+.ozfc .fc-stage.fc-pan-ready .fc-world{will-change:transform}
+.ozfc .fc-stage.fc-moving-canvas{cursor:grabbing}
+.ozfc .fc-stage.fc-moving-canvas::after{content:"";position:absolute;inset:0;z-index:70;cursor:grabbing}
 .ozfc .fc-stage.fc-moving-canvas .fc-card{box-shadow:none!important}
-.ozfc .fc-stage.fc-moving-canvas .fc-card>*{visibility:hidden}
+.ozfc .fc-stage.fc-moving-canvas .fc-card>:not(.fc-drag){visibility:hidden}
 .ozfc .fc-stage.fc-moving-canvas .fc-lines,.ozfc .fc-stage.fc-moving-canvas .fc-full-image-card,.ozfc .fc-stage.fc-moving-canvas .fc-image-link{visibility:hidden}
 .ozfc .fc-item-meta{padding:0 16px 12px}
 .ozfc .fc-cost{padding:10px 12px;background:linear-gradient(110deg,#edf6f9,#f4f9fd);border:1px solid #e0edf2;border-radius:10px;margin-bottom:10px}

@@ -20,9 +20,33 @@ def run():
           c.root=document.createElement('div');c.root.className='ozfc';document.body.append(c.root);
           c.s={nodes:[{id:'ui-test',manual:true,manualSale:100,commissionOverride:10,item:{item_code:'SIM-ui',item_name:'测试物料',length:100,width:100,height:100,weight:200,value:10,value_currency:'CNY',quantity:4},x:0,y:0}],active:'ui-test',focus:'ui-test',expanded:['ui-test'],exclusive:true,view:{x:0,y:0,z:1}};
           c.c={cny_per_rub:.08,margin_pct:35,routes:[{id:'ui-route',enabled:true,provider:'测试',name:'按包计费',speed:'Standard',fixed:5,rate:10,min_weight:0,max_weight:20,min_value:0,max_value:10000,max_side:100,max_sum:200,divisor:12000,step:.001}]};
-          c.undo=[];c.redo=[];c.shell();c.bind();c.paint();
+          c.bootData={defaults:structuredClone(c.c)};c.undo=[];c.redo=[];c.shell();c.bind();c.paint();
         }""")
         assert page.locator(".fc-packing").count() == 1
+        page.evaluate("""() => {
+          const c=canvas;window.panTest={paint:c.paint,card:document.querySelector('.fc-item'),view:{...c.s.view},paints:0};
+          c.paint=function(){if(!this.panning)panTest.paints++;return panTest.paint.call(this);};
+        }""")
+        page.locator('.fc-fx').focus()
+        stage = page.locator('.fc-stage').bounding_box()
+        x, y = stage['x'] + 350, stage['y'] + 30
+        page.mouse.move(x, y)
+        page.mouse.down()
+        assert page.evaluate('canvas.panning && document.activeElement===canvas.stage'), 'Panning focuses the canvas after a toolbar input'
+        page.mouse.move(x + 20, y + 10, steps=3)
+        page.wait_for_timeout(50)
+        assert page.evaluate("getComputedStyle(document.querySelector('.fc-item>.fc-drag')).visibility==='visible' && getComputedStyle(document.querySelector('.fc-product')).visibility==='hidden'"), 'Lightweight panning keeps card titles and hides the details'
+        page.mouse.up()
+        assert page.evaluate('!canvas.panning && panTest.paints===0 && panTest.card===document.querySelector(".fc-item")'), 'Panning preserves the existing cards without a full repaint'
+        assert page.evaluate("getComputedStyle(document.querySelector('.fc-product')).visibility==='visible'"), 'Card details are restored on release'
+        page.keyboard.press('Control+z')
+        assert page.evaluate('canvas.s.view.x===panTest.view.x && canvas.s.view.y===panTest.view.y'), 'Keyboard undo restores the original view'
+        page.keyboard.press('Control+Shift+z')
+        assert page.evaluate('canvas.s.view.x===panTest.view.x+20 && canvas.s.view.y===panTest.view.y+10'), 'Keyboard redo restores the final view'
+        page.keyboard.press('Control+z')
+        page.wait_for_timeout(180)
+        assert page.evaluate('!canvas.stage.classList.contains("fc-pan-ready")'), 'The temporary pan layer is released'
+        page.evaluate('canvas.paint=panTest.paint;canvas.undo=[];canvas.redo=[];canvas.dirty=false;delete window.panTest')
         assert page.evaluate("""async () => {
           const c=canvas,api=c.api,save=c.save,hydrate=c.hydrateHistory;let calls=0,hydrations=0,delay;
           const interval=window.setInterval;window.setInterval=(fn,ms)=>{delay=ms;return 123;};c.startAutoSave();window.setInterval=interval;c.autoSaveTimer=null;

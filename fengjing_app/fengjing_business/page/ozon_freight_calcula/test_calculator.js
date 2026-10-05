@@ -1,6 +1,119 @@
 /* Run: node test_calculator.js */
 {
  const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const c=Object.create(OzFreightCanvas.prototype);
+ c.s={nodes:[{id:'untouched',meta:{toJSON(){throw Error('Panning must not serialize material data');}}}],view:{x:10,y:20,z:2}};
+ c.c={toJSON(){throw Error('Panning must not serialize logistics configuration');}};
+ c.undo=[];c.redo=[];c.change=c.refreshViewport=()=>{};
+ const nodes=c.s.nodes,config=c.c;
+ c.snapView();c.s.view.x=90;c.s.view.y=-30;
+ assert.equal(c.undo.length,1);assert.equal(c.undo[0].type,'view');
+ assert.deepEqual(Object.keys(c.undo[0]).sort(),['type','view']);
+ c.history(true);assert.deepEqual(c.s.view,{x:10,y:20,z:2});
+ assert.equal(c.s.nodes,nodes);assert.equal(c.c,config);
+ c.history(false);assert.deepEqual(c.s.view,{x:90,y:-30,z:2});
+ assert.equal(c.s.nodes,nodes);assert.equal(c.c,config);
+ c.s={nodes:[{id:'mixed',item:{value:1}}],view:{x:0,y:0,z:1}};c.c={margin_pct:35};
+ c.undo=[];c.redo=[];c.paint=()=>{};
+ c.snap();c.s.nodes[0].item.value=2;c.c.margin_pct=40;
+ c.snapView();c.s.view.x=100;
+ c.snap();c.s.nodes[0].item.value=3;
+ const state=()=>[c.s.nodes[0].item.value,c.c.margin_pct,c.s.view.x];
+ c.history(true);assert.deepEqual(state(),[2,40,100]);
+ c.history(true);assert.deepEqual(state(),[2,40,0]);
+ c.history(true);assert.deepEqual(state(),[1,35,0]);
+ c.history(false);assert.deepEqual(state(),[2,40,0]);
+ c.history(false);assert.deepEqual(state(),[2,40,100]);
+ c.history(false);assert.deepEqual(state(),[3,40,100]);
+ c.history(true);c.snapView();assert.equal(c.redo.length,0);
+ console.log('PASS: viewport-only undo avoids data serialization and composes with full undo/redo');
+}
+{
+ const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
+ const keys=['window','document','requestAnimationFrame','cancelAnimationFrame','setTimeout','clearTimeout'];
+ const originals=new Map(keys.map(key=>[key,{present:Object.prototype.hasOwnProperty.call(global,key),value:global[key]}]));
+ const frames=new Map(),timers=new Map();let frameId=0,timerId=0,windowListeners;
+ try{
+  global.requestAnimationFrame=callback=>{frames.set(++frameId,callback);return frameId;};
+  global.cancelAnimationFrame=id=>frames.delete(id);
+  global.setTimeout=(callback,delay)=>{timers.set(++timerId,{callback,delay});return timerId;};
+  global.clearTimeout=id=>timers.delete(id);
+  global.window={addEventListener:(name,callback)=>windowListeners[name]=callback,removeEventListener:(name,callback)=>{if(windowListeners[name]===callback)delete windowListeners[name];},getSelection:()=>({removeAllRanges(){}})};
+  const runFrame=()=>{const [id,callback]=frames.entries().next().value;frames.delete(id);callback();};
+  const fixture=()=>{
+   frames.clear();timers.clear();windowListeners={};
+   const c=Object.create(OzFreightCanvas.prototype),stageListeners={},classes=new Set(),transforms=[];
+   let paints=0;
+   c.s={nodes:Array.from({length:30},(_,i)=>({id:'visible-'+i,x:i===0?50:i===1?900:10000+i*1000,y:50,item:{quantity:1}})),expanded:[],view:{x:60,y:50,z:2}};
+   c.c={};c.undo=[];c.redo=[];
+   c.root={isConnected:true,addEventListener(){}};
+   c.stage={clientWidth:1000,clientHeight:800,addEventListener:(name,callback)=>stageListeners[name]=callback,classList:{add:(...names)=>names.forEach(name=>classes.add(name)),remove:(...names)=>names.forEach(name=>classes.delete(name))}};
+   c.world={style:{}};
+   c.snap=()=>{throw Error('Blank panning must use a viewport-only snapshot');};
+   c.change=()=>{};c.transform=refresh=>transforms.push({view:{...c.s.view},refresh});
+   c.paint=function(){if(this.panning)return OzFreightCanvas.prototype.paint.call(this);paints++;this.panPaintPending=false;this.panCalculations?.clear();this.renderedNodeIds=new Set(this.visibleCanvasNodes().map(n=>n.id));};
+   c.renderedNodeIds=new Set(c.visibleCanvasNodes().map(n=>n.id));
+   c.bind();
+   const event=(x,y)=>({button:0,clientX:x,clientY:y,target:{closest:()=>null},preventDefault(){}});
+   return {c,classes,transforms,paints:()=>paints,down:(x=0,y=0)=>stageListeners.pointerdown(event(x,y)),move:(x,y)=>windowListeners.pointermove(event(x,y)),up:(x,y)=>windowListeners.pointerup(event(x,y))};
+  };
+  let f=fixture();f.down();
+  f.move(10,20);f.move(30,40);f.move(50,60);
+  assert.equal(frames.size,1);assert.equal(f.transforms.length,0);assert.equal(f.c.undo.length,0);
+  runFrame();assert.equal(f.transforms.length,1);assert.deepEqual(f.c.s.view,{x:110,y:110,z:2});
+  assert.equal(f.c.undo.length,1);assert.equal(f.c.undo[0].type,'view');
+  f.move(60,70);assert.equal(frames.size,1);
+  f.up(80,90);
+  assert.deepEqual(f.c.s.view,{x:140,y:140,z:2});assert.equal(frames.size,0);
+  assert.equal(f.c.undo.length,1);assert.equal(f.paints(),0);assert.equal(f.c.panning,false);
+  assert.equal(f.classes.has('fc-panning'),false);assert.equal(f.classes.has('fc-moving-canvas'),false);
+  assert.equal(windowListeners.pointermove,undefined);assert.equal(windowListeners.pointerup,undefined);
+  f=fixture();f.down();f.move(-1200,0);runFrame();
+  assert.equal(f.paints(),0);f.up(-1200,0);
+  assert.equal(f.paints(),1);assert.deepEqual([...f.c.renderedNodeIds],['visible-1']);
+  f=fixture();f.down();f.move(2,1);f.up(2,1);
+  assert.deepEqual(f.c.s.view,{x:60,y:50,z:2});assert.equal(f.c.undo.length,0);assert.equal(f.paints(),0);assert.equal(f.c.panning,false);
+  f=fixture();f.down();f.move(40,30);
+  windowListeners.pointercancel({type:'pointercancel',clientX:0,clientY:0});
+  assert.deepEqual(f.c.s.view,{x:100,y:80,z:2});assert.equal(f.c.panning,false);assert.equal(frames.size,0);
+  assert.equal(windowListeners.pointercancel,undefined);assert.equal(windowListeners.blur,undefined);
+  f=fixture();f.down();f.move(40,30);windowListeners.blur({type:'blur'});
+  assert.deepEqual(f.c.s.view,{x:100,y:80,z:2});assert.equal(f.c.panning,false);assert.equal(frames.size,0);
+  console.log('PASS: blank pan merges frames, commits final pointer coordinates and only repaints changed visibility');
+  f=fixture();f.c.queueViewportPaint();
+  assert.equal(timers.size,1);const queued=f.c.viewportPaintTimer;
+  f.down();assert.equal(timers.has(queued),false);assert.equal(f.c.viewportPaintTimer,null);
+  f.move(20,0);runFrame();f.c.queueViewportPaint();
+  assert.equal(timers.size,0);assert.equal(f.paints(),0);
+  f.up(20,0);assert.equal(f.paints(),0);
+  f=fixture();f.down();f.move(20,0);runFrame();
+  f.c.paint();f.c.paint();
+  assert.equal(f.paints(),0);assert.equal(f.c.panPaintPending,true);
+  f.up(20,0);assert.equal(f.paints(),1);assert.equal(f.c.panPaintPending,false);
+  f=fixture();f.down();f.c.paint();f.up(0,0);
+  assert.equal(f.paints(),1);assert.equal(f.c.panning,false);
+  f=fixture();f.c.queueViewportPaint();
+  const [id,timer]=timers.entries().next().value;timers.delete(id);timer.callback();
+  assert.equal(f.paints(),0);assert.equal(f.transforms.length,1);
+  console.log('PASS: pending viewport timer is canceled and full repaint requests wait until pan release');
+  global.document={addEventListener(){}};
+  let updates=[];f=fixture();f.down();f.move(20,0);runFrame();
+  f.c.updateMaterialCalculation=function(id,shipping){if(this.panning)return OzFreightCanvas.prototype.updateMaterialCalculation.call(this,id,shipping);updates.push([id,shipping]);};
+  f.c.updateMaterialCalculation('visible-0',false);f.c.updateMaterialCalculation('visible-0',true);f.c.updateMaterialCalculation('visible-0',false);
+  f.c.updateMaterialCalculation('visible-1',false);
+  assert.deepEqual(updates,[]);assert.deepEqual([...f.c.panCalculations],[['visible-0',true],['visible-1',false]]);
+  f.up(20,0);assert.deepEqual(updates,[['visible-0',true],['visible-1',false]]);assert.equal(f.c.panCalculations,null);assert.equal(f.paints(),0);
+  updates=[];f=fixture();f.down();
+  f.c.updateMaterialCalculation=function(id,shipping){if(this.panning)return OzFreightCanvas.prototype.updateMaterialCalculation.call(this,id,shipping);updates.push([id,shipping]);};
+  f.c.updateMaterialCalculation('visible-0',true);f.c.paint();f.up(0,0);
+  assert.equal(f.paints(),1);assert.deepEqual(updates,[]);assert.equal(f.c.panCalculations,null);
+  console.log('PASS: pan cancellation preserves the last pointer position; deferred calculations retain shipping updates');
+ }finally{
+  for(const [key,original] of originals){if(original.present)global[key]=original.value;else delete global[key];}
+ }
+}
+{
+ const assert=require('node:assert/strict'),{OzFreightCanvas}=require('./ozon_freight_calcula.js');
  const c=Object.create(OzFreightCanvas.prototype),n={meta:{prices:[{store:'my-store',currency:'CNY',amount:10}]},priceIndex:0};
  const method={store:'my-store',warehouse_id:'1',warehouse_name:'我的仓库',method_name:'CEL Standard Small Linyi PUDO',mode:'RFBS',dropoff_name:'CEL集货仓'};
  c.warehouseData={channels:[method,{...method,store:'other-store'},{...method,method_name:'CEL Standard Extra Small Linyi PUDO'},{...method,method_name:'CEL Standard Small Kyrgyz PUDO'}],errors:[]};
