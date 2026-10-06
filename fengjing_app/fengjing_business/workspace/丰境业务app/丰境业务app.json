@@ -392,7 +392,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "\u4e3b\u914d\u7f6e",
-   "link_count": 3,
+   "link_count": 4,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -426,9 +426,19 @@
    "link_type": "Page",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u4e30\u5883\u65e5\u5386",
+   "link_count": 0,
+   "link_to": "fengjin_team_calenda",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-06 20:28:25.571015",
+ "modified": "2026-10-06 23:19:00.602782",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "\u4e30\u5883\u4e1a\u52a1APP",
