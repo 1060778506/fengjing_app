@@ -19,6 +19,22 @@
 	height: 100%;
 }
 
+/* Frappe/Bootstrap会把同名的Excalidraw菜单强制隐藏。 */
+.fjwb-page .excalidraw .dropdown-menu {
+	display: block;
+	float: none;
+	min-width: 0;
+	padding: 0;
+	color: inherit;
+	text-align: initial;
+	background-color: transparent;
+	background-clip: initial;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	z-index: auto;
+}
+
 .fjwb-loading,
 .fjwb-error {
 	position: absolute;
