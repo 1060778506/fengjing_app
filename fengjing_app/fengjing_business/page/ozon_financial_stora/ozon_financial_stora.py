@@ -40,6 +40,22 @@ def _db_filters(filters):
 	return result
 
 
+def _available_months():
+	"""Return current-year month buttons from the first finance record through this month."""
+	today = getdate(nowdate())
+	year_start = f"{today.year}-01-01 00:00:00"
+	year_end = f"{today.year}-12-31 23:59:59"
+	earliest = frappe.db.sql(
+		f"""SELECT MIN(operation_date)
+			FROM `tab{DOCTYPE}`
+			WHERE operation_date BETWEEN %s AND %s""",
+		(year_start, year_end),
+	)[0][0]
+	first_month = getdate(earliest).month if earliest else today.month
+	first_month = min(first_month, today.month)
+	return [f"{today.year}-{month:02d}" for month in range(first_month, today.month + 1)]
+
+
 def _mapping_index():
 	rows = frappe.get_all(
 		MAPPING_DOCTYPE,
@@ -71,6 +87,8 @@ def _enrich_items(rows):
 					break
 		if row.get("corresponding_item"):
 			item_codes.add(row.corresponding_item)
+		if row.get("manual_corresponding_item"):
+			item_codes.add(row.manual_corresponding_item)
 	items = {}
 	if item_codes:
 		items = {
@@ -84,6 +102,9 @@ def _enrich_items(rows):
 		if item:
 			row.corresponding_item_name = item.item_name or row.get("corresponding_item_name")
 			row.corresponding_item_image = item.image or row.get("corresponding_item_image")
+		manual_item = items.get(row.get("manual_corresponding_item"))
+		row.manual_item_name = manual_item.item_name if manual_item else ""
+		row.manual_item_image = manual_item.image if manual_item else ""
 		row.is_product = 1 if row.get("sku") else 0
 		row.is_bound = 1 if row.get("corresponding_item") else 0
 
@@ -126,9 +147,19 @@ def _posting_breakdown(row):
 	return result
 
 
-def _accrual_type_label(row):
-	key = str(row.get("operation_type_name") or row.get("operation_type") or "")
-	description = str(row.get("description") or "")
+TYPE_GROUP_ORDER = (
+	"商品销售与佣金",
+	"广告费",
+	"国际配送服务",
+	"Ozon平台服务费",
+	"商品缺陷罚款",
+)
+
+
+def _accrual_item_type(row):
+	"""Return the original Ozon accrual type translated for display."""
+	key = str(row.get("operation_type_name") or row.get("operation_type") or "").strip()
+	description = str(row.get("description") or "").strip()
 	by_name = {
 		"POSTING": "商品销售与佣金",
 		"Acquiring": "收单服务费",
@@ -139,6 +170,8 @@ def _accrual_type_label(row):
 		"RfbsGlobalPlatformConnectionService": "Ozon物流平台接入服务",
 		"Promotion": "推广服务",
 		"DefectFineErrors": "商品缺陷罚款",
+		"ReturnFlowLogistic": "退货运费",
+		"Обратная логистика": "退货运费",
 	}
 	by_description = {
 		"Эквайринг": "收单服务费",
@@ -147,8 +180,57 @@ def _accrual_type_label(row):
 		"Агентское вознаграждение Ozon": "Ozon代理佣金",
 		"Услуги по заключению договора на организацию международной перевозки": "国际运输组织合同服务",
 		"Электронная услуга подключения к логистической Платформе Ozon": "Ozon物流平台接入服务",
+		"Обратная логистика": "退货运费",
 	}
 	return by_name.get(key) or by_description.get(description) or description or key or "未分类应计项目"
+
+
+def _accrual_group_label(row):
+	"""Combine related original accrual types into the dashboard filter groups."""
+	item_type = _accrual_item_type(row)
+	if item_type in {"推广服务", "按点击付费"}:
+		return "广告费"
+	if item_type in {"国际配送服务", "退货运费"}:
+		return "国际配送服务"
+	if item_type in {
+		"Ozon物流平台接入服务", "国际运输组织合同服务", "Ozon代理佣金", "收单服务费",
+	}:
+		return "Ozon平台服务费"
+	return item_type
+
+
+def _sort_dashboard_rows(rows, sort_field=None, sort_direction=None):
+	"""Sort the complete filtered result before pagination; time is the stable secondary order."""
+	sort_field = str(sort_field or "accrual_type")
+	reverse = str(sort_direction or "asc").lower() == "desc"
+	text_fields = {
+		"posting_number": "posting_number",
+		"manual_item": "manual_corresponding_item",
+		"accrual_type": "accrual_type_label",
+		"sync_type": "sync_type",
+		"operation_date": "operation_date",
+	}
+	number_fields = {
+		"is_booked": "is_booked",
+		"net_amount": "net_amount",
+		"accruals_for_sale": "accruals_for_sale",
+		"coinvestment_amount": "coinvestment_amount",
+	}
+
+	# Stable secondary order: records inside the same primary value remain newest first.
+	rows.sort(key=lambda row: str(row.get("operation_date") or ""), reverse=True)
+	if sort_field == "order_product":
+		key = lambda row: str(
+			row.get("product_name") or row.get("offer_id") or row.get("sku") or row.get("order_number") or ""
+		).casefold()
+	elif sort_field in number_fields:
+		fieldname = number_fields[sort_field]
+		key = lambda row: flt(row.get(fieldname))
+	else:
+		fieldname = text_fields.get(sort_field, "accrual_type_label")
+		key = lambda row: str(row.get(fieldname) or "").casefold()
+	rows.sort(key=key, reverse=reverse)
+	return rows
 
 
 def _attach_related_products(rows):
@@ -166,7 +248,8 @@ def _attach_related_products(rows):
 		filters={"posting_number": ["in", posting_numbers]},
 		fields=[
 			"name", "store", "posting_number", "sku", "offer_id", "product_id", "product_name",
-			"quantity", "corresponding_item", "corresponding_item_name", "corresponding_item_image", "items_json",
+			"quantity", "corresponding_item", "manual_corresponding_item",
+			"corresponding_item_name", "corresponding_item_image", "items_json",
 		],
 		limit_page_length=0,
 	)
@@ -251,20 +334,51 @@ def _attach_related_products(rows):
 		row.related_products = list(grouped.get(group_key, {}).values())
 
 
+def _store_cost_center_map():
+	"""Map every Ozon store identifier used by finance records to its configured cost center."""
+	result = {}
+	for row in frappe.get_all(
+		"Ozon Store Configuration",
+		filters={"enabled": 1},
+		fields=["name", "store_name", "cost_center", "ozon_id"],
+		limit_page_length=0,
+	):
+		cost_center = str(row.cost_center or "").strip()
+		if not cost_center:
+			continue
+		for value in (row.name, row.store_name, row.cost_center, row.ozon_id):
+			if value:
+				result[str(value).strip()] = cost_center
+	return result
+
+
 def _filtered_type_summary(rows, selected_type):
-	"""汇总当前筛选类型的全部记录，并按币种和可明确归属的物料分组。"""
+	"""按币种、对应物料和原始应计项目类型汇总当前筛选分组。"""
 	if not selected_type:
 		return None
 
 	currencies = {}
+	manual_item_details = {}
+	store_cost_centers = _store_cost_center_map()
 	for row in rows:
 		currency = row.get("currency_code") or "未知"
+		accrual_item_type = row.get("accrual_type_label") or _accrual_item_type(row)
 		amount = _money(row.get("net_amount") if row.get("net_amount") is not None else row.get("transaction_amount"))
+		sale_amount = _money(row.get("accruals_for_sale"))
+		commission_amount = _money(row.get("sale_commission"))
+		manual_item = str(row.get("manual_corresponding_item") or "")
+		if manual_item:
+			manual_item_details[manual_item] = {
+				"name": row.get("manual_item_name") or manual_item,
+				"image": row.get("manual_item_image") or "",
+			}
 		bucket = currencies.setdefault(currency, {
-			"total": 0.0, "count": 0, "unassigned": 0.0,
-			"unassigned_count": 0, "items": {},
+			"total": 0.0, "count": 0, "sale_total": 0.0,
+			"commission_total": 0.0, "items": {},
 		})
 		bucket["total"] += amount
+		bucket["sale_total"] += sale_amount
+		bucket["commission_total"] += commission_amount
 		bucket["count"] += 1
 
 		item = None
@@ -276,10 +390,10 @@ def _filtered_type_summary(rows, selected_type):
 			}
 		else:
 			# 店铺级费用只有在能唯一对应一个物料时才归入该物料，避免一笔费用重复计算。
-			related = {}
-			for product in row.get("related_products") or []:
-				if product.get("item"):
-					related[product.get("item")] = product
+			related = {
+				product.get("item"): product
+				for product in row.get("related_products") or [] if product.get("item")
+			}
 			if len(related) == 1:
 				product = next(iter(related.values()))
 				item = {
@@ -288,34 +402,105 @@ def _filtered_type_summary(rows, selected_type):
 					"image": product.get("image"),
 				}
 
-		if not item:
-			bucket["unassigned"] += amount
-			bucket["unassigned_count"] += 1
-			continue
-
-		item_bucket = bucket["items"].setdefault(item["item"], {
-			**item, "amount": 0.0, "count": 0,
+		item = item or {"item": "", "item_name": "未明确归属物料", "image": ""}
+		default_cost_center = store_cost_centers.get(str(row.get("store") or "").strip(), "")
+		effective_cost_center = str(row.get("cost_center") or default_cost_center or "")
+		# 同一物料只合并相同的原始应计项目类型，不同服务类型必须分行。
+		group_key = (str(item.get("item") or ""), accrual_item_type)
+		item_bucket = bucket["items"].setdefault(group_key, {
+			**item, "accrual_type": accrual_item_type,
+			"amount": 0.0, "sale_amount": 0.0, "commission_amount": 0.0,
+			"count": 0, "record_names": [], "account_codes": set(),
+			"cost_centers": set(), "manual_items": set(),
 		})
 		item_bucket["amount"] += amount
+		item_bucket["sale_amount"] += sale_amount
+		item_bucket["commission_amount"] += commission_amount
 		item_bucket["count"] += 1
+		item_bucket["record_names"].append(row.get("name"))
+		item_bucket["account_codes"].add(str(row.get("account_code") or ""))
+		item_bucket["cost_centers"].add(effective_cost_center)
+		item_bucket["manual_items"].add(manual_item)
 
 	result = []
 	for currency, bucket in currencies.items():
 		bucket["total"] = _money(bucket["total"])
-		bucket["unassigned"] = _money(bucket["unassigned"])
+		bucket["sale_total"] = _money(bucket["sale_total"])
+		bucket["commission_total"] = _money(bucket["commission_total"])
 		items = sorted(
 			bucket.pop("items").values(),
-			key=lambda item: abs(item["amount"]),
-			reverse=True,
+			key=lambda item: (item["accrual_type"], -abs(item["amount"]), item["item"]),
 		)
 		for item in items:
 			item["amount"] = _money(item["amount"])
+			item["sale_amount"] = _money(item["sale_amount"])
+			item["commission_amount"] = _money(item["commission_amount"])
+			account_codes = item.pop("account_codes")
+			item["account_code"] = next(iter(account_codes)) if len(account_codes) == 1 else ""
+			item["account_mixed"] = len(account_codes) > 1
+			cost_centers = item.pop("cost_centers")
+			item["cost_center"] = next(iter(cost_centers)) if len(cost_centers) == 1 else ""
+			item["cost_center_mixed"] = len(cost_centers) > 1
+			manual_items = item.pop("manual_items")
+			manual_item = next(iter(manual_items)) if len(manual_items) == 1 else ""
+			manual_detail = manual_item_details.get(manual_item, {})
+			item["manual_item"] = manual_item
+			item["manual_item_name"] = manual_detail.get("name", "")
+			item["manual_item_image"] = manual_detail.get("image", "")
+			item["manual_item_mixed"] = len(manual_items) > 1
+			item["equation_difference"] = _money(item["sale_amount"] + item["commission_amount"] - item["amount"])
+			item["equation_valid"] = abs(item["equation_difference"]) < 0.01
+		bucket["equation_difference"] = _money(bucket["sale_total"] + bucket["commission_total"] - bucket["total"])
+		bucket["equation_valid"] = abs(bucket["equation_difference"]) < 0.01
 		bucket["currency"] = currency
 		bucket["items"] = items
 		bucket["has_items"] = bool(items)
 		result.append(bucket)
 	result.sort(key=lambda row: row["currency"])
-	return {"type": selected_type, "count": len(rows), "currencies": result}
+	return {
+		"type": selected_type,
+		"count": len(rows),
+		"is_sales_commission": selected_type == "商品销售与佣金",
+		"currencies": result,
+	}
+
+
+def _account_options():
+	"""Return selectable leaf account codes for the summary table."""
+	rows = frappe.get_all(
+		"Account",
+		filters={"is_group": 0, "disabled": 0, "account_number": ["!=", ""]},
+		fields=["name", "account_number", "account_name", "company", "account_currency"],
+		order_by="account_number asc, company asc",
+		limit_page_length=0,
+	)
+	return [
+		{
+			"code": str(row.account_number or ""),
+			"name": row.name,
+			"label": row.name,
+			"currency": row.account_currency,
+		}
+		for row in rows if row.account_number
+	]
+
+
+def _cost_center_options():
+	"""Return selectable leaf cost centers for the summary table."""
+	rows = frappe.get_all(
+		"Cost Center",
+		filters={"is_group": 0, "disabled": 0},
+		fields=["name", "cost_center_name", "company"],
+		order_by="cost_center_name asc, company asc",
+		limit_page_length=0,
+	)
+	return [
+		{
+			"value": row.name,
+			"label": f"{row.cost_center_name} · {row.company}",
+		}
+		for row in rows
+	]
 
 
 @frappe.whitelist()
@@ -328,12 +513,12 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 		"transaction_status", "description", "is_refund", "is_reversal", "is_adjustment",
 		"posting_number", "order_number", "delivery_schema", "warehouse_name", "statement_id",
 		"statement_number", "sku", "offer_id", "product_id", "product_name", "quantity",
-		"corresponding_item", "corresponding_item_name", "corresponding_item_image", "item_count",
+		"corresponding_item", "manual_corresponding_item", "corresponding_item_name", "corresponding_item_image", "item_count",
 		"currency_code", "transaction_amount", "accruals_for_sale", "coinvestment_amount", "sale_commission",
 		"delivery_charge", "return_delivery_charge", "services_amount", "advertising_amount",
 		"penalty_amount", "compensation_amount", "discount_points_amount", "other_amount",
 		"net_amount", "operation_date", "order_date", "payment_date", "settlement_period_start",
-		"settlement_period_end", "fetched_at", "data_version", "data_changed", "sync_status", "items_json", "is_booked",
+		"settlement_period_end", "fetched_at", "data_version", "data_changed", "sync_status", "items_json", "is_booked", "account_code", "cost_center",
 	]
 	rows = frappe.get_all(
 		DOCTYPE, filters=_db_filters(f), fields=fields,
@@ -366,16 +551,21 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 			filtered.append(row)
 		rows = filtered
 
-	# 每条主交易只能归入一个应计项目类型；按钮合计必须严格等于“全部”。
+	# 每条主交易只能归入一个类型分组；按钮合计必须严格等于“全部”。
 	type_counts = defaultdict(int)
+	type_booked_counts = defaultdict(int)
 	for row in rows:
-		row.accrual_type_label = _accrual_type_label(row)
-		type_counts[row.accrual_type_label] += 1
+		row.accrual_type_label = _accrual_item_type(row)
+		row.accrual_group_label = _accrual_group_label(row)
+		type_counts[row.accrual_group_label] += 1
+		type_booked_counts[row.accrual_group_label] += cint(row.get("is_booked"))
 	type_total = len(rows)
 	type_sum = sum(type_counts.values())
 	selected_type = str(f.accrual_type or "").strip()
 	if selected_type and selected_type in type_counts:
-		rows = [row for row in rows if row.accrual_type_label == selected_type]
+		rows = [row for row in rows if row.accrual_group_label == selected_type]
+	_sort_dashboard_rows(rows, f.sort_field, f.sort_direction)
+	if selected_type:
 		_attach_related_products(rows)
 	filtered_type_summary = _filtered_type_summary(rows, selected_type)
 
@@ -457,7 +647,10 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 		"statuses": sorted({str(row.transaction_status) for row in rows if row.transaction_status}),
 		"sync_types": sorted({str(row.sync_type) for row in rows if row.sync_type}),
 	}
+	ordered_type_names = [name for name in TYPE_GROUP_ORDER if name in type_counts]
+	ordered_type_names.extend(sorted(name for name in type_counts if name not in TYPE_GROUP_ORDER))
 	return {
+		"available_months": _available_months(),
 		"summary": {
 			"records": len(rows), "product_records": product_rows, "store_records": store_rows,
 			"bound": bound, "unbound": product_rows - bound,
@@ -470,11 +663,15 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 		"fees": {currency: dict(values) for currency, values in fees.items()},
 		"products": product_list[:500], "statements": statement_list[:300],
 		"rows": page_rows, "options": options, "filtered_type_summary": filtered_type_summary,
+		"account_options": _account_options(),
+		"cost_center_options": _cost_center_options(),
 		"type_filter": {
 			"total": type_total,
+			"booked_total": sum(type_booked_counts.values()),
 			"sum": type_sum,
 			"valid": type_sum == type_total,
-			"counts": dict(sorted(type_counts.items(), key=lambda item: (-item[1], item[0]))),
+			"counts": {name: type_counts[name] for name in ordered_type_names},
+			"booked_counts": {name: type_booked_counts[name] for name in ordered_type_names},
 		},
 		"pagination": {"page": page, "page_size": page_size, "total": len(rows), "pages": max(1, (len(rows) + page_size - 1) // page_size)},
 	}
@@ -482,25 +679,78 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 
 @frappe.whitelist()
 def save_booked_status(changes=None):
-	"""保存财务明细页面中发生变化的“已记账”状态。"""
+	"""保存财务明细页面中发生变化的记账状态、科目代码和成本中心。"""
 	frappe.has_permission(DOCTYPE, "write", throw=True)
 	if isinstance(changes, str):
 		changes = frappe.parse_json(changes)
 	if not isinstance(changes, list):
 		frappe.throw("记账状态数据格式不正确")
-	if len(changes) > 200:
-		frappe.throw("一次最多保存200条记账状态")
+	if len(changes) > 5000:
+		frappe.throw("一次最多保存5000条财务记录")
 
 	updated = 0
+	booked_updated = 0
+	account_updated = 0
+	cost_center_updated = 0
 	for change in changes:
 		if not isinstance(change, dict):
 			continue
 		name = str(change.get("name") or "").strip()
 		if not name or not frappe.db.exists(DOCTYPE, name):
 			continue
-		frappe.db.set_value(DOCTYPE, name, "is_booked", 1 if cint(change.get("is_booked")) else 0)
+		values = {}
+		if "is_booked" in change:
+			values["is_booked"] = 1 if cint(change.get("is_booked")) else 0
+			booked_updated += 1
+		if "account_code" in change:
+			account_code = str(change.get("account_code") or "").strip()
+			if len(account_code) > 140:
+				frappe.throw("科目代码长度不能超过140个字符")
+			if account_code and not frappe.db.exists(
+				"Account", {"account_number": account_code, "is_group": 0, "disabled": 0}
+			):
+				frappe.throw(f"科目代码不存在或不可用：{account_code}")
+			values["account_code"] = account_code
+			account_updated += 1
+		if "cost_center" in change:
+			cost_center = str(change.get("cost_center") or "").strip()
+			if cost_center and not frappe.db.exists(
+				"Cost Center", {"name": cost_center, "is_group": 0, "disabled": 0}
+			):
+				frappe.throw(f"成本中心不存在或不可用：{cost_center}")
+			values["cost_center"] = cost_center
+			cost_center_updated += 1
+		if not values:
+			continue
+		frappe.db.set_value(DOCTYPE, name, values)
 		updated += 1
-	return {"updated": updated}
+	return {
+		"updated": updated,
+		"booked_updated": booked_updated,
+		"account_updated": account_updated,
+		"cost_center_updated": cost_center_updated,
+	}
+
+
+@frappe.whitelist()
+def bind_financial_item(record_names=None, item=None):
+	"""Set the independent bookkeeping item without changing corresponding-item or SKU mapping data."""
+	frappe.has_permission(DOCTYPE, "write", throw=True)
+	if isinstance(record_names, str):
+		record_names = frappe.parse_json(record_names)
+	if not isinstance(record_names, list) or not record_names:
+		frappe.throw("请选择需要归属物料的财务记录")
+	if len(record_names) > 5000:
+		frappe.throw("一次最多处理5000条财务记录")
+	item = str(item or "").strip()
+	if item and not frappe.db.exists("Item", item):
+		frappe.throw("请选择有效的ERPNext物料")
+	updated = 0
+	for name in {str(value or "").strip() for value in record_names}:
+		if name and frappe.db.exists(DOCTYPE, name):
+			frappe.db.set_value(DOCTYPE, name, "manual_corresponding_item", item, update_modified=True)
+			updated += 1
+	return {"updated": updated, "item": item}
 
 
 @frappe.whitelist()
