@@ -201,12 +201,12 @@ doc_events = {
 
 # 只有在“整页刷新”或者“重新进入系统”加载初始化数据时，才会调用一次。
 extend_bootinfo = "fengjing_app.install.新系统公司执行的净化科目表"
-# 加载科目表弹窗 JS 和丰境前端公共组件库
+# 只全局加载每个 Desk 页面都需要的运行时脚本。
+# 图表、节点图、Three.js 和 Excalidraw 由具体页面通过 frappe.require 按需加载。
 app_include_js = [
     "/assets/fengjing_app/js/runtime/fengjing_init_check.js?v=20261006-2",
     "/assets/fengjing_app/js/runtime/ai_gateway.js?v=20261006-1",
     "/assets/fengjing_app/js/runtime/runtime_ui.js?v=20261006-1",
-    "fengjing_libraries.bundle.js",
 ]
 
 # ERPNext 标准单据的丰境业务脚本，仅在打开对应单据时加载。
