@@ -67,9 +67,16 @@ cd "/root/Desktop/erpnext-os-py/fengjing_app" && git add -A && git commit -m "20
 			# 字段导入到自己的app内
 			bench --site fjnb export-fixtures
 
-			#升级包升级组件
+			#升级包升级组件,必须使用frappe用户！
+			docker exec -u frappe -it neizhang-backend-1 bash
+			cd ~/frappe-bench/apps/fengjing_app
+			whoami
 			yarn upgrade --latest
-			#查看有那些要升级
+
+			#查看有那些要升级组件
+			docker exec -u frappe -it neizhang-backend-1 bash
+			cd ~/frappe-bench/apps/fengjing_app
+			whoami
 			yarn outdated
 
 			# 查看日志
