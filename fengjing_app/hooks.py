@@ -192,7 +192,7 @@ doc_events = {
         "after_insert": "fengjing_app.install.在系统内新建公司"
     },
     "Journal Entry": {
-        "before_validate": "fengjing_app.install.validate_journal_entry_foreign_amounts"
+        "before_validate": "fengjing_app.events.journal_entry.validate_journal_entry_foreign_amounts"
     },
     "Stock Entry": {
         "before_validate": "fengjing_app.fengjing_business.doctype.temu_material_movement.temu_material_movement.validate_temu_product_bundle_movement"
@@ -203,12 +203,18 @@ doc_events = {
 extend_bootinfo = "fengjing_app.install.新系统公司执行的净化科目表"
 # 加载科目表弹窗 JS 和丰境前端公共组件库
 app_include_js = [
-    "/assets/fengjing_app/js/fengjing_init_check.js?v=20261006-1",
+    "/assets/fengjing_app/js/runtime/fengjing_init_check.js?v=20261006-2",
+    "/assets/fengjing_app/js/runtime/ai_gateway.js?v=20261006-1",
+    "/assets/fengjing_app/js/runtime/runtime_ui.js?v=20261006-1",
     "fengjing_libraries.bundle.js",
 ]
 
-# 2. 专门针对 Account 列表页的 JS 加载（官方推荐做法）
-# 这样系统只会在打开科目表时，才精准加载这个 JS
+# ERPNext 标准单据的丰境业务脚本，仅在打开对应单据时加载。
+doctype_js = {
+    "Item": "public/js/runtime/item.js",
+    "Journal Entry": "public/js/runtime/journal_entry.js",
+    "Stock Entry": "public/js/runtime/stock_entry.js",
+}
 
 
 # 各平台后台调度入口
