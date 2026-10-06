@@ -21,6 +21,34 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 	let whiteboard = null;
 	let synchronizingFields = false;
 	let spacePressed = false;
+	const lastWhiteboardKey = `fengjing-whiteboard-last:${frappe.session.user}`;
+
+	function getLastWhiteboardName() {
+		try {
+			return window.localStorage.getItem(lastWhiteboardKey) || '';
+		} catch (error) {
+			console.warn('读取上次打开的白板失败', error);
+			return '';
+		}
+	}
+
+	function rememberWhiteboard(doc = storage?.document) {
+		if (!doc?.name) return;
+		try {
+			window.localStorage.setItem(lastWhiteboardKey, doc.name);
+		} catch (error) {
+			console.warn('记录当前白板失败', error);
+		}
+	}
+
+	function forgetWhiteboard(name) {
+		if (!name || getLastWhiteboardName() !== name) return;
+		try {
+			window.localStorage.removeItem(lastWhiteboardKey);
+		} catch (error) {
+			console.warn('清除已删除白板记录失败', error);
+		}
+	}
 
 	const titleField = page.add_field({
 		fieldname: 'whiteboard_title',
@@ -90,6 +118,7 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 	async function saveCurrent() {
 		try {
 			const doc = await storage.saveNow({ force: true });
+			rememberWhiteboard(doc);
 			frappe.show_alert({ message: `白板“${doc.whiteboard_title}”已保存`, indicator: 'green' }, 4);
 		} catch (error) {
 			showError('白板保存失败', error);
@@ -100,6 +129,7 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 		if (!await confirmIfDirty('当前白板还有未保存内容，确定新建白板吗？')) return;
 		try {
 			const created = await storage.createNew();
+			rememberWhiteboard(created.document);
 			await syncDocumentFields(created.document);
 			replaceScene(created.scene);
 		} catch (error) {
@@ -137,6 +167,7 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 			async values => {
 				try {
 					const scene = await storage.load(values.whiteboard);
+					rememberWhiteboard();
 					await syncDocumentFields(storage.document);
 					replaceScene(scene);
 				} catch (error) {
@@ -168,6 +199,7 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 			async values => {
 				try {
 					const doc = await storage.saveAs(values.whiteboard_title, values.folder_name);
+					rememberWhiteboard(doc);
 					await syncDocumentFields(doc);
 					frappe.show_alert({ message: `已另存为“${doc.whiteboard_title}”`, indicator: 'green' }, 4);
 				} catch (error) {
@@ -191,6 +223,7 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 			async () => {
 				try {
 					const result = await storage.deleteCurrent();
+					forgetWhiteboard(deletedName);
 					if (deletedName && frappe.model?.clear_doc) {
 						frappe.model.clear_doc('Fengjin Excalidraw whiteboard storage', deletedName);
 					}
@@ -231,7 +264,25 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 				onStatusChange: setStatus,
 				onDocumentChange: syncDocumentFields
 			});
-			const initialScene = await storage.restoreDraft();
+			let initialScene = await storage.restoreDraft();
+			if (storage.document.name) {
+				rememberWhiteboard();
+			} else if (!storage.isDirty) {
+				try {
+					const whiteboards = await storage.list();
+					const lastName = getLastWhiteboardName();
+					const selected = whiteboards.find(board => board.name === lastName) || whiteboards[0];
+					if (selected) {
+						initialScene = await storage.load(selected.name);
+						rememberWhiteboard();
+					} else if (lastName) {
+						forgetWhiteboard(lastName);
+					}
+				} catch (error) {
+					console.error('自动打开上次白板失败', error);
+					frappe.show_alert({ message: '上次白板打开失败，已显示空白画布', indicator: 'orange' }, 5);
+				}
+			}
 			await syncDocumentFields(storage.document);
 			$main.find('.fjwb-loading').remove();
 			whiteboard.mount(container, {

@@ -52,7 +52,9 @@ class FengjingTeamCalendarPage {
 	async show() {
 		try {
 			await this.ensureCalendar();
-			this.calendar.updateSize();
+			// FullCalendar 7 no longer exposes updateSize(). Re-render after the
+			// Frappe page becomes visible so it can measure the real container.
+			this.calendar.render();
 			this.calendar.refetchEvents();
 		} catch (error) {
 			this.showError("日历加载失败", error);
@@ -73,9 +75,9 @@ class FengjingTeamCalendarPage {
 					const library = window.FengjingFullCalendar;
 					if (!library?.Calendar) throw new Error("未找到 FullCalendar 构建资源。");
 					this.calendar = this.createCalendar(library);
-					this.calendar.render();
 					this.$main.find(".fjtc-loading").hide();
 					this.$main.find(".fjtc-calendar").show();
+					this.calendar.render();
 					resolve(this.calendar);
 				} catch (error) {
 					reject(error);
