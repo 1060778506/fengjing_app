@@ -53,7 +53,8 @@ cd "/root/Desktop/erpnext-os-py/fengjing_app" && git add -A && git commit -m "20
 			# 卸载app
 			bench --site fjnb uninstall-app erpnext_china
 			# 登录docker内部
-			docker exec -it neizhang-backend-1 bash
+			docker exec -u frappe -it neizhang-backend-1 bash
+			cd ~/frappe-bench/apps/fengjing_app
 
 			# Redis缓存固化，更新   刷新   重启所有服务  仅编译我的app
 			bench --site fjnb execute frappe.model.utils.user_settings.sync_user_settings \
