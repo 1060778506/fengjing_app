@@ -55,8 +55,9 @@ cd "/root/Desktop/erpnext-os-py/fengjing_app" && git add -A && git commit -m "20
 			# 登录docker内部
 			docker exec -it neizhang-backend-1 bash
 
-			# 更新   刷新   重启所有服务  仅编译我的app
-			bench --site fjnb migrate \
+			# Redis缓存固化，更新   刷新   重启所有服务  仅编译我的app
+			bench --site fjnb execute frappe.model.utils.user_settings.sync_user_settings \
+			&& bench --site fjnb migrate \
 			&& bench --site fjnb clear-cache \
 			&& bench restart \
 			&& bench setup requirements --node fengjing_app \

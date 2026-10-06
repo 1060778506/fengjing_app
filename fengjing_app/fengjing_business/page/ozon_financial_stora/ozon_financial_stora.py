@@ -412,6 +412,7 @@ def _filtered_type_summary(rows, selected_type):
 			"amount": 0.0, "sale_amount": 0.0, "commission_amount": 0.0,
 			"count": 0, "record_names": [], "account_codes": set(),
 			"cost_centers": set(), "manual_items": set(),
+			"posting_numbers": set(), "booked_names": set(),
 		})
 		item_bucket["amount"] += amount
 		item_bucket["sale_amount"] += sale_amount
@@ -421,16 +422,25 @@ def _filtered_type_summary(rows, selected_type):
 		item_bucket["account_codes"].add(str(row.get("account_code") or ""))
 		item_bucket["cost_centers"].add(effective_cost_center)
 		item_bucket["manual_items"].add(manual_item)
+		if row.get("posting_number"):
+			item_bucket["posting_numbers"].add(str(row.get("posting_number")))
+		if cint(row.get("is_booked")):
+			item_bucket["booked_names"].add(row.get("name"))
 
 	result = []
 	for currency, bucket in currencies.items():
 		bucket["total"] = _money(bucket["total"])
 		bucket["sale_total"] = _money(bucket["sale_total"])
 		bucket["commission_total"] = _money(bucket["commission_total"])
-		items = sorted(
-			bucket.pop("items").values(),
-			key=lambda item: (item["accrual_type"], -abs(item["amount"]), item["item"]),
-		)
+		items = list(bucket.pop("items").values())
+		if selected_type == "Ozon平台服务费":
+			# 有金额且已绑定物料的记录优先；零金额随后；未绑定物料始终放在最后。
+			items.sort(key=lambda item: (
+				2 if not item["item"] else (1 if abs(item["amount"]) < 0.005 else 0),
+				item["accrual_type"], -abs(item["amount"]), item["item"],
+			))
+		else:
+			items.sort(key=lambda item: (item["accrual_type"], -abs(item["amount"]), item["item"]))
 		for item in items:
 			item["amount"] = _money(item["amount"])
 			item["sale_amount"] = _money(item["sale_amount"])
@@ -448,6 +458,8 @@ def _filtered_type_summary(rows, selected_type):
 			item["manual_item_name"] = manual_detail.get("name", "")
 			item["manual_item_image"] = manual_detail.get("image", "")
 			item["manual_item_mixed"] = len(manual_items) > 1
+			item["posting_numbers"] = sorted(item["posting_numbers"])
+			item["booked_names"] = sorted(item["booked_names"])
 			item["equation_difference"] = _money(item["sale_amount"] + item["commission_amount"] - item["amount"])
 			item["equation_valid"] = abs(item["equation_difference"]) < 0.01
 		bucket["equation_difference"] = _money(bucket["sale_total"] + bucket["commission_total"] - bucket["total"])

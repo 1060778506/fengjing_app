@@ -193,6 +193,44 @@
         );
     }
 
+    async function splitRemarks(frm, cdt, cdn) {
+        if (frm.doc.docstatus !== 0) {
+            frappe.show_alert({ message: __("已提交的日记账凭证不能切分摘要。"), indicator: "orange" }, 6);
+            return;
+        }
+
+        const currentRow = locals[cdt]?.[cdn];
+        if (!currentRow) return;
+
+        const remarks = String(currentRow.user_remark || "")
+            .split(/[;；]/)
+            .map(value => value.trim())
+            .filter(Boolean);
+
+        if (remarks.length < 2) {
+            frappe.show_alert({ message: __("摘要中没有可切分的分号内容。"), indicator: "orange" }, 6);
+            return;
+        }
+
+        const accounts = frm.doc.accounts || [];
+        const startIndex = accounts.findIndex(row => row.name === cdn);
+        if (startIndex < 0) return;
+
+        while ((frm.doc.accounts || []).length < startIndex + remarks.length) {
+            frm.add_child("accounts");
+        }
+
+        const targetRows = (frm.doc.accounts || []).slice(startIndex, startIndex + remarks.length);
+        for (let index = 0; index < targetRows.length; index += 1) {
+            const row = targetRows[index];
+            await frappe.model.set_value(row.doctype, row.name, "user_remark", remarks[index]);
+        }
+
+        frm.refresh_field("accounts");
+        frm.dirty();
+        frappe.show_alert({ message: __(`已按顺序切分 ${remarks.length} 条摘要。`), indicator: "green" }, 6);
+    }
+
     frappe.ui.form.on("Journal Entry", {
         refresh(frm) {
             scheduleRecalculation(frm);
@@ -209,6 +247,9 @@
     });
 
     frappe.ui.form.on("Journal Entry Account", {
+        custom_切分摘要(frm, cdt, cdn) {
+            return splitRemarks(frm, cdt, cdn);
+        },
         custom_借方外币(frm, cdt, cdn) {
             return recalculateRow(frm, cdt, cdn, { clearWhenEmpty: true });
         },
