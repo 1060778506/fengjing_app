@@ -95,35 +95,6 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "\u4e3b\u914d\u7f6e",
-   "link_count": 2,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "\u914d\u7f6e\u4e30\u5883app",
-   "link_count": 0,
-   "link_to": "Fengjing - Product Corresponding Platform - Configuration",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "SKU\u7269\u6599\u6620\u5c04",
-   "link_count": 0,
-   "link_to": "Fengjing - Product Corresponding Platform - Main Table",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "\u4e9a\u9a6c\u900a\u914d\u7f6e",
    "link_count": 7,
    "link_type": "DocType",
@@ -416,9 +387,48 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u4e3b\u914d\u7f6e",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u914d\u7f6e\u4e30\u5883app",
+   "link_count": 0,
+   "link_to": "Fengjing - Product Corresponding Platform - Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "SKU\u7269\u6599\u6620\u5c04",
+   "link_count": 0,
+   "link_to": "Fengjing - Product Corresponding Platform - Main Table",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "\u767d\u677f\u7ed8\u56fe",
+   "link_count": 0,
+   "link_to": "fengjin_whiteboard_d",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-10-04 21:31:24.071528",
+ "modified": "2026-10-06 20:28:25.571015",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "\u4e30\u5883\u4e1a\u52a1APP",
