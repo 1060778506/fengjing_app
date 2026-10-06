@@ -1,0 +1,9 @@
+本目录存放第三方前端工具的 Frappe 打包入口源码。
+
+当前内容：
+1. fengjing_charts.bundle.js：加载 ECharts 图表工具。
+2. fengjing_graph.bundle.js：加载 X6 和 D3 图形、节点与连线工具。
+3. fengjing_three.bundle.js：加载 Three.js 三维图形工具。
+
+名称以 .bundle.js 结尾的文件会被 Frappe 的 bench build 自动编译，生成结果位于 public/dist/js。
+这里是源代码目录，可以修改；public/dist/js 是生成目录，不应手工修改。

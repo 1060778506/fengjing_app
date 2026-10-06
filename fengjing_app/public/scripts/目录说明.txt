@@ -1,0 +1,14 @@
+本目录存放 fengjing_app 的构建辅助脚本。
+
+当前文件：
+build_excalidraw.cjs
+
+作用：
+1. 单独将 Excalidraw 编译为 ES2020 的 ES Module。
+2. 避免 Excalidraw 被 Frappe 按 ES2017 编译时出现 import.meta 警告。
+3. 生成白板主程序、功能子模块和 Worker 文件。
+
+该脚本由 package.json 的 build 命令自动调用。
+平时仍然执行 bench build --app fengjing_app --force，不需要单独运行这个脚本。
+
+生成结果位于 public/whiteboard/excalidraw，该目录会在每次构建时重新生成，不应手工修改。

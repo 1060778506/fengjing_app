@@ -1,0 +1,10 @@
+本目录存放 Frappe 构建后生成的 JavaScript 文件。
+
+文件名中的字母和数字是内容哈希，例如：
+fengjing_charts.bundle.YN5NSQKT.js
+
+注意：
+1. 本目录是构建结果，不是日常编写源代码的位置。
+2. 不要手工修改这里的 JS 或 source map（.map）文件。
+3. 执行 bench build --app fengjing_app --force 后，文件可能被重新生成或更换名称。
+4. 对应源代码主要位于 public/js/libraries。

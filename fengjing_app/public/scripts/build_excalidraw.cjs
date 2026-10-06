@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const appRoot = path.resolve(__dirname, "..");
+const appRoot = path.resolve(__dirname, "../../..");
 const entryPoint = path.join(
 	appRoot,
 	"fengjing_app/public/js/whiteboard/fengjing_excalidraw.entry.js"

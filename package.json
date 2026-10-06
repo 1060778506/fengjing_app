@@ -2,7 +2,7 @@
   "name": "fengjing_app",
   "version": "1.0.0",
   "scripts": {
-    "build": "node scripts/build_excalidraw.cjs"
+    "build": "node fengjing_app/public/scripts/build_excalidraw.cjs"
   },
   "dependencies": {
     "@antv/x6": "^3.1.8",
