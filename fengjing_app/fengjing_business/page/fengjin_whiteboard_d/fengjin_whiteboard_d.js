@@ -98,9 +98,13 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 
 	async function createNew() {
 		if (!await confirmIfDirty('当前白板还有未保存内容，确定新建白板吗？')) return;
-		const scene = storage.startNew();
-		await syncDocumentFields(storage.document);
-		replaceScene(scene);
+		try {
+			const created = await storage.createNew();
+			await syncDocumentFields(created.document);
+			replaceScene(created.scene);
+		} catch (error) {
+			showError('新建白板失败', error);
+		}
 	}
 
 	async function openWhiteboard() {
@@ -160,10 +164,33 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 		);
 	}
 
+	function deleteCurrent() {
+		if (!storage?.document.name) {
+			frappe.show_alert({ message: '当前白板尚未保存，无需删除', indicator: 'orange' }, 4);
+			return;
+		}
+		const title = storage.document.whiteboard_title || '未命名白板';
+		frappe.confirm(
+			`确定删除白板“${frappe.utils.escape_html(title)}”吗？该白板中的图片附件也会一起删除。`,
+			async () => {
+				try {
+					const result = await storage.deleteCurrent();
+					await syncDocumentFields(result.document);
+					replaceScene(result.scene);
+					frappe.show_alert({ message: `白板“${title}”已删除`, indicator: 'green' }, 4);
+				} catch (error) {
+					showError('删除白板失败', error);
+				}
+			}
+		);
+	}
+
 	page.set_primary_action('保存', saveCurrent, 'save');
 	page.add_inner_button('另存为', saveAs);
 	page.add_inner_button('打开', openWhiteboard);
 	page.add_inner_button('新建', createNew);
+	const deleteButton = page.add_inner_button('删除白板', deleteCurrent);
+	deleteButton.removeClass('btn-default').addClass('btn-danger');
 	page.set_indicator('正在加载…', 'blue');
 
 	window.EXCALIDRAW_ASSET_PATH = excalidrawAssetRoot;
@@ -185,7 +212,7 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 				onStatusChange: setStatus,
 				onDocumentChange: syncDocumentFields
 			});
-			const initialScene = storage.restoreDraft();
+			const initialScene = await storage.restoreDraft();
 			await syncDocumentFields(storage.document);
 			$main.find('.fjwb-loading').remove();
 			whiteboard.mount(container, {
@@ -195,7 +222,9 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 					requestAnimationFrame(() => requestAnimationFrame(() => storage.setCaptureEnabled(true)));
 				}
 			});
-			if (!storage.isDirty) setStatus({ status: 'new', message: '新白板' });
+			if (!storage.isDirty && !storage.document.name) {
+				setStatus({ status: 'new', message: '尚未新建白板' });
+			}
 			wrapper.fengjing_whiteboard = { container, page, storage, whiteboard };
 		} catch (error) {
 			console.error('丰境白板加载失败', error);

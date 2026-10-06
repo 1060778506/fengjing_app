@@ -45,6 +45,16 @@ function canonicalScene(value) {
 	return JSON.stringify(parseScene(value));
 }
 
+function capturedScene(elements, appState, files) {
+	const scene = parseScene(serializeAsJSON(elements, appState, files, "database"));
+	return canonicalScene({
+		...scene,
+		// Excalidraw 的 database 序列化会主动移除 files。这里仅在浏览器内
+		// 保留图片二进制，提交服务器前仍由 sceneWithoutFiles() 删除。
+		files: files && typeof files === "object" ? files : {},
+	});
+}
+
 function sceneWithoutFiles(value) {
 	return JSON.stringify({ ...parseScene(value), files: {} });
 }
@@ -202,6 +212,7 @@ export class FengjingWhiteboardStorage {
 		this.captureEnabled = false;
 		this.saveTimer = null;
 		this.savingPromise = null;
+		this.creationAllowed = false;
 		this.imageManifest = {};
 		this.current = {
 			name: null,
@@ -277,14 +288,18 @@ export class FengjingWhiteboardStorage {
 
 	captureChange(elements, appState, files) {
 		if (!this.captureEnabled) return;
-		const nextScene = canonicalScene(serializeAsJSON(elements, appState, files, "database"));
+		const nextScene = capturedScene(elements, appState, files);
 		if (nextScene === this.latestSceneJson) return;
 		this.latestSceneJson = nextScene;
 		this.refreshDirtyState();
 		this.writeDraft();
 		this.setStatus("dirty", "未保存");
 		const hasPendingImage = [...activeFileIds(nextScene)].some(fileId => !this.imageManifest[fileId]);
-		this.scheduleSave(hasPendingImage ? 0 : this.autosaveDelay);
+		if (this.current.name || this.creationAllowed) {
+			this.scheduleSave(hasPendingImage ? 0 : this.autosaveDelay);
+		} else {
+			this.setStatus("new", "尚未新建，内容仅保存在当前页面");
+		}
 	}
 
 	setMetadata({ whiteboard_title, folder_name } = {}) {
@@ -299,7 +314,11 @@ export class FengjingWhiteboardStorage {
 		if (this.dirty) {
 			this.writeDraft();
 			this.setStatus("dirty", "未保存");
-			this.scheduleSave(this.autosaveDelay);
+			if (this.current.name || this.creationAllowed) {
+				this.scheduleSave(this.autosaveDelay);
+			} else {
+				this.setStatus("new", "尚未新建，内容仅保存在当前页面");
+			}
 		}
 	}
 
@@ -335,6 +354,10 @@ export class FengjingWhiteboardStorage {
 		this.saveTimer = null;
 		if (!force && !this.dirty) return this.document;
 		if (this.savingPromise) return this.savingPromise;
+		if (auto && !this.current.name && !this.creationAllowed) {
+			this.setStatus("new", "尚未新建，未写入白板记录");
+			return this.document;
+		}
 
 		const snapshot = {
 			scene: this.latestSceneJson,
@@ -350,6 +373,7 @@ export class FengjingWhiteboardStorage {
 				let saved;
 				const imageIds = activeFileIds(snapshot.scene);
 				if (!snapshot.name) {
+					this.creationAllowed = true;
 					saved = await this.call("create_whiteboard", {
 						whiteboard_title: snapshot.whiteboard_title,
 						folder_name: snapshot.folder_name,
@@ -421,6 +445,7 @@ export class FengjingWhiteboardStorage {
 		const imageIds = activeFileIds(snapshot);
 		this.setStatus("saving", "正在另存为…");
 		try {
+			this.creationAllowed = true;
 			let saved = await this.call("create_whiteboard", {
 				whiteboard_title: title,
 				folder_name: folder,
@@ -475,6 +500,7 @@ export class FengjingWhiteboardStorage {
 			revision: Number(doc.revision) || 0,
 			preview_image: doc.preview_image || "",
 		};
+		this.creationAllowed = true;
 		this.imageManifest = parseManifest(doc.image_manifest);
 		this.savedMetadata = {
 			whiteboard_title: this.current.whiteboard_title,
@@ -493,7 +519,19 @@ export class FengjingWhiteboardStorage {
 		return this.scene;
 	}
 
-	startNew() {
+	async deleteCurrent() {
+		if (this.savingPromise) await this.savingPromise;
+		if (!this.current.name) throw new Error("当前白板尚未保存，无需删除");
+		const deleted = await this.call("delete_whiteboard", { name: this.current.name }, {
+			freeze: true,
+			freezeMessage: "正在删除白板…",
+		});
+		const scene = this.startNew({ allowCreate: false });
+		this.setStatus("new", "白板已删除");
+		return { deleted, document: this.document, scene };
+	}
+
+	startNew({ allowCreate = true } = {}) {
 		clearTimeout(this.saveTimer);
 		this.saveTimer = null;
 		this.current = {
@@ -503,6 +541,7 @@ export class FengjingWhiteboardStorage {
 			revision: 0,
 		};
 		this.imageManifest = {};
+		this.creationAllowed = Boolean(allowCreate);
 		this.savedMetadata = { whiteboard_title: DEFAULT_TITLE, folder_name: "" };
 		this.latestSceneJson = canonicalScene(emptyScene());
 		this.lastSavedSceneJson = this.latestSceneJson;
@@ -511,6 +550,36 @@ export class FengjingWhiteboardStorage {
 		this.notifyDocument();
 		this.setStatus("new", "新白板");
 		return this.scene;
+	}
+
+	async createNew() {
+		if (this.savingPromise) await this.savingPromise;
+		const scene = this.startNew({ allowCreate: true });
+		this.setStatus("saving", "正在新建白板…");
+		try {
+			const saved = await this.call("create_whiteboard", {
+				whiteboard_title: this.current.whiteboard_title,
+				folder_name: this.current.folder_name,
+				whiteboard_data: sceneWithoutFiles(scene),
+				image_manifest: {},
+			});
+			this.current = { ...this.current, ...saved };
+			this.imageManifest = parseManifest(saved.image_manifest);
+			this.savedMetadata = {
+				whiteboard_title: this.current.whiteboard_title,
+				folder_name: this.current.folder_name,
+			};
+			this.lastSavedSceneJson = this.latestSceneJson;
+			this.dirty = false;
+			this.clearDraft();
+			this.notifyDocument();
+			this.setStatus("saved", "新白板已创建");
+			return { document: this.document, scene: this.scene };
+		} catch (error) {
+			this.creationAllowed = false;
+			this.setStatus("error", "新建白板失败");
+			throw error;
+		}
 	}
 
 	async list(searchText = "") {

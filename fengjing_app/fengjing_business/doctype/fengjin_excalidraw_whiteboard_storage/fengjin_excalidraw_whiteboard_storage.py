@@ -274,6 +274,15 @@ def get_whiteboard(name):
 
 
 @frappe.whitelist()
+def delete_whiteboard(name):
+	doc = frappe.get_doc(DOCTYPE, name)
+	doc.check_permission("delete")
+	whiteboard_title = doc.whiteboard_title or DEFAULT_TITLE
+	frappe.delete_doc(DOCTYPE, doc.name)
+	return {"name": doc.name, "whiteboard_title": whiteboard_title}
+
+
+@frappe.whitelist()
 def save_whiteboard(
 	name,
 	whiteboard_data,
