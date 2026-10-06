@@ -653,11 +653,45 @@ $(document).on('app_ready', function () {
         });
     }
 
+    async function updateForeignTotals(frm) {
+        if (frm.doc.docstatus !== 0) return;
+
+        const totals = (frm.doc.accounts || []).reduce(
+            (result, row) => {
+                result.debit += flt(row.custom_借方外币);
+                result.credit += flt(row.custom_贷方外币);
+                return result;
+            },
+            { debit: 0, credit: 0 }
+        );
+        const debitTotal = flt(
+            totals.debit,
+            precision("custom_借方外币合计", frm.doc)
+        );
+        const creditTotal = flt(
+            totals.credit,
+            precision("custom_贷方外币合计", frm.doc)
+        );
+        const values = {};
+
+        if (flt(frm.doc.custom_借方外币合计) !== debitTotal) {
+            values.custom_借方外币合计 = debitTotal;
+        }
+        if (flt(frm.doc.custom_贷方外币合计) !== creditTotal) {
+            values.custom_贷方外币合计 = creditTotal;
+        }
+        if (Object.keys(values).length) {
+            await frm.set_value(values);
+        }
+    }
+
     async function recalculateRow(frm, cdt, cdn, options = {}) {
         if (frm.doc.docstatus !== 0) return;
 
         const row = locals[cdt]?.[cdn];
         if (!row) return;
+
+        await updateForeignTotals(frm);
 
         const debitForeign = flt(row.custom_借方外币);
         const creditForeign = flt(row.custom_贷方外币);
@@ -738,6 +772,8 @@ $(document).on('app_ready', function () {
     async function recalculateAll(frm) {
         if (frm.doc.docstatus !== 0) return;
 
+        await updateForeignTotals(frm);
+
         for (const row of frm.doc.accounts || []) {
             if (flt(row.custom_借方外币) || flt(row.custom_贷方外币)) {
                 await recalculateRow(frm, row.doctype, row.name);
@@ -762,6 +798,9 @@ $(document).on('app_ready', function () {
         },
         multi_currency(frm) {
             scheduleRecalculation(frm);
+        },
+        validate(frm) {
+            return recalculateAll(frm);
         }
     });
 
@@ -788,6 +827,9 @@ $(document).on('app_ready', function () {
             scheduleRecalculation(frm);
         },
         accounts_remove(frm) {
+            scheduleRecalculation(frm);
+        },
+        accounts_add(frm) {
             scheduleRecalculation(frm);
         }
     });

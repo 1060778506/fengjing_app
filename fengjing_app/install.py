@@ -680,6 +680,21 @@ def validate_journal_entry_foreign_amounts(doc, method=None):
         doc = frappe.get_doc(doc)
 
     accounts = doc.get("accounts") or []
+    debit_foreign_total = sum(
+        flt(row.get("custom_借方外币")) for row in accounts
+    )
+    credit_foreign_total = sum(
+        flt(row.get("custom_贷方外币")) for row in accounts
+    )
+    doc.custom_借方外币合计 = flt(
+        debit_foreign_total,
+        doc.precision("custom_借方外币合计"),
+    )
+    doc.custom_贷方外币合计 = flt(
+        credit_foreign_total,
+        doc.precision("custom_贷方外币合计"),
+    )
+
     rows_with_foreign_input = [
         row
         for row in accounts
