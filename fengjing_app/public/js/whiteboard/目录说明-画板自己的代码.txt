@@ -7,6 +7,9 @@
 2. fengjing_excalidraw.css
    丰境白板页面的布局、加载状态和错误提示样式。
 
+3. fengjing_whiteboard_storage.js
+   白板存储模块，负责服务器新建、读取、保存、另存为、自动保存、版本冲突保护和浏览器临时草稿。
+
 构建关系：
 1. public/scripts/build_excalidraw.cjs 读取本目录中的 entry.js。
 2. 构建后生成的浏览器文件位于 public/whiteboard/excalidraw。

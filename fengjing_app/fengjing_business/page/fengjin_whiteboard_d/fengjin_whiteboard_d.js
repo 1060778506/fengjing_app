@@ -1,5 +1,5 @@
 frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
-	var page = frappe.ui.make_app_page({
+	const page = frappe.ui.make_app_page({
 		parent: wrapper,
 		title: '丰境白板绘图',
 		single_column: true
@@ -17,6 +17,154 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 	const container = $main.find('.fjwb-canvas')[0];
 	const excalidrawAssetRoot = '/assets/fengjing_app/node_modules/@excalidraw/excalidraw/dist/prod/';
 	const whiteboardModuleRoot = '/assets/fengjing_app/whiteboard/excalidraw/';
+	let storage = null;
+	let whiteboard = null;
+	let synchronizingFields = false;
+
+	const titleField = page.add_field({
+		fieldname: 'whiteboard_title',
+		fieldtype: 'Data',
+		label: '白板名称',
+		default: '未命名白板',
+		change: () => {
+			if (!synchronizingFields && storage) {
+				storage.setMetadata({ whiteboard_title: titleField.get_value() });
+			}
+		}
+	});
+	const folderField = page.add_field({
+		fieldname: 'folder_name',
+		fieldtype: 'Data',
+		label: '所属文件夹',
+		change: () => {
+			if (!synchronizingFields && storage) {
+				storage.setMetadata({ folder_name: folderField.get_value() });
+			}
+		}
+	});
+
+	function setStatus({ status, message }) {
+		const colors = {
+			dirty: 'orange',
+			error: 'red',
+			loading: 'blue',
+			new: 'gray',
+			restored: 'orange',
+			saved: 'green',
+			saving: 'blue'
+		};
+		page.set_indicator(message || '白板', colors[status] || 'gray');
+	}
+
+	async function syncDocumentFields(doc) {
+		synchronizingFields = true;
+		try {
+			await titleField.set_value(doc.whiteboard_title || '未命名白板');
+			await folderField.set_value(doc.folder_name || '');
+		} finally {
+			synchronizingFields = false;
+		}
+	}
+
+	function confirmIfDirty(message) {
+		if (!storage?.isDirty) return Promise.resolve(true);
+		return new Promise(resolve => {
+			frappe.confirm(message, () => resolve(true), () => resolve(false));
+		});
+	}
+
+	function showError(title, error) {
+		frappe.msgprint({
+			title,
+			message: error?.message || '请稍后重试或查看错误日志。',
+			indicator: 'red'
+		});
+	}
+
+	function replaceScene(scene) {
+		storage.setCaptureEnabled(false);
+		whiteboard.replaceScene(container, scene);
+	}
+
+	async function saveCurrent() {
+		try {
+			const doc = await storage.saveNow({ force: true });
+			frappe.show_alert({ message: `白板“${doc.whiteboard_title}”已保存`, indicator: 'green' }, 4);
+		} catch (error) {
+			showError('白板保存失败', error);
+		}
+	}
+
+	async function createNew() {
+		if (!await confirmIfDirty('当前白板还有未保存内容，确定新建白板吗？')) return;
+		const scene = storage.startNew();
+		await syncDocumentFields(storage.document);
+		replaceScene(scene);
+	}
+
+	async function openWhiteboard() {
+		if (!await confirmIfDirty('当前白板还有未保存内容，确定打开其他白板吗？')) return;
+		frappe.prompt(
+			[
+				{
+					fieldname: 'whiteboard',
+					fieldtype: 'Link',
+					label: '选择白板',
+					options: 'Fengjin Excalidraw whiteboard storage',
+					reqd: 1
+				}
+			],
+			async values => {
+				try {
+					const scene = await storage.load(values.whiteboard);
+					await syncDocumentFields(storage.document);
+					replaceScene(scene);
+				} catch (error) {
+					showError('打开白板失败', error);
+				}
+			},
+			'打开白板',
+			'打开'
+		);
+	}
+
+	function saveAs() {
+		frappe.prompt(
+			[
+				{
+					fieldname: 'whiteboard_title',
+					fieldtype: 'Data',
+					label: '新白板名称',
+					default: storage.document.whiteboard_title || '未命名白板',
+					reqd: 1
+				},
+				{
+					fieldname: 'folder_name',
+					fieldtype: 'Data',
+					label: '所属文件夹',
+					default: storage.document.folder_name || ''
+				}
+			],
+			async values => {
+				try {
+					const doc = await storage.saveAs(values.whiteboard_title, values.folder_name);
+					await syncDocumentFields(doc);
+					frappe.show_alert({ message: `已另存为“${doc.whiteboard_title}”`, indicator: 'green' }, 4);
+				} catch (error) {
+					showError('白板另存为失败', error);
+				}
+			},
+			'另存为白板',
+			'保存'
+		);
+	}
+
+	page.set_primary_action('保存', saveCurrent, 'save');
+	page.add_inner_button('另存为', saveAs);
+	page.add_inner_button('打开', openWhiteboard);
+	page.add_inner_button('新建', createNew);
+	page.set_indicator('正在加载…', 'blue');
+
 	window.EXCALIDRAW_ASSET_PATH = excalidrawAssetRoot;
 	frappe.require([
 		`${excalidrawAssetRoot}index.css`,
@@ -26,21 +174,50 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 			window.fengjingWhiteboardAssetVersion ??= Date.now();
 			const moduleUrl = `${whiteboardModuleRoot}fengjing_excalidraw.js?v=${window.fengjingWhiteboardAssetVersion}`;
 			const whiteboardModule = await import(moduleUrl);
-			const whiteboard = whiteboardModule.default || window.FengjingWhiteboard;
+			whiteboard = whiteboardModule.default || window.FengjingWhiteboard;
 
-			if (!whiteboard) {
-				throw new Error('白板模块没有提供加载接口');
+			if (!whiteboard || !whiteboardModule.FengjingWhiteboardStorage) {
+				throw new Error('白板模块没有提供存储接口');
 			}
 
+			storage = new whiteboardModule.FengjingWhiteboardStorage({
+				onStatusChange: setStatus,
+				onDocumentChange: syncDocumentFields
+			});
+			const initialScene = storage.restoreDraft();
+			await syncDocumentFields(storage.document);
 			$main.find('.fjwb-loading').remove();
-			whiteboard.mount(container);
-			wrapper.fengjing_whiteboard = { container, whiteboard, page };
+			whiteboard.mount(container, {
+				initialData: initialScene,
+				onChange: (elements, appState, files) => storage.captureChange(elements, appState, files),
+				excalidrawAPI: () => {
+					requestAnimationFrame(() => requestAnimationFrame(() => storage.setCaptureEnabled(true)));
+				}
+			});
+			if (!storage.isDirty) setStatus({ status: 'new', message: '新白板' });
+			wrapper.fengjing_whiteboard = { container, page, storage, whiteboard };
 		} catch (error) {
 			console.error('丰境白板加载失败', error);
 			$main.find('.fjwb-loading')
 				.removeClass('fjwb-loading')
 				.addClass('fjwb-error')
 				.text('白板资源加载失败，请重新构建 fengjing_app 前端资源。');
+			page.set_indicator('加载失败', 'red');
 		}
+	});
+
+	wrapper.addEventListener('keydown', event => {
+		if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
+		if (!event.target.closest?.('.fjwb-canvas')) return;
+		if (event.target.matches?.('input, textarea, select, [contenteditable="true"]')) return;
+		event.preventDefault();
+		event.stopImmediatePropagation();
+		saveCurrent();
+	}, true);
+
+	window.addEventListener('beforeunload', event => {
+		if (!storage?.isDirty || !frappe.get_route()?.includes('fengjin_whiteboard_d')) return;
+		event.preventDefault();
+		event.returnValue = '';
 	});
 };
