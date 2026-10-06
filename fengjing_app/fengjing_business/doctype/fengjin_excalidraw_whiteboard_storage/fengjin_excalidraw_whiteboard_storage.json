@@ -13,6 +13,7 @@
   "revision",
   "whiteboard_data_section",
   "whiteboard_data",
+  "image_manifest",
   "preview_section",
   "preview_image"
  ],
@@ -58,11 +59,20 @@
    "label": "白板内容"
   },
   {
-   "description": "保存Excalidraw的elements、appState和files数据。",
+   "description": "保存Excalidraw的元素和画布状态；图片二进制不保存在这里。",
    "fieldname": "whiteboard_data",
    "fieldtype": "Code",
    "hidden": 1,
    "label": "白板数据",
+   "no_copy": 1,
+   "options": "JSON"
+  },
+  {
+   "description": "保存Excalidraw图片编号与Frappe私有附件的对应关系，不包含Base64。",
+   "fieldname": "image_manifest",
+   "fieldtype": "Code",
+   "hidden": 1,
+   "label": "图片附件索引",
    "no_copy": 1,
    "options": "JSON"
   },

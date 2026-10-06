@@ -2,6 +2,7 @@ import { serializeAsJSON } from "@excalidraw/excalidraw";
 
 const API_ROOT =
 	"fengjing_app.fengjing_business.doctype.fengjin_excalidraw_whiteboard_storage.fengjin_excalidraw_whiteboard_storage";
+const DOCTYPE = "Fengjin Excalidraw whiteboard storage";
 const DEFAULT_TITLE = "未命名白板";
 const AUTOSAVE_DELAY = 2000;
 
@@ -31,13 +32,166 @@ function parseScene(value) {
 	}
 }
 
+function parseManifest(value) {
+	try {
+		const manifest = typeof value === "string" ? JSON.parse(value) : value;
+		return manifest && typeof manifest === "object" && !Array.isArray(manifest) ? manifest : {};
+	} catch (_error) {
+		return {};
+	}
+}
+
 function canonicalScene(value) {
 	return JSON.stringify(parseScene(value));
+}
+
+function sceneWithoutFiles(value) {
+	return JSON.stringify({ ...parseScene(value), files: {} });
+}
+
+function sceneWithoutPendingImages(value) {
+	const scene = parseScene(value);
+	return JSON.stringify({
+		...scene,
+		elements: scene.elements.filter(element => element?.type !== "image" || element?.isDeleted),
+		files: {},
+	});
+}
+
+function activeFileIds(value) {
+	return new Set(
+		parseScene(value).elements
+			.filter(element => element?.type === "image" && !element?.isDeleted && element?.fileId)
+			.map(element => String(element.fileId))
+	);
+}
+
+function sceneFileIds(value) {
+	return new Set(
+		parseScene(value).elements
+			.filter(element => element?.type === "image" && element?.fileId)
+			.map(element => String(element.fileId))
+	);
 }
 
 function cleanText(value, fallback = "") {
 	const cleaned = String(value || "").trim();
 	return (cleaned || fallback).slice(0, 140);
+}
+
+function extensionForMimeType(mimeType) {
+	return {
+		"image/avif": "avif",
+		"image/bmp": "bmp",
+		"image/gif": "gif",
+		"image/ico": "ico",
+		"image/jpeg": "jpg",
+		"image/jfif": "jfif",
+		"image/png": "png",
+		"image/svg+xml": "svg",
+		"image/webp": "webp",
+		"image/x-icon": "ico",
+	}[mimeType] || "bin";
+}
+
+async function dataURLToBlob(dataURL) {
+	const response = await fetch(dataURL);
+	if (!response.ok) throw new Error("无法读取白板图片数据");
+	return response.blob();
+}
+
+function blobToDataURL(blob) {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => resolve(reader.result);
+		reader.onerror = () => reject(reader.error || new Error("无法读取白板图片"));
+		reader.readAsDataURL(blob);
+	});
+}
+
+function responseError(payload, fallback) {
+	if (payload?.message && typeof payload.message === "string") return payload.message;
+	if (payload?.exception) return payload.exception;
+	try {
+		const messages = JSON.parse(payload?._server_messages || "[]");
+		if (messages.length) {
+			const first = JSON.parse(messages[0]);
+			return first.message || fallback;
+		}
+	} catch (_error) {
+		// 使用通用错误信息。
+	}
+	return fallback;
+}
+
+async function uploadPrivateImage(boardName, fileId, binaryFile) {
+	if (!binaryFile?.dataURL) throw new Error(`图片 ${fileId} 没有可上传的数据`);
+	const blob = await dataURLToBlob(binaryFile.dataURL);
+	const mimeType = binaryFile.mimeType || blob.type || "application/octet-stream";
+	if (!mimeType.startsWith("image/")) throw new Error(`图片 ${fileId} 的文件格式无效`);
+	const extension = extensionForMimeType(mimeType);
+	const formData = new FormData();
+	formData.append("file", new File([blob], `whiteboard-${fileId}.${extension}`, { type: mimeType }));
+	formData.append("is_private", "1");
+	formData.append("doctype", DOCTYPE);
+	formData.append("docname", boardName);
+	formData.append("fieldname", "image_manifest");
+
+	const response = await fetch("/api/method/upload_file", {
+		method: "POST",
+		credentials: "same-origin",
+		headers: { "X-Frappe-CSRF-Token": frappe.csrf_token },
+		body: formData,
+	});
+	const payload = await response.json().catch(() => ({}));
+	if (!response.ok || !payload.message?.name || !payload.message?.file_url) {
+		throw new Error(responseError(payload, `图片 ${fileId} 上传失败`));
+	}
+	return {
+		file_document: payload.message.name,
+		file_url: payload.message.file_url,
+		file_name: payload.message.file_name || `whiteboard-${fileId}.${extension}`,
+		mime_type: mimeType,
+		size: Number(payload.message.file_size) || blob.size,
+		created: Number(binaryFile.created) || Date.now(),
+		version: Number(binaryFile.version) || 1,
+	};
+}
+
+async function hydrateSceneImages(value, manifestValue) {
+	const scene = parseScene(value);
+	const manifest = parseManifest(manifestValue);
+	const files = {};
+	let missing = 0;
+
+	// 同时恢复已删除元素的图片，使用户重新打开白板后仍可执行“撤销删除”。
+	for (const fileId of sceneFileIds(scene)) {
+		const entry = manifest[fileId];
+		if (!entry?.file_url) {
+			missing += 1;
+			continue;
+		}
+		try {
+			const response = await fetch(entry.file_url, { credentials: "same-origin" });
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
+			const blob = await response.blob();
+			const mimeType = entry.mime_type || blob.type;
+			if (!mimeType?.startsWith("image/")) throw new Error("返回内容不是图片");
+			files[fileId] = {
+				id: fileId,
+				dataURL: await blobToDataURL(blob),
+				mimeType,
+				created: Number(entry.created) || Date.now(),
+				lastRetrieved: Date.now(),
+				version: Number(entry.version) || 1,
+			};
+		} catch (error) {
+			missing += 1;
+			console.warn(`白板图片 ${fileId} 读取失败`, error);
+		}
+	}
+
+	return { scene: { ...scene, files }, missing };
 }
 
 export class FengjingWhiteboardStorage {
@@ -48,6 +202,7 @@ export class FengjingWhiteboardStorage {
 		this.captureEnabled = false;
 		this.saveTimer = null;
 		this.savingPromise = null;
+		this.imageManifest = {};
 		this.current = {
 			name: null,
 			whiteboard_title: DEFAULT_TITLE,
@@ -87,7 +242,7 @@ export class FengjingWhiteboardStorage {
 		this.captureEnabled = Boolean(enabled);
 	}
 
-	restoreDraft() {
+	async restoreDraft() {
 		try {
 			const raw = localStorage.getItem(this.draftKey);
 			if (!raw) return this.scene;
@@ -99,15 +254,20 @@ export class FengjingWhiteboardStorage {
 				folder_name: cleanText(draft.folder_name),
 				revision: Number(draft.revision) || 0,
 			};
+			this.imageManifest = parseManifest(draft.image_manifest);
 			this.savedMetadata = {
 				whiteboard_title: draft.saved_whiteboard_title || this.current.whiteboard_title,
 				folder_name: draft.saved_folder_name || this.current.folder_name,
 			};
-			this.latestSceneJson = canonicalScene(draft.scene);
+			const hydrated = await hydrateSceneImages(draft.scene, this.imageManifest);
+			this.latestSceneJson = canonicalScene(hydrated.scene);
 			this.lastSavedSceneJson = "";
 			this.dirty = true;
 			this.notifyDocument();
-			this.setStatus("restored", "已恢复浏览器临时草稿");
+			this.setStatus(
+				hydrated.missing ? "error" : "restored",
+				hydrated.missing ? `已恢复草稿，${hydrated.missing}张图片读取失败` : "已恢复浏览器临时草稿"
+			);
 			return this.scene;
 		} catch (_error) {
 			this.clearDraft();
@@ -123,7 +283,8 @@ export class FengjingWhiteboardStorage {
 		this.refreshDirtyState();
 		this.writeDraft();
 		this.setStatus("dirty", "未保存");
-		this.scheduleSave();
+		const hasPendingImage = [...activeFileIds(nextScene)].some(fileId => !this.imageManifest[fileId]);
+		this.scheduleSave(hasPendingImage ? 0 : this.autosaveDelay);
 	}
 
 	setMetadata({ whiteboard_title, folder_name } = {}) {
@@ -138,7 +299,7 @@ export class FengjingWhiteboardStorage {
 		if (this.dirty) {
 			this.writeDraft();
 			this.setStatus("dirty", "未保存");
-			this.scheduleSave();
+			this.scheduleSave(this.autosaveDelay);
 		}
 	}
 
@@ -149,11 +310,24 @@ export class FengjingWhiteboardStorage {
 			this.current.folder_name !== this.savedMetadata.folder_name;
 	}
 
-	scheduleSave() {
+	scheduleSave(delay = this.autosaveDelay) {
 		clearTimeout(this.saveTimer);
 		this.saveTimer = setTimeout(() => {
 			this.saveNow({ auto: true }).catch(() => {});
-		}, this.autosaveDelay);
+		}, delay);
+	}
+
+	async uploadMissingImages(sceneValue, boardName, initialManifest = this.imageManifest) {
+		const scene = parseScene(sceneValue);
+		const manifest = { ...parseManifest(initialManifest) };
+		for (const fileId of activeFileIds(scene)) {
+			if (manifest[fileId]?.file_document) continue;
+			const binaryFile = scene.files[fileId];
+			manifest[fileId] = await uploadPrivateImage(boardName, fileId, binaryFile);
+			this.imageManifest = { ...manifest };
+			this.writeDraft();
+		}
+		return manifest;
 	}
 
 	async saveNow({ auto = false, force = false } = {}) {
@@ -174,19 +348,32 @@ export class FengjingWhiteboardStorage {
 		this.savingPromise = (async () => {
 			try {
 				let saved;
-				if (snapshot.name) {
-					saved = await this.call("save_whiteboard", {
-						name: snapshot.name,
-						whiteboard_data: snapshot.scene,
-						expected_revision: snapshot.revision,
-						whiteboard_title: snapshot.whiteboard_title,
-						folder_name: snapshot.folder_name,
-					});
-				} else {
+				const imageIds = activeFileIds(snapshot.scene);
+				if (!snapshot.name) {
 					saved = await this.call("create_whiteboard", {
 						whiteboard_title: snapshot.whiteboard_title,
 						folder_name: snapshot.folder_name,
-						whiteboard_data: snapshot.scene,
+						whiteboard_data: imageIds.size
+							? sceneWithoutPendingImages(snapshot.scene)
+							: sceneWithoutFiles(snapshot.scene),
+						image_manifest: {},
+					});
+					snapshot.name = saved.name;
+					snapshot.revision = Number(saved.revision) || 1;
+					this.current = { ...this.current, ...saved };
+					this.imageManifest = {};
+					this.notifyDocument();
+				}
+
+				if (imageIds.size || this.current.name !== saved?.name) {
+					const manifest = await this.uploadMissingImages(snapshot.scene, snapshot.name, this.imageManifest);
+					saved = await this.call("save_whiteboard", {
+						name: snapshot.name,
+						whiteboard_data: sceneWithoutFiles(snapshot.scene),
+						image_manifest: manifest,
+						expected_revision: snapshot.revision,
+						whiteboard_title: snapshot.whiteboard_title,
+						folder_name: snapshot.folder_name,
 					});
 				}
 
@@ -196,6 +383,7 @@ export class FengjingWhiteboardStorage {
 					whiteboard_title: saved.whiteboard_title || snapshot.whiteboard_title,
 					folder_name: saved.folder_name || "",
 				};
+				this.imageManifest = parseManifest(saved.image_manifest);
 				this.lastSavedSceneJson = snapshot.scene;
 				this.savedMetadata = {
 					whiteboard_title: snapshot.whiteboard_title,
@@ -230,14 +418,33 @@ export class FengjingWhiteboardStorage {
 		const snapshot = this.latestSceneJson;
 		const title = cleanText(whiteboard_title, DEFAULT_TITLE);
 		const folder = cleanText(folder_name);
+		const imageIds = activeFileIds(snapshot);
 		this.setStatus("saving", "正在另存为…");
 		try {
-			const saved = await this.call("create_whiteboard", {
+			let saved = await this.call("create_whiteboard", {
 				whiteboard_title: title,
 				folder_name: folder,
-				whiteboard_data: snapshot,
+				whiteboard_data: imageIds.size ? sceneWithoutPendingImages(snapshot) : sceneWithoutFiles(snapshot),
+				image_manifest: {},
 			});
 			this.current = { ...saved };
+			this.imageManifest = {};
+			this.notifyDocument();
+
+			if (imageIds.size) {
+				const manifest = await this.uploadMissingImages(snapshot, saved.name, {});
+				saved = await this.call("save_whiteboard", {
+					name: saved.name,
+					whiteboard_data: sceneWithoutFiles(snapshot),
+					image_manifest: manifest,
+					expected_revision: saved.revision,
+					whiteboard_title: title,
+					folder_name: folder,
+				});
+			}
+
+			this.current = { ...saved };
+			this.imageManifest = parseManifest(saved.image_manifest);
 			this.savedMetadata = { whiteboard_title: title, folder_name: folder };
 			this.lastSavedSceneJson = snapshot;
 			this.refreshDirtyState();
@@ -268,16 +475,21 @@ export class FengjingWhiteboardStorage {
 			revision: Number(doc.revision) || 0,
 			preview_image: doc.preview_image || "",
 		};
+		this.imageManifest = parseManifest(doc.image_manifest);
 		this.savedMetadata = {
 			whiteboard_title: this.current.whiteboard_title,
 			folder_name: this.current.folder_name,
 		};
-		this.latestSceneJson = canonicalScene(doc.whiteboard_data);
+		const hydrated = await hydrateSceneImages(doc.whiteboard_data, this.imageManifest);
+		this.latestSceneJson = canonicalScene(hydrated.scene);
 		this.lastSavedSceneJson = this.latestSceneJson;
 		this.dirty = false;
 		this.clearDraft();
 		this.notifyDocument();
-		this.setStatus("saved", "已打开");
+		this.setStatus(
+			hydrated.missing ? "error" : "saved",
+			hydrated.missing ? `已打开，${hydrated.missing}张图片读取失败` : "已打开"
+		);
 		return this.scene;
 	}
 
@@ -290,6 +502,7 @@ export class FengjingWhiteboardStorage {
 			folder_name: "",
 			revision: 0,
 		};
+		this.imageManifest = {};
 		this.savedMetadata = { whiteboard_title: DEFAULT_TITLE, folder_name: "" };
 		this.latestSceneJson = canonicalScene(emptyScene());
 		this.lastSavedSceneJson = this.latestSceneJson;
@@ -316,12 +529,13 @@ export class FengjingWhiteboardStorage {
 					revision: this.current.revision,
 					saved_whiteboard_title: this.savedMetadata.whiteboard_title,
 					saved_folder_name: this.savedMetadata.folder_name,
-					scene: this.latestSceneJson,
+					scene: sceneWithoutFiles(this.latestSceneJson),
+					image_manifest: this.imageManifest,
 					updated_at: new Date().toISOString(),
 				})
 			);
 		} catch (_error) {
-			// 浏览器存储空间不足时，服务器保存仍然可以继续。
+			// 浏览器禁用本地存储时，服务器保存仍然可以继续。
 		}
 	}
 

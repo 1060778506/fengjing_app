@@ -20,6 +20,7 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 	let storage = null;
 	let whiteboard = null;
 	let synchronizingFields = false;
+	let spacePressed = false;
 
 	const titleField = page.add_field({
 		fieldname: 'whiteboard_title',
@@ -207,6 +208,9 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 	});
 
 	wrapper.addEventListener('keydown', event => {
+		if (event.code === 'Space' && !event.target.matches?.('input, textarea, select, [contenteditable="true"]')) {
+			spacePressed = true;
+		}
 		if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
 		if (!event.target.closest?.('.fjwb-canvas')) return;
 		if (event.target.matches?.('input, textarea, select, [contenteditable="true"]')) return;
@@ -214,6 +218,36 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 		event.stopImmediatePropagation();
 		saveCurrent();
 	}, true);
+
+	wrapper.addEventListener('keyup', event => {
+		if (event.code === 'Space') spacePressed = false;
+	}, true);
+
+	window.addEventListener('blur', () => {
+		spacePressed = false;
+	});
+
+	wrapper.addEventListener('wheel', event => {
+		if (!container.contains(event.target)) return;
+		if (!event.target.matches?.('canvas, textarea, iframe')) return;
+		if (event.ctrlKey || event.metaKey || event.shiftKey || spacePressed) return;
+
+		event.preventDefault();
+		event.stopImmediatePropagation();
+		event.target.dispatchEvent(new WheelEvent('wheel', {
+			bubbles: true,
+			cancelable: true,
+			view: window,
+			ctrlKey: true,
+			metaKey: true,
+			clientX: event.clientX,
+			clientY: event.clientY,
+			deltaX: event.deltaX,
+			deltaY: event.deltaY,
+			deltaZ: event.deltaZ,
+			deltaMode: event.deltaMode
+		}));
+	}, { capture: true, passive: false });
 
 	window.addEventListener('beforeunload', event => {
 		if (!storage?.isDirty || !frappe.get_route()?.includes('fengjin_whiteboard_d')) return;
