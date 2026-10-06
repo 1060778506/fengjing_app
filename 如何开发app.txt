@@ -67,7 +67,9 @@ cd "/root/Desktop/erpnext-os-py/fengjing_app" && git add -A && git commit -m "20
 			bench --site fjnb export-fixtures
 
 			#升级包升级组件
-			npm audit fix
+			yarn upgrade --latest
+			#查看有那些要升级
+			yarn outdated
 
 			# 查看日志
 			docker logs -f --tail 100 neizhang-backend-1
