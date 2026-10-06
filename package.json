@@ -10,8 +10,10 @@
     "bootstrap-icons": "^1.13.1",
     "d3-force": "^3.0.0",
     "echarts": "^6.1.0",
+    "fullcalendar": "7.1.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "temporal-polyfill": "^1.0.1",
     "three": "^0.186.1"
   }
 }

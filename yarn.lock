@@ -161,6 +161,16 @@
   resolved "https://registry.yarnpkg.com/@floating-ui/utils/-/utils-0.2.12.tgz#afefe785949f16ac4cdd1e695935a321572dd56a"
   integrity sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==
 
+"@full-ui/headless-calendar@7.1.1":
+  version "7.1.1"
+  resolved "https://registry.npmmirror.com/@full-ui/headless-calendar/-/headless-calendar-7.1.1.tgz#47617ecbe8214aa5fb0d6ab5c30e10cf18f5243b"
+  integrity sha512-WaZw5t4K+JlLDw/1ucnjnOznXJJ/86bZWgeNIh8Xac62/+nn0VMO4HqCFKk9ylFnrng4zLy4iAjkFuH6jjS3Ow==
+
+"@fullcalendar/core@7.1.1":
+  version "7.1.1"
+  resolved "https://registry.npmmirror.com/@fullcalendar/core/-/core-7.1.1.tgz#2a25884bb0c73151ad948a492f85bbbc335d4f30"
+  integrity sha512-QYTmaq52uxvGLk9EX60p+4zYIE+baGDdbYEITW4iovevohlpl1Jg7u3X2hfW1//yk0cs7d1Kd3yOBcaMnObITg==
+
 "@iconify/types@^2.0.0":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/@iconify/types/-/types-2.0.0.tgz#ab0e9ea681d6c8a1214f30cd741fe3a20cc57f57"
@@ -1201,6 +1211,15 @@ fsevents@~2.3.2:
   resolved "https://registry.yarnpkg.com/fsevents/-/fsevents-2.3.3.tgz#cac6407785d03675a2a5e1a5305c697b347d90d6"
   integrity sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==
 
+fullcalendar@7.1.1:
+  version "7.1.1"
+  resolved "https://registry.npmmirror.com/fullcalendar/-/fullcalendar-7.1.1.tgz#c6b727feb72486aeee98e9fb47e5c4d8248db336"
+  integrity sha512-W+0ji7pvvb4miUMLHXnx86GgA3uRVqGfxJRg1Ibph9w9jbMVyydDv26XuoH7LjS7Q6MRTkzNEw2UxO/3Q3L/+w==
+  dependencies:
+    "@full-ui/headless-calendar" "7.1.1"
+    "@fullcalendar/core" "7.1.1"
+    preact "^10.29.8"
+
 fuzzy@0.1.3:
   version "0.1.3"
   resolved "https://registry.yarnpkg.com/fuzzy/-/fuzzy-0.1.3.tgz#4c76ec2ff0ac1a36a9dccf9a00df8623078d4ed8"
@@ -1509,6 +1528,11 @@ points-on-path@^0.2.1:
     path-data-parser "0.1.0"
     points-on-curve "0.2.0"
 
+preact@^10.29.8:
+  version "10.29.8"
+  resolved "https://registry.npmmirror.com/preact/-/preact-10.29.8.tgz#fc85b82dc2474e245b1430b51781d417361f5fc3"
+  integrity sha512-ej2aVZ+vZ8WO7tvlQWRM9N63A0KzF9q4mWJfDUHgYaIofWY9hu74QdnQrjoPMmZi2/nZ5gN0bJCQF49xQqx09Q==
+
 pwacompat@2.0.17:
   version "2.0.17"
   resolved "https://registry.yarnpkg.com/pwacompat/-/pwacompat-2.0.17.tgz#707959ff97f239bf1fe7b260b63aeea416a15eab"
@@ -1640,6 +1664,24 @@ stylis@^4.3.6:
   version "4.4.0"
   resolved "https://registry.yarnpkg.com/stylis/-/stylis-4.4.0.tgz#c5846c9345f4bfc51bd0cbd7ca35a0744f485a5d"
   integrity sha512-5Z9ZpRzfuH6l/UAvCPAPUo3665Nk2wLaZU3x+TLHKVzIz33+sbJqbtrYoC3KD4/uVOr2Zp+L0LySezP9OHV9yA==
+
+temporal-polyfill@^1.0.1:
+  version "1.0.5"
+  resolved "https://registry.npmmirror.com/temporal-polyfill/-/temporal-polyfill-1.0.5.tgz#e24905f179e3c78de5a3422221d4aa1571eb8d88"
+  integrity sha512-+H/mmY74i6wXCMcjIhGuSnODcyZnc4eois2myhOyX0UqRAKNXQY5m9iB1en5jQ/n4SXtjLXo1ElBI5bmn8tZwQ==
+  dependencies:
+    temporal-spec "1.0.1"
+    temporal-utils "1.0.3"
+
+temporal-spec@1.0.1:
+  version "1.0.1"
+  resolved "https://registry.npmmirror.com/temporal-spec/-/temporal-spec-1.0.1.tgz#5679ce2dd0089865afe80e0a8bd22a9033c16717"
+  integrity sha512-wxVoanmDeavXie1vu2JaQ3WIc3JZnWAOYFBsJyATaVsXsycKYUflGsyBmrRSnoCpZJpwPyr38VpgSUlQ8CbFxg==
+
+temporal-utils@1.0.3:
+  version "1.0.3"
+  resolved "https://registry.npmmirror.com/temporal-utils/-/temporal-utils-1.0.3.tgz#dbbe3e14adaa81fcf811d0f7380b30a9c6a2ada0"
+  integrity sha512-9jbTSX3HvkOWvDpNpFzwX/d1mkCrgQgwLmVTOEiuocZGKHsrQJtttGZFmybJ2zYP5zCSZuU5ZyeS8+eOEPABiQ==
 
 three@^0.186.1:
   version "0.186.1"
