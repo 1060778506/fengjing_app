@@ -72,7 +72,7 @@
   resolved "https://registry.yarnpkg.com/@chevrotain/utils/-/utils-11.0.3.tgz#e39999307b102cff3645ec4f5b3665f5297a2224"
   integrity sha512-YslZMgtJUyuMbZ+aKvfF3x1f5liK4mWNxghFRv7jqRR9C3R3fAOGTTKvxXDa2Y1s9zSbcpuO0cAxDYsc9SrXoQ==
 
-"@excalidraw/excalidraw@0.18.1":
+"@excalidraw/excalidraw@^0.18.1":
   version "0.18.1"
   resolved "https://registry.yarnpkg.com/@excalidraw/excalidraw/-/excalidraw-0.18.1.tgz#fd6ad752807c814698c5f51dab778845b7e4bba7"
   integrity sha512-6i5Gt7IDTOH//qa0Z315Ly5iVRhjWpu2whrlQFqkuwrkKUWgRsMk0P5qdE7bpyDpai7jeLeWYkyj1eVAfni1lw==
