@@ -109,13 +109,28 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 
 	async function openWhiteboard() {
 		if (!await confirmIfDirty('当前白板还有未保存内容，确定打开其他白板吗？')) return;
+		let whiteboards;
+		try {
+			whiteboards = await storage.list();
+		} catch (error) {
+			showError('白板列表读取失败', error);
+			return;
+		}
+		if (!whiteboards.length) {
+			frappe.show_alert({ message: '当前没有已保存的白板', indicator: 'orange' }, 4);
+			return;
+		}
 		frappe.prompt(
 			[
 				{
 					fieldname: 'whiteboard',
-					fieldtype: 'Link',
+					fieldtype: 'Autocomplete',
 					label: '选择白板',
-					options: 'Fengjin Excalidraw whiteboard storage',
+					options: whiteboards.map(board => ({
+						value: board.name,
+						label: board.whiteboard_title || board.name,
+						description: [board.folder_name, board.modified].filter(Boolean).join(' · ')
+					})),
 					reqd: 1
 				}
 			],
@@ -170,11 +185,15 @@ frappe.pages['fengjin_whiteboard_d'].on_page_load = function(wrapper) {
 			return;
 		}
 		const title = storage.document.whiteboard_title || '未命名白板';
+		const deletedName = storage.document.name;
 		frappe.confirm(
 			`确定删除白板“${frappe.utils.escape_html(title)}”吗？该白板中的图片附件也会一起删除。`,
 			async () => {
 				try {
 					const result = await storage.deleteCurrent();
+					if (deletedName && frappe.model?.clear_doc) {
+						frappe.model.clear_doc('Fengjin Excalidraw whiteboard storage', deletedName);
+					}
 					await syncDocumentFields(result.document);
 					replaceScene(result.scene);
 					frappe.show_alert({ message: `白板“${title}”已删除`, indicator: 'green' }, 4);

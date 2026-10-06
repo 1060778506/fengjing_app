@@ -1,0 +1,91 @@
+.fjtc-page .layout-main-section {
+	background: transparent;
+}
+
+.fjtc-shell {
+	min-height: 680px;
+	padding: 18px;
+	border: 1px solid var(--border-color);
+	border-radius: 14px;
+	background: var(--card-bg);
+	box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+}
+
+.fjtc-loading {
+	display: flex;
+	min-height: 580px;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	color: var(--text-muted);
+}
+
+.fjtc-spinner {
+	width: 20px;
+	height: 20px;
+	border: 2px solid var(--border-color);
+	border-top-color: var(--primary);
+	border-radius: 50%;
+	animation: fjtc-spin 0.8s linear infinite;
+}
+
+.fjtc-calendar {
+	display: none;
+}
+
+.fjtc-page .fc {
+	--fc-border-color: var(--border-color);
+	--fc-page-bg-color: var(--card-bg);
+	--fc-neutral-bg-color: var(--subtle-fg);
+	--fc-list-event-hover-bg-color: var(--subtle-fg);
+	--fc-today-bg-color: rgba(59, 130, 246, 0.08);
+	font-family: inherit;
+}
+
+.fjtc-page .fc .fc-toolbar-title {
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.fjtc-page .fc .fc-button {
+	border-radius: 8px;
+	font-weight: 600;
+}
+
+.fjtc-page .fc .fc-event {
+	border-radius: 6px;
+	cursor: pointer;
+	padding: 1px 3px;
+}
+
+.fjtc-page .fc .fc-daygrid-day-number,
+.fjtc-page .fc .fc-col-header-cell-cushion {
+	color: var(--text-color);
+}
+
+.fjtc-delete-event {
+	margin-right: auto;
+}
+
+@keyframes fjtc-spin {
+	to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+	.fjtc-shell {
+		min-height: 560px;
+		padding: 8px;
+		border-radius: 10px;
+	}
+
+	.fjtc-page .fc .fc-toolbar {
+		align-items: stretch;
+		gap: 8px;
+		flex-direction: column;
+	}
+
+	.fjtc-page .fc .fc-toolbar-chunk {
+		display: flex;
+		justify-content: center;
+	}
+}
