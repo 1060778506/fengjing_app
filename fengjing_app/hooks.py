@@ -195,7 +195,7 @@ doc_events = {
         "before_validate": "fengjing_app.events.journal_entry.validate_journal_entry_foreign_amounts"
     },
     "Stock Entry": {
-        "before_validate": "fengjing_app.fengjing_business.doctype.temu_material_movement.temu_material_movement.validate_temu_product_bundle_movement"
+        "before_validate": "fengjing_app.fengjing_business.doctype.analysis_material_movement.analysis_material_movement.validate_product_bundle_movement"
     }
 }
 

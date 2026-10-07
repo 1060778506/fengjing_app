@@ -9,7 +9,7 @@ from frappe.model.document import Document
 from frappe.utils import cint, flt
 
 
-class TemuMaterialmovement(Document):
+class AnalysisMaterialmovement(Document):
 	pass
 
 
@@ -21,27 +21,20 @@ def _as_rows(value):
 
 
 def _expand_bundle_rows(bundle_rows):
-	"""将 TEMU 包裹子表展开为真实库存物料。"""
-	result = []
-	seen_packages = set()
+	"""将套件展开为真实库存物料，并合并重复的物料编号。"""
+	source_rows = _as_rows(bundle_rows)
 	bundle_cache = {}
 	item_cache = {}
+	result_by_item = {}
 
-	for index, source in enumerate(_as_rows(bundle_rows), start=1):
-		package_no = (source.get("temu包裹号") or "").strip()
+	for index, source in enumerate(source_rows, start=1):
 		bundle_name = (source.get("套件") or "").strip()
 		bundle_qty = flt(source.get("数量"))
 
-		if not package_no:
-			frappe.throw(_(f"TEMU 物料套件移动第 {index} 行：请填写 TEMU 包裹号。"))
-		if package_no in seen_packages:
-			frappe.throw(_(f"TEMU 包裹号 {package_no} 在套件子表中重复，一个包裹号只能对应一行套件。"))
-		seen_packages.add(package_no)
-
 		if not bundle_name:
-			frappe.throw(_(f"TEMU 物料套件移动第 {index} 行：请选择物料套件。"))
+			frappe.throw(_(f"套件物料解析第 {index} 行：请选择物料套件。"))
 		if bundle_qty <= 0:
-			frappe.throw(_(f"TEMU 物料套件移动第 {index} 行：数量必须大于 0。"))
+			frappe.throw(_(f"套件物料解析第 {index} 行：数量必须大于 0。"))
 
 		if bundle_name not in bundle_cache:
 			if not frappe.db.exists("Product Bundle", bundle_name):
@@ -75,19 +68,16 @@ def _expand_bundle_rows(bundle_rows):
 			if quantity <= 0:
 				frappe.throw(_(f"套件 {bundle_name} 中的物料 {item_code} 数量必须大于 0。"))
 
-			result.append(
-				{
-					"temu_package_no": package_no,
-					"bundle": bundle_name,
-					"bundle_description": bundle.description or "",
+			if item_code not in result_by_item:
+				result_by_item[item_code] = {
 					"item_code": item_code,
 					"item_name": item.item_name or "",
 					"stock_uom": item.stock_uom,
-					"qty": quantity,
+					"qty": 0,
 				}
-			)
+			result_by_item[item_code]["qty"] = flt(result_by_item[item_code]["qty"] + quantity, 6)
 
-	return result
+	return list(result_by_item.values())
 
 
 def _check_stock_entry_permission():
@@ -99,51 +89,35 @@ def _check_stock_entry_permission():
 
 
 @frappe.whitelist()
-def parse_temu_product_bundles(bundle_rows):
+def parse_product_bundles(bundle_rows):
 	"""供物料移动的“解析套件”按钮调用。"""
 	_check_stock_entry_permission()
-	rows = _expand_bundle_rows(bundle_rows)
+	source_rows = _as_rows(bundle_rows)
+	rows = _expand_bundle_rows(source_rows)
 	return {
 		"rows": rows,
-		"package_count": len({row["temu_package_no"] for row in rows}),
+		"bundle_row_count": len(source_rows),
 		"item_row_count": len(rows),
 	}
 
 
-def validate_temu_product_bundle_movement(doc, method=None):
-	"""
-	保存或提交前的服务端校验。
-
-	既防止绕过前端，也能发现解析后又修改了套件、数量或包裹号的情况。
-	"""
-	bundle_rows = doc.get("custom_temu_物料套件移动") or []
+def validate_product_bundle_movement(doc, method=None):
+	"""保存或提交前校验套件配置与程序生成的物料明细。"""
+	bundle_rows = doc.get("custom_物料套件移动") or []
 	if not bundle_rows:
 		return
 
 	if doc.get("purpose") and doc.purpose != "Material Transfer":
-		frappe.throw(_("“TEMU 物料套件移动”只能用于“物料转移”类型的库存凭证。"))
-
-	# 套件名称当前是 Link 字段，保存有效的 Product Bundle 编号，
-	# 避免 fetch_from 带入描述文本后造成无效链接。
-	for source in bundle_rows:
-		if source.get("套件"):
-			source.set("套件名称", source.get("套件"))
+		frappe.throw(_("“套件物料解析”只能用于“物料转移”类型的库存凭证。"))
 
 	expected_rows = _expand_bundle_rows(bundle_rows)
 	generated_rows = [row for row in (doc.get("items") or []) if cint(row.get("custom_是否程序生成"))]
 
 	if not generated_rows:
-		frappe.throw(_("已填写 TEMU 物料套件移动，请先点击“解析套件”生成物料明细。"))
+		frappe.throw(_("已填写套件物料解析，请先点击“解析套件”生成物料明细。"))
 
-	def expected_key(row):
-		return (row["temu_package_no"], row["item_code"], flt(row["qty"], 6))
+	def row_key(row):
+		return (row.get("item_code") or "", flt(row.get("qty"), 6))
 
-	def actual_key(row):
-		return (
-			(row.get("custom_temu包裹号") or "").strip(),
-			row.get("item_code") or "",
-			flt(row.get("qty"), 6),
-		)
-
-	if Counter(expected_key(row) for row in expected_rows) != Counter(actual_key(row) for row in generated_rows):
-		frappe.throw(_("TEMU 套件配置与已生成的物料明细不一致，请重新点击“解析套件”。"))
+	if Counter(row_key(row) for row in expected_rows) != Counter(row_key(row) for row in generated_rows):
+		frappe.throw(_("套件配置与已生成的物料明细不一致，请重新点击“解析套件”。"))

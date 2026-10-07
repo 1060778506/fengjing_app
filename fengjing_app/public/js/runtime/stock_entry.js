@@ -1,7 +1,7 @@
-// ERPNext 物料移动中的 TEMU 物料套件功能。
+// ERPNext 物料移动中的通用物料套件解析功能。
 
 // ============================================================
-// TEMU 物料套件移动
+// 物料套件移动
 // 1. 解析 Product Bundle 中的真实库存物料
 // 2. 自动生成 Stock Entry Detail 明细
 // 3. 重新解析时只替换程序生成的行
@@ -10,11 +10,10 @@
     "use strict";
 
     const PARSE_METHOD =
-        "fengjing_app.fengjing_business.doctype.temu_material_movement.temu_material_movement.parse_temu_product_bundles";
+        "fengjing_app.fengjing_business.doctype.analysis_material_movement.analysis_material_movement.parse_product_bundles";
 
     function getBundleRows(frm) {
-        return (frm.doc.custom_temu_物料套件移动 || []).map(row => ({
-            temu包裹号: String(row.temu包裹号 || "").trim(),
+        return (frm.doc.custom_物料套件移动 || []).map(row => ({
             套件: row.套件 || "",
             数量: row.数量
         }));
@@ -45,7 +44,6 @@
 
         const values = {
             qty: data.qty,
-            custom_temu包裹号: data.temu_package_no,
             custom_是否程序生成: 1
         };
 
@@ -67,7 +65,7 @@
 
         const bundleRows = getBundleRows(frm);
         if (!bundleRows.length) {
-            frappe.msgprint(__("请先在“TEMU 物料套件移动”中添加包裹和物料套件。"));
+            frappe.msgprint(__("请先在“套件物料解析”中添加物料套件。"));
             return;
         }
 
@@ -77,7 +75,7 @@
                 bundle_rows: bundleRows
             },
             freeze: true,
-            freeze_message: __("正在解析 TEMU 物料套件……")
+            freeze_message: __("正在解析物料套件……")
         });
 
         const result = response.message || {};
@@ -107,8 +105,8 @@
 
         frappe.show_alert({
             message: __(
-                "解析完成：{0} 个包裹，生成 {1} 条物料明细。",
-                [result.package_count || 0, result.item_row_count || itemRows.length]
+                "解析完成：{0} 行套件，生成 {1} 条物料明细。",
+                [result.bundle_row_count || 0, result.item_row_count || itemRows.length]
             ),
             indicator: "green"
         }, 7);
@@ -119,24 +117,8 @@
             try {
                 await parseBundles(frm);
             } catch (error) {
-                console.error("TEMU 物料套件解析失败：", error);
+                console.error("物料套件解析失败：", error);
             }
-        },
-
-        validate(frm) {
-            // “套件名称”当前是 Product Bundle Link，在发送到后端前
-            // 统一保存有效套件编号，避免 fetch_from 描述造成无效链接。
-            (frm.doc.custom_temu_物料套件移动 || []).forEach(row => {
-                row.套件名称 = row.套件 || "";
-            });
-        }
-    });
-
-    frappe.ui.form.on("Temu Material movement", {
-        套件(frm, cdt, cdn) {
-            const row = locals[cdt][cdn];
-            // 当前“套件名称”是 Product Bundle Link，必须保存有效编号。
-            frappe.model.set_value(cdt, cdn, "套件名称", row.套件 || "");
         }
     });
 })();
