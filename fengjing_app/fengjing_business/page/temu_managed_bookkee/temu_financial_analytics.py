@@ -103,24 +103,27 @@ class TemuItemResolver:
 	def __init__(self, batches):
 		self.batch_store = {row.name: _text(row.cost_center) for row in batches}
 		stores = sorted({store for store in self.batch_store.values() if store})
-		self.sku_index = defaultdict(dict)
-		self.product_index = defaultdict(dict)
+		self.sku_index = defaultdict(lambda: defaultdict(list))
+		self.product_index = defaultdict(lambda: defaultdict(list))
+		self.spu_index = defaultdict(lambda: defaultdict(list))
 		self.item_info = {}
 		if not stores or not frappe.has_permission(MAPPING_DOCTYPE, "read"):
 			return
 		mappings = frappe.get_list(
 			MAPPING_DOCTYPE,
 			filters={"启用": 1, "店铺": ["in", stores]},
-			fields=["店铺", "平台asin", "平台sku", "物料id", "物料名称"],
+			fields=["店铺", "平台asin", "平台sku", "平台spu", "物料id", "物料名称"],
 			limit_page_length=100000,
 		)
 		item_codes = set()
 		for mapping in mappings:
 			store = _text(mapping.get("店铺"))
 			if mapping.get("平台sku"):
-				self.sku_index[store][_key(mapping.get("平台sku"))] = mapping
+				self.sku_index[store][_key(mapping.get("平台sku"))].append(mapping)
 			if mapping.get("平台asin"):
-				self.product_index[store][_key(mapping.get("平台asin"))] = mapping
+				self.product_index[store][_key(mapping.get("平台asin"))].append(mapping)
+			if mapping.get("平台spu"):
+				self.spu_index[store][_key(mapping.get("平台spu"))].append(mapping)
 			if mapping.get("物料id"):
 				item_codes.add(mapping.get("物料id"))
 		if item_codes:
@@ -134,25 +137,56 @@ class TemuItemResolver:
 
 	def resolve(self, row):
 		store = self.batch_store.get(row.get("reconciliation_batch"), "")
-		mapping = None
+		mappings = []
+		mapping_basis = ""
 		for value in (row.get("sku_code"), row.get("sku_id")):
-			if value and _key(value) in self.sku_index.get(store, {}):
-				mapping = self.sku_index[store][_key(value)]
+			matches = self.sku_index.get(store, {}).get(_key(value)) if value else None
+			if matches:
+				mappings = matches
+				mapping_basis = "SKU"
 				break
-		if not mapping:
-			for value in (row.get("product_id"), row.get("spu_id"), row.get("sku_id")):
-				if value and _key(value) in self.product_index.get(store, {}):
-					mapping = self.product_index[store][_key(value)]
+		if not mappings:
+			for value in (row.get("product_id"), row.get("sku_id")):
+				matches = self.product_index.get(store, {}).get(_key(value)) if value else None
+				if matches:
+					mappings = matches
+					mapping_basis = "商品ID"
 					break
-		if not mapping:
-			return {"item_code": "", "item_name": "", "item_image": "", "is_bound": 0, "cost_center": store}
-		item_code = mapping.get("物料id") or ""
-		item = self.item_info.get(item_code)
+		if not mappings and row.get("spu_id"):
+			mappings = self.spu_index.get(store, {}).get(_key(row.get("spu_id")), [])
+			if mappings:
+				mapping_basis = "SPU"
+		if not mappings and row.get("spu_id"):
+			# 兼容曾经把SPU保存在“平台ASIN/商品ID”中的旧映射。
+			mappings = self.product_index.get(store, {}).get(_key(row.get("spu_id")), [])
+			if mappings:
+				mapping_basis = "商品ID（兼容SPU）"
+
+		items = []
+		seen = set()
+		for mapping in mappings:
+			item_code = mapping.get("物料id") or ""
+			if not item_code or item_code in seen:
+				continue
+			seen.add(item_code)
+			item = self.item_info.get(item_code)
+			items.append(
+				{
+					"item_code": item_code,
+					"item_name": (item.item_name if item else None) or mapping.get("物料名称") or "",
+					"item_image": (item.image if item else None) or "",
+				}
+			)
+		primary = items[0] if items else {}
 		return {
-			"item_code": item_code,
-			"item_name": (item.item_name if item else None) or mapping.get("物料名称") or "",
-			"item_image": (item.image if item else None) or "",
-			"is_bound": 1 if item_code else 0,
+			"item_code": primary.get("item_code", ""),
+			"item_name": primary.get("item_name", ""),
+			"item_image": primary.get("item_image", ""),
+			"items": items,
+			"item_count": len(items),
+			"is_multi_item": 1 if len(items) > 1 else 0,
+			"is_bound": 1 if items else 0,
+			"mapping_basis": mapping_basis,
 			"cost_center": store,
 		}
 
@@ -577,7 +611,16 @@ def get_ad_analysis(filters=None, page=1, page_size=50):
 			continue
 		if filters.binding == "unbound" and entry["is_bound"]:
 			continue
-		haystack = _key(" ".join(_text(entry.get(field)) for field in ("product_name", "product_id", "spu_id", "item_code", "item_name")))
+		item_search = " ".join(
+			f"{item.get('item_code', '')} {item.get('item_name', '')}"
+			for item in entry.get("items", [])
+		)
+		haystack = _key(
+			" ".join(
+				[_text(entry.get(field)) for field in ("product_name", "product_id", "spu_id", "item_code", "item_name")]
+				+ [item_search]
+			)
+		)
 		if search and search not in haystack:
 			continue
 		products.append(entry)

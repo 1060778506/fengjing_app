@@ -141,8 +141,12 @@ class TemuAdAnalysisPage {
 		this.$.find(".taa-page-info").text(`共 ${this.num(this.data.total)} 个商品 · 第 ${this.data.page || 1}/${this.data.pages || 1} 页`);
 		this.$.find(".taa-prev").prop("disabled", (this.data.page || 1) <= 1); this.$.find(".taa-next").prop("disabled", (this.data.page || 1) >= (this.data.pages || 1));
 		this.$.find(".taa-products tbody").html(rows.map((row) => {
-			const item = row.is_bound ? `<a href="/app/item/${encodeURIComponent(row.item_code)}">${this.esc(row.item_code)}</a><small>${this.esc(row.item_name)}</small>` : `<em>未绑定ERPNext物料</em>`;
-			return `<tr><td><div class="taa-product">${row.item_image ? `<img src="${this.esc(row.item_image)}" loading="lazy">` : "<i>AD</i>"}<span><b>${this.esc(row.product_name || row.product_id)}</b><small>商品ID ${this.esc(row.product_id || "—")} · SPU ${this.esc(row.spu_id || "—")}</small>${item}</span></div></td><td>${this.money(row.spend, row.currency)}</td><td>${this.money(row.sales, row.currency)}</td><td><b>${this.num(row.roas)}</b></td><td>${this.num(row.impressions)}<small>${this.num(row.clicks)} 次点击</small></td><td>${this.num(row.orders)}<small>${this.num(row.units)} 件</small></td><td>${this.num(row.conversion_rate)}%</td></tr>`;
+			const items = Array.isArray(row.items) ? row.items : [];
+			const item = items.length
+				? `<div class="taa-linked-items"><strong>${row.is_multi_item ? `关联 ${items.length} 个ERPNext物料` : "关联ERPNext物料"}<small>${this.esc(row.mapping_basis || "SPU")}</small></strong>${items.map((value) => `<a href="/app/item/${encodeURIComponent(value.item_code)}"><b>${this.esc(value.item_code)}</b><span>${this.esc(value.item_name || "未命名物料")}</span></a>`).join("")}</div>`
+				: `<em>未绑定ERPNext物料</em>`;
+			const preview = row.item_image ? `<img src="${this.esc(row.item_image)}" loading="lazy">` : `<i>${items.length > 1 ? items.length : "AD"}</i>`;
+			return `<tr><td><div class="taa-product">${preview}<div class="taa-product-copy"><b>${this.esc(row.product_name || row.product_id)}</b><small>商品ID ${this.esc(row.product_id || "—")} · SPU ${this.esc(row.spu_id || "—")}</small>${item}</div></div></td><td>${this.money(row.spend, row.currency)}</td><td>${this.money(row.sales, row.currency)}</td><td><b>${this.num(row.roas)}</b></td><td>${this.num(row.impressions)}<small>${this.num(row.clicks)} 次点击</small></td><td>${this.num(row.orders)}<small>${this.num(row.units)} 件</small></td><td>${this.num(row.conversion_rate)}%</td></tr>`;
 		}).join("") || `<tr><td colspan="7" class="taa-empty">当前条件没有广告商品数据</td></tr>`);
 	}
 

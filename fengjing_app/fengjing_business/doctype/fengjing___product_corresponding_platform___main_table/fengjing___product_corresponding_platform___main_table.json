@@ -12,6 +12,7 @@
   "column_break_mapping",
   "\u5e73\u53f0asin",
   "\u5e73\u53f0sku",
+  "\u5e73\u53f0spu",
   "\u7269\u6599id",
   "\u7269\u6599\u540d\u79f0",
   "\u5e73\u53f0sku_\u5c5e\u6027",
@@ -61,6 +62,14 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "\u5e73\u53f0SKU",
+   "search_index": 1
+  },
+  {
+   "description": "Temu\u5e7f\u544a\u5546\u54c1\u4f7f\u7528SPU ID\u5173\u8054\u7269\u6599\uff1b\u540c\u4e00SPU\u53ef\u4ee5\u5bf9\u5e94\u591a\u4e2aSKU\u7269\u6599\u3002",
+   "fieldname": "\u5e73\u53f0spu",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u5e73\u53f0SPU",
    "search_index": 1
   },
   {
