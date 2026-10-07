@@ -196,6 +196,9 @@ doc_events = {
     },
     "Stock Entry": {
         "before_validate": "fengjing_app.fengjing_business.doctype.analysis_material_movement.analysis_material_movement.validate_product_bundle_movement"
+    },
+    "Material Request": {
+        "before_validate": "fengjing_app.fengjing_business.doctype.analysis_material_movement.analysis_material_movement.validate_material_request_product_bundles"
     }
 }
 
@@ -214,6 +217,7 @@ doctype_js = {
     "Item": "public/js/runtime/item.js",
     "Journal Entry": "public/js/runtime/journal_entry.js",
     "Stock Entry": "public/js/runtime/stock_entry.js",
+    "Material Request": "public/js/runtime/material_request.js",
 }
 
 
