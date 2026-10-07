@@ -22,6 +22,7 @@ AD_STORE_DOCTYPE = "Temu Advertising Store Daily"
 AD_PRODUCT_DOCTYPE = "Temu Advertising Product Report"
 AD_RECONCILIATION_DOCTYPE = "Temu Advertising Reconciliation Daily"
 AD_PAYMENT_DOCTYPE = "Temu Advertising Payment Transaction"
+SNAPSHOT_DOCTYPE = "Temu Financial Source JSON Snapshot"
 
 EXTRACTED_DOCTYPES = (
 	PENDING_DOCTYPE,
@@ -33,6 +34,17 @@ EXTRACTED_DOCTYPES = (
 	AD_RECONCILIATION_DOCTYPE,
 	AD_PAYMENT_DOCTYPE,
 )
+
+REQUIRED_BUSINESS_FIELDS = {
+	PENDING_DOCTYPE: ("stock_order_number",),
+	TRANSACTION_DOCTYPE: ("transaction_type", "currency", "accounting_time"),
+	PROTECTION_DOCTYPE: ("protection_type", "business_number"),
+	LEDGER_DOCTYPE: ("accounting_time", "accounting_type", "currency"),
+	AD_STORE_DOCTYPE: ("record_type",),
+	AD_PRODUCT_DOCTYPE: ("record_type",),
+	AD_RECONCILIATION_DOCTYPE: ("report_date",),
+	AD_PAYMENT_DOCTYPE: ("payment_time", "settlement_number", "payment_status"),
+}
 
 REGIONS = {
 	"欧区待处理": "欧区",
@@ -102,6 +114,42 @@ def _raw_row(values):
 	return json.dumps(list(values), ensure_ascii=False, default=str)
 
 
+def _workbook_json(batch, file_row, file_doc, workbook):
+	sheets = []
+	for sheet in workbook.worksheets:
+		rows = []
+		for row_number, values in enumerate(sheet.iter_rows(values_only=True), start=1):
+			rows.append({"row_number": row_number, "values": list(values)})
+		sheets.append(
+			{
+				"name": sheet.title,
+				"max_row": sheet.max_row,
+				"max_column": sheet.max_column,
+				"rows": rows,
+			}
+		)
+	payload = {
+		"format_version": 1,
+		"batch": batch.name,
+		"file": {
+			"record": file_row.name,
+			"type": file_row.file_type,
+			"name": file_row.original_file_name or file_doc.file_name,
+			"url": file_row.file,
+			"hash": file_doc.content_hash or file_row.file_hash,
+			"region": REGIONS.get(file_row.file_type),
+		},
+		"sheets": sheets,
+	}
+	json_text = json.dumps(
+		payload,
+		ensure_ascii=False,
+		default=str,
+		separators=(",", ":"),
+	)
+	return payload, json_text
+
+
 def _has_values(values):
 	return any(_text(value) is not None for value in values)
 
@@ -123,11 +171,32 @@ def _header(sheet, row_number=1):
 
 
 def _require_header(sheet, expected, row_number=1):
-	actual = _header(sheet, row_number)[: len(expected)]
+	actual = list(_header(sheet, row_number))
+	while actual and actual[-1] is None:
+		actual.pop()
+	actual = tuple(actual)
 	if actual != tuple(expected):
 		frappe.throw(
-			_("工作表 {0} 的第 {1} 行表头与预期格式不一致。").format(
-				sheet.title, row_number
+			_(
+				"工作表 {0} 的第 {1} 行表头与预期格式不一致。"
+				"可能存在新增、删除、改名或调整顺序的列。"
+			).format(sheet.title, row_number)
+		)
+
+
+def _validate_business_record(doctype, data, file_row, sheet, row_number):
+	missing = [
+		fieldname
+		for fieldname in REQUIRED_BUSINESS_FIELDS[doctype]
+		if data.get(fieldname) in (None, "")
+	]
+	if missing:
+		frappe.throw(
+			_("文件 {0}、工作表 {1}、第 {2} 行缺少关键数据：{3}").format(
+				file_row.original_file_name or file_row.file_type,
+				sheet.title,
+				row_number,
+				", ".join(missing),
 			)
 		)
 
@@ -182,6 +251,7 @@ def _source_values(batch, file_row, file_doc, sheet, row_number, values, region=
 def _add_record(
 	result, doctype, batch, file_row, file_doc, sheet, row_number, values, data, region=None
 ):
+	_validate_business_record(doctype, data, file_row, sheet, row_number)
 	record = _source_values(
 		batch, file_row, file_doc, sheet, row_number, values, region=region
 	)
@@ -586,6 +656,7 @@ def _parse_sheet(result, batch, file_row, file_doc, sheet):
 
 def _build_expected_records(batch):
 	result = defaultdict(list)
+	snapshots = []
 	for file_row in sorted(batch.files or [], key=lambda row: row.sort_order or row.idx):
 		if not file_row.file:
 			continue
@@ -600,19 +671,80 @@ def _build_expected_records(batch):
 		except Exception as error:
 			frappe.throw(_("无法读取文件 {0}：{1}").format(file_doc.file_name, error))
 		try:
+			snapshot_payload, json_text = _workbook_json(
+				batch, file_row, file_doc, workbook
+			)
+			rows_before = sum(len(rows) for rows in result.values())
 			for sheet in workbook.worksheets:
 				if sheet.max_row == 1 and sheet.max_column == 1 and not _has_values(_header(sheet)):
 					continue
 				_parse_sheet(result, batch, file_row, file_doc, sheet)
+			rows_after = sum(len(rows) for rows in result.values())
+			json_hash = sha256(json_text.encode("utf-8")).hexdigest()
+			snapshot_key = sha256(
+				f"{batch.name}|{file_row.name}".encode("utf-8")
+			).hexdigest()
+			snapshots.append(
+				{
+					"name": snapshot_key[:16],
+					"reconciliation_batch": batch.name,
+					"source_file_record": file_row.name,
+					"source_file_type": file_row.file_type,
+					"region": REGIONS.get(file_row.file_type),
+					"source_file_name": file_row.original_file_name or file_doc.file_name,
+					"source_file_url": file_row.file,
+					"source_file_hash": file_doc.content_hash or file_row.file_hash,
+					"snapshot_key": snapshot_key,
+					"format_version": snapshot_payload["format_version"],
+					"sheet_count": len(snapshot_payload["sheets"]),
+					"data_row_count": rows_after - rows_before,
+					"json_size": len(json_text.encode("utf-8")),
+					"json_hash": json_hash,
+					"workbook_json": json_text,
+					"conversion_status": "成功",
+					"converted_at": now_datetime(),
+				}
+			)
 		finally:
 			workbook.close()
 
 	for doctype in EXTRACTED_DOCTYPES:
 		result.setdefault(doctype, [])
-	return result
+	return result, snapshots
 
 
-def _is_complete(batch_name, expected):
+def _is_complete(batch_name, expected, snapshots):
+	expected_snapshots = {
+		row["source_file_record"]: (
+			row["source_file_hash"],
+			row["json_hash"],
+			row["sheet_count"],
+			row["data_row_count"],
+		)
+		for row in snapshots
+	}
+	existing_snapshots = {
+		row.source_file_record: (
+			row.source_file_hash,
+			row.json_hash,
+			row.sheet_count,
+			row.data_row_count,
+		)
+		for row in frappe.get_all(
+			SNAPSHOT_DOCTYPE,
+			filters={"reconciliation_batch": batch_name},
+			fields=[
+				"source_file_record",
+				"source_file_hash",
+				"json_hash",
+				"sheet_count",
+				"data_row_count",
+			],
+		)
+	}
+	if expected_snapshots != existing_snapshots:
+		return False
+
 	for doctype in EXTRACTED_DOCTYPES:
 		expected_hashes = {row["source_row_hash"] for row in expected[doctype]}
 		existing_hashes = set(
@@ -628,33 +760,44 @@ def _is_complete(batch_name, expected):
 
 
 def delete_batch_data(batch_name):
+	frappe.db.delete(SNAPSHOT_DOCTYPE, {"reconciliation_batch": batch_name})
 	for doctype in EXTRACTED_DOCTYPES:
 		frappe.db.delete(doctype, {"reconciliation_batch": batch_name})
 
 
-def _insert_records(expected):
+def _bulk_insert_values(doctype, values_list):
+	if not values_list:
+		return
+	documents = [
+		frappe.get_doc({"doctype": doctype, **values}) for values in values_list
+	]
+	bulk_insert(doctype, documents, chunk_size=500)
+
+
+def _insert_records(expected, snapshots):
+	_bulk_insert_values(SNAPSHOT_DOCTYPE, snapshots)
 	for doctype in EXTRACTED_DOCTYPES:
-		documents = []
-		for values in expected[doctype]:
-			doc = frappe.get_doc({"doctype": doctype, **values})
-			documents.append(doc)
-		if documents:
-			bulk_insert(doctype, documents, chunk_size=500)
+		_bulk_insert_values(doctype, expected[doctype])
 
 
 def sync_batch_data(batch_name, force=False):
 	batch = frappe.get_doc(BATCH_DOCTYPE, batch_name)
-	expected = _build_expected_records(batch)
+	expected, snapshots = _build_expected_records(batch)
 	counts = {doctype: len(expected[doctype]) for doctype in EXTRACTED_DOCTYPES}
 	total = sum(counts.values())
 
-	if not force and _is_complete(batch.name, expected):
+	if not force and _is_complete(batch.name, expected, snapshots):
 		if batch.files:
 			frappe.db.set_value(BATCH_DOCTYPE, batch.name, "status", "已处理", update_modified=False)
-		return {"status": "unchanged", "total": total, "counts": counts}
+		return {
+			"status": "unchanged",
+			"total": total,
+			"snapshots": len(snapshots),
+			"counts": counts,
+		}
 
 	delete_batch_data(batch.name)
-	_insert_records(expected)
+	_insert_records(expected, snapshots)
 	frappe.db.set_value(
 		BATCH_DOCTYPE,
 		batch.name,
@@ -662,4 +805,9 @@ def sync_batch_data(batch_name, force=False):
 		"已处理" if batch.files else "草稿",
 		update_modified=False,
 	)
-	return {"status": "synchronized", "total": total, "counts": counts}
+	return {
+		"status": "synchronized",
+		"total": total,
+		"snapshots": len(snapshots),
+		"counts": counts,
+	}

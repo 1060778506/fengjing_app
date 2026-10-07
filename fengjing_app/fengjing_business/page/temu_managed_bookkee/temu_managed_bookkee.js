@@ -406,8 +406,8 @@ class TemuManagedBookkeepingPage {
 			await this.loadBatchList();
 			const syncResult = syncResponse.message || {};
 			const message = syncResult.status === "unchanged"
-				? `对账批次已保存，${syncResult.total || 0} 条数据完整，无需重复写入`
-				: `对账批次已保存并同步 ${syncResult.total || 0} 条数据`;
+				? `对账批次已保存，${syncResult.snapshots || 0} 份JSON和 ${syncResult.total || 0} 条数据完整，无需重复写入`
+				: `对账批次已保存，已生成 ${syncResult.snapshots || 0} 份JSON并同步 ${syncResult.total || 0} 条数据`;
 			frappe.show_alert({ message, indicator: "green" }, 9);
 		} catch (error) {
 			this.showError("对账批次保存失败", error);
