@@ -74,6 +74,7 @@ class TemuManagedBookkeepingPage {
 						</div>
 					</div>
 					<div class="tmfb-date-card">
+						<div class="tmfb-date-field tmfb-cost-center"></div>
 						<div class="tmfb-date-field tmfb-start-date"></div>
 						<div class="tmfb-date-arrow">至</div>
 						<div class="tmfb-date-field tmfb-end-date"></div>
@@ -95,6 +96,14 @@ class TemuManagedBookkeepingPage {
 	}
 
 	makeDateControls() {
+		this.costCenterControl = frappe.ui.form.make_control({
+			parent: this.$main.find(".tmfb-cost-center"),
+			df: {
+				fieldname: "cost_center", fieldtype: "Link", options: "Cost Center",
+				label: "店铺（成本中心）", reqd: 1, change: () => this.markDirty(),
+			},
+			render_input: true,
+		});
 		this.startDateControl = frappe.ui.form.make_control({
 			parent: this.$main.find(".tmfb-start-date"),
 			df: { fieldname: "start_date", fieldtype: "Datetime", label: "开始日期", change: () => this.normalizeDateControl(this.startDateControl, "00:00:00") },
@@ -197,6 +206,7 @@ class TemuManagedBookkeepingPage {
 		this.fileSlots = Array.from({ length: INITIAL_FILE_SLOTS }, (_, index) => this.makeEmptySlot(index + 1));
 		this.startDateControl.set_value("");
 		this.endDateControl.set_value("");
+		this.costCenterControl.set_value("");
 		this.$main.find(".tmfb-remarks").val("");
 		this.$main.find(".tmfb-current-title").text("新建对账批次");
 		this.$main.find(".tmfb-status-pill").text("草稿");
@@ -314,7 +324,7 @@ class TemuManagedBookkeepingPage {
 
 	renderBatchList() {
 		const query = String(this.$main.find(".tmfb-search").val() || "").trim().toLowerCase();
-		const rows = this.batchList.filter((row) => !query || `${row.name} ${row.remarks || ""}`.toLowerCase().includes(query));
+		const rows = this.batchList.filter((row) => !query || `${row.name} ${row.cost_center || ""} ${row.remarks || ""}`.toLowerCase().includes(query));
 		if (!rows.length) {
 			this.$batchList.html('<div class="tmfb-empty-list">暂无对账批次</div>');
 			return;
@@ -324,6 +334,7 @@ class TemuManagedBookkeepingPage {
 			return `<button type="button" class="tmfb-batch-item ${row.name === this.currentBatch?.name ? "is-active" : ""}" data-name="${frappe.utils.escape_html(row.name)}">
 				<span class="tmfb-batch-item-top"><strong>${frappe.utils.escape_html(row.name)}</strong><em>${Number(row.file_count || 0)} 个文件</em></span>
 				<span class="tmfb-batch-range">${frappe.utils.escape_html(range)}</span>
+				<span class="tmfb-batch-store">${frappe.utils.escape_html(row.cost_center || "未选择店铺")}</span>
 				<span class="tmfb-batch-item-bottom"><span>${frappe.utils.escape_html(row.status || "草稿")}</span><time>${frappe.datetime.str_to_user(row.modified)}</time></span>
 			</button>`;
 		}).join(""));
@@ -358,6 +369,7 @@ class TemuManagedBookkeepingPage {
 		});
 		this.startDateControl.set_value(batch.start_date || "");
 		this.endDateControl.set_value(batch.end_date || "");
+		this.costCenterControl.set_value(batch.cost_center || "");
 		this.$main.find(".tmfb-remarks").val(batch.remarks || "");
 		this.$main.find(".tmfb-current-title").text(batch.name);
 		this.$main.find(".tmfb-status-pill").text(batch.status || "草稿");
@@ -376,6 +388,8 @@ class TemuManagedBookkeepingPage {
 	async saveBatch() {
 		const startDate = this.startDateControl.get_value() || null;
 		const endDate = this.endDateControl.get_value() || null;
+		const costCenter = this.costCenterControl.get_value() || null;
+		if (!costCenter) return frappe.msgprint("请选择代表Temu店铺的成本中心。");
 		if (startDate && endDate && startDate > endDate) return frappe.msgprint("结束日期不能早于开始日期。");
 		const pendingSlots = this.fileSlots.filter((slot) => slot.pending_file);
 		const metadata = this.fileSlots.filter((slot) => slot.row_name).map((slot) => ({
@@ -385,7 +399,7 @@ class TemuManagedBookkeepingPage {
 		try {
 			const saveResponse = await frappe.call({
 				method: `${TEMU_BOOKKEEPING_METHOD}.save_batch`,
-				args: { name: this.currentBatch?.name || null, start_date: startDate, end_date: endDate,
+				args: { name: this.currentBatch?.name || null, start_date: startDate, end_date: endDate, cost_center: costCenter,
 					remarks: this.$main.find(".tmfb-remarks").val() || "", file_metadata: metadata },
 			});
 			const batchName = saveResponse.message.name;

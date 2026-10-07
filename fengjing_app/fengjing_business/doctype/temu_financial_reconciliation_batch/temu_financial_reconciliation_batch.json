@@ -10,6 +10,7 @@
   "start_date",
   "column_break_dates",
   "end_date",
+  "cost_center",
   "status",
   "column_break_summary",
   "file_count",
@@ -37,6 +38,15 @@
    "fieldname": "end_date",
    "fieldtype": "Datetime",
    "label": "\u7ed3\u675f\u65e5\u671f"
+  },
+  {
+   "description": "\u7528\u4e8e\u9650\u5b9aSKU\u7269\u6599\u6620\u5c04\u6240\u5c5e\u7684Temu\u5e97\u94fa\u3002",
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u5e97\u94fa\uff08\u6210\u672c\u4e2d\u5fc3\uff09",
+   "options": "Cost Center",
+   "search_index": 1
   },
   {
    "default": "\u8349\u7a3f",

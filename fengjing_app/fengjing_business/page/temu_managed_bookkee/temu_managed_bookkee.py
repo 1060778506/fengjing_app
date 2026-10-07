@@ -64,6 +64,7 @@ def _batch_payload(doc):
 		"name": doc.name,
 		"start_date": _date_text(doc.start_date),
 		"end_date": _date_text(doc.end_date),
+		"cost_center": doc.cost_center or "",
 		"status": doc.status or "草稿",
 		"file_count": cint(doc.file_count),
 		"remarks": doc.remarks or "",
@@ -107,6 +108,7 @@ def get_batches():
 			"name",
 			"start_date",
 			"end_date",
+			"cost_center",
 			"status",
 			"file_count",
 			"remarks",
@@ -125,7 +127,14 @@ def get_batch(name):
 
 
 @frappe.whitelist()
-def save_batch(name=None, start_date=None, end_date=None, remarks=None, file_metadata=None):
+def save_batch(
+	name=None,
+	start_date=None,
+	end_date=None,
+	cost_center=None,
+	remarks=None,
+	file_metadata=None,
+):
 	start_date = _day_boundary(start_date)
 	end_date = _day_boundary(end_date, end_of_day=True)
 	_check_date_range(start_date, end_date)
@@ -137,6 +146,9 @@ def save_batch(name=None, start_date=None, end_date=None, remarks=None, file_met
 
 	doc.start_date = start_date or None
 	doc.end_date = end_date or None
+	if not cost_center:
+		frappe.throw(_("请选择代表Temu店铺的成本中心。"))
+	doc.cost_center = cost_center
 	doc.remarks = remarks or ""
 	rows_by_name = {row.name: row for row in doc.get(CHILD_FIELD) or []}
 	for values in _as_list(file_metadata):

@@ -63,7 +63,8 @@
 .tmfb-batch-item-top, .tmfb-batch-item-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tmfb-batch-item-top strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .tmfb-batch-item-top em { flex: 0 0 auto; padding: 2px 7px; border-radius: 999px; background: var(--subtle-fg); color: var(--text-muted); font-size: 10px; font-style: normal; }
-.tmfb-batch-range { display: block; margin: 7px 0; color: var(--text-muted); font-size: 12px; }
+.tmfb-batch-range { display: block; margin: 7px 0 3px; color: var(--text-muted); font-size: 12px; }
+.tmfb-batch-store { display: block; overflow: hidden; margin-bottom: 6px; color: var(--primary); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .tmfb-batch-item-bottom { color: var(--text-muted); font-size: 11px; }
 .tmfb-empty-list { padding: 50px 12px; color: var(--text-muted); text-align: center; }
 
@@ -75,7 +76,7 @@
 
 .tmfb-date-card {
 	display: grid;
-	grid-template-columns: minmax(180px, 1fr) auto minmax(180px, 1fr) minmax(90px, auto);
+	grid-template-columns: minmax(220px, 1.25fr) minmax(170px, 1fr) auto minmax(170px, 1fr) minmax(80px, auto);
 	align-items: end;
 	gap: 14px;
 	margin-bottom: 22px;
@@ -150,6 +151,8 @@
 
 @media (max-width: 1100px) {
 	.tmfb-shell { grid-template-columns: 260px minmax(0, 1fr); }
+	.tmfb-date-card { grid-template-columns: 1fr auto 1fr; }
+	.tmfb-cost-center { grid-column: 1 / -1; }
 	.tmfb-file-slot { grid-column: span 6; grid-row: auto !important; }
 	.tmfb-file-slot--featured { grid-column: 1 / -1; width: calc((100% - 12px) / 2); justify-self: center; }
 	.tmfb-file-slot--advertising { grid-column: span 6; }
