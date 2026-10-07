@@ -397,10 +397,18 @@ class TemuManagedBookkeepingPage {
 						file_type: String(slot.file_type || slot.pending_file.name).trim(), sort_order: slot.sort_order, notes: slot.notes || "" },
 				});
 			}
+			const syncResponse = await frappe.call({
+				method: `${TEMU_BOOKKEEPING_METHOD}.sync_batch_data`,
+				args: { batch_name: batchName },
+			});
 			const response = await frappe.call({ method: `${TEMU_BOOKKEEPING_METHOD}.get_batch`, args: { name: batchName } });
 			this.applyBatch(response.message);
 			await this.loadBatchList();
-			frappe.show_alert({ message: "对账批次已保存", indicator: "green" }, 7);
+			const syncResult = syncResponse.message || {};
+			const message = syncResult.status === "unchanged"
+				? `对账批次已保存，${syncResult.total || 0} 条数据完整，无需重复写入`
+				: `对账批次已保存并同步 ${syncResult.total || 0} 条数据`;
+			frappe.show_alert({ message, indicator: "green" }, 9);
 		} catch (error) {
 			this.showError("对账批次保存失败", error);
 		} finally {

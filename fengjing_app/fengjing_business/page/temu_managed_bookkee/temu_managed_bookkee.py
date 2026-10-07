@@ -213,6 +213,11 @@ def delete_batch_file(batch_name, row_name):
 @frappe.whitelist()
 def delete_batch(name):
 	doc = _get_batch_doc(name, "delete")
+	from fengjing_app.fengjing_business.page.temu_managed_bookkee.temu_financial_importer import (
+		delete_batch_data,
+	)
+
+	delete_batch_data(doc.name)
 	file_names = frappe.get_all(
 		"File",
 		filters={"attached_to_doctype": BATCH_DOCTYPE, "attached_to_name": doc.name},
@@ -223,3 +228,13 @@ def delete_batch(name):
 		if frappe.db.exists("File", file_name):
 			frappe.delete_doc("File", file_name, ignore_permissions=True)
 	return {"name": name}
+
+
+@frappe.whitelist()
+def sync_batch_data(batch_name, force=0):
+	doc = _get_batch_doc(batch_name, "write")
+	from fengjing_app.fengjing_business.page.temu_managed_bookkee.temu_financial_importer import (
+		sync_batch_data as run_sync,
+	)
+
+	return run_sync(doc.name, force=bool(cint(force)))

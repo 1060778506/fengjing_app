@@ -2,16 +2,165 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
+ "autoname": "hash",
  "creation": "2026-10-07 21:18:02.741317",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
- "field_order": [],
- "fields": [],
+ "field_order": [
+  "source_section",
+  "reconciliation_batch",
+  "source_file_record",
+  "source_file_type",
+  "region",
+  "source_column_break",
+  "source_file_name",
+  "source_sheet",
+  "source_row_number",
+  "source_file_hash",
+  "source_row_hash",
+  "imported_at",
+  "raw_row_json",
+  "data_section",
+  "accounting_time",
+  "accounting_type",
+  "currency",
+  "income_expense_amount",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "source_section",
+   "fieldtype": "Section Break",
+   "label": "\u5bfc\u5165\u6765\u6e90"
+  },
+  {
+   "fieldname": "reconciliation_batch",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u5bf9\u8d26\u6279\u6b21",
+   "options": "Temu Financial Reconciliation Batch",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "source_file_record",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "\u6765\u6e90\u6587\u4ef6\u8bb0\u5f55",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_file_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u6765\u6e90\u6587\u4ef6\u7c7b\u578b",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "region",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u533a\u57df",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_column_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "source_file_name",
+   "fieldtype": "Data",
+   "label": "\u6765\u6e90\u6587\u4ef6\u540d",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_sheet",
+   "fieldtype": "Data",
+   "label": "\u6765\u6e90\u5de5\u4f5c\u8868",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_row_number",
+   "fieldtype": "Int",
+   "label": "Excel\u539f\u59cb\u884c\u53f7",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_file_hash",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "\u6765\u6e90\u6587\u4ef6\u6821\u9a8c\u503c",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_row_hash",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "\u6570\u636e\u552f\u4e00\u6821\u9a8c\u503c",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "imported_at",
+   "fieldtype": "Datetime",
+   "label": "\u5bfc\u5165\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_row_json",
+   "fieldtype": "Long Text",
+   "hidden": 1,
+   "label": "\u539f\u59cb\u884c\u6570\u636e",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_section",
+   "fieldtype": "Section Break",
+   "label": "\u4e1a\u52a1\u6570\u636e"
+  },
+  {
+   "fieldname": "accounting_time",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "\u8d26\u52a1\u65f6\u95f4",
+   "read_only": 1
+  },
+  {
+   "fieldname": "accounting_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u8d26\u52a1\u7c7b\u578b",
+   "read_only": 1
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "\u5e01\u79cd",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "income_expense_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "\u6536\u652f\u91d1\u989d",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "\u5907\u6ce8",
+   "read_only": 1
+  }
+ ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-07 21:18:02.741317",
+ "modified": "2026-10-07 21:25:55.570807",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "Temu Accounting Ledger Detail",
@@ -32,8 +181,10 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "show_title_field_in_link": 1,
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
+ "title_field": "accounting_type",
  "track_changes": 1
 }
