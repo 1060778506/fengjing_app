@@ -4,8 +4,17 @@
  "docstatus": 0,
  "doctype": "Dock",
  "idx": 0,
- "items": [],
- "modified": "2026-10-08 13:17:58.296832",
+ "items": [
+  {
+   "added": 1,
+   "hidden": 0,
+   "icon": "liabilities",
+   "link_to": "Fengjing Business",
+   "link_type": "Sidebar",
+   "title": "\u4e30\u5883\u4e1a\u52a1APP"
+  }
+ ],
+ "modified": "2026-10-08 13:22:23.067643",
  "modified_by": "Administrator",
  "name": "fengjing_app",
  "owner": "Administrator",
