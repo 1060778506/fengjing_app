@@ -1,0 +1,197 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-10-08 14:30:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_section",
+  "amazon_store",
+  "enabled",
+  "store_column",
+  "cost_center",
+  "marketplace_id",
+  "api_region",
+  "schedule_section",
+  "sync_interval_minutes",
+  "include_inventory_details",
+  "schedule_column",
+  "snapshot_retention_days",
+  "incremental_lookback_minutes",
+  "runtime_section",
+  "current_status",
+  "last_sync_at",
+  "last_success_at",
+  "runtime_column",
+  "next_sync_at",
+  "last_sync_result",
+  "last_error"
+ ],
+ "fields": [
+  {
+   "fieldname": "basic_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Configuration"
+  },
+  {
+   "fieldname": "amazon_store",
+   "fieldtype": "Link",
+   "label": "Amazon Store",
+   "options": "Amazon Store Configuration",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "0",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "store_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "fetch_from": "amazon_store.cost_center",
+   "read_only": 1
+  },
+  {
+   "fieldname": "marketplace_id",
+   "fieldtype": "Data",
+   "label": "Marketplace ID",
+   "fetch_from": "amazon_store.marketplace_id",
+   "read_only": 1
+  },
+  {
+   "fieldname": "api_region",
+   "fieldtype": "Data",
+   "label": "API Region",
+   "fetch_from": "amazon_store.api_region",
+   "read_only": 1
+  },
+  {
+   "fieldname": "schedule_section",
+   "fieldtype": "Section Break",
+   "label": "Snapshot Schedule"
+  },
+  {
+   "fieldname": "sync_interval_minutes",
+   "fieldtype": "Int",
+   "label": "Sync Interval Minutes",
+   "default": "60",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "include_inventory_details",
+   "fieldtype": "Check",
+   "label": "Include Inventory Details",
+   "default": "1",
+   "description": "Request detailed FBA quantity breakdowns."
+  },
+  {
+   "fieldname": "schedule_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "snapshot_retention_days",
+   "fieldtype": "Int",
+   "label": "Snapshot Retention Days",
+   "default": "0",
+   "non_negative": 1,
+   "description": "0 means keep snapshots indefinitely."
+  },
+  {
+   "fieldname": "incremental_lookback_minutes",
+   "fieldtype": "Int",
+   "label": "Incremental Lookback Minutes",
+   "default": "120",
+   "non_negative": 1,
+   "description": "Reserved for filtering recently updated summaries."
+  },
+  {
+   "fieldname": "runtime_section",
+   "fieldtype": "Section Break",
+   "label": "Runtime Status"
+  },
+  {
+   "fieldname": "current_status",
+   "fieldtype": "Select",
+   "label": "Current Status",
+   "options": "Not Started\nWaiting\nRunning\nCompleted\nFailed",
+   "default": "Not Started",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "last_sync_at",
+   "fieldtype": "Datetime",
+   "label": "Last Sync At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_success_at",
+   "fieldtype": "Datetime",
+   "label": "Last Successful Sync",
+   "read_only": 1
+  },
+  {
+   "fieldname": "runtime_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "next_sync_at",
+   "fieldtype": "Datetime",
+   "label": "Next Sync At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_result",
+   "fieldtype": "Small Text",
+   "label": "Last Sync Result",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Small Text",
+   "label": "Last Error",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-08 14:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon FBA Inventory Configuration",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "amazon_store"
+}

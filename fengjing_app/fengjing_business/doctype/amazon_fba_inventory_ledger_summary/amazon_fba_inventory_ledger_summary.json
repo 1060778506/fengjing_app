@@ -1,0 +1,389 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-10-08 14:30:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "summary_key",
+  "amazon_store",
+  "cost_center",
+  "marketplace_id",
+  "country",
+  "product_column",
+  "seller_sku",
+  "fnsku",
+  "asin",
+  "product_name",
+  "corresponding_item",
+  "corresponding_item_name",
+  "disposition",
+  "period_section",
+  "period_date",
+  "report_start_date",
+  "report_end_date",
+  "time_aggregation",
+  "period_column",
+  "location_type",
+  "location_id",
+  "report_id",
+  "balance_section",
+  "starting_warehouse_balance",
+  "receipts",
+  "customer_shipments",
+  "customer_returns",
+  "vendor_returns",
+  "balance_column",
+  "ending_warehouse_balance",
+  "in_transit_between_warehouses",
+  "warehouse_transfer_in",
+  "warehouse_transfer_out",
+  "adjustment_section",
+  "found_quantity",
+  "lost_quantity",
+  "damaged_quantity",
+  "adjustment_column",
+  "disposed_quantity",
+  "other_events_quantity",
+  "unknown_events_quantity",
+  "raw_section",
+  "sync_batch_id",
+  "raw_json_hash",
+  "fetched_at",
+  "raw_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "Inventory Ledger Identity"
+  },
+  {
+   "fieldname": "summary_key",
+   "fieldtype": "Data",
+   "label": "Summary Key",
+   "hidden": 1,
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "amazon_store",
+   "fieldtype": "Link",
+   "label": "Amazon Store",
+   "options": "Amazon Store Configuration",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "marketplace_id",
+   "fieldtype": "Data",
+   "label": "Marketplace ID",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "label": "Country",
+   "options": "Country",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "product_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "seller_sku",
+   "fieldtype": "Data",
+   "label": "Seller SKU",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "fnsku",
+   "fieldtype": "Data",
+   "label": "FNSKU",
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "asin",
+   "fieldtype": "Data",
+   "label": "ASIN",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "product_name",
+   "fieldtype": "Small Text",
+   "label": "Product Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "corresponding_item",
+   "fieldtype": "Link",
+   "label": "Corresponding Item",
+   "options": "Item",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "corresponding_item_name",
+   "fieldtype": "Data",
+   "label": "Corresponding Item Name",
+   "read_only": 1,
+   "fetch_from": "corresponding_item.item_name"
+  },
+  {
+   "fieldname": "disposition",
+   "fieldtype": "Data",
+   "label": "Disposition",
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "period_section",
+   "fieldtype": "Section Break",
+   "label": "Report Period"
+  },
+  {
+   "fieldname": "period_date",
+   "fieldtype": "Date",
+   "label": "Period Date",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "report_start_date",
+   "fieldtype": "Date",
+   "label": "Report Start Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "report_end_date",
+   "fieldtype": "Date",
+   "label": "Report End Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "time_aggregation",
+   "fieldtype": "Data",
+   "label": "Time Aggregation",
+   "read_only": 1
+  },
+  {
+   "fieldname": "period_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "location_type",
+   "fieldtype": "Data",
+   "label": "Location Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "location_id",
+   "fieldtype": "Data",
+   "label": "Location",
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "report_id",
+   "fieldtype": "Data",
+   "label": "Amazon Report ID",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "balance_section",
+   "fieldtype": "Section Break",
+   "label": "Inventory Balance"
+  },
+  {
+   "fieldname": "starting_warehouse_balance",
+   "fieldtype": "Int",
+   "label": "Starting Warehouse Balance",
+   "read_only": 1
+  },
+  {
+   "fieldname": "receipts",
+   "fieldtype": "Int",
+   "label": "Receipts",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer_shipments",
+   "fieldtype": "Int",
+   "label": "Customer Shipments",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer_returns",
+   "fieldtype": "Int",
+   "label": "Customer Returns",
+   "read_only": 1
+  },
+  {
+   "fieldname": "vendor_returns",
+   "fieldtype": "Int",
+   "label": "Vendor Returns",
+   "read_only": 1
+  },
+  {
+   "fieldname": "balance_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ending_warehouse_balance",
+   "fieldtype": "Int",
+   "label": "Ending Warehouse Balance",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "in_transit_between_warehouses",
+   "fieldtype": "Int",
+   "label": "In Transit Between Warehouses",
+   "read_only": 1
+  },
+  {
+   "fieldname": "warehouse_transfer_in",
+   "fieldtype": "Int",
+   "label": "Warehouse Transfer In",
+   "read_only": 1
+  },
+  {
+   "fieldname": "warehouse_transfer_out",
+   "fieldtype": "Int",
+   "label": "Warehouse Transfer Out",
+   "read_only": 1
+  },
+  {
+   "fieldname": "adjustment_section",
+   "fieldtype": "Section Break",
+   "label": "Inventory Adjustments"
+  },
+  {
+   "fieldname": "found_quantity",
+   "fieldtype": "Int",
+   "label": "Found Quantity",
+   "read_only": 1
+  },
+  {
+   "fieldname": "lost_quantity",
+   "fieldtype": "Int",
+   "label": "Lost Quantity",
+   "read_only": 1
+  },
+  {
+   "fieldname": "damaged_quantity",
+   "fieldtype": "Int",
+   "label": "Damaged Quantity",
+   "read_only": 1
+  },
+  {
+   "fieldname": "adjustment_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "disposed_quantity",
+   "fieldtype": "Int",
+   "label": "Disposed Quantity",
+   "read_only": 1
+  },
+  {
+   "fieldname": "other_events_quantity",
+   "fieldtype": "Int",
+   "label": "Other Events Quantity",
+   "read_only": 1
+  },
+  {
+   "fieldname": "unknown_events_quantity",
+   "fieldtype": "Int",
+   "label": "Unknown Events Quantity",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_section",
+   "fieldtype": "Section Break",
+   "label": "Source Data"
+  },
+  {
+   "fieldname": "sync_batch_id",
+   "fieldtype": "Data",
+   "label": "Sync Batch ID",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "raw_json_hash",
+   "fieldtype": "Data",
+   "label": "Raw JSON Hash",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fetched_at",
+   "fieldtype": "Datetime",
+   "label": "Fetched At",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Code",
+   "label": "Raw JSON",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-08 14:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon FBA Inventory Ledger Summary",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "period_date",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "seller_sku"
+}

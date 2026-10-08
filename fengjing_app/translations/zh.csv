@@ -12733,3 +12733,121 @@ Sep 2050,2050年9月
 Oct 2050,2050年10月
 Nov 2050,2050年11月
 Dec 2050,2050年12月
+Amazon FBA Inventory Configuration,亚马逊FBA库存配置
+Amazon FBA Inventory Ledger Configuration,亚马逊FBA库存分类账配置
+Amazon AWD Inventory Configuration,亚马逊AWD库存配置
+Amazon FBA Inventory Snapshot,亚马逊FBA站点库存快照
+Amazon FBA Inventory Ledger Summary,亚马逊FBA库存分类账汇总
+Amazon FBA Inventory Ledger Detail,亚马逊FBA库存分类账明细
+Amazon AWD Inventory Snapshot,亚马逊AWD库存快照
+Snapshot Schedule,库存快照计划
+Include Inventory Details,包含库存明细
+Snapshot Retention Days,快照保留天数
+Last Successful Sync,上次成功同步时间
+Inventory Ledger History,库存分类账历史
+Ledger Summary Report,库存分类账汇总报告
+Enable Summary Report,启用汇总报告
+Summary Time Aggregation,汇总时间粒度
+Summary Location Aggregation,汇总位置粒度
+Summary Last Sync At,汇总报告上次同步时间
+Summary Checkpoint,汇总报告检查点
+Summary Last Report ID,汇总报告最近报告ID
+Summary Status,汇总报告状态
+Summary Last Error,汇总报告最近错误
+Ledger Detail Report,库存分类账明细报告
+Enable Detail Report,启用明细报告
+Detail Event Type,明细事件类型
+Detail Last Sync At,明细报告上次同步时间
+Detail Checkpoint,明细报告检查点
+Detail Last Report ID,明细报告最近报告ID
+Detail Status,明细报告状态
+Detail Last Error,明细报告最近错误
+AWD Permission Status,AWD权限状态
+Last Permission Check At,上次权限检查时间
+Inventory Identity,库存身份
+Inventory Ledger Identity,库存分类账身份
+Snapshot Key,快照唯一键
+Summary Key,汇总唯一键
+Detail Key,明细唯一键
+Seller SKU,卖家SKU
+Product Name,商品名称
+Corresponding Item Name,对应物料名称
+Condition,商品状况
+Snapshot Information,快照信息
+Snapshot At,快照时间
+Snapshot Date,快照日期
+Amazon Updated At,Amazon更新时间
+Granularity Type,粒度类型
+Granularity ID,粒度ID
+Amazon Stores JSON,Amazon适用店铺JSON
+FBA Inventory Quantities,FBA库存数量
+Total Quantity,总数量
+Fulfillable Quantity,可售数量
+Total Reserved Quantity,预留总数量
+Total Unfulfillable Quantity,不可售总数量
+Inbound Working Quantity,入库计划中数量
+Inbound Shipped Quantity,入库运输中数量
+Inbound Receiving Quantity,入库接收中数量
+Total Researching Quantity,调查中总数量
+Reserved Quantity Breakdown,预留数量明细
+Pending Customer Order Quantity,待处理客户订单数量
+Pending Transshipment Quantity,仓库调拨中数量
+FC Processing Quantity,配送中心处理中数量
+Reserved Future Supply Quantity,未来供应预留数量
+Future Supply Buyable Quantity,未来供应可售数量
+Unfulfillable Quantity Breakdown,不可售数量明细
+Customer Damaged Quantity,客户损坏数量
+Warehouse Damaged Quantity,仓库损坏数量
+Distributor Damaged Quantity,经销商损坏数量
+Carrier Damaged Quantity,承运商损坏数量
+Defective Quantity,缺陷数量
+Expired Quantity,过期数量
+Researching Breakdown JSON,调查中明细JSON
+Source Data,源数据
+Sync Batch ID,同步批次ID
+Raw JSON Hash,原始JSON哈希
+Fetched At,抓取时间
+Raw JSON,原始JSON
+Disposition,库存状态
+Report Period,报告期间
+Period Date,期间日期
+Report Start Date,报告开始日期
+Report End Date,报告结束日期
+Time Aggregation,时间汇总粒度
+Location Type,位置类型
+Amazon Report ID,Amazon报告ID
+Inventory Balance,库存余额
+Starting Warehouse Balance,期初仓库余额
+Receipts,收货数量
+Customer Shipments,客户订单发货数量
+Customer Returns,客户退货数量
+Vendor Returns,卖家退货数量
+Ending Warehouse Balance,期末仓库余额
+In Transit Between Warehouses,仓库间调拨在途数量
+Warehouse Transfer In,仓库调入数量
+Warehouse Transfer Out,仓库调出数量
+Inventory Adjustments,库存调整
+Found Quantity,找回数量
+Lost Quantity,丢失数量
+Damaged Quantity,损坏数量
+Disposed Quantity,销毁数量
+Other Events Quantity,其他事件数量
+Unknown Events Quantity,未知事件数量
+Inventory Event,库存事件
+Event At,事件时间
+Event Type,事件类型
+Reference ID,参考编号
+Quantity,数量
+Fulfillment Center,FBA配送中心
+Reason,原因
+Reconciliation,库存核对
+Reconciled Quantity,已核对数量
+Unreconciled Quantity,未核对数量
+Expiration Details JSON,有效期明细JSON
+AWD Inventory Quantities,AWD库存数量
+Total On-hand Quantity,AWD现有总数量
+Total Inbound Quantity,AWD入库在途总数量
+Available Distributable Quantity,可分配数量
+Reserved Distributable Quantity,已预留分配数量
+AWD to FBA Replenishment Quantity,AWD到FBA补货在途数量
+Inventory Details JSON,库存明细JSON
