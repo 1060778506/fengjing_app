@@ -128,10 +128,18 @@ fixtures = [
         "dt": "Custom Field",
         "filters": [["module", "=", "Fengjing Business"]] 
     },
+    {
+        "dt": "Custom Field",
+        "filters": [["module", "=", "丰境业务APP"]] 
+    },
     # 1. 抓取你对系统默认字段的修改（比如：改了标签名、隐藏了字段、设置了默认值）
     {
         "dt": "Property Setter",
         "filters": [["module", "=", "Fengjing Business"]]
+    },
+    {
+        "dt": "Property Setter",
+        "filters": [["module", "=", "丰境业务APP"]]
     },
     # Amazon CSV 离线翻译：报表类型和翻译词典跟随 App 导出。
     {

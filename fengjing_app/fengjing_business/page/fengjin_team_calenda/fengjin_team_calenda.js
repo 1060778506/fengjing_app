@@ -172,6 +172,8 @@ class FengjingTeamCalendarPage {
 			description: "",
 			status: "Open",
 			send_reminder: 1,
+			custom_店铺: "",
+			custom_物料: "",
 			can_write: true,
 			can_delete: false,
 		};
@@ -195,6 +197,8 @@ class FengjingTeamCalendarPage {
 			size: "large",
 			fields: [
 				{ fieldname: "subject", fieldtype: "Small Text", label: "日程标题", reqd: 1, read_only: readOnly },
+				{ fieldname: "custom_店铺", fieldtype: "Link", label: "店铺", options: "Cost Center", read_only: readOnly },
+				{ fieldname: "custom_物料", fieldtype: "Link", label: "物料", options: "Item", read_only: readOnly },
 				{ fieldname: "starts_on", fieldtype: "Datetime", label: "开始时间", reqd: 1, read_only: readOnly },
 				{ fieldname: "ends_on", fieldtype: "Datetime", label: "结束时间", read_only: readOnly },
 				{ fieldname: "time_column", fieldtype: "Column Break" },

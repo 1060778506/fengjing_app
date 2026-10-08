@@ -16,6 +16,8 @@ EVENT_FIELDS = {
 	"description",
 	"status",
 	"send_reminder",
+	"custom_店铺",
+	"custom_物料",
 }
 
 
@@ -110,6 +112,8 @@ def get_event(name):
 		"description": doc.description,
 		"status": doc.status,
 		"send_reminder": cint(doc.send_reminder),
+		"custom_店铺": doc.get("custom_店铺") or "",
+		"custom_物料": doc.get("custom_物料") or "",
 		"repeat_this_event": cint(doc.repeat_this_event),
 		"can_write": bool(doc.has_permission("write")),
 		"can_delete": bool(doc.has_permission("delete")),
