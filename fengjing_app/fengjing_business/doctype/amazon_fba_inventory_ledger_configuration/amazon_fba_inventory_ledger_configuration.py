@@ -99,16 +99,19 @@ def _task_lock(name):
 	)
 
 
-def _enqueue(name, reset=False):
+def _enqueue(name, reset=False, recheck_days=0):
+	recheck_days = cint(recheck_days)
+	job_suffix = f"-recheck-{recheck_days}" if recheck_days else ""
 	frappe.enqueue(
 		execute_ledger_sync,
 		queue="long",
 		timeout=TASK_TIMEOUT,
 		enqueue_after_commit=True,
-		job_id=f"amazon-fba-ledger-{name}",
+		job_id=f"amazon-fba-ledger-{name}{job_suffix}",
 		deduplicate=True,
 		configuration_name=name,
 		reset=reset,
+		recheck_days=recheck_days,
 	)
 
 
@@ -141,6 +144,27 @@ def _effective_range(config, kind):
 	if end < start:
 		label = _("汇总报告") if kind == "summary" else _("明细报告")
 		frappe.throw(_("{0}目前没有已经完整结束的可同步日期范围。").format(label))
+	return start, end
+
+
+def _recent_recheck_range(config, kind, days):
+	"""按最近天数生成核对范围；周、月汇总自动对齐完整周期。"""
+	days = cint(days)
+	if days not in {7, 14, 30, 90, 180}:
+		frappe.throw(_("不支持的核对周期。"))
+	end = getdate(now_datetime()) - timedelta(days=1)
+	start = end - timedelta(days=days - 1)
+	if kind == "summary" and config.summary_time_aggregation == "WEEKLY":
+		end -= timedelta(days=(end.weekday() + 1) % 7)
+		start -= timedelta(days=start.weekday())
+	elif kind == "summary" and config.summary_time_aggregation == "MONTHLY":
+		last_day = calendar.monthrange(end.year, end.month)[1]
+		if end.day != last_day:
+			end = end.replace(day=1) - timedelta(days=1)
+		start = min(start.replace(day=1), end.replace(day=1))
+	if end < start:
+		label = _("汇总报告") if kind == "summary" else _("明细报告")
+		frappe.throw(_("{0}目前没有已经完整结束的可核对日期范围。").format(label))
 	return start, end
 
 
@@ -414,12 +438,14 @@ def _request_report(config, store, kind, start, end, batch_id):
 	return report_id, stats
 
 
-def _process_kind(config, store, kind, start, end, batch_id):
+def _process_kind(config, store, kind, start, end, batch_id, force_start=False):
 	checkpoint_field = f"{kind}_checkpoint"
 	last_sync_field = f"{kind}_last_sync_at"
 	status_field = f"{kind}_status"
 	error_field = f"{kind}_last_error"
-	cursor = getdate(config.get(checkpoint_field)) if config.get(checkpoint_field) else start
+	cursor = start if force_start else (
+		getdate(config.get(checkpoint_field)) if config.get(checkpoint_field) else start
+	)
 	cursor = max(cursor, start)
 	result = {"created": 0, "updated": 0, "unchanged": 0, "rows": 0, "reports": 0}
 	_update_configuration(config.name, **{status_field: "Running", error_field: ""})
@@ -490,7 +516,34 @@ def start_ledger_sync(name):
 	return {"status": "queued", "message": _("FBA 库存分类账历史同步已进入后台队列。")}
 
 
-def execute_ledger_sync(configuration_name, reset=False):
+@frappe.whitelist()
+def start_recheck_sync(name, days):
+	config = _configuration(name)
+	config.check_permission("write")
+	days = cint(days)
+	if days not in {7, 14, 30, 90, 180}:
+		frappe.throw(_("不支持的核对周期。"))
+	if not cint(config.enabled):
+		frappe.throw(_("请先启用 FBA 库存分类账同步。"))
+	if cint(config.summary_enabled):
+		_recent_recheck_range(config, "summary", days)
+	if cint(config.detail_enabled):
+		_recent_recheck_range(config, "detail", days)
+	get_store(config.amazon_store)
+	values = {"current_status": "Waiting", "last_error": ""}
+	if cint(config.summary_enabled):
+		values.update({"summary_status": "Waiting", "summary_last_error": ""})
+	if cint(config.detail_enabled):
+		values.update({"detail_status": "Waiting", "detail_last_error": ""})
+	_update_configuration(name, **values)
+	_enqueue(name, recheck_days=days)
+	return {
+		"status": "queued",
+		"message": _("FBA 库存分类账最近{0}天核对已进入后台队列。").format(days),
+	}
+
+
+def execute_ledger_sync(configuration_name, reset=False, recheck_days=0):
 	lock = _task_lock(configuration_name)
 	if not lock.acquire(blocking=False):
 		return {"status": "busy", "message": "FBA inventory ledger configuration is already running"}
@@ -514,18 +567,35 @@ def execute_ledger_sync(configuration_name, reset=False):
 			_update_configuration(configuration_name, **reset_values)
 			config = _configuration(configuration_name)
 		batch_id = f"ledger-{frappe.generate_hash(length=12)}"
-		summary = {"batch_id": batch_id}
+		recheck_days = cint(recheck_days)
+		summary = {"batch_id": batch_id, "mode": "recheck" if recheck_days else "history"}
+		if recheck_days:
+			summary["recheck_days"] = recheck_days
 		completed_ends = []
 		if cint(config.summary_enabled):
 			active_kind = "summary"
-			start, end = _effective_range(config, "summary")
-			summary["summary"] = _process_kind(config, store, "summary", start, end, batch_id)
+			start, end = (
+				_recent_recheck_range(config, "summary", recheck_days)
+				if recheck_days
+				else _effective_range(config, "summary")
+			)
+			summary["summary_range"] = {"start": str(start), "end": str(end)}
+			summary["summary"] = _process_kind(
+				config, store, "summary", start, end, batch_id, force_start=bool(recheck_days)
+			)
 			completed_ends.append(end)
 			config = _configuration(configuration_name)
 		if cint(config.detail_enabled):
 			active_kind = "detail"
-			start, end = _effective_range(config, "detail")
-			summary["detail"] = _process_kind(config, store, "detail", start, end, batch_id)
+			start, end = (
+				_recent_recheck_range(config, "detail", recheck_days)
+				if recheck_days
+				else _effective_range(config, "detail")
+			)
+			summary["detail_range"] = {"start": str(start), "end": str(end)}
+			summary["detail"] = _process_kind(
+				config, store, "detail", start, end, batch_id, force_start=bool(recheck_days)
+			)
 			completed_ends.append(end)
 			config = _configuration(configuration_name)
 		summary["expired_deleted"] = _delete_expired_records(config, store)

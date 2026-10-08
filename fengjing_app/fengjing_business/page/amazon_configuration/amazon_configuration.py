@@ -131,6 +131,11 @@ SECTIONS = {
 		"progress_field": None,
 		"actions": [
 			{"key": "history", "label": "同步配置日期范围", "style": "primary", "confirm": True},
+			{"key": "recheck_7", "label": "核对7天", "style": "ghost", "confirm": True},
+			{"key": "recheck_14", "label": "核对14天", "style": "ghost", "confirm": True},
+			{"key": "recheck_30", "label": "核对30天", "style": "ghost", "confirm": True},
+			{"key": "recheck_90", "label": "核对90天", "style": "ghost", "confirm": True},
+			{"key": "recheck_180", "label": "核对180天", "style": "ghost", "confirm": True},
 		],
 	},
 	"awd_inventory": {
@@ -349,11 +354,15 @@ def _action_method(section_key, action_key):
 	method = ACTION_METHODS.get((section_key, action_key))
 	if method:
 		return method, None
-	if section_key in {"orders", "finances"} and str(action_key).startswith("recheck_"):
+	if section_key in {"orders", "finances", "fba_ledger"} and str(action_key).startswith("recheck_"):
 		days = cint(str(action_key).split("_")[-1])
 		if days not in {7, 14, 30, 90, 180}:
 			frappe.throw(_("不支持的核对周期。"))
-		base = "amazon_order_configuration" if section_key == "orders" else "amazon_financial_configuration"
+		base = {
+			"orders": "amazon_order_configuration",
+			"finances": "amazon_financial_configuration",
+			"fba_ledger": "amazon_fba_inventory_ledger_configuration",
+		}[section_key]
 		method_name = (
 			"fengjing_app.fengjing_business.doctype."
 			f"{base}.{base}.start_recheck_sync"
