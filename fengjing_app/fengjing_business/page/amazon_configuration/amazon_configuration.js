@@ -494,7 +494,8 @@ class AmazonConfigurationCenter {
 		const labels = {
 			"Not Tested": __("未测试"), Available: __("连接正常"), Unavailable: __("连接不可用"),
 			Enabled: __("已启用"), Disabled: __("已停用"), Idle: __("空闲"),
-			Running: __("运行中"), Waiting: __("等待中"), Failed: __("失败"), Success: __("成功"),
+			"Not Started": __("尚未开始"), Running: __("运行中"), Waiting: __("等待中"),
+			Completed: __("已完成"), Failed: __("失败"), Success: __("成功"),
 		};
 		return labels[status] || status;
 	}
@@ -510,6 +511,8 @@ class AmazonConfigurationCenter {
 			"Basic Configuration": __("基础配置"), "Schedule and Result": __("调度设置"), "Product Discovery Result": __("商品发现"), "Runtime Status": __("运行设置"),
 			"Historical Order Sync": __("历史订单同步"), "Incremental Order Sync": __("增量订单同步"), "Historical Financial Sync": __("历史财务同步"), "Incremental Financial Sync": __("增量财务同步"), "Manual Sync Actions": __("手动同步"),
 			"Historical Ranking Sync": __("历史排名同步"), "Automatic Ranking Sync": __("自动排名同步"), "Historical Settlement Statement Sync": __("历史结算报告同步"),
+			"Snapshot Schedule": __("库存快照计划"), "Inventory Ledger History": __("库存分类账历史"),
+			"Ledger Summary Report": __("库存分类账汇总报告"), "Ledger Detail Report": __("库存分类账明细报告"),
 			"Recent 7 Days Recheck": __("近7天核对"), "Recent 14 Days Recheck": __("近14天核对"), "Recent 30 Days Recheck": __("近30天核对"), "Recent 90 Days Recheck": __("近90天核对"), "Recent 180 Days Recheck": __("近180天核对"),
 		};
 		return labels[label] || label;
@@ -533,7 +536,8 @@ class AmazonConfigurationCenter {
 
 	icon(name) {
 		const icons = {
-			stores: "shop-window", ranking: "bar-chart-line", orders: "box-seam", finances: "wallet2", prices: "tags", settlements: "receipt",
+			stores: "shop-window", ranking: "bar-chart-line", orders: "box-seam", finances: "wallet2", fba_inventory: "boxes", fba_ledger: "journal-text", awd_inventory: "building",
+			prices: "tags", settlements: "receipt",
 			refresh: "arrow-clockwise", expand: "arrows-fullscreen", plus: "plus-lg", search: "search", chevron: "chevron-right",
 			info: "info-circle", warning: "exclamation-triangle", trash: "trash3", save: "check2-circle", check: "check-lg",
 			test: "plug", latest: "arrow-repeat", history: "clock-history", discover: "search", full: "cloud-download", recheck: "calendar-check",

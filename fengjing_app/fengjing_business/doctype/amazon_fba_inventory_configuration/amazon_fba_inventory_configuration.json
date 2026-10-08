@@ -114,7 +114,7 @@
    "label": "Incremental Lookback Minutes",
    "default": "120",
    "non_negative": 1,
-   "description": "Reserved for filtering recently updated summaries."
+   "description": "Look back for incremental updates; a full snapshot still runs every 24 hours."
   },
   {
    "fieldname": "runtime_section",
@@ -168,7 +168,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-08 14:30:00.000000",
+ "modified": "2026-10-08 19:10:00.000000",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "Amazon FBA Inventory Configuration",

@@ -12851,3 +12851,19 @@ Available Distributable Quantity,可分配数量
 Reserved Distributable Quantity,已预留分配数量
 AWD to FBA Replenishment Quantity,AWD到FBA补货在途数量
 Inventory Details JSON,库存明细JSON
+Request detailed FBA quantity breakdowns.,请求完整的FBA库存数量明细。
+0 means keep snapshots indefinitely.,0 表示永久保留库存快照。
+Reserved for filtering recently updated summaries.,用于回看并核对最近更新的库存汇总。
+0 means keep records indefinitely.,0 表示永久保留记录。
+DAILY,每日
+WEEKLY,每周
+MONTHLY,每月
+COUNTRY,国家
+FC,配送中心
+Leave blank to request all inventory event types.,留空表示请求全部库存事件类型。
+Request AWD expiration and preparation details when available.,请求可用的AWD有效期和商品预处理明细。
+Adjustments,库存调整
+CustomerReturns,客户退货
+VendorReturns,卖家退货
+WhseTransfers,仓库调拨
+Look back for incremental updates; a full snapshot still runs every 24 hours.,用于增量回看；系统每24小时仍会执行一次完整快照。

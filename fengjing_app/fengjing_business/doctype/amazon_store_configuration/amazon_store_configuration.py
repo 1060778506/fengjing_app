@@ -1,8 +1,9 @@
 # Copyright (c) 2026, Fengjing E-Commerce and contributors
 # For license information, please see license.txt
 
-"""Amazon 店铺配置及订单、财务、排名可共用的 SP-API 请求能力。"""
+"""Amazon 店铺配置及各业务模块共用的 SP-API 请求能力。"""
 
+import gzip
 import hashlib
 import time
 
@@ -56,6 +57,14 @@ MARKETPLACE_REGIONS = {
 
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 RETRY_DELAYS = (5, 15, 30, 60, 120, 180)
+SERVICE_MINIMUM_INTERVALS = {
+	"finances": 2.1,
+	"fba-inventory": 0.55,
+	"awd-inventory": 1.1,
+	"reports-create": 60.5,
+	"reports-status": 1.1,
+	"reports-document": 1.1,
+}
 
 
 class AmazonStoreConfiguration(Document):
@@ -228,7 +237,7 @@ def _wait_for_rate_limit(store, service):
 			cache.set_value(key, {"tokens": tokens, "updated_at": now}, expires_in_sec=86400)
 		time.sleep(wait_seconds)
 		return
-	minimum_interval = 2.1 if service == "finances" else 1.0
+	minimum_interval = SERVICE_MINIMUM_INTERVALS.get(service, 1.0)
 	with cache.lock(cache.make_key(f"{key}:lock"), timeout=30, blocking_timeout=30):
 		now = time.time()
 		try:
@@ -242,7 +251,19 @@ def _wait_for_rate_limit(store, service):
 		time.sleep(wait_seconds)
 
 
-def amazon_api_request(store, service, method, path, *, params=None, timeout=60, max_retries=None):
+def amazon_api_request(
+	store,
+	service,
+	method,
+	path,
+	*,
+	params=None,
+	json_body=None,
+	data=None,
+	headers=None,
+	timeout=60,
+	max_retries=None,
+):
 	url = path if str(path).startswith("http") else f"{get_endpoint(store)}{path}"
 	last_response = None
 	refreshed_token = False
@@ -254,16 +275,20 @@ def amazon_api_request(store, service, method, path, *, params=None, timeout=60,
 		_wait_for_rate_limit(store, service)
 		token = get_access_token(store, force_refresh=force_token_refresh)
 		force_token_refresh = False
+		request_headers = {
+			"X-Amz-Access-Token": token,
+			"Accept": "application/json",
+			"User-Agent": "FengjingAmazonIntegration/2.0",
+		}
+		request_headers.update(headers or {})
 		try:
 			response = requests.request(
 				method,
 				url,
-				headers={
-					"X-Amz-Access-Token": token,
-					"Accept": "application/json",
-					"User-Agent": "FengjingAmazonIntegration/2.0",
-				},
+				headers=request_headers,
 				params=params,
+				json=json_body,
+				data=data,
 				timeout=timeout,
 			)
 		except requests.RequestException:
@@ -287,6 +312,123 @@ def amazon_api_request(store, service, method, path, *, params=None, timeout=60,
 			continue
 		return response
 	return last_response
+
+
+def amazon_api_json(store, service, method, path, *, expected_statuses=(200,), **kwargs):
+	"""执行 SP-API 请求并统一校验 HTTP 状态与 JSON 响应。"""
+	response = amazon_api_request(store, service, method, path, **kwargs)
+	if response is None or response.status_code not in set(expected_statuses):
+		status = response.status_code if response is not None else "no response"
+		message = response.text[:1600] if response is not None else "Amazon returned no response"
+		raise RuntimeError(f"Amazon SP-API request failed (HTTP {status}): {message}")
+	try:
+		return response.json() or {}
+	except ValueError as exc:
+		raise RuntimeError("Amazon SP-API returned invalid JSON") from exc
+
+
+def create_amazon_report(
+	store,
+	report_type,
+	*,
+	marketplace_ids,
+	data_start_time=None,
+	data_end_time=None,
+	report_options=None,
+):
+	"""创建 Reports API 报告并返回 reportId。"""
+	body = {
+		"reportType": report_type,
+		"marketplaceIds": list(marketplace_ids or []),
+	}
+	if data_start_time:
+		body["dataStartTime"] = str(data_start_time)
+	if data_end_time:
+		body["dataEndTime"] = str(data_end_time)
+	if report_options:
+		body["reportOptions"] = report_options
+	payload = amazon_api_json(
+		store,
+		"reports-create",
+		"POST",
+		"/reports/2021-06-30/reports",
+		json_body=body,
+		expected_statuses=(202,),
+		timeout=60,
+	)
+	report_id = str(payload.get("reportId") or "").strip()
+	if not report_id:
+		raise RuntimeError("Amazon Reports API did not return reportId")
+	return report_id
+
+
+def wait_for_amazon_report(store, report_id, *, timeout_seconds=3600, poll_seconds=15):
+	"""等待 Amazon 报告完成，并返回报告元数据。"""
+	deadline = time.monotonic() + max(int(timeout_seconds), 60)
+	while True:
+		payload = amazon_api_json(
+			store,
+			"reports-status",
+			"GET",
+			f"/reports/2021-06-30/reports/{report_id}",
+			timeout=60,
+		)
+		status = str(payload.get("processingStatus") or "").upper()
+		if status == "DONE":
+			if not payload.get("reportDocumentId"):
+				raise RuntimeError(f"Amazon report {report_id} completed without reportDocumentId")
+			return payload
+		# Amazon 会在没有可返回数据时自动把按需报告标记为 CANCELLED。
+		if status == "CANCELLED":
+			return payload
+		if status == "FATAL":
+			raise RuntimeError(f"Amazon report {report_id} ended with status {status}")
+		if time.monotonic() >= deadline:
+			raise TimeoutError(f"Amazon report {report_id} did not finish within {timeout_seconds} seconds")
+		time.sleep(max(int(poll_seconds), 5))
+
+
+def download_amazon_report(store, report_document_id):
+	"""获取报告下载地址，下载并按 Amazon 声明解压为文本。"""
+	metadata = amazon_api_json(
+		store,
+		"reports-document",
+		"GET",
+		f"/reports/2021-06-30/documents/{report_document_id}",
+		timeout=60,
+	)
+	url = str(metadata.get("url") or "").strip()
+	if not url:
+		raise RuntimeError("Amazon report document did not return a download URL")
+	response = None
+	for attempt, delay in enumerate(RETRY_DELAYS):
+		try:
+			response = requests.get(
+				url,
+				headers={"User-Agent": "FengjingAmazonIntegration/2.0"},
+				timeout=120,
+			)
+		except requests.RequestException:
+			if attempt == len(RETRY_DELAYS) - 1:
+				raise
+			time.sleep(delay)
+			continue
+		if response.status_code not in RETRYABLE_STATUS_CODES or attempt == len(RETRY_DELAYS) - 1:
+			break
+		time.sleep(delay)
+	if response is None or response.status_code != 200:
+		status = response.status_code if response is not None else "no response"
+		message = response.text[:800] if response is not None else "Amazon returned no response"
+		raise RuntimeError(f"Amazon report download failed (HTTP {status}): {message}")
+	content = response.content
+	if str(metadata.get("compressionAlgorithm") or "").upper() == "GZIP":
+		content = gzip.decompress(content)
+	for encoding in ("utf-8-sig", "utf-8", "cp1252"):
+		try:
+			return content.decode(encoding), metadata
+		except UnicodeDecodeError:
+			continue
+	return content.decode("utf-8", errors="replace"), metadata
 
 
 @frappe.whitelist()

@@ -103,6 +103,51 @@ SECTIONS = {
 			{"key": "recheck_180", "label": "核对180天", "style": "ghost", "confirm": True},
 		],
 	},
+	"fba_inventory": {
+		"title": "FBA 库存配置",
+		"description": "按当前店铺和国家站点管理 FBA 实时库存快照。",
+		"doctype": "Amazon FBA Inventory Configuration",
+		"primary_field": "amazon_store",
+		"enabled_field": "enabled",
+		"status_field": "current_status",
+		"last_field": "last_sync_at",
+		"next_field": "next_sync_at",
+		"error_field": "last_error",
+		"progress_field": None,
+		"actions": [
+			{"key": "latest", "label": "立即同步库存", "style": "primary"},
+		],
+	},
+	"fba_ledger": {
+		"title": "FBA 库存分类账配置",
+		"description": "按当前店铺和国家站点管理库存分类账汇总与明细报告。",
+		"doctype": "Amazon FBA Inventory Ledger Configuration",
+		"primary_field": "amazon_store",
+		"enabled_field": "enabled",
+		"status_field": "current_status",
+		"last_field": "last_sync_at",
+		"next_field": "next_sync_at",
+		"error_field": "last_error",
+		"progress_field": None,
+		"actions": [
+			{"key": "history", "label": "同步配置日期范围", "style": "primary", "confirm": True},
+		],
+	},
+	"awd_inventory": {
+		"title": "AWD 库存配置",
+		"description": "按当前店铺和国家站点管理 AWD 实时库存及权限状态。",
+		"doctype": "Amazon AWD Inventory Configuration",
+		"primary_field": "amazon_store",
+		"enabled_field": "enabled",
+		"status_field": "current_status",
+		"last_field": "last_sync_at",
+		"next_field": "next_sync_at",
+		"error_field": "last_error",
+		"progress_field": None,
+		"actions": [
+			{"key": "latest", "label": "立即同步库存", "style": "primary"},
+		],
+	},
 }
 
 
@@ -115,6 +160,9 @@ ACTION_METHODS = {
 	("orders", "history"): "fengjing_app.fengjing_business.doctype.amazon_order_configuration.amazon_order_configuration.start_history_sync",
 	("finances", "latest"): "fengjing_app.fengjing_business.doctype.amazon_financial_configuration.amazon_financial_configuration.start_incremental_sync",
 	("finances", "history"): "fengjing_app.fengjing_business.doctype.amazon_financial_configuration.amazon_financial_configuration.start_history_sync",
+	("fba_inventory", "latest"): "fengjing_app.fengjing_business.doctype.amazon_fba_inventory_configuration.amazon_fba_inventory_configuration.start_inventory_sync",
+	("fba_ledger", "history"): "fengjing_app.fengjing_business.doctype.amazon_fba_inventory_ledger_configuration.amazon_fba_inventory_ledger_configuration.start_ledger_sync",
+	("awd_inventory", "latest"): "fengjing_app.fengjing_business.doctype.amazon_awd_inventory_configuration.amazon_awd_inventory_configuration.start_inventory_sync",
 }
 
 
@@ -230,7 +278,7 @@ def get_dashboard():
 	return {
 		"platform": "amazon",
 		"title": "亚马逊配置中心",
-		"subtitle": "集中管理店铺、排名、订单与财务自动化",
+		"subtitle": "集中管理店铺、排名、订单、财务与库存自动化",
 		"generated_at": str(frappe.utils.now_datetime()),
 		"sections": [
 			_section_payload(section_key, section)

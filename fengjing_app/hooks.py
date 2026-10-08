@@ -33,6 +33,33 @@ def run_amazon_rankings():
     return run_scheduled_ranking_sync()
 
 
+def run_amazon_fba_inventory():
+    """Amazon FBA 实时库存快照调度入口。"""
+    from fengjing_app.fengjing_business.doctype.amazon_fba_inventory_configuration.amazon_fba_inventory_configuration import (
+        run_scheduled_inventory_sync,
+    )
+
+    return run_scheduled_inventory_sync()
+
+
+def run_amazon_fba_inventory_ledger():
+    """Amazon FBA 库存分类账报告调度入口。"""
+    from fengjing_app.fengjing_business.doctype.amazon_fba_inventory_ledger_configuration.amazon_fba_inventory_ledger_configuration import (
+        run_scheduled_ledger_sync,
+    )
+
+    return run_scheduled_ledger_sync()
+
+
+def run_amazon_awd_inventory():
+    """Amazon AWD 实时库存快照调度入口。"""
+    from fengjing_app.fengjing_business.doctype.amazon_awd_inventory_configuration.amazon_awd_inventory_configuration import (
+        run_scheduled_inventory_sync,
+    )
+
+    return run_scheduled_inventory_sync()
+
+
 def run_ozon_orders():
     """Short scheduler entry; Scheduled Job Type.method is limited to 140 chars."""
     from fengjing_app.fengjing_business.doctype.ozon_order_configuration.ozon_order_configuration import (
@@ -235,6 +262,9 @@ scheduler_events = {
         "fengjing_app.hooks.run_amazon_rankings",
         "fengjing_app.hooks.run_amazon_orders",
         "fengjing_app.hooks.run_amazon_finances",
+        "fengjing_app.hooks.run_amazon_fba_inventory",
+        "fengjing_app.hooks.run_amazon_fba_inventory_ledger",
+        "fengjing_app.hooks.run_amazon_awd_inventory",
         "fengjing_app.hooks.run_ozon_orders",
         "fengjing_app.hooks.run_ozon_rankings",
         "fengjing_app.hooks.run_ozon_prices",
