@@ -13,6 +13,8 @@ FBA_FIELDS = [
 	"corresponding_item_name", "condition", "snapshot_at", "snapshot_date",
 	"source_updated_at", "total_quantity", "fulfillable_quantity",
 	"total_reserved_quantity", "total_unfulfillable_quantity",
+	"pending_customer_order_quantity", "pending_transshipment_quantity",
+	"fc_processing_quantity",
 	"inbound_working_quantity", "inbound_shipped_quantity",
 	"inbound_receiving_quantity", "total_researching_quantity",
 ]
@@ -65,9 +67,7 @@ def _load_rows(doctype, fields, filters):
 	)
 
 
-def _row_identity(row, platform, account_level=False):
-	if platform == "AWD" and account_level:
-		return (row.get("seller_sku") or row.get("name") or "",)
+def _row_identity(row, platform):
 	if platform == "AWD":
 		return (row.get("amazon_store") or "", row.get("seller_sku") or row.get("name") or "")
 	return (
@@ -130,6 +130,9 @@ def _decorate_fba(rows, images):
 		row.total = cint(row.total_quantity)
 		row.available = cint(row.fulfillable_quantity)
 		row.reserved = cint(row.total_reserved_quantity)
+		row.reserved_customer_orders = cint(row.pending_customer_order_quantity)
+		row.reserved_transshipment = cint(row.pending_transshipment_quantity)
+		row.reserved_fc_processing = cint(row.fc_processing_quantity)
 		row.inbound = sum(cint(row.get(key)) for key in (
 			"inbound_working_quantity", "inbound_shipped_quantity", "inbound_receiving_quantity",
 		))
@@ -141,7 +144,7 @@ def _decorate_fba(rows, images):
 	return result
 
 
-def _decorate_awd(rows, images, filters):
+def _decorate_awd(rows, images):
 	decorated = []
 	for source in rows:
 		row = frappe._dict(source)
@@ -152,36 +155,16 @@ def _decorate_awd(rows, images, filters):
 		row.total = cint(row.total_onhand_quantity)
 		row.available = cint(row.available_distributable_quantity)
 		row.reserved = cint(row.reserved_distributable_quantity)
+		row.reserved_customer_orders = None
+		row.reserved_transshipment = None
+		row.reserved_fc_processing = None
 		row.inbound = cint(row.total_inbound_quantity)
 		row.unavailable = 0
 		row.replenishment = cint(row.replenishment_quantity)
 		row.source_store_count = 1
 		row.source_stores = [row.amazon_store]
 		decorated.append(row)
-	if filters.amazon_store or filters.country:
-		return decorated
-
-	# AWD listInventory 返回卖家账户级库存。多个站点配置返回相同 SKU 时只计一次。
-	deduplicated = {}
-	for row in decorated:
-		key = row.seller_sku or row.name
-		current = deduplicated.get(key)
-		if not current:
-			deduplicated[key] = row
-			continue
-		stores = set(current.source_stores or [])
-		stores.update(row.source_stores or [])
-		if row.snapshot_at and (not current.snapshot_at or row.snapshot_at > current.snapshot_at):
-			row.source_stores = sorted(stores)
-			deduplicated[key] = row
-		else:
-			current.source_stores = sorted(stores)
-	for row in deduplicated.values():
-		row.source_store_count = len(row.source_stores)
-		if row.source_store_count > 1:
-			row.amazon_store = "多个店铺配置"
-			row.country = "账户级库存"
-	return list(deduplicated.values())
+	return decorated
 
 
 def _trend(rows, platform, filters):
@@ -189,10 +172,7 @@ def _trend(rows, platform, filters):
 	daily_changes = defaultdict(dict)
 	for row in rows:
 		day = str(getdate(row.snapshot_date or row.snapshot_at))
-		key = _row_identity(
-			row, platform,
-			account_level=platform == "AWD" and not filters.amazon_store and not filters.country,
-		)
+		key = _row_identity(row, platform)
 		current = daily_changes[day].get(key)
 		if not current or row.snapshot_at > current.snapshot_at:
 			daily_changes[day][key] = row
@@ -247,7 +227,7 @@ def get_inventory_data(filters=None):
 	awd_latest = _latest_per_item(awd_all, "AWD")
 	images = _item_images([*fba_latest, *awd_latest])
 	fba_rows = _decorate_fba(fba_latest, images)
-	awd_rows = _decorate_awd(awd_latest, images, filters)
+	awd_rows = _decorate_awd(awd_latest, images)
 
 	platform = str(filters.platform or "").upper()
 	rows = fba_rows + awd_rows
@@ -261,6 +241,9 @@ def get_inventory_data(filters=None):
 			"total": sum(cint(row.total) for row in source),
 			"available": sum(cint(row.available) for row in source),
 			"reserved": sum(cint(row.reserved) for row in source),
+			"reserved_customer_orders": sum(cint(row.reserved_customer_orders) for row in source),
+			"reserved_transshipment": sum(cint(row.reserved_transshipment) for row in source),
+			"reserved_fc_processing": sum(cint(row.reserved_fc_processing) for row in source),
 			"inbound": sum(cint(row.inbound) for row in source),
 			"unavailable": sum(cint(row.unavailable) for row in source),
 			"replenishment": sum(cint(row.replenishment) for row in source),
@@ -278,5 +261,5 @@ def get_inventory_data(filters=None):
 			"fba": str(max((row.snapshot_at for row in fba_latest), default="") or ""),
 			"awd": str(max((row.snapshot_at for row in awd_latest), default="") or ""),
 		},
-		"awd_deduplicated": not bool(filters.amazon_store or filters.country),
+		"awd_deduplicated": False,
 	}
