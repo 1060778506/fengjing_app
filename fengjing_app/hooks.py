@@ -255,7 +255,7 @@ add_to_apps_screen = [
         "name": "fengjing_app",
         "logo": "/assets/fengjing_app/images/fengjing-logo.svg",
         "title": "丰境业务APP",
-        "route": "/desk/丰境业务app",
+        "route": "/desk/fengjing-business/丰境业务app",
         "sequence_id": 50,
     }
 ]
