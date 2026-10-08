@@ -154,7 +154,7 @@
    "fieldname": "history_segment_days",
    "fieldtype": "Int",
    "label": "History Segment Days",
-   "default": "30",
+   "default": "365",
    "non_negative": 1
   },
   {
