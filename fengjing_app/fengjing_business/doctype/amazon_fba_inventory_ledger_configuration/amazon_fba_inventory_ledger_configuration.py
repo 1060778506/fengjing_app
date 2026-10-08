@@ -29,10 +29,12 @@ DOCTYPE = "Amazon FBA Inventory Ledger Configuration"
 SUMMARY_DOCTYPE = "Amazon FBA Inventory Ledger Summary"
 DETAIL_DOCTYPE = "Amazon FBA Inventory Ledger Detail"
 TASK_TIMEOUT = 6 * 60 * 60
+QUOTA_RETRY_MINUTES = 35
 SUMMARY_REPORT_TYPE = "GET_LEDGER_SUMMARY_VIEW_DATA"
 DETAIL_REPORT_TYPE = "GET_LEDGER_DETAIL_VIEW_DATA"
 TIME_AGGREGATIONS = {"DAILY", "WEEKLY", "MONTHLY"}
 LOCATION_AGGREGATIONS = {"COUNTRY", "FC"}
+RECHECK_DAYS = (7, 14, 30, 90, 180)
 
 
 class AmazonFBAInventoryLedgerConfiguration(Document):
@@ -45,6 +47,9 @@ class AmazonFBAInventoryLedgerConfiguration(Document):
 		self.history_segment_days = min(max(cint(self.history_segment_days), 1), 366)
 		self.sync_interval_hours = max(cint(self.sync_interval_hours), 1)
 		self.snapshot_retention_days = max(cint(self.snapshot_retention_days), 0)
+		for days in RECHECK_DAYS:
+			fieldname = f"recheck_{days}_interval_days"
+			self.set(fieldname, max(cint(self.get(fieldname)), 1))
 		self.summary_time_aggregation = str(self.summary_time_aggregation or "DAILY").upper()
 		self.summary_location_aggregation = str(self.summary_location_aggregation or "COUNTRY").upper()
 		if self.summary_time_aggregation not in TIME_AGGREGATIONS:
@@ -150,7 +155,7 @@ def _effective_range(config, kind):
 def _recent_recheck_range(config, kind, days):
 	"""按最近天数生成核对范围；周、月汇总自动对齐完整周期。"""
 	days = cint(days)
-	if days not in {7, 14, 30, 90, 180}:
+	if days not in RECHECK_DAYS:
 		frappe.throw(_("不支持的核对周期。"))
 	end = getdate(now_datetime()) - timedelta(days=1)
 	start = end - timedelta(days=days - 1)
@@ -450,7 +455,10 @@ def _process_kind(config, store, kind, start, end, batch_id, force_start=False):
 	result = {"created": 0, "updated": 0, "unchanged": 0, "rows": 0, "reports": 0}
 	_update_configuration(config.name, **{status_field: "Running", error_field: ""})
 	while cursor <= end:
-		if kind == "summary" and config.summary_time_aggregation == "WEEKLY":
+		if force_start:
+			# 7～180天核对直接请求完整范围，避免按历史分段连续创建大量报告。
+			segment_end = end
+		elif kind == "summary" and config.summary_time_aggregation == "WEEKLY":
 			segment_end = min(end, cursor + timedelta(days=6))
 		elif kind == "summary" and config.summary_time_aggregation == "MONTHLY":
 			month_end = date(cursor.year, cursor.month, calendar.monthrange(cursor.year, cursor.month)[1])
@@ -462,15 +470,15 @@ def _process_kind(config, store, kind, start, end, batch_id, force_start=False):
 			result[key] += cint(stats.get(key))
 		result["reports"] += 1
 		cursor = segment_end + timedelta(days=1)
-		_update_configuration(
-			config.name,
-			**{
-				checkpoint_field: cursor,
-				last_sync_field: now_datetime(),
-				status_field: "Completed" if cursor > end else "Running",
-				error_field: "",
-			},
-		)
+		values = {
+			last_sync_field: now_datetime(),
+			status_field: "Completed" if cursor > end else "Running",
+			error_field: "",
+		}
+		# 最近天数核对只更新数据，不推进历史同步断点。
+		if not force_start:
+			values[checkpoint_field] = cursor
+		_update_configuration(config.name, **values)
 	return result
 
 
@@ -521,7 +529,7 @@ def start_recheck_sync(name, days):
 	config = _configuration(name)
 	config.check_permission("write")
 	days = cint(days)
-	if days not in {7, 14, 30, 90, 180}:
+	if days not in RECHECK_DAYS:
 		frappe.throw(_("不支持的核对周期。"))
 	if not cint(config.enabled):
 		frappe.throw(_("请先启用 FBA 库存分类账同步。"))
@@ -541,6 +549,23 @@ def start_recheck_sync(name, days):
 		"status": "queued",
 		"message": _("FBA 库存分类账最近{0}天核对已进入后台队列。").format(days),
 	}
+
+
+def _next_recheck(now, interval_days):
+	return get_datetime(now).replace(hour=2, minute=59, second=0, microsecond=0) + timedelta(
+		days=max(cint(interval_days), 1)
+	)
+
+
+def _first_recheck(now):
+	now = get_datetime(now)
+	candidate = now.replace(hour=2, minute=59, second=0, microsecond=0)
+	return candidate if candidate > now else candidate + timedelta(days=1)
+
+
+def _is_quota_exceeded(exc):
+	message = str(exc or "").lower()
+	return "http 429" in message or "quotaexceeded" in message
 
 
 def execute_ledger_sync(configuration_name, reset=False, recheck_days=0):
@@ -600,18 +625,55 @@ def execute_ledger_sync(configuration_name, reset=False, recheck_days=0):
 			config = _configuration(configuration_name)
 		summary["expired_deleted"] = _delete_expired_records(config, store)
 		finished_at = now_datetime()
-		_update_configuration(
-			configuration_name,
-			current_status="Completed",
-			history_checkpoint=max(completed_ends),
-			last_success_at=finished_at,
-			next_sync_at=finished_at + timedelta(hours=max(cint(config.sync_interval_hours), 1)),
-			last_sync_result=json.dumps(summary, ensure_ascii=False, default=str),
-			last_error="",
-		)
+		values = {
+			"current_status": "Completed",
+			"last_success_at": finished_at,
+			"last_sync_result": json.dumps(summary, ensure_ascii=False, default=str),
+			"last_error": "",
+		}
+		if recheck_days:
+			values.update(
+				{
+					f"recheck_{recheck_days}_last_at": finished_at,
+					f"recheck_{recheck_days}_next_at": _next_recheck(
+						finished_at, config.get(f"recheck_{recheck_days}_interval_days")
+					),
+				}
+			)
+		else:
+			values.update(
+				{
+					"history_checkpoint": max(completed_ends),
+					"next_sync_at": finished_at
+					+ timedelta(hours=max(cint(config.sync_interval_hours), 1)),
+				}
+			)
+		_update_configuration(configuration_name, **values)
 		return {"status": "success", "summary": summary}
 	except Exception as exc:
 		message = str(exc)
+		if _is_quota_exceeded(exc):
+			retry_at = now_datetime() + timedelta(minutes=QUOTA_RETRY_MINUTES)
+			waiting_message = _(
+				"Amazon FBA 报告生成频率已达到限制，任务将在 {0} 自动续跑。"
+			).format(retry_at)
+			values = {
+				"current_status": "Waiting",
+				"next_sync_at": retry_at,
+				"last_error": "",
+				"last_sync_result": waiting_message,
+			}
+			if recheck_days:
+				values[f"recheck_{recheck_days}_next_at"] = retry_at
+			if active_kind:
+				values.update({f"{active_kind}_status": "Waiting", f"{active_kind}_last_error": ""})
+			_update_configuration(configuration_name, **values)
+			frappe.logger("amazon_fba_inventory_ledger", allow_site=True).warning(
+				"FBA inventory ledger quota reached; scheduled to resume: configuration=%s retry_at=%s",
+				configuration_name,
+				retry_at,
+			)
+			return {"status": "waiting", "retry_at": retry_at, "message": waiting_message}
 		values = {
 			"current_status": "Failed",
 			"next_sync_at": now_datetime() + timedelta(minutes=30),
@@ -643,6 +705,26 @@ def run_scheduled_ledger_sync():
 					continue
 				_update_configuration(name, current_status="Failed", last_error="上一次任务超时，已由调度器释放。")
 				config = _configuration(name)
+			initialized = {}
+			for days in RECHECK_DAYS:
+				if cint(config.get(f"enable_recheck_{days}")) and not config.get(
+					f"recheck_{days}_next_at"
+				):
+					initialized[f"recheck_{days}_next_at"] = _first_recheck(now)
+			if initialized:
+				_update_configuration(name, **initialized)
+				continue
+			queued_recheck = False
+			for days in RECHECK_DAYS:
+				if not cint(config.get(f"enable_recheck_{days}")):
+					continue
+				next_at = config.get(f"recheck_{days}_next_at")
+				if next_at and get_datetime(next_at) <= now:
+					_enqueue(name, recheck_days=days)
+					queued_recheck = True
+					break
+			if queued_recheck:
+				continue
 			if config.next_sync_at and get_datetime(config.next_sync_at) > now:
 				continue
 			# 历史已完成时只重新核对最近一个分段，避免每次重跑全部历史。

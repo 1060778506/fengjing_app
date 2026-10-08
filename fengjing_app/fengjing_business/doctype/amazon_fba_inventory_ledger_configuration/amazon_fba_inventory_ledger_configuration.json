@@ -40,6 +40,43 @@
   "detail_last_report_id",
   "detail_status",
   "detail_last_error",
+  "recheck_7_section",
+  "enable_recheck_7",
+  "recheck_7_interval_days",
+  "recheck_7_last_at",
+  "recheck_7_column",
+  "recheck_7_next_at",
+  "recheck_14_section",
+  "enable_recheck_14",
+  "recheck_14_interval_days",
+  "recheck_14_last_at",
+  "recheck_14_column",
+  "recheck_14_next_at",
+  "recheck_30_section",
+  "enable_recheck_30",
+  "recheck_30_interval_days",
+  "recheck_30_last_at",
+  "recheck_30_column",
+  "recheck_30_next_at",
+  "recheck_90_section",
+  "enable_recheck_90",
+  "recheck_90_interval_days",
+  "recheck_90_last_at",
+  "recheck_90_column",
+  "recheck_90_next_at",
+  "recheck_180_section",
+  "enable_recheck_180",
+  "recheck_180_interval_days",
+  "recheck_180_last_at",
+  "recheck_180_column",
+  "recheck_180_next_at",
+  "manual_actions_section",
+  "recheck_7_now",
+  "recheck_14_now",
+  "recheck_30_now",
+  "manual_actions_column_2",
+  "recheck_90_now",
+  "recheck_180_now",
   "runtime_section",
   "current_status",
   "last_sync_at",
@@ -259,6 +296,210 @@
    "fieldtype": "Small Text",
    "label": "Detail Last Error",
    "read_only": 1
+  },
+  {
+   "fieldname": "recheck_7_section",
+   "fieldtype": "Section Break",
+   "label": "Recent 7 Days Recheck"
+  },
+  {
+   "fieldname": "enable_recheck_7",
+   "fieldtype": "Check",
+   "label": "Enable 7 Days Recheck",
+   "default": "1"
+  },
+  {
+   "fieldname": "recheck_7_interval_days",
+   "fieldtype": "Int",
+   "label": "7 Days Recheck Interval",
+   "default": "1",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "recheck_7_last_at",
+   "fieldtype": "Datetime",
+   "label": "7 Days Last Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_7_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_7_next_at",
+   "fieldtype": "Datetime",
+   "label": "7 Days Next Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_14_section",
+   "fieldtype": "Section Break",
+   "label": "Recent 14 Days Recheck"
+  },
+  {
+   "fieldname": "enable_recheck_14",
+   "fieldtype": "Check",
+   "label": "Enable 14 Days Recheck",
+   "default": "1"
+  },
+  {
+   "fieldname": "recheck_14_interval_days",
+   "fieldtype": "Int",
+   "label": "14 Days Recheck Interval",
+   "default": "7",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "recheck_14_last_at",
+   "fieldtype": "Datetime",
+   "label": "14 Days Last Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_14_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_14_next_at",
+   "fieldtype": "Datetime",
+   "label": "14 Days Next Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_30_section",
+   "fieldtype": "Section Break",
+   "label": "Recent 30 Days Recheck"
+  },
+  {
+   "fieldname": "enable_recheck_30",
+   "fieldtype": "Check",
+   "label": "Enable 30 Days Recheck",
+   "default": "1"
+  },
+  {
+   "fieldname": "recheck_30_interval_days",
+   "fieldtype": "Int",
+   "label": "30 Days Recheck Interval",
+   "default": "14",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "recheck_30_last_at",
+   "fieldtype": "Datetime",
+   "label": "30 Days Last Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_30_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_30_next_at",
+   "fieldtype": "Datetime",
+   "label": "30 Days Next Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_90_section",
+   "fieldtype": "Section Break",
+   "label": "Recent 90 Days Recheck"
+  },
+  {
+   "fieldname": "enable_recheck_90",
+   "fieldtype": "Check",
+   "label": "Enable 90 Days Recheck",
+   "default": "1"
+  },
+  {
+   "fieldname": "recheck_90_interval_days",
+   "fieldtype": "Int",
+   "label": "90 Days Recheck Interval",
+   "default": "30",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "recheck_90_last_at",
+   "fieldtype": "Datetime",
+   "label": "90 Days Last Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_90_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_90_next_at",
+   "fieldtype": "Datetime",
+   "label": "90 Days Next Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_180_section",
+   "fieldtype": "Section Break",
+   "label": "Recent 180 Days Recheck"
+  },
+  {
+   "fieldname": "enable_recheck_180",
+   "fieldtype": "Check",
+   "label": "Enable 180 Days Recheck",
+   "default": "1"
+  },
+  {
+   "fieldname": "recheck_180_interval_days",
+   "fieldtype": "Int",
+   "label": "180 Days Recheck Interval",
+   "default": "60",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "recheck_180_last_at",
+   "fieldtype": "Datetime",
+   "label": "180 Days Last Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_180_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_180_next_at",
+   "fieldtype": "Datetime",
+   "label": "180 Days Next Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "manual_actions_section",
+   "fieldtype": "Section Break",
+   "label": "Manual Sync Actions"
+  },
+  {
+   "fieldname": "recheck_7_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 7 Days"
+  },
+  {
+   "fieldname": "recheck_14_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 14 Days"
+  },
+  {
+   "fieldname": "recheck_30_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 30 Days"
+  },
+  {
+   "fieldname": "manual_actions_column_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_90_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 90 Days"
+  },
+  {
+   "fieldname": "recheck_180_now",
+   "fieldtype": "Button",
+   "label": "Recheck Recent 180 Days"
   },
   {
    "fieldname": "runtime_section",
