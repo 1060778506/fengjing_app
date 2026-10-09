@@ -323,8 +323,8 @@ class AmazonOfflineTranslator {
         let matched = 0;
         let checked = 0;
         by_field.forEach((known, field) => {
-            // description 同时包含商品标题和固定费用名称，商品标题不属于“漏翻词条”。
-            if (field === "description" || field === "__preamble__") return;
+            // description / Title 可能包含商品自由文本，不属于“漏翻词条”。
+            if (["description", "Title", "__preamble__"].includes(field)) return;
             const column = headers.indexOf(field);
             if (column < 0) return;
             const counts = new Map();
@@ -363,8 +363,12 @@ class AmazonOfflineTranslator {
             content_rules.set(`${row.file_field_name}\u0000${row.source_text}`, String(row.target_text));
         });
         const source_headers = this.rows[this.header_index];
-        const sku_column = source_headers.indexOf("sku");
-        const description_column = source_headers.indexOf("description");
+        const first_column = (aliases) => aliases
+            .map((field) => source_headers.indexOf(field))
+            .find((index) => index >= 0) ?? -1;
+        // 付款报表使用 sku / description；FBA 库存分类账使用 MSKU / Title。
+        const sku_column = first_column(["sku", "MSKU"]);
+        const description_column = first_column(["description", "Title"]);
         let enriched_descriptions = 0;
         const preamble_rules = new Map(this.applicable_rules("字段内容")
             .filter((row) => row.file_field_name === "__preamble__")
@@ -496,7 +500,7 @@ class AmazonOfflineTranslator {
 
     default_column_width(header) {
         const name = String(header || "").toLowerCase();
-        if (name === "description" || name === "描述") return 420;
+        if (["description", "描述", "title", "商品标题"].includes(name)) return 420;
         if (name.includes("date") || name.includes("time") || name.includes("时间")) return 190;
         if (name.includes("order id") || name.includes("订单号")) return 185;
         if (name === "sku") return 155;

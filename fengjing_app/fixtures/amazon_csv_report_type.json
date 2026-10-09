@@ -10,5 +10,17 @@
   "recognition_priority": 100,
   "report_type_code": "amazon_custom_unified_transaction",
   "report_type_name": "付款交易联合报告"
+ },
+ {
+  "description": "亚马逊 FBA 库存分类账明细报告（Inventory Ledger Detail Report），用于翻译每日库存事件、配送中心及库存状态。",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Report Type",
+  "enabled": 1,
+  "modified": "2026-10-09 15:35:21.992622",
+  "name": "amazon-fba-inventory-ledger-detail",
+  "recognition_fields": "FNSKU\nASIN\nMSKU\nEvent Type\nFulfillment Center\nReconciled Quantity\nUnreconciled Quantity\nDate and Time",
+  "recognition_priority": 110,
+  "report_type_code": "amazon_fba_inventory_ledger_detail",
+  "report_type_name": "亚马逊库存分类账"
  }
 ]
