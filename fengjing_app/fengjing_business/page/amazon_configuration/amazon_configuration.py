@@ -120,7 +120,7 @@ SECTIONS = {
 	},
 	"fba_ledger": {
 		"title": "FBA 库存分类账配置",
-		"description": "按当前店铺和国家站点管理库存分类账汇总与明细报告。",
+		"description": "统一管理同一卖家的库存分类账任务，并分别查看各国家站点的保存结果。",
 		"doctype": "Amazon FBA Inventory Ledger Configuration",
 		"primary_field": "amazon_store",
 		"enabled_field": "enabled",
@@ -129,13 +129,14 @@ SECTIONS = {
 		"next_field": "next_sync_at",
 		"error_field": "last_error",
 		"progress_field": None,
-		"actions": [
-			{"key": "history", "label": "同步配置日期范围", "style": "primary", "confirm": True},
-			{"key": "recheck_7", "label": "核对7天", "style": "ghost", "confirm": True},
-			{"key": "recheck_14", "label": "核对14天", "style": "ghost", "confirm": True},
-			{"key": "recheck_30", "label": "核对30天", "style": "ghost", "confirm": True},
-			{"key": "recheck_90", "label": "核对90天", "style": "ghost", "confirm": True},
-			{"key": "recheck_180", "label": "核对180天", "style": "ghost", "confirm": True},
+		"actions": [],
+		"group_actions": [
+			{"key": "group_recheck_7", "label": "立即核对最近7天", "style": "primary", "confirm": True},
+			{"key": "group_history", "label": "同步历史范围", "style": "soft", "confirm": True},
+			{"key": "group_recheck_14", "label": "核对14天", "style": "ghost", "confirm": True},
+			{"key": "group_recheck_30", "label": "核对30天", "style": "ghost", "confirm": True},
+			{"key": "group_recheck_90", "label": "核对90天", "style": "ghost", "confirm": True},
+			{"key": "group_recheck_180", "label": "核对180天", "style": "ghost", "confirm": True},
 		],
 	},
 	"awd_inventory": {
@@ -224,6 +225,177 @@ def _document_payload(doc, schema):
 	return {"name": doc.name, "values": values, "password_set": password_set}
 
 
+def _ledger_group_payload(documents, section, master_name=None):
+	"""按总配置生成公共操作区；不同 API 区域允许归属同一个卖家总配置。"""
+	if not documents:
+		return {
+			"master_name": master_name,
+			"status": "Not Started",
+			"countries": [],
+			"shared": {},
+			"mixed_fields": [],
+			"actions": section.get("group_actions") or [],
+			"actions_ready": False,
+			"action_notice": "当前总配置没有国家站点。",
+		}
+
+	store_names = [row["values"].get("amazon_store") for row in documents]
+	store_names = [name for name in store_names if name]
+	stores = {
+		row.name: row
+		for row in frappe.get_all(
+			"Amazon Store Configuration",
+			filters={"name": ["in", store_names]},
+			fields=["name", "store_name", "country", "marketplace_id", "seller_id", "api_region", "cost_center"],
+			limit_page_length=0,
+		)
+	}
+
+	def aggregate(doctype):
+		if not store_names:
+			return {}
+		table_name = {
+			"Amazon FBA Inventory Ledger Summary": "tabAmazon FBA Inventory Ledger Summary",
+			"Amazon FBA Inventory Ledger Detail": "tabAmazon FBA Inventory Ledger Detail",
+		}[doctype]
+		date_field = {
+			"Amazon FBA Inventory Ledger Summary": "period_date",
+			"Amazon FBA Inventory Ledger Detail": "event_at",
+		}[doctype]
+		return {
+			row.amazon_store: row
+			for row in frappe.db.sql(
+				f"""SELECT amazon_store, COUNT(name) AS record_count,
+					MAX(`{date_field}`) AS latest_date
+				FROM `{table_name}`
+				WHERE amazon_store IN %(store_names)s
+				GROUP BY amazon_store""",  # nosec: names come from fixed mappings above
+				{"store_names": tuple(store_names)},
+				as_dict=True,
+			)
+		}
+
+	shared_fields = (
+		"history_start_date",
+		"history_end_date",
+		"history_segment_days",
+		"sync_interval_hours",
+		"routine_lookback_days",
+		"summary_time_aggregation",
+		"summary_location_aggregation",
+		"detail_event_type",
+	)
+	master = None
+	if master_name:
+		master = frappe.db.get_value(
+			"Amazon FBA Inventory Ledger Master Configuration",
+			master_name,
+			["name", "configuration_name", "enabled", "summary_enabled", "detail_enabled", *shared_fields],
+			as_dict=True,
+		)
+	shared = {fieldname: _serialise_value(master.get(fieldname)) if master else None for fieldname in shared_fields}
+	summary_stats = aggregate("Amazon FBA Inventory Ledger Summary")
+	detail_stats = aggregate("Amazon FBA Inventory Ledger Detail")
+	country_order = {"United States": 10, "Canada": 20, "Mexico": 30, "Brazil": 40}
+	countries = []
+	for document in documents:
+		values = document["values"]
+		store_name = values.get("amazon_store")
+		store = stores.get(store_name)
+		summary = summary_stats.get(store_name)
+		detail = detail_stats.get(store_name)
+		error = values.get("last_error") or values.get("summary_last_error") or values.get("detail_last_error") or ""
+		countries.append({
+			"configuration_name": document["name"],
+			"master_configuration": values.get("master_configuration"),
+			"amazon_store": store_name,
+			"store_name": store.store_name if store else store_name,
+			"country": store.country if store else "",
+			"marketplace_id": store.marketplace_id if store else values.get("marketplace_id"),
+			"seller_id": store.seller_id if store else "",
+			"api_region": store.api_region if store else values.get("api_region"),
+			"cost_center": store.cost_center if store else values.get("cost_center"),
+			"enabled": cint(values.get("enabled")),
+			"status": values.get("current_status") or "Not Started",
+			"history_completed": cint(values.get("history_completed")),
+			"summary_status": values.get("summary_status") or "Not Started",
+			"detail_status": values.get("detail_status") or "Not Started",
+			"summary_latest_date": _serialise_value(summary.latest_date) if summary else None,
+			"detail_latest_date": _serialise_value(detail.latest_date) if detail else None,
+			"summary_records": cint(summary.record_count) if summary else 0,
+			"detail_records": cint(detail.record_count) if detail else 0,
+			"last_success_at": _serialise_value(values.get("last_success_at")),
+			"next_sync_at": _serialise_value(values.get("next_sync_at")),
+			"last_result": values.get("last_sync_result") or "",
+			"error": error,
+		})
+
+	countries.sort(key=lambda row: (country_order.get(row["country"], 99), row["country"] or "", row["store_name"] or ""))
+	enabled = [row for row in countries if row["enabled"]]
+	statuses = {str(row["status"] or "").lower() for row in enabled}
+	if any(row["error"] for row in enabled) or "failed" in statuses:
+		overall_status = "Failed"
+	elif "running" in statuses:
+		overall_status = "Running"
+	elif "waiting" in statuses:
+		overall_status = "Waiting"
+	elif enabled and all(status == "completed" for status in statuses):
+		overall_status = "Completed"
+	else:
+		overall_status = "Not Started"
+
+	waiting_rows = [row for row in enabled if str(row["status"]).lower() == "waiting" and row["next_sync_at"]]
+	next_retry_at = min((row["next_sync_at"] for row in waiting_rows), default=None)
+	quota_message = next((
+		row["last_result"] for row in waiting_rows
+		if "频率" in str(row["last_result"]) or "quota" in str(row["last_result"]).lower()
+	), "")
+	latest_summary_dates = [row["summary_latest_date"] for row in enabled if row["summary_latest_date"]]
+	latest_detail_dates = [row["detail_latest_date"] for row in enabled if row["detail_latest_date"]]
+	sellers = {str(row["seller_id"] or "").strip().upper() for row in enabled}
+	regions = {str(row["api_region"] or "").strip() for row in enabled}
+	marketplaces = [str(row["marketplace_id"] or "").strip().upper() for row in enabled]
+	readiness_issues = []
+	if not enabled:
+		readiness_issues.append("没有已启用的国家配置")
+	if not master:
+		readiness_issues.append("国家配置尚未引用有效的总配置")
+	elif not cint(master.enabled):
+		readiness_issues.append("总配置未启用")
+	if "" in sellers or len(sellers) != 1:
+		readiness_issues.append("卖家编号不一致")
+	if "" in regions:
+		readiness_issues.append("存在无法识别的API区域")
+	if "" in marketplaces or len(set(marketplaces)) != len(marketplaces):
+		readiness_issues.append("Marketplace ID为空或重复")
+	if master and cint(master.summary_enabled) and shared.get("summary_location_aggregation") != "COUNTRY":
+		readiness_issues.append("汇总位置粒度不是国家")
+	actions_ready = not readiness_issues
+	return {
+		"master_name": master.name if master else master_name,
+		"master_label": master.configuration_name if master else (master_name or "未关联总配置"),
+		"status": overall_status,
+		"enabled_countries": len(enabled),
+		"api_regions": sorted(region for region in regions if region),
+		"region_count": len([region for region in regions if region]),
+		"countries": countries,
+		"shared": shared,
+		"mixed_fields": [],
+		"actions": section.get("group_actions") or [],
+		"actions_ready": actions_ready,
+		"action_notice": (
+			f"每个API区域只提交一组 Amazon 报告，{len(enabled)}个站点的结果仍分别保存。"
+			if actions_ready else "暂时不能运行：" + "、".join(readiness_issues) + "。"
+		),
+		"readiness_issues": readiness_issues,
+		"next_retry_at": next_retry_at,
+		"quota_message": quota_message,
+		"summary_latest_date": min(latest_summary_dates) if latest_summary_dates else None,
+		"detail_latest_date": min(latest_detail_dates) if latest_detail_dates else None,
+		"summary_records": sum(row["summary_records"] for row in enabled),
+		"detail_records": sum(row["detail_records"] for row in enabled),
+	}
+
 def _section_payload(section_key, section):
 	doctype = section["doctype"]
 	frappe.has_permission(doctype, "read", throw=True)
@@ -254,7 +426,7 @@ def _section_payload(section_key, section):
 			by_configuration.setdefault(product.ranking_configuration, []).append(row)
 		for document in documents:
 			document["products"] = by_configuration.get(document["name"], [])
-	return {
+	payload = {
 		"key": section_key,
 		"title": section["title"],
 		"description": section["description"],
@@ -275,6 +447,17 @@ def _section_payload(section_key, section):
 			"delete": frappe.has_permission(doctype, "delete"),
 		},
 	}
+	if section_key == "fba_ledger":
+		by_master = {}
+		for document in documents:
+			master_name = str(document["values"].get("master_configuration") or "").strip() or None
+			by_master.setdefault(master_name, []).append(document)
+		payload["groups"] = [
+			_ledger_group_payload(rows, section, master_name)
+			for master_name, rows in sorted(by_master.items(), key=lambda item: str(item[0] or ""))
+		]
+		payload["group"] = payload["groups"][0] if payload["groups"] else _ledger_group_payload([], section)
+	return payload
 
 
 @frappe.whitelist()
@@ -380,3 +563,24 @@ def run_action(section_key, name, action_key):
 	method_name, days = _action_method(section_key, action_key)
 	method = frappe.get_attr(method_name)
 	return method(name=name, days=days) if days else method(name=name)
+
+
+@frappe.whitelist(methods=["POST"])
+def run_group_action(section_key, action_key, master_name):
+	frappe.only_for("System Manager")
+	if str(section_key or "") != "fba_ledger":
+		frappe.throw(_("该配置不支持公共任务。"))
+	action_key = str(action_key or "").strip()
+	allowed = {item["key"] for item in SECTIONS["fba_ledger"].get("group_actions", [])}
+	if action_key not in allowed:
+		frappe.throw(_("不支持的公共分类账操作。"))
+	if not master_name:
+		frappe.throw(_("当前国家配置尚未关联库存分类账总配置。"))
+	method = frappe.get_attr(
+		"fengjing_app.fengjing_business.doctype.amazon_fba_inventory_ledger_configuration."
+		"amazon_fba_inventory_ledger_configuration.start_group_ledger_sync"
+	)
+	if action_key == "group_history":
+		return method(master_name=master_name, action="history")
+	days = cint(action_key.rsplit("_", 1)[-1])
+	return method(master_name=master_name, action="recheck", days=days)

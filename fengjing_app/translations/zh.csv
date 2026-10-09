@@ -12872,3 +12872,8 @@ CustomerReturns,客户退货
 VendorReturns,卖家退货
 WhseTransfers,仓库调拨
 Look back for incremental updates; a full snapshot still runs every 24 hours.,用于增量回看；系统每24小时仍会执行一次完整快照。
+Amazon FBA Inventory Ledger Master Configuration,亚马逊FBA库存分类账总配置
+Configuration Name,配置名称
+Inventory Ledger History Result,库存分类账历史结果
+Ledger Summary Result,库存分类账汇总结果
+Ledger Detail Result,库存分类账明细结果

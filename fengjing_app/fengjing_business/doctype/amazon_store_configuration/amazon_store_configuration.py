@@ -6,6 +6,8 @@
 import gzip
 import hashlib
 import time
+from email.utils import parsedate_to_datetime
+from datetime import datetime, timezone
 
 import frappe
 import requests
@@ -65,6 +67,33 @@ SERVICE_MINIMUM_INTERVALS = {
 	"reports-status": 1.1,
 	"reports-document": 1.1,
 }
+
+
+class AmazonAPIError(RuntimeError):
+	"""保留 Amazon HTTP 状态和重试提示，供后台任务安排下一次执行。"""
+
+	def __init__(self, message, *, status_code=None, retry_after_seconds=None):
+		super().__init__(message)
+		self.status_code = status_code
+		self.retry_after_seconds = retry_after_seconds
+
+
+def _retry_after_seconds(response):
+	if response is None:
+		return None
+	header = str(response.headers.get("Retry-After") or "").strip()
+	if not header:
+		return None
+	try:
+		return max(int(float(header)), 0)
+	except (TypeError, ValueError):
+		try:
+			when = parsedate_to_datetime(header)
+			if when.tzinfo is None:
+				when = when.replace(tzinfo=timezone.utc)
+			return max(int((when - datetime.now(timezone.utc)).total_seconds()), 0)
+		except (TypeError, ValueError, OverflowError):
+			return None
 
 
 class AmazonStoreConfiguration(Document):
@@ -320,7 +349,11 @@ def amazon_api_json(store, service, method, path, *, expected_statuses=(200,), *
 	if response is None or response.status_code not in set(expected_statuses):
 		status = response.status_code if response is not None else "no response"
 		message = response.text[:1600] if response is not None else "Amazon returned no response"
-		raise RuntimeError(f"Amazon SP-API request failed (HTTP {status}): {message}")
+		raise AmazonAPIError(
+			f"Amazon SP-API request failed (HTTP {status}): {message}",
+			status_code=response.status_code if response is not None else None,
+			retry_after_seconds=_retry_after_seconds(response),
+		)
 	try:
 		return response.json() or {}
 	except ValueError as exc:
@@ -337,9 +370,26 @@ def create_amazon_report(
 	report_options=None,
 ):
 	"""创建 Reports API 报告并返回 reportId。"""
+	marketplace_ids = list(dict.fromkeys(
+		str(value or "").strip().upper() for value in (marketplace_ids or []) if str(value or "").strip()
+	))
+	if not marketplace_ids:
+		raise ValueError("Amazon report requires at least one Marketplace ID")
+	if len(marketplace_ids) > 25:
+		raise ValueError("Amazon report accepts at most 25 Marketplace IDs")
+	store_region = get_region(store)
+	invalid_marketplaces = [
+		marketplace_id for marketplace_id in marketplace_ids
+		if MARKETPLACE_REGIONS.get(marketplace_id, store_region) != store_region
+	]
+	if invalid_marketplaces:
+		raise ValueError(
+			"Amazon report marketplaces must belong to one SP-API region: "
+			+ ", ".join(invalid_marketplaces)
+		)
 	body = {
 		"reportType": report_type,
-		"marketplaceIds": list(marketplace_ids or []),
+		"marketplaceIds": marketplace_ids,
 	}
 	if data_start_time:
 		body["dataStartTime"] = str(data_start_time)

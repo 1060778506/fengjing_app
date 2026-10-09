@@ -7,6 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "basic_section",
+  "master_configuration",
   "amazon_store",
   "enabled",
   "store_column",
@@ -14,21 +15,10 @@
   "marketplace_id",
   "api_region",
   "history_section",
-  "history_start_date",
-  "history_end_date",
-  "history_segment_days",
   "history_column",
   "history_checkpoint",
   "history_completed",
-  "snapshot_retention_days",
-  "routine_recheck_section",
-  "sync_interval_hours",
-  "routine_recheck_column",
-  "routine_lookback_days",
   "summary_section",
-  "summary_enabled",
-  "summary_time_aggregation",
-  "summary_location_aggregation",
   "summary_last_sync_at",
   "summary_column",
   "summary_checkpoint",
@@ -36,8 +26,6 @@
   "summary_status",
   "summary_last_error",
   "detail_section",
-  "detail_enabled",
-  "detail_event_type",
   "detail_last_sync_at",
   "detail_column",
   "detail_checkpoint",
@@ -45,42 +33,25 @@
   "detail_status",
   "detail_last_error",
   "recheck_7_section",
-  "enable_recheck_7",
-  "recheck_7_interval_days",
   "recheck_7_last_at",
   "recheck_7_column",
   "recheck_7_next_at",
   "recheck_14_section",
-  "enable_recheck_14",
-  "recheck_14_interval_days",
   "recheck_14_last_at",
   "recheck_14_column",
   "recheck_14_next_at",
   "recheck_30_section",
-  "enable_recheck_30",
-  "recheck_30_interval_days",
   "recheck_30_last_at",
   "recheck_30_column",
   "recheck_30_next_at",
   "recheck_90_section",
-  "enable_recheck_90",
-  "recheck_90_interval_days",
   "recheck_90_last_at",
   "recheck_90_column",
   "recheck_90_next_at",
   "recheck_180_section",
-  "enable_recheck_180",
-  "recheck_180_interval_days",
   "recheck_180_last_at",
   "recheck_180_column",
   "recheck_180_next_at",
-  "manual_actions_section",
-  "recheck_7_now",
-  "recheck_14_now",
-  "recheck_30_now",
-  "manual_actions_column_2",
-  "recheck_90_now",
-  "recheck_180_now",
   "runtime_section",
   "current_status",
   "last_sync_at",
@@ -95,6 +66,16 @@
    "fieldname": "basic_section",
    "fieldtype": "Section Break",
    "label": "Basic Configuration"
+  },
+  {
+   "fieldname": "master_configuration",
+   "fieldtype": "Link",
+   "label": "Inventory Ledger Master Configuration",
+   "options": "Amazon FBA Inventory Ledger Master Configuration",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
   },
   {
    "fieldname": "amazon_store",
@@ -142,24 +123,7 @@
   {
    "fieldname": "history_section",
    "fieldtype": "Section Break",
-   "label": "Inventory Ledger History"
-  },
-  {
-   "fieldname": "history_start_date",
-   "fieldtype": "Date",
-   "label": "History Start Date"
-  },
-  {
-   "fieldname": "history_end_date",
-   "fieldtype": "Date",
-   "label": "History End Date"
-  },
-  {
-   "fieldname": "history_segment_days",
-   "fieldtype": "Int",
-   "label": "History Segment Days",
-   "default": "365",
-   "non_negative": 1
+   "label": "Inventory Ledger History Result"
   },
   {
    "fieldname": "history_column",
@@ -176,66 +140,14 @@
    "fieldtype": "Check",
    "label": "History Completed",
    "default": "0",
-   "hidden": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "snapshot_retention_days",
-   "fieldtype": "Int",
-   "label": "Snapshot Retention Days",
-   "default": "0",
-   "non_negative": 1,
-   "description": "0 means keep records indefinitely."
-  },
-  {
-   "fieldname": "routine_recheck_section",
-   "fieldtype": "Section Break",
-   "label": "Routine Ledger Recheck"
-  },
-  {
-   "fieldname": "sync_interval_hours",
-   "fieldtype": "Int",
-   "label": "Routine Recheck Interval Hours",
-   "default": "3",
-   "non_negative": 1,
-   "description": "After historical synchronization completes, this interval controls routine ledger rechecks. It does not control real-time FBA inventory snapshots."
-  },
-  {
-   "fieldname": "routine_recheck_column",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "routine_lookback_days",
-   "fieldtype": "Int",
-   "label": "Routine Recheck Lookback Days",
-   "default": "3",
-   "non_negative": 1,
-   "description": "Each routine ledger recheck requests this many most recently completed days. Historical segment days are used only for initial history synchronization."
+   "hidden": 0,
+   "read_only": 1,
+   "in_list_view": 0
   },
   {
    "fieldname": "summary_section",
    "fieldtype": "Section Break",
-   "label": "Ledger Summary Report"
-  },
-  {
-   "fieldname": "summary_enabled",
-   "fieldtype": "Check",
-   "label": "Enable Summary Report",
-   "default": "1"
-  },
-  {
-   "fieldname": "summary_time_aggregation",
-   "fieldtype": "Select",
-   "label": "Summary Time Aggregation",
-   "options": "DAILY\nWEEKLY\nMONTHLY",
-   "default": "DAILY"
-  },
-  {
-   "fieldname": "summary_location_aggregation",
-   "fieldtype": "Select",
-   "label": "Summary Location Aggregation",
-   "options": "COUNTRY\nFC",
-   "default": "COUNTRY"
+   "label": "Ledger Summary Result"
   },
   {
    "fieldname": "summary_last_sync_at",
@@ -276,20 +188,7 @@
   {
    "fieldname": "detail_section",
    "fieldtype": "Section Break",
-   "label": "Ledger Detail Report"
-  },
-  {
-   "fieldname": "detail_enabled",
-   "fieldtype": "Check",
-   "label": "Enable Detail Report",
-   "default": "1"
-  },
-  {
-   "fieldname": "detail_event_type",
-   "fieldtype": "Select",
-   "label": "Detail Event Type",
-   "options": "\nAdjustments\nCustomerReturns\nReceipts\nShipments\nVendorReturns\nWhseTransfers",
-   "description": "Leave blank to request all inventory event types."
+   "label": "Ledger Detail Result"
   },
   {
    "fieldname": "detail_last_sync_at",
@@ -333,19 +232,6 @@
    "label": "Recent 7 Days Recheck"
   },
   {
-   "fieldname": "enable_recheck_7",
-   "fieldtype": "Check",
-   "label": "Enable 7 Days Recheck",
-   "default": "1"
-  },
-  {
-   "fieldname": "recheck_7_interval_days",
-   "fieldtype": "Int",
-   "label": "7 Days Recheck Interval",
-   "default": "1",
-   "non_negative": 1
-  },
-  {
    "fieldname": "recheck_7_last_at",
    "fieldtype": "Datetime",
    "label": "7 Days Last Recheck",
@@ -365,19 +251,6 @@
    "fieldname": "recheck_14_section",
    "fieldtype": "Section Break",
    "label": "Recent 14 Days Recheck"
-  },
-  {
-   "fieldname": "enable_recheck_14",
-   "fieldtype": "Check",
-   "label": "Enable 14 Days Recheck",
-   "default": "1"
-  },
-  {
-   "fieldname": "recheck_14_interval_days",
-   "fieldtype": "Int",
-   "label": "14 Days Recheck Interval",
-   "default": "7",
-   "non_negative": 1
   },
   {
    "fieldname": "recheck_14_last_at",
@@ -401,19 +274,6 @@
    "label": "Recent 30 Days Recheck"
   },
   {
-   "fieldname": "enable_recheck_30",
-   "fieldtype": "Check",
-   "label": "Enable 30 Days Recheck",
-   "default": "1"
-  },
-  {
-   "fieldname": "recheck_30_interval_days",
-   "fieldtype": "Int",
-   "label": "30 Days Recheck Interval",
-   "default": "14",
-   "non_negative": 1
-  },
-  {
    "fieldname": "recheck_30_last_at",
    "fieldtype": "Datetime",
    "label": "30 Days Last Recheck",
@@ -433,19 +293,6 @@
    "fieldname": "recheck_90_section",
    "fieldtype": "Section Break",
    "label": "Recent 90 Days Recheck"
-  },
-  {
-   "fieldname": "enable_recheck_90",
-   "fieldtype": "Check",
-   "label": "Enable 90 Days Recheck",
-   "default": "1"
-  },
-  {
-   "fieldname": "recheck_90_interval_days",
-   "fieldtype": "Int",
-   "label": "90 Days Recheck Interval",
-   "default": "30",
-   "non_negative": 1
   },
   {
    "fieldname": "recheck_90_last_at",
@@ -469,19 +316,6 @@
    "label": "Recent 180 Days Recheck"
   },
   {
-   "fieldname": "enable_recheck_180",
-   "fieldtype": "Check",
-   "label": "Enable 180 Days Recheck",
-   "default": "1"
-  },
-  {
-   "fieldname": "recheck_180_interval_days",
-   "fieldtype": "Int",
-   "label": "180 Days Recheck Interval",
-   "default": "60",
-   "non_negative": 1
-  },
-  {
    "fieldname": "recheck_180_last_at",
    "fieldtype": "Datetime",
    "label": "180 Days Last Recheck",
@@ -496,40 +330,6 @@
    "fieldtype": "Datetime",
    "label": "180 Days Next Recheck",
    "read_only": 1
-  },
-  {
-   "fieldname": "manual_actions_section",
-   "fieldtype": "Section Break",
-   "label": "Manual Sync Actions"
-  },
-  {
-   "fieldname": "recheck_7_now",
-   "fieldtype": "Button",
-   "label": "Recheck Recent 7 Days"
-  },
-  {
-   "fieldname": "recheck_14_now",
-   "fieldtype": "Button",
-   "label": "Recheck Recent 14 Days"
-  },
-  {
-   "fieldname": "recheck_30_now",
-   "fieldtype": "Button",
-   "label": "Recheck Recent 30 Days"
-  },
-  {
-   "fieldname": "manual_actions_column_2",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "recheck_90_now",
-   "fieldtype": "Button",
-   "label": "Recheck Recent 90 Days"
-  },
-  {
-   "fieldname": "recheck_180_now",
-   "fieldtype": "Button",
-   "label": "Recheck Recent 180 Days"
   },
   {
    "fieldname": "runtime_section",
@@ -583,7 +383,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-08 19:10:00.000000",
+ "modified": "2026-10-10 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "Amazon FBA Inventory Ledger Configuration",

@@ -14,27 +14,80 @@ from datetime import date, datetime, time, timedelta, timezone
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import add_days, add_months, cint, getdate, get_datetime, now_datetime
+from frappe.utils import add_days, cint, getdate, get_datetime, now_datetime
 
 from fengjing_app.fengjing_business.doctype.amazon_store_configuration.amazon_store_configuration import (
+	AmazonAPIError,
 	create_amazon_report,
 	download_amazon_report,
 	ensure_database_connection,
+	get_region,
 	get_store,
 	wait_for_amazon_report,
 )
 
 
 DOCTYPE = "Amazon FBA Inventory Ledger Configuration"
+MASTER_DOCTYPE = "Amazon FBA Inventory Ledger Master Configuration"
 SUMMARY_DOCTYPE = "Amazon FBA Inventory Ledger Summary"
 DETAIL_DOCTYPE = "Amazon FBA Inventory Ledger Detail"
 TASK_TIMEOUT = 6 * 60 * 60
 QUOTA_RETRY_MINUTES = 35
 SUMMARY_REPORT_TYPE = "GET_LEDGER_SUMMARY_VIEW_DATA"
 DETAIL_REPORT_TYPE = "GET_LEDGER_DETAIL_VIEW_DATA"
-TIME_AGGREGATIONS = {"DAILY", "WEEKLY", "MONTHLY"}
-LOCATION_AGGREGATIONS = {"COUNTRY", "FC"}
 RECHECK_DAYS = (7, 14, 30, 90, 180)
+MARKETPLACE_COUNTRY_CODES = {
+	"ATVPDKIKX0DER": "US",
+	"A2EUQ1WTGCTBG2": "CA",
+	"A1AM78C64UM0Y8": "MX",
+	"A2Q3Y263D00KWC": "BR",
+	"A2ZV50J4W1RKNI": "CL",
+	"A28R8C7NBKEWEA": "IE",
+	"A1RKKUPIHCS9HS": "ES",
+	"A1F83G8C2ARO7P": "GB",
+	"A13V1IB3VIYZZH": "FR",
+	"AMEN7PMS3EDWL": "BE",
+	"A1805IZSGTT6HS": "NL",
+	"A1PA6795UKMFR9": "DE",
+	"APJ6JRA9NG5V4": "IT",
+	"A2NODRKZP88ZB9": "SE",
+	"AE08WJ6YKNBMC": "ZA",
+	"A1C3SOZRARQ6R3": "PL",
+	"ARBP9OOSHTCHU": "EG",
+	"A33AVAJ2PDY3EV": "TR",
+	"A17E79C6D8DWNP": "SA",
+	"A2VIGQ35RCS4UG": "AE",
+	"A21TJRUUN4KGV": "IN",
+	"A19VAU5U5O7RUS": "SG",
+	"A39IBJ37TRP1C6": "AU",
+	"A1VC38T7YXB528": "JP",
+}
+COUNTRY_CODES = {
+	"US": "US", "USA": "US", "UNITEDSTATES": "US", "UNITEDSTATESOFAMERICA": "US",
+	"CA": "CA", "CAN": "CA", "CANADA": "CA",
+	"MX": "MX", "MEX": "MX", "MEXICO": "MX",
+	"BR": "BR", "BRA": "BR", "BRAZIL": "BR", "BRASIL": "BR",
+	"CL": "CL", "CHL": "CL", "CHILE": "CL",
+	"GB": "GB", "UK": "GB", "GBR": "GB", "UNITEDKINGDOM": "GB", "GREATBRITAIN": "GB",
+	"IE": "IE", "IRL": "IE", "IRELAND": "IE",
+	"DE": "DE", "DEU": "DE", "GERMANY": "DE", "DEUTSCHLAND": "DE",
+	"FR": "FR", "FRA": "FR", "FRANCE": "FR",
+	"IT": "IT", "ITA": "IT", "ITALY": "IT", "ITALIA": "IT",
+	"ES": "ES", "ESP": "ES", "SPAIN": "ES", "ESPANA": "ES",
+	"NL": "NL", "NLD": "NL", "NETHERLANDS": "NL", "HOLLAND": "NL",
+	"BE": "BE", "BEL": "BE", "BELGIUM": "BE",
+	"SE": "SE", "SWE": "SE", "SWEDEN": "SE",
+	"PL": "PL", "POL": "PL", "POLAND": "PL",
+	"TR": "TR", "TUR": "TR", "TURKEY": "TR", "TURKIYE": "TR",
+	"SA": "SA", "SAU": "SA", "SAUDIARABIA": "SA",
+	"AE": "AE", "ARE": "AE", "UNITEDARABEMIRATES": "AE", "UAE": "AE",
+	"EG": "EG", "EGY": "EG", "EGYPT": "EG",
+	"ZA": "ZA", "ZAF": "ZA", "SOUTHAFRICA": "ZA",
+	"IN": "IN", "IND": "IN", "INDIA": "IN",
+	"JP": "JP", "JPN": "JP", "JAPAN": "JP",
+	"AU": "AU", "AUS": "AU", "AUSTRALIA": "AU",
+	"SG": "SG", "SGP": "SG", "SINGAPORE": "SG",
+}
 
 
 class AmazonFBAInventoryLedgerConfiguration(Document):
@@ -43,39 +96,33 @@ class AmazonFBAInventoryLedgerConfiguration(Document):
 		if store:
 			self.cost_center = store.cost_center
 			self.marketplace_id = store.marketplace_id
-			self.api_region = store.api_region
-		self.history_segment_days = min(max(cint(self.history_segment_days), 1), 366)
-		self.sync_interval_hours = max(cint(self.sync_interval_hours), 1)
-		self.routine_lookback_days = min(max(cint(self.routine_lookback_days), 1), 366)
-		self.snapshot_retention_days = max(cint(self.snapshot_retention_days), 0)
-		for days in RECHECK_DAYS:
-			fieldname = f"recheck_{days}_interval_days"
-			self.set(fieldname, max(cint(self.get(fieldname)), 1))
-		self.summary_time_aggregation = str(self.summary_time_aggregation or "DAILY").upper()
-		self.summary_location_aggregation = str(self.summary_location_aggregation or "COUNTRY").upper()
-		if self.summary_time_aggregation not in TIME_AGGREGATIONS:
-			frappe.throw(_("汇总时间粒度必须是每日、每周或每月。"))
-		if self.summary_location_aggregation not in LOCATION_AGGREGATIONS:
-			frappe.throw(_("汇总位置粒度必须是国家或配送中心。"))
-		if self.history_start_date and self.history_end_date:
-			start_date = getdate(self.history_start_date)
-			end_date = getdate(self.history_end_date)
-			if end_date < start_date:
-				frappe.throw(_("历史结束日期不能早于历史开始日期。"))
-			if cint(self.detail_enabled) and start_date < getdate(add_months(getdate(now_datetime()), -18)):
-				frappe.throw(_("Amazon 库存分类账明细最多只能查询最近18个月。"))
-			if cint(self.summary_enabled) and self.summary_time_aggregation == "WEEKLY":
-				if start_date.weekday() != 0 or end_date.weekday() != 6:
-					frappe.throw(_("按周汇总时，开始日期必须是周一，结束日期必须是周日。"))
-			if cint(self.summary_enabled) and self.summary_time_aggregation == "MONTHLY":
-				last_day = calendar.monthrange(end_date.year, end_date.month)[1]
-				if start_date.day != 1 or end_date.day != last_day:
-					frappe.throw(_("按月汇总时，开始日期必须是月初，结束日期必须是月末。"))
-		if cint(self.enabled) and not cint(self.summary_enabled) and not cint(self.detail_enabled):
-			frappe.throw(_("请至少启用一种库存分类账报告。"))
-		if not self.is_new() and (
-			self.has_value_changed("history_start_date") or self.has_value_changed("history_end_date")
-		):
+			self.api_region = get_region(store)
+			if cint(self.enabled) and not cint(store.enabled):
+				frappe.throw(_("启用国家配置前，请先启用关联的 Amazon 店铺。"))
+		if cint(self.enabled) and not self.master_configuration:
+			frappe.throw(_("启用国家配置前，请先选择库存分类账总配置。"))
+		if self.master_configuration:
+			master = frappe.get_doc(MASTER_DOCTYPE, self.master_configuration)
+			if cint(self.enabled) and not cint(master.enabled):
+				frappe.throw(_("当前库存分类账总配置尚未启用。"))
+			if cint(self.enabled) and store:
+				other_stores = frappe.get_all(
+					DOCTYPE,
+					filters={
+						"master_configuration": self.master_configuration,
+						"enabled": 1,
+						"name": ["!=", self.name or ""],
+					},
+					pluck="amazon_store",
+				)
+				seller_ids = {
+					str(get_store(name, require_enabled=False).seller_id or "").strip().upper()
+					for name in other_stores if name
+				}
+				seller_ids.add(str(store.seller_id or "").strip().upper())
+				if "" in seller_ids or len(seller_ids) != 1:
+					frappe.throw(_("同一个库存分类账总配置只能关联同一个 Amazon 卖家的店铺。"))
+		if not self.is_new() and self.has_value_changed("master_configuration"):
 			self.history_completed = 0
 			self.history_checkpoint = None
 			self.summary_checkpoint = None
@@ -98,25 +145,65 @@ def _update_configuration(name, **values):
 		frappe.db.commit()
 
 
-def _task_lock(name):
+def _master_configuration(name):
+	ensure_database_connection()
+	return frappe.get_doc(MASTER_DOCTYPE, name)
+
+
+def _group_lock(master_name):
+	key = hashlib.sha256(str(master_name).encode("utf-8")).hexdigest()[:24]
 	return frappe.cache().lock(
-		frappe.cache().make_key(f"fengjing:amazon-fba-ledger:{name}"),
+		frappe.cache().make_key(f"fengjing:amazon-fba-ledger-group:{key}"),
 		timeout=TASK_TIMEOUT,
 		blocking_timeout=0,
 	)
 
 
-def _enqueue(name, reset=False, recheck_days=0, routine=False):
+def _enabled_group(master_name, configuration_names=None):
+	master = _master_configuration(master_name)
+	if not cint(master.enabled):
+		frappe.throw(_("库存分类账总配置尚未启用。"))
+	filters = {"enabled": 1, "master_configuration": master.name}
+	if configuration_names:
+		filters["name"] = ["in", list(configuration_names)]
+	names = frappe.get_all(DOCTYPE, filters=filters, pluck="name", order_by="name asc")
+	configurations = [_configuration(name) for name in names]
+	if not configurations:
+		frappe.throw(_("当前总配置没有已启用的 FBA 库存分类账国家配置。"))
+	stores = [get_store(config.amazon_store) for config in configurations]
+	regions = _validate_group(master, configurations, stores)
+	return master, configurations, stores, regions
+
+
+def _validate_group(master, configurations, stores):
+	if len(configurations) != len(stores):
+		frappe.throw(_("FBA 库存分类账配置与店铺数量不一致。"))
+	sellers = {str(store.seller_id or "").strip().upper() for store in stores}
+	if "" in sellers or len(sellers) != 1:
+		frappe.throw(_("同一个总配置要求所有店铺使用同一个 Amazon 卖家编号。"))
+	marketplaces = [str(store.marketplace_id or "").strip().upper() for store in stores]
+	if len(set(marketplaces)) != len(marketplaces):
+		frappe.throw(_("同一个总配置中存在重复的 Amazon Marketplace ID。"))
+	if cint(master.summary_enabled) and str(master.summary_location_aggregation or "").upper() != "COUNTRY":
+		frappe.throw(_("多站点合并抓取要求汇总位置粒度使用“国家”。"))
+	regions = {}
+	for config, store in zip(configurations, stores):
+		regions.setdefault(get_region(store), []).append((config, store))
+	return regions
+
+
+def _enqueue_group(master_name, reset=False, recheck_days=0, routine=False):
 	recheck_days = cint(recheck_days)
-	job_suffix = f"-recheck-{recheck_days}" if recheck_days else ("-routine" if routine else "")
+	identity = hashlib.sha256(str(master_name).encode("utf-8")).hexdigest()[:16]
+	job_suffix = f"-recheck-{recheck_days}" if recheck_days else ("-routine" if routine else "-history")
 	frappe.enqueue(
-		execute_ledger_sync,
+		execute_group_ledger_sync,
 		queue="long",
 		timeout=TASK_TIMEOUT,
 		enqueue_after_commit=True,
-		job_id=f"amazon-fba-ledger-{name}{job_suffix}",
+		job_id=f"amazon-fba-ledger-group-{identity}{job_suffix}",
 		deduplicate=True,
-		configuration_name=name,
+		master_name=master_name,
 		reset=reset,
 		recheck_days=recheck_days,
 		routine=routine,
@@ -270,7 +357,8 @@ def _upsert(doctype, key_field, key, values, raw_hash):
 	return "unchanged" if current_hash == raw_hash else "updated"
 
 
-def _save_summary_rows(config, store, rows, report_id, batch_id, start, end):
+def _save_summary_rows(config, store, rows, report_id, batch_id, start, end, policy=None):
+	policy = policy or config
 	stats = {"created": 0, "updated": 0, "unchanged": 0, "rows": 0}
 	for row in rows:
 		sku = _row_value(row, "MSKU", "Seller SKU", "SKU")
@@ -293,7 +381,7 @@ def _save_summary_rows(config, store, rows, report_id, batch_id, start, end):
 				asin,
 				disposition,
 				location,
-				str(config.summary_time_aggregation or ""),
+				str(policy.summary_time_aggregation or ""),
 			)
 		)
 		transfer = _number(_row_value(row, "Warehouse Transfer In/Out", "Warehouse Transfer"))
@@ -312,8 +400,8 @@ def _save_summary_rows(config, store, rows, report_id, batch_id, start, end):
 			"period_date": period_date,
 			"report_start_date": start,
 			"report_end_date": end,
-			"time_aggregation": config.summary_time_aggregation,
-			"location_type": config.summary_location_aggregation,
+			"time_aggregation": policy.summary_time_aggregation,
+			"location_type": policy.summary_location_aggregation,
 			"location_id": location,
 			"report_id": report_id,
 			"starting_warehouse_balance": _number(_row_value(row, "Starting Warehouse Balance")),
@@ -417,89 +505,154 @@ def _save_detail_rows(config, store, rows, report_id, batch_id, start, end):
 	return stats
 
 
-def _request_report(config, store, kind, start, end, batch_id):
+def _country_code(value):
+	normalized = re.sub(r"[^A-Z]", "", str(value or "").strip().upper())
+	return COUNTRY_CODES.get(normalized)
+
+
+def _store_country_code(store):
+	return _country_code(store.country) or MARKETPLACE_COUNTRY_CODES.get(
+		str(store.marketplace_id or "").strip().upper()
+	)
+
+
+def _split_group_rows(rows, stores, kind):
+	"""按报告中的国家列拆分；无法识别的行不会写入错误国家。"""
+	by_country = {_store_country_code(store): store for store in stores if _store_country_code(store)}
+	by_store = {store.name: [] for store in stores}
+	unrouted = []
+	for row in rows:
+		aliases = ("Country", "Country Code", "Marketplace Country")
+		if kind == "summary":
+			aliases += ("Location",)
+		country_value = _row_value(row, *aliases)
+		store = by_country.get(_country_code(country_value))
+		if not store and len(stores) == 1:
+			store = stores[0]
+		if store:
+			by_store[store.name].append(row)
+		else:
+			unrouted.append(row)
+	return by_store, unrouted
+
+
+def _empty_stats():
+	return {"created": 0, "updated": 0, "unchanged": 0, "rows": 0}
+
+
+def _request_group_report(master, targets, kind, start, end, batch_id):
+	configurations = [config for config, _store in targets]
+	stores = [store for _config, store in targets]
+	primary_store = stores[0]
 	if kind == "summary":
 		report_type = SUMMARY_REPORT_TYPE
 		options = {
-			"aggregatedByTimePeriod": config.summary_time_aggregation,
-			"aggregateByLocation": config.summary_location_aggregation,
+			"aggregatedByTimePeriod": master.summary_time_aggregation,
+			"aggregateByLocation": master.summary_location_aggregation,
 		}
 	else:
 		report_type = DETAIL_REPORT_TYPE
 		options = {}
-		if str(config.detail_event_type or "").strip():
-			options["eventType"] = str(config.detail_event_type).strip()
+		if str(master.detail_event_type or "").strip():
+			options["eventType"] = str(master.detail_event_type).strip()
 	report_id = create_amazon_report(
-		store,
+		primary_store,
 		report_type,
-		marketplace_ids=[store.marketplace_id],
+		marketplace_ids=[store.marketplace_id for store in stores],
 		data_start_time=_report_datetime(start),
 		data_end_time=_report_datetime(end, end=True),
 		report_options=options,
 	)
-	_update_configuration(
-		config.name,
-		**{
-			f"{kind}_last_report_id": report_id,
-			f"{kind}_status": "Running",
-			f"{kind}_last_error": "",
-		},
-	)
-	metadata = wait_for_amazon_report(store, report_id, timeout_seconds=3600, poll_seconds=15)
+	for config in configurations:
+		_update_configuration(
+			config.name,
+			**{
+				f"{kind}_last_report_id": report_id,
+				f"{kind}_status": "Running",
+				f"{kind}_last_error": "",
+			},
+		)
+	metadata = wait_for_amazon_report(primary_store, report_id, timeout_seconds=3600, poll_seconds=15)
 	if str(metadata.get("processingStatus") or "").upper() == "CANCELLED":
-		return report_id, {"created": 0, "updated": 0, "unchanged": 0, "rows": 0, "no_data": True}
-	text, _document = download_amazon_report(store, metadata.get("reportDocumentId"))
+		return report_id, {config.name: {**_empty_stats(), "no_data": True} for config in configurations}
+	text, _document = download_amazon_report(primary_store, metadata.get("reportDocumentId"))
 	ensure_database_connection()
 	rows = _read_report_rows(text)
-	if kind == "summary":
-		stats = _save_summary_rows(config, store, rows, report_id, batch_id, start, end)
-	else:
-		stats = _save_detail_rows(config, store, rows, report_id, batch_id, start, end)
+	rows_by_store, unrouted = _split_group_rows(rows, stores, kind)
+	results = {}
+	for config, store in targets:
+		store_rows = rows_by_store.get(store.name, [])
+		if kind == "summary":
+			results[config.name] = _save_summary_rows(
+				config, store, store_rows, report_id, batch_id, start, end, policy=master
+			)
+		else:
+			results[config.name] = _save_detail_rows(
+				config, store, store_rows, report_id, batch_id, start, end
+			)
+	if unrouted:
+		results["unrouted_rows"] = len(unrouted)
+		frappe.logger("amazon_fba_inventory_ledger", allow_site=True).warning(
+			"Grouped FBA ledger report left rows unrouted: report_id=%s kind=%s rows=%s",
+			report_id,
+			kind,
+			len(unrouted),
+		)
 	frappe.db.commit()
-	return report_id, stats
+	return report_id, results
 
 
-def _process_kind(config, store, kind, start, end, batch_id, force_start=False):
+def _process_group_kind(master, targets, kind, start, end, batch_id, force_start=False):
 	checkpoint_field = f"{kind}_checkpoint"
 	last_sync_field = f"{kind}_last_sync_at"
 	status_field = f"{kind}_status"
 	error_field = f"{kind}_last_error"
-	cursor = start if force_start else (
-		getdate(config.get(checkpoint_field)) if config.get(checkpoint_field) else start
-	)
+	checkpoint_values = [config.get(checkpoint_field) for config, _store in targets]
+	checkpoints = [getdate(value) for value in checkpoint_values if value]
+	cursor = start if force_start or len(checkpoints) != len(targets) else min(checkpoints)
 	cursor = max(cursor, start)
-	result = {"created": 0, "updated": 0, "unchanged": 0, "rows": 0, "reports": 0}
-	_update_configuration(config.name, **{status_field: "Running", error_field: ""})
+	result = {config.name: {**_empty_stats(), "reports": 0} for config, _store in targets}
+	unrouted_rows = 0
+	for config, _store in targets:
+		_update_configuration(config.name, **{status_field: "Running", error_field: ""})
 	while cursor <= end:
 		if force_start:
-			# 7～180天核对直接请求完整范围，避免按历史分段连续创建大量报告。
 			segment_end = end
-		elif kind == "summary" and config.summary_time_aggregation == "WEEKLY":
+		elif kind == "summary" and master.summary_time_aggregation == "WEEKLY":
 			segment_end = min(end, cursor + timedelta(days=6))
-		elif kind == "summary" and config.summary_time_aggregation == "MONTHLY":
+		elif kind == "summary" and master.summary_time_aggregation == "MONTHLY":
 			month_end = date(cursor.year, cursor.month, calendar.monthrange(cursor.year, cursor.month)[1])
 			segment_end = min(end, month_end)
 		else:
-			segment_end = min(end, cursor + timedelta(days=max(cint(config.history_segment_days), 1) - 1))
-		_report_id, stats = _request_report(config, store, kind, cursor, segment_end, batch_id)
-		for key in ("created", "updated", "unchanged", "rows"):
-			result[key] += cint(stats.get(key))
-		result["reports"] += 1
+			segment_end = min(
+				end,
+				cursor + timedelta(days=max(cint(master.history_segment_days), 1) - 1),
+			)
+		_report_id, report_results = _request_group_report(
+			master, targets, kind, cursor, segment_end, batch_id
+		)
+		unrouted_rows += cint(report_results.get("unrouted_rows"))
+		for config, _store in targets:
+			stats = report_results.get(config.name, _empty_stats())
+			for key in ("created", "updated", "unchanged", "rows"):
+				result[config.name][key] += cint(stats.get(key))
+			result[config.name]["reports"] += 1
 		cursor = segment_end + timedelta(days=1)
-		values = {
-			last_sync_field: now_datetime(),
-			status_field: "Completed" if cursor > end else "Running",
-			error_field: "",
-		}
-		# 最近天数核对只更新数据，不推进历史同步断点。
-		if not force_start:
-			values[checkpoint_field] = cursor
-		_update_configuration(config.name, **values)
+		for config, _store in targets:
+			values = {
+				last_sync_field: now_datetime(),
+				status_field: "Completed" if cursor > end else "Running",
+				error_field: "",
+			}
+			if not force_start:
+				values[checkpoint_field] = cursor
+			_update_configuration(config.name, **values)
+	result["unrouted_rows"] = unrouted_rows
 	return result
 
 
-def _delete_expired_records(config, store):
-	days = cint(config.snapshot_retention_days)
+def _delete_expired_records(policy, store):
+	days = cint(policy.snapshot_retention_days)
 	if days <= 0:
 		return 0
 	cutoff = add_days(getdate(now_datetime()), -days)
@@ -521,54 +674,74 @@ def _delete_expired_records(config, store):
 
 @frappe.whitelist()
 def start_ledger_sync(name):
+	"""兼容旧入口；国家配置按钮统一转到其所属总配置。"""
 	config = _configuration(name)
 	config.check_permission("write")
-	if not cint(config.enabled):
-		frappe.throw(_("请先启用 FBA 库存分类账同步。"))
-	if cint(config.summary_enabled):
-		_effective_range(config, "summary")
-	if cint(config.detail_enabled):
-		_effective_range(config, "detail")
-	get_store(config.amazon_store)
-	values = {
-		"current_status": "Waiting",
-		"last_error": "",
-		"history_completed": 0,
-		"history_checkpoint": None,
-	}
-	if cint(config.summary_enabled):
-		values.update({"summary_checkpoint": None, "summary_status": "Waiting", "summary_last_error": ""})
-	if cint(config.detail_enabled):
-		values.update({"detail_checkpoint": None, "detail_status": "Waiting", "detail_last_error": ""})
-	_update_configuration(name, **values)
-	_enqueue(name, reset=True)
-	return {"status": "queued", "message": _("FBA 库存分类账历史同步已进入后台队列。")}
+	if not config.master_configuration:
+		frappe.throw(_("请先为国家配置选择库存分类账总配置。"))
+	return start_group_ledger_sync(config.master_configuration, action="history")
 
 
 @frappe.whitelist()
 def start_recheck_sync(name, days):
+	"""兼容旧入口；核对任务统一由总配置调度。"""
 	config = _configuration(name)
 	config.check_permission("write")
+	if not config.master_configuration:
+		frappe.throw(_("请先为国家配置选择库存分类账总配置。"))
+	return start_group_ledger_sync(config.master_configuration, action="recheck", days=days)
+
+
+@frappe.whitelist()
+def start_group_ledger_sync(master_name, action="history", days=0):
+	"""按总配置启动任务；同一区域的多个站点只提交一组 Amazon 报告。"""
+	master, configurations, stores, regions = _enabled_group(master_name)
+	master.check_permission("write")
+	for config in configurations:
+		config.check_permission("write")
+	action = str(action or "history").strip().lower()
 	days = cint(days)
-	if days not in RECHECK_DAYS:
+	if action not in {"history", "recheck"}:
+		frappe.throw(_("不支持的公共分类账操作。"))
+	if action == "recheck" and days not in RECHECK_DAYS:
 		frappe.throw(_("不支持的核对周期。"))
-	if not cint(config.enabled):
-		frappe.throw(_("请先启用 FBA 库存分类账同步。"))
-	if cint(config.summary_enabled):
-		_recent_recheck_range(config, "summary", days)
-	if cint(config.detail_enabled):
-		_recent_recheck_range(config, "detail", days)
-	get_store(config.amazon_store)
-	values = {"current_status": "Waiting", "last_error": ""}
-	if cint(config.summary_enabled):
-		values.update({"summary_status": "Waiting", "summary_last_error": ""})
-	if cint(config.detail_enabled):
-		values.update({"detail_status": "Waiting", "detail_last_error": ""})
-	_update_configuration(name, **values)
-	_enqueue(name, recheck_days=days)
+	if cint(master.summary_enabled):
+		(_recent_recheck_range(master, "summary", days) if action == "recheck" else _effective_range(master, "summary"))
+	if cint(master.detail_enabled):
+		(_recent_recheck_range(master, "detail", days) if action == "recheck" else _effective_range(master, "detail"))
+
+	for config in configurations:
+		values = {"current_status": "Waiting", "last_error": ""}
+		if action == "history":
+			values.update({"history_completed": 0, "history_checkpoint": None})
+		if cint(master.summary_enabled):
+			values.update({"summary_status": "Waiting", "summary_last_error": ""})
+			if action == "history":
+				values["summary_checkpoint"] = None
+		if cint(master.detail_enabled):
+			values.update({"detail_status": "Waiting", "detail_last_error": ""})
+			if action == "history":
+				values["detail_checkpoint"] = None
+		_update_configuration(config.name, **values)
+	_enqueue_group(
+		master.name,
+		reset=action == "history",
+		recheck_days=days if action == "recheck" else 0,
+	)
+	if action == "recheck":
+		message = _("FBA 库存分类账最近{0}天核对已进入后台队列；{1}个站点将按{2}个API区域合并请求。").format(
+			days, len(stores), len(regions)
+		)
+	else:
+		message = _("FBA 库存分类账历史同步已进入后台队列；{0}个站点将按{1}个API区域合并请求。").format(
+			len(stores), len(regions)
+		)
 	return {
 		"status": "queued",
-		"message": _("FBA 库存分类账最近{0}天核对已进入后台队列。").format(days),
+		"master_name": master.name,
+		"marketplaces": len(stores),
+		"regions": len(regions),
+		"message": message,
 	}
 
 
@@ -586,137 +759,177 @@ def _first_recheck(now):
 
 def _is_quota_exceeded(exc):
 	message = str(exc or "").lower()
-	return "http 429" in message or "quotaexceeded" in message
+	return (
+		isinstance(exc, AmazonAPIError) and exc.status_code == 429
+	) or "http 429" in message or "quotaexceeded" in message
 
 
-def execute_ledger_sync(configuration_name, reset=False, recheck_days=0, routine=False):
-	lock = _task_lock(configuration_name)
+def _quota_retry_at(exc):
+	retry_after = max(cint(getattr(exc, "retry_after_seconds", 0)), QUOTA_RETRY_MINUTES * 60)
+	return now_datetime() + timedelta(seconds=retry_after)
+
+
+def execute_group_ledger_sync(master_name, reset=False, recheck_days=0, routine=False):
+	master, configurations, stores, regions = _enabled_group(master_name)
+	lock = _group_lock(master.name)
 	if not lock.acquire(blocking=False):
-		return {"status": "busy", "message": "FBA inventory ledger configuration is already running"}
+		return {"status": "busy", "message": "FBA inventory ledger master task is already running"}
 	started_at = now_datetime()
 	active_kind = None
+	active_region = None
 	try:
-		_update_configuration(
-			configuration_name,
-			current_status="Running",
-			last_sync_at=started_at,
-			last_error="",
-		)
-		config = _configuration(configuration_name)
-		store = get_store(config.amazon_store)
+		for config in configurations:
+			_update_configuration(config.name, current_status="Running", last_sync_at=started_at, last_error="")
 		if reset:
-			reset_values = {"history_completed": 0, "history_checkpoint": None}
-			if cint(config.summary_enabled):
-				reset_values["summary_checkpoint"] = None
-			if cint(config.detail_enabled):
-				reset_values["detail_checkpoint"] = None
-			_update_configuration(configuration_name, **reset_values)
-			config = _configuration(configuration_name)
-		batch_id = f"ledger-{frappe.generate_hash(length=12)}"
+			for config in configurations:
+				values = {"history_completed": 0, "history_checkpoint": None}
+				if cint(master.summary_enabled):
+					values["summary_checkpoint"] = None
+				if cint(master.detail_enabled):
+					values["detail_checkpoint"] = None
+				_update_configuration(config.name, **values)
+			master, configurations, stores, regions = _enabled_group(master.name)
+
+		batch_id = f"ledger-master-{frappe.generate_hash(length=12)}"
 		recheck_days = cint(recheck_days)
 		routine = bool(routine)
 		mode = "recheck" if recheck_days else ("routine" if routine else "history")
-		summary = {"batch_id": batch_id, "mode": mode}
-		if recheck_days:
-			summary["recheck_days"] = recheck_days
-		elif routine:
-			summary["routine_lookback_days"] = max(cint(config.routine_lookback_days), 1)
-		completed_ends = []
-		if cint(config.summary_enabled):
-			active_kind = "summary"
-			if recheck_days:
-				start, end = _recent_recheck_range(config, "summary", recheck_days)
-			elif routine:
-				start, end = _routine_recheck_range(config, "summary")
-			else:
-				start, end = _effective_range(config, "summary")
-			summary["summary_range"] = {"start": str(start), "end": str(end)}
-			summary["summary"] = _process_kind(
-				config, store, "summary", start, end, batch_id, force_start=bool(recheck_days or routine)
-			)
-			completed_ends.append(end)
-			config = _configuration(configuration_name)
-		if cint(config.detail_enabled):
-			active_kind = "detail"
-			if recheck_days:
-				start, end = _recent_recheck_range(config, "detail", recheck_days)
-			elif routine:
-				start, end = _routine_recheck_range(config, "detail")
-			else:
-				start, end = _effective_range(config, "detail")
-			summary["detail_range"] = {"start": str(start), "end": str(end)}
-			summary["detail"] = _process_kind(
-				config, store, "detail", start, end, batch_id, force_start=bool(recheck_days or routine)
-			)
-			completed_ends.append(end)
-			config = _configuration(configuration_name)
-		summary["expired_deleted"] = _delete_expired_records(config, store)
-		finished_at = now_datetime()
-		values = {
-			"current_status": "Completed",
-			"last_success_at": finished_at,
-			"last_sync_result": json.dumps(summary, ensure_ascii=False, default=str),
-			"last_error": "",
+		group_summary = {
+			"batch_id": batch_id,
+			"mode": mode,
+			"master_configuration": master.name,
+			"configurations": [config.name for config in configurations],
+			"regions": {},
 		}
 		if recheck_days:
-			values.update(
-				{
+			group_summary["recheck_days"] = recheck_days
+		elif routine:
+			group_summary["routine_lookback_days"] = max(cint(master.routine_lookback_days), 1)
+
+		completed_ends = []
+		for region_name, targets in sorted(regions.items()):
+			active_region = region_name
+			region_summary = {
+				"marketplace_ids": [store.marketplace_id for _config, store in targets],
+				"configurations": [config.name for config, _store in targets],
+			}
+			for kind, enabled_field in (("summary", "summary_enabled"), ("detail", "detail_enabled")):
+				if not cint(master.get(enabled_field)):
+					continue
+				active_kind = kind
+				if recheck_days:
+					start, end = _recent_recheck_range(master, kind, recheck_days)
+				elif routine:
+					start, end = _routine_recheck_range(master, kind)
+				else:
+					start, end = _effective_range(master, kind)
+				region_summary[f"{kind}_range"] = {"start": str(start), "end": str(end)}
+				region_summary[kind] = _process_group_kind(
+					master,
+					targets,
+					kind,
+					start,
+					end,
+					batch_id,
+					force_start=bool(recheck_days or routine),
+				)
+				completed_ends.append(end)
+			group_summary["regions"][region_name] = region_summary
+
+		finished_at = now_datetime()
+		region_by_configuration = {
+			config.name: region_name
+			for region_name, targets in regions.items()
+			for config, _store in targets
+		}
+		for config, store in zip(configurations, stores):
+			region_name = region_by_configuration.get(config.name)
+			region_summary = group_summary["regions"].get(region_name, {})
+			country_summary = {
+				"batch_id": batch_id,
+				"mode": mode,
+				"master_configuration": master.name,
+				"api_region": region_name,
+				"marketplace_id": store.marketplace_id,
+			}
+			if recheck_days:
+				country_summary["recheck_days"] = recheck_days
+			elif routine:
+				country_summary["routine_lookback_days"] = max(cint(master.routine_lookback_days), 1)
+			for kind in ("summary", "detail"):
+				if f"{kind}_range" in region_summary:
+					country_summary[f"{kind}_range"] = region_summary[f"{kind}_range"]
+				kind_result = region_summary.get(kind)
+				if isinstance(kind_result, dict):
+					country_summary[kind] = kind_result.get(config.name, _empty_stats())
+			country_summary["expired_deleted"] = _delete_expired_records(master, store)
+			values = {
+				"current_status": "Completed",
+				"last_success_at": finished_at,
+				"last_sync_result": json.dumps(country_summary, ensure_ascii=False, default=str),
+				"last_error": "",
+			}
+			if recheck_days:
+				values.update({
 					f"recheck_{recheck_days}_last_at": finished_at,
 					f"recheck_{recheck_days}_next_at": _next_recheck(
-						finished_at, config.get(f"recheck_{recheck_days}_interval_days")
+						finished_at, master.get(f"recheck_{recheck_days}_interval_days")
 					),
-				}
-			)
-		elif routine:
-			values["next_sync_at"] = finished_at + timedelta(
-				hours=max(cint(config.sync_interval_hours), 1)
-			)
-		else:
-			values.update(
-				{
+				})
+			elif routine:
+				values["next_sync_at"] = finished_at + timedelta(
+					hours=max(cint(master.sync_interval_hours), 1)
+				)
+			else:
+				values.update({
 					"history_completed": 1,
 					"history_checkpoint": max(completed_ends),
-					"next_sync_at": finished_at
-					+ timedelta(hours=max(cint(config.sync_interval_hours), 1)),
-				}
-			)
-		_update_configuration(configuration_name, **values)
-		return {"status": "success", "summary": summary}
+					"next_sync_at": finished_at + timedelta(
+						hours=max(cint(master.sync_interval_hours), 1)
+					),
+				})
+			_update_configuration(config.name, **values)
+		return {"status": "success", "summary": group_summary}
 	except Exception as exc:
 		message = str(exc)
 		if _is_quota_exceeded(exc):
-			retry_at = now_datetime() + timedelta(minutes=QUOTA_RETRY_MINUTES)
+			retry_at = _quota_retry_at(exc)
 			waiting_message = _(
-				"Amazon FBA 报告生成频率已达到限制，任务将在 {0} 自动续跑。"
+				"Amazon FBA 报告生成频率已达到限制，总配置任务将在 {0} 自动续跑。"
 			).format(retry_at)
-			values = {
-				"current_status": "Waiting",
-				"next_sync_at": retry_at,
-				"last_error": "",
-				"last_sync_result": waiting_message,
-			}
-			if recheck_days:
-				values[f"recheck_{recheck_days}_next_at"] = retry_at
-			if active_kind:
-				values.update({f"{active_kind}_status": "Waiting", f"{active_kind}_last_error": ""})
-			_update_configuration(configuration_name, **values)
+			for config in configurations:
+				values = {
+					"current_status": "Waiting",
+					"next_sync_at": retry_at,
+					"last_error": "",
+					"last_sync_result": waiting_message,
+				}
+				if recheck_days:
+					values[f"recheck_{recheck_days}_next_at"] = retry_at
+				if active_kind:
+					values.update({f"{active_kind}_status": "Waiting", f"{active_kind}_last_error": ""})
+				_update_configuration(config.name, **values)
 			frappe.logger("amazon_fba_inventory_ledger", allow_site=True).warning(
-				"FBA inventory ledger quota reached; scheduled to resume: configuration=%s retry_at=%s",
-				configuration_name,
+				"FBA ledger master quota reached: master=%s region=%s retry_at=%s",
+				master.name,
+				active_region,
 				retry_at,
 			)
 			return {"status": "waiting", "retry_at": retry_at, "message": waiting_message}
-		values = {
-			"current_status": "Failed",
-			"next_sync_at": now_datetime() + timedelta(minutes=30),
-			"last_error": message[:2000],
-			"last_sync_result": f"Failed: {message[:1800]}",
-		}
-		if active_kind:
-			values.update({f"{active_kind}_status": "Failed", f"{active_kind}_last_error": message[:2000]})
-		_update_configuration(configuration_name, **values)
+		for config in configurations:
+			values = {
+				"current_status": "Failed",
+				"next_sync_at": now_datetime() + timedelta(minutes=30),
+				"last_error": message[:2000],
+				"last_sync_result": f"Failed: {message[:1800]}",
+			}
+			if active_kind:
+				values.update({f"{active_kind}_status": "Failed", f"{active_kind}_last_error": message[:2000]})
+			_update_configuration(config.name, **values)
 		frappe.logger("amazon_fba_inventory_ledger", allow_site=True).exception(
-			"FBA inventory ledger sync failed: configuration=%s", configuration_name
+			"FBA inventory ledger master sync failed: master=%s region=%s",
+			master.name,
+			active_region,
 		)
 		raise
 	finally:
@@ -726,52 +939,82 @@ def execute_ledger_sync(configuration_name, reset=False, recheck_days=0, routine
 			pass
 
 
+def execute_ledger_sync(configuration_name, reset=False, recheck_days=0, routine=False):
+	"""兼容升级前已经进入队列的单国家任务。"""
+	config = _configuration(configuration_name)
+	if not config.master_configuration:
+		frappe.throw(_("国家配置尚未关联库存分类账总配置。"))
+	return execute_group_ledger_sync(
+		config.master_configuration,
+		reset=reset,
+		recheck_days=recheck_days,
+		routine=routine,
+	)
+
+
+def _run_scheduled_master(master_name, now):
+	master, configurations, _stores, _regions = _enabled_group(master_name)
+	active = False
+	for config in configurations:
+		if config.current_status != "Running" or not config.last_sync_at:
+			continue
+		if (now - get_datetime(config.last_sync_at)).total_seconds() <= TASK_TIMEOUT:
+			active = True
+		else:
+			_update_configuration(
+				config.name,
+				current_status="Failed",
+				last_error="上一次总配置任务超时，已由调度器释放。",
+			)
+	if active:
+		return
+
+	master, configurations, _stores, _regions = _enabled_group(master_name)
+	all_history_completed = all(cint(config.history_completed) for config in configurations)
+	if all_history_completed:
+		initialized_any = False
+		for config in configurations:
+			initialized = {}
+			for days in RECHECK_DAYS:
+				if cint(master.get(f"enable_recheck_{days}")) and not config.get(f"recheck_{days}_next_at"):
+					initialized[f"recheck_{days}_next_at"] = _first_recheck(now)
+			if initialized:
+				initialized_any = True
+				_update_configuration(config.name, **initialized)
+		if initialized_any:
+			return
+		for days in RECHECK_DAYS:
+			if not cint(master.get(f"enable_recheck_{days}")):
+				continue
+			due = any(
+				config.get(f"recheck_{days}_next_at")
+				and get_datetime(config.get(f"recheck_{days}_next_at")) <= now
+				for config in configurations
+			)
+			if due:
+				_enqueue_group(master.name, recheck_days=days)
+				return
+
+	future_times = [get_datetime(config.next_sync_at) for config in configurations if config.next_sync_at]
+	if len(future_times) == len(configurations) and min(future_times) > now:
+		return
+	for config in configurations:
+		values = {"current_status": "Waiting"}
+		if cint(master.summary_enabled):
+			values["summary_status"] = "Waiting"
+		if cint(master.detail_enabled):
+			values["detail_status"] = "Waiting"
+		_update_configuration(config.name, **values)
+	_enqueue_group(master.name, routine=all_history_completed)
+
+
 def run_scheduled_ledger_sync():
 	now = now_datetime()
-	for name in frappe.get_all(DOCTYPE, filters={"enabled": 1}, pluck="name"):
+	master_names = frappe.get_all(MASTER_DOCTYPE, filters={"enabled": 1}, pluck="name", order_by="name asc")
+	for master_name in master_names:
 		try:
-			config = _configuration(name)
-			get_store(config.amazon_store)
-			if config.current_status == "Running" and config.last_sync_at:
-				if (now - get_datetime(config.last_sync_at)).total_seconds() <= TASK_TIMEOUT:
-					continue
-				_update_configuration(name, current_status="Failed", last_error="上一次任务超时，已由调度器释放。")
-				config = _configuration(name)
-			if cint(config.history_completed):
-				initialized = {}
-				for days in RECHECK_DAYS:
-					if cint(config.get(f"enable_recheck_{days}")) and not config.get(
-						f"recheck_{days}_next_at"
-					):
-						initialized[f"recheck_{days}_next_at"] = _first_recheck(now)
-				if initialized:
-					_update_configuration(name, **initialized)
-					continue
-				queued_recheck = False
-				for days in RECHECK_DAYS:
-					if not cint(config.get(f"enable_recheck_{days}")):
-						continue
-					next_at = config.get(f"recheck_{days}_next_at")
-					if next_at and get_datetime(next_at) <= now:
-						_enqueue(name, recheck_days=days)
-						queued_recheck = True
-						break
-				if queued_recheck:
-					continue
-			if config.next_sync_at and get_datetime(config.next_sync_at) > now:
-				continue
-			# 历史完成后，日常任务只核对独立配置的最近完整天数。
-			if cint(config.history_completed):
-				values = {"current_status": "Waiting"}
-				if cint(config.summary_enabled):
-					values["summary_status"] = "Waiting"
-				if cint(config.detail_enabled):
-					values["detail_status"] = "Waiting"
-				_update_configuration(name, **values)
-				_enqueue(name, routine=True)
-			else:
-				_enqueue(name)
+			_run_scheduled_master(master_name, now)
 		except Exception:
 			frappe.logger("amazon_fba_inventory_ledger", allow_site=True).exception(
-				"FBA inventory ledger scheduler failed: configuration=%s", name
+				"FBA inventory ledger master scheduler failed: master=%s", master_name
 			)
