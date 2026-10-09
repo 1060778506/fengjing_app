@@ -46,6 +46,7 @@ class AmazonFBAInventoryLedgerConfiguration(Document):
 			self.api_region = store.api_region
 		self.history_segment_days = min(max(cint(self.history_segment_days), 1), 366)
 		self.sync_interval_hours = max(cint(self.sync_interval_hours), 1)
+		self.routine_lookback_days = min(max(cint(self.routine_lookback_days), 1), 366)
 		self.snapshot_retention_days = max(cint(self.snapshot_retention_days), 0)
 		for days in RECHECK_DAYS:
 			fieldname = f"recheck_{days}_interval_days"
@@ -75,6 +76,7 @@ class AmazonFBAInventoryLedgerConfiguration(Document):
 		if not self.is_new() and (
 			self.has_value_changed("history_start_date") or self.has_value_changed("history_end_date")
 		):
+			self.history_completed = 0
 			self.history_checkpoint = None
 			self.summary_checkpoint = None
 			self.detail_checkpoint = None
@@ -104,9 +106,9 @@ def _task_lock(name):
 	)
 
 
-def _enqueue(name, reset=False, recheck_days=0):
+def _enqueue(name, reset=False, recheck_days=0, routine=False):
 	recheck_days = cint(recheck_days)
-	job_suffix = f"-recheck-{recheck_days}" if recheck_days else ""
+	job_suffix = f"-recheck-{recheck_days}" if recheck_days else ("-routine" if routine else "")
 	frappe.enqueue(
 		execute_ledger_sync,
 		queue="long",
@@ -117,6 +119,7 @@ def _enqueue(name, reset=False, recheck_days=0):
 		configuration_name=name,
 		reset=reset,
 		recheck_days=recheck_days,
+		routine=routine,
 	)
 
 
@@ -152,11 +155,11 @@ def _effective_range(config, kind):
 	return start, end
 
 
-def _recent_recheck_range(config, kind, days):
-	"""按最近天数生成核对范围；周、月汇总自动对齐完整周期。"""
+def _lookback_range(config, kind, days):
+	"""按最近完整天数生成范围；周、月汇总自动对齐完整周期。"""
 	days = cint(days)
-	if days not in RECHECK_DAYS:
-		frappe.throw(_("不支持的核对周期。"))
+	if days < 1:
+		frappe.throw(_("回看天数必须大于0。"))
 	end = getdate(now_datetime()) - timedelta(days=1)
 	start = end - timedelta(days=days - 1)
 	if kind == "summary" and config.summary_time_aggregation == "WEEKLY":
@@ -171,6 +174,19 @@ def _recent_recheck_range(config, kind, days):
 		label = _("汇总报告") if kind == "summary" else _("明细报告")
 		frappe.throw(_("{0}目前没有已经完整结束的可核对日期范围。").format(label))
 	return start, end
+
+
+def _recent_recheck_range(config, kind, days):
+	"""按7～180天按钮生成核对范围。"""
+	days = cint(days)
+	if days not in RECHECK_DAYS:
+		frappe.throw(_("不支持的核对周期。"))
+	return _lookback_range(config, kind, days)
+
+
+def _routine_recheck_range(config, kind):
+	"""日常复核独立使用回看天数，不复用历史分段天数。"""
+	return _lookback_range(config, kind, max(cint(config.routine_lookback_days), 1))
 
 
 def _normalise_header(value):
@@ -514,7 +530,12 @@ def start_ledger_sync(name):
 	if cint(config.detail_enabled):
 		_effective_range(config, "detail")
 	get_store(config.amazon_store)
-	values = {"current_status": "Waiting", "last_error": "", "history_checkpoint": None}
+	values = {
+		"current_status": "Waiting",
+		"last_error": "",
+		"history_completed": 0,
+		"history_checkpoint": None,
+	}
 	if cint(config.summary_enabled):
 		values.update({"summary_checkpoint": None, "summary_status": "Waiting", "summary_last_error": ""})
 	if cint(config.detail_enabled):
@@ -568,7 +589,7 @@ def _is_quota_exceeded(exc):
 	return "http 429" in message or "quotaexceeded" in message
 
 
-def execute_ledger_sync(configuration_name, reset=False, recheck_days=0):
+def execute_ledger_sync(configuration_name, reset=False, recheck_days=0, routine=False):
 	lock = _task_lock(configuration_name)
 	if not lock.acquire(blocking=False):
 		return {"status": "busy", "message": "FBA inventory ledger configuration is already running"}
@@ -584,7 +605,7 @@ def execute_ledger_sync(configuration_name, reset=False, recheck_days=0):
 		config = _configuration(configuration_name)
 		store = get_store(config.amazon_store)
 		if reset:
-			reset_values = {"history_checkpoint": None}
+			reset_values = {"history_completed": 0, "history_checkpoint": None}
 			if cint(config.summary_enabled):
 				reset_values["summary_checkpoint"] = None
 			if cint(config.detail_enabled):
@@ -593,33 +614,39 @@ def execute_ledger_sync(configuration_name, reset=False, recheck_days=0):
 			config = _configuration(configuration_name)
 		batch_id = f"ledger-{frappe.generate_hash(length=12)}"
 		recheck_days = cint(recheck_days)
-		summary = {"batch_id": batch_id, "mode": "recheck" if recheck_days else "history"}
+		routine = bool(routine)
+		mode = "recheck" if recheck_days else ("routine" if routine else "history")
+		summary = {"batch_id": batch_id, "mode": mode}
 		if recheck_days:
 			summary["recheck_days"] = recheck_days
+		elif routine:
+			summary["routine_lookback_days"] = max(cint(config.routine_lookback_days), 1)
 		completed_ends = []
 		if cint(config.summary_enabled):
 			active_kind = "summary"
-			start, end = (
-				_recent_recheck_range(config, "summary", recheck_days)
-				if recheck_days
-				else _effective_range(config, "summary")
-			)
+			if recheck_days:
+				start, end = _recent_recheck_range(config, "summary", recheck_days)
+			elif routine:
+				start, end = _routine_recheck_range(config, "summary")
+			else:
+				start, end = _effective_range(config, "summary")
 			summary["summary_range"] = {"start": str(start), "end": str(end)}
 			summary["summary"] = _process_kind(
-				config, store, "summary", start, end, batch_id, force_start=bool(recheck_days)
+				config, store, "summary", start, end, batch_id, force_start=bool(recheck_days or routine)
 			)
 			completed_ends.append(end)
 			config = _configuration(configuration_name)
 		if cint(config.detail_enabled):
 			active_kind = "detail"
-			start, end = (
-				_recent_recheck_range(config, "detail", recheck_days)
-				if recheck_days
-				else _effective_range(config, "detail")
-			)
+			if recheck_days:
+				start, end = _recent_recheck_range(config, "detail", recheck_days)
+			elif routine:
+				start, end = _routine_recheck_range(config, "detail")
+			else:
+				start, end = _effective_range(config, "detail")
 			summary["detail_range"] = {"start": str(start), "end": str(end)}
 			summary["detail"] = _process_kind(
-				config, store, "detail", start, end, batch_id, force_start=bool(recheck_days)
+				config, store, "detail", start, end, batch_id, force_start=bool(recheck_days or routine)
 			)
 			completed_ends.append(end)
 			config = _configuration(configuration_name)
@@ -640,9 +667,14 @@ def execute_ledger_sync(configuration_name, reset=False, recheck_days=0):
 					),
 				}
 			)
+		elif routine:
+			values["next_sync_at"] = finished_at + timedelta(
+				hours=max(cint(config.sync_interval_hours), 1)
+			)
 		else:
 			values.update(
 				{
+					"history_completed": 1,
 					"history_checkpoint": max(completed_ends),
 					"next_sync_at": finished_at
 					+ timedelta(hours=max(cint(config.sync_interval_hours), 1)),
@@ -705,56 +737,40 @@ def run_scheduled_ledger_sync():
 					continue
 				_update_configuration(name, current_status="Failed", last_error="上一次任务超时，已由调度器释放。")
 				config = _configuration(name)
-			initialized = {}
-			for days in RECHECK_DAYS:
-				if cint(config.get(f"enable_recheck_{days}")) and not config.get(
-					f"recheck_{days}_next_at"
-				):
-					initialized[f"recheck_{days}_next_at"] = _first_recheck(now)
-			if initialized:
-				_update_configuration(name, **initialized)
-				continue
-			queued_recheck = False
-			for days in RECHECK_DAYS:
-				if not cint(config.get(f"enable_recheck_{days}")):
+			if cint(config.history_completed):
+				initialized = {}
+				for days in RECHECK_DAYS:
+					if cint(config.get(f"enable_recheck_{days}")) and not config.get(
+						f"recheck_{days}_next_at"
+					):
+						initialized[f"recheck_{days}_next_at"] = _first_recheck(now)
+				if initialized:
+					_update_configuration(name, **initialized)
 					continue
-				next_at = config.get(f"recheck_{days}_next_at")
-				if next_at and get_datetime(next_at) <= now:
-					_enqueue(name, recheck_days=days)
-					queued_recheck = True
-					break
-			if queued_recheck:
-				continue
+				queued_recheck = False
+				for days in RECHECK_DAYS:
+					if not cint(config.get(f"enable_recheck_{days}")):
+						continue
+					next_at = config.get(f"recheck_{days}_next_at")
+					if next_at and get_datetime(next_at) <= now:
+						_enqueue(name, recheck_days=days)
+						queued_recheck = True
+						break
+				if queued_recheck:
+					continue
 			if config.next_sync_at and get_datetime(config.next_sync_at) > now:
 				continue
-			# 历史已完成时只重新核对最近一个分段，避免每次重跑全部历史。
-			if config.current_status == "Completed":
-				starts = []
+			# 历史完成后，日常任务只核对独立配置的最近完整天数。
+			if cint(config.history_completed):
 				values = {"current_status": "Waiting"}
 				if cint(config.summary_enabled):
-					summary_range_start, summary_end = _effective_range(config, "summary")
-					if config.summary_time_aggregation == "WEEKLY":
-						summary_start = max(summary_range_start, summary_end - timedelta(days=6))
-					elif config.summary_time_aggregation == "MONTHLY":
-						summary_start = max(summary_range_start, summary_end.replace(day=1))
-					else:
-						summary_start = max(
-							summary_range_start,
-							summary_end - timedelta(days=max(cint(config.history_segment_days), 1) - 1),
-						)
-					starts.append(summary_start)
-					values.update({"summary_checkpoint": summary_start, "summary_status": "Waiting"})
+					values["summary_status"] = "Waiting"
 				if cint(config.detail_enabled):
-					detail_range_start, detail_end = _effective_range(config, "detail")
-					detail_start = max(
-						detail_range_start,
-						detail_end - timedelta(days=max(cint(config.history_segment_days), 1) - 1),
-					)
-					starts.append(detail_start)
-					values.update({"detail_checkpoint": detail_start, "detail_status": "Waiting"})
-				values["history_checkpoint"] = min(starts)
+					values["detail_status"] = "Waiting"
 				_update_configuration(name, **values)
-			_enqueue(name)
+				_enqueue(name, routine=True)
+			else:
+				_enqueue(name)
 		except Exception:
 			frappe.logger("amazon_fba_inventory_ledger", allow_site=True).exception(
 				"FBA inventory ledger scheduler failed: configuration=%s", name

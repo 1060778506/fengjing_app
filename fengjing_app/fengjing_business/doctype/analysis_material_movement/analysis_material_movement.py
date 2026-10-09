@@ -136,17 +136,23 @@ def validate_product_bundle_movement(doc, method=None):
 	if doc.get("purpose") and doc.purpose != "Material Transfer":
 		frappe.throw(_("“套件物料解析”只能用于“物料转移”类型的库存凭证。"))
 
-	expected_rows = _expand_bundle_rows(bundle_rows)
+	# 从物料需求创建物料移动时，同一套件可能属于多个 Temu 包裹。
+	# 这些明细必须继续按包裹分行，不能仅按物料编码合并。
+	expected_rows = _expand_bundle_rows(bundle_rows, preserve_package=True)
 	generated_rows = [row for row in (doc.get("items") or []) if cint(row.get("custom_是否程序生成"))]
 
 	if not generated_rows:
 		frappe.throw(_("已填写套件物料解析，请先点击“解析套件”生成物料明细。"))
 
 	def row_key(row):
-		return (row.get("item_code") or "", flt(row.get("qty"), 6))
+		return (
+			(row.get("temu_package_no") or row.get("custom_temu包裹号") or "").strip(),
+			row.get("item_code") or "",
+			flt(row.get("qty"), 6),
+		)
 
 	if Counter(row_key(row) for row in expected_rows) != Counter(row_key(row) for row in generated_rows):
-		frappe.throw(_("套件配置与已生成的物料明细不一致，请重新点击“解析套件”。"))
+		frappe.throw(_("套件配置、包裹号与已生成的物料明细不一致，请重新点击“解析套件”。"))
 
 
 def validate_material_request_product_bundles(doc, method=None):

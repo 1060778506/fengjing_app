@@ -511,7 +511,7 @@ class AmazonConfigurationCenter {
 			"Basic Configuration": __("基础配置"), "Schedule and Result": __("调度设置"), "Product Discovery Result": __("商品发现"), "Runtime Status": __("运行设置"),
 			"Historical Order Sync": __("历史订单同步"), "Incremental Order Sync": __("增量订单同步"), "Historical Financial Sync": __("历史财务同步"), "Incremental Financial Sync": __("增量财务同步"), "Manual Sync Actions": __("手动同步"),
 			"Historical Ranking Sync": __("历史排名同步"), "Automatic Ranking Sync": __("自动排名同步"), "Historical Settlement Statement Sync": __("历史结算报告同步"),
-			"Snapshot Schedule": __("库存快照计划"), "Inventory Ledger History": __("库存分类账历史"),
+			"Snapshot Schedule": __("库存快照计划"), "Inventory Ledger History": __("库存分类账历史"), "Routine Ledger Recheck": __("分类账日常复核"),
 			"Ledger Summary Report": __("库存分类账汇总报告"), "Ledger Detail Report": __("库存分类账明细报告"),
 			"Recent 7 Days Recheck": __("近7天核对"), "Recent 14 Days Recheck": __("近14天核对"), "Recent 30 Days Recheck": __("近30天核对"), "Recent 90 Days Recheck": __("近90天核对"), "Recent 180 Days Recheck": __("近180天核对"),
 		};

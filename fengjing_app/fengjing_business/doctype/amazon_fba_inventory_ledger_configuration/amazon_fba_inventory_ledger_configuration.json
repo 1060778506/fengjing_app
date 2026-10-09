@@ -18,9 +18,13 @@
   "history_end_date",
   "history_segment_days",
   "history_column",
-  "sync_interval_hours",
   "history_checkpoint",
+  "history_completed",
   "snapshot_retention_days",
+  "routine_recheck_section",
+  "sync_interval_hours",
+  "routine_recheck_column",
+  "routine_lookback_days",
   "summary_section",
   "summary_enabled",
   "summary_time_aggregation",
@@ -162,16 +166,17 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "sync_interval_hours",
-   "fieldtype": "Int",
-   "label": "Sync Interval Hours",
-   "default": "24",
-   "non_negative": 1
-  },
-  {
    "fieldname": "history_checkpoint",
    "fieldtype": "Date",
    "label": "History Checkpoint",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_completed",
+   "fieldtype": "Check",
+   "label": "History Completed",
+   "default": "0",
+   "hidden": 1,
    "read_only": 1
   },
   {
@@ -181,6 +186,31 @@
    "default": "0",
    "non_negative": 1,
    "description": "0 means keep records indefinitely."
+  },
+  {
+   "fieldname": "routine_recheck_section",
+   "fieldtype": "Section Break",
+   "label": "Routine Ledger Recheck"
+  },
+  {
+   "fieldname": "sync_interval_hours",
+   "fieldtype": "Int",
+   "label": "Routine Recheck Interval Hours",
+   "default": "3",
+   "non_negative": 1,
+   "description": "After historical synchronization completes, this interval controls routine ledger rechecks. It does not control real-time FBA inventory snapshots."
+  },
+  {
+   "fieldname": "routine_recheck_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "routine_lookback_days",
+   "fieldtype": "Int",
+   "label": "Routine Recheck Lookback Days",
+   "default": "3",
+   "non_negative": 1,
+   "description": "Each routine ledger recheck requests this many most recently completed days. Historical segment days are used only for initial history synchronization."
   },
   {
    "fieldname": "summary_section",

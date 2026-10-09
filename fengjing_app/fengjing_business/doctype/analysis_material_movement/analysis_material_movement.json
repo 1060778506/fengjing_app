@@ -9,6 +9,7 @@
  "field_order": [
   "\u5957\u4ef6",
   "\u5957\u4ef6\u540d\u79f0",
+  "temu\u5305\u88f9\u53f7",
   "\u6570\u91cf"
  ],
  "fields": [
@@ -34,6 +35,12 @@
    "in_list_view": 1,
    "label": "\u5957\u4ef6\u540d\u79f0",
    "read_only": 1
+  },
+  {
+   "fieldname": "temu\u5305\u88f9\u53f7",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "TEMU\u5305\u88f9\u53f7"
   }
  ],
  "grid_page_length": 50,
