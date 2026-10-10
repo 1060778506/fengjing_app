@@ -51,6 +51,15 @@ def run_amazon_fba_inventory_ledger():
     return run_scheduled_ledger_sync()
 
 
+def run_amazon_fba_inbound_shipments():
+    """Amazon FBA 入库货件调度入口。"""
+    from fengjing_app.fengjing_business.doctype.amazon_fba_inbound_shipment_country_configuration.amazon_fba_inbound_shipment_country_configuration import (
+        run_scheduled_inbound_shipment_sync,
+    )
+
+    return run_scheduled_inbound_shipment_sync()
+
+
 def run_amazon_awd_inventory():
     """Amazon AWD 实时库存快照调度入口。"""
     from fengjing_app.fengjing_business.doctype.amazon_awd_inventory_configuration.amazon_awd_inventory_configuration import (
@@ -264,6 +273,7 @@ scheduler_events = {
         "fengjing_app.hooks.run_amazon_finances",
         "fengjing_app.hooks.run_amazon_fba_inventory",
         "fengjing_app.hooks.run_amazon_fba_inventory_ledger",
+        "fengjing_app.hooks.run_amazon_fba_inbound_shipments",
         "fengjing_app.hooks.run_amazon_awd_inventory",
         "fengjing_app.hooks.run_ozon_orders",
         "fengjing_app.hooks.run_ozon_rankings",

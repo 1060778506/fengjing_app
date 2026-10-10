@@ -178,6 +178,15 @@ class AmazonConfigurationCenter {
 			|| null;
 	}
 
+	currentInboundGroup(section = this.active) {
+		if (!section || section.key !== "fba_inbound") return null;
+		const document = this.currentDocument(section);
+		const masterName = document?.values?.master_configuration;
+		return (section.groups || []).find((group) => group.master_name === masterName)
+			|| section.group
+			|| null;
+	}
+
 	editorHtml() {
 		const section = this.active;
 		const store = this.currentStore();
@@ -185,6 +194,7 @@ class AmazonConfigurationCenter {
 			return `<div class="pc-empty-state"><div class="pc-empty-icon">${this.icon("stores")}</div><span>${__("配置工作台")}</span><h3>${__("请先选择一个店铺")}</h3><p>${__("从左侧选择现有店铺，或者新建店铺，然后在中间选择要维护的配置。")}</p><button type="button" class="pc-button pc-button-primary" data-action="new-store">${this.icon("plus")}${__("新建店铺")}</button></div>`;
 		}
 		if (section.key === "fba_ledger" && this.currentLedgerGroup(section)) return this.ledgerGroupEditorHtml(section);
+		if (section.key === "fba_inbound" && this.currentInboundGroup(section)) return this.inboundGroupEditorHtml(section);
 		const document = this.currentDocument(section);
 		const isNew = !document;
 		const title = section.key === "stores" && isNew ? __("建立新店铺") : section.title;
@@ -253,6 +263,65 @@ class AmazonConfigurationCenter {
 				<td><span class="pc-product-state ${statusTone}">${this.escape(Number(row.enabled) ? this.translateStatus(row.status) : __("已停用"))}</span><small>${Number(row.history_completed) ? __("历史已完成") : __("历史未完成")}</small>${row.error ? `<em class="pc-ledger-row-error" title="${this.escape(row.error)}">${this.escape(row.error)}</em>` : ""}</td>
 				<td><span class="pc-product-state ${summaryTone}">${this.escape(this.translateStatus(row.summary_status))}</span><b>${this.formatDate(row.summary_latest_date)}</b><small>${this.formatCount(row.summary_records)} ${__("条")}</small></td>
 				<td><span class="pc-product-state ${detailTone}">${this.escape(this.translateStatus(row.detail_status))}</span><b>${this.formatDate(row.detail_latest_date)}</b><small>${this.formatCount(row.detail_records)} ${__("条")}</small></td>
+				<td><b>${this.formatTime(row.last_success_at)}</b><small>${this.escape(row.cost_center || "—")}</small></td>
+				<td><a class="pc-ledger-config-link" href="${configUrl}">${this.icon("settings")}${__("打开配置")}</a></td>
+			</tr>`;
+			}).join("");
+	}
+
+	inboundGroupEditorHtml(section) {
+		const group = this.currentInboundGroup(section) || {};
+		const shared = group.shared || {};
+		const overallTone = this.statusTone(group.status);
+		const actions = (group.actions || []).map((action) => `<button type="button" data-action="run-inbound-group" data-task="${this.escape(action.key)}" class="pc-task-${action.style || "ghost"}" ${group.actions_ready ? "" : "disabled"} title="${this.escape(group.action_notice || "")}">${this.icon(this.actionIcon(action.key))}${this.escape(action.label)}</button>`).join("");
+		const masterUrl = group.master_name
+			? `/app/amazon-fba-inbound-shipment-master-configuration/${encodeURIComponent(group.master_name)}`
+			: "/app/amazon-fba-inbound-shipment-master-configuration";
+		const countryDocument = this.currentDocument(section);
+		const countryUrl = countryDocument
+			? `/app/amazon-fba-inbound-shipment-country-configuration/${encodeURIComponent(countryDocument.name)}`
+			: "/app/amazon-fba-inbound-shipment-country-configuration";
+		const masterLink = `<a class="pc-ledger-config-link" href="${masterUrl}">${this.icon("settings")}${group.master_name ? __("打开总配置") : __("总配置入口")}</a>`;
+		const countryLink = `<a class="pc-ledger-config-link" href="${countryUrl}">${this.icon("stores")}${countryDocument ? __("打开当前国家配置") : __("国家配置入口")}</a>`;
+		const enabledRechecks = [7, 14, 30, 90, 180]
+			.filter((days) => Number(shared[`enable_recheck_${days}`]))
+			.map((days) => `${days}${__("天")}/${shared[`recheck_${days}_interval_days`] || "—"}${__("天一次")}`)
+			.join(" · ") || __("未启用");
+		return `
+			<div class="pc-editor-head pc-ledger-editor-head"><div class="pc-editor-title"><span class="pc-editor-icon">${this.icon("fba_inbound")}</span><div><small>${this.escape(group.master_label || __("同一卖家 · 多国家站点"))}</small><h3>${this.escape(section.title)}</h3><p>${this.escape(section.description || "")}</p></div></div><div class="pc-editor-status"><span class="pc-status ${overallTone}"><i></i>${this.escape(this.translateStatus(group.status))}</span><span class="pc-runtime"><small>${__("已启用站点")}</small><b>${Number(group.enabled_countries || 0)}</b></span><span class="pc-runtime"><small>${__("API区域")}</small><b>${Number(group.region_count || 0)}</b></span><span class="pc-runtime"><small>${__("下次同步")}</small><b>${this.formatTime(group.next_sync_at)}</b></span></div></div>
+			<div class="pc-editor-scroll pc-ledger-scroll">
+				<section class="pc-ledger-public-card">
+					<header><div><span>${__("公共区域")}</span><h4>${__("入库货件统一抓取设置")}</h4><p>${__("同一个卖家和API区域只读取一次计划，再按目的国家分配到国家配置。")}</p></div><div class="pc-ledger-actions">${masterLink}${countryLink}${actions}</div></header>
+					<div class="pc-ledger-shared-grid">
+						<div><small>${__("历史范围")}</small><b>${this.escape(shared.history_start_datetime || "—")} <em>→</em> ${this.escape(shared.history_end_datetime || "—")}</b><span>${__("每段 {0} 天", [shared.history_segment_days || "—"])}</span></div>
+						<div><small>${__("日常同步")}</small><b>${this.escape(shared.sync_interval_minutes ?? "—")} ${__("分钟一次")}</b><span>${__("回看 {0} 小时", [shared.incremental_lookback_hours ?? "—"])}</span></div>
+						<div><small>${__("定期核对")}</small><b>${this.escape(enabledRechecks)}</b><span>${__("按总配置统一执行")}</span></div>
+						<div><small>${__("入库计划")}</small><b>${this.formatCount(group.plan_records)} ${__("条")}</b><span><a class="pc-ledger-config-link" href="/app/amazon-fba-inbound-plan">${__("打开计划")}</a> · ${this.formatTime(group.plan_latest_at)}</span></div>
+						<div><small>${__("货件与商品")}</small><b>${this.formatCount(group.shipment_records)} ${__("个货件")} · ${this.formatCount(group.item_records)} ${__("条商品")}</b><span><a class="pc-ledger-config-link" href="/app/amazon-fba-inbound-shipment">${__("货件")}</a> <a class="pc-ledger-config-link" href="/app/amazon-fba-inbound-shipment-item">${__("商品")}</a></span></div>
+						<div><small>${__("变化历史")}</small><b>${this.formatCount(group.history_records)} ${__("条")}</b><span><a class="pc-ledger-config-link" href="/app/amazon-fba-inbound-shipment-history">${__("打开记录")}</a> · ${__("保留 {0} 天", [shared.record_retention_days ?? 0])}</span></div>
+					</div>
+					<div class="pc-ledger-action-note">${this.icon("info")}<span>${this.escape(group.action_notice || "")}</span></div>
+				</section>
+				<section class="pc-ledger-country-card">
+					<header><div><span>${__("国家结果")}</span><h4>${this.escape((group.api_regions || []).join(" · ") || __("已关联国家站点"))}</h4><p>${__("每个国家保留独立店铺、成本中心、运行状态及货件数据。")}</p></div></header>
+					<div class="pc-ledger-table-wrap"><table class="pc-ledger-table"><thead><tr><th>${__("国家与店铺")}</th><th>${__("运行状态")}</th><th>${__("入库货件")}</th><th>${__("商品明细")}</th><th>${__("变化记录")}</th><th>${__("最后成功")}</th><th>${__("配置")}</th></tr></thead><tbody>${this.inboundCountryRowsHtml(group.countries || [])}</tbody></table></div>
+				</section>
+			</div>
+			<footer class="pc-editor-footer"><div><span class="pc-ledger-footer-note">${this.escape(group.action_notice || "")}</span></div><div class="pc-save-actions"><button type="button" class="pc-button pc-button-secondary" data-action="refresh">${this.icon("refresh")}${__("刷新状态")}</button></div></footer>`;
+	}
+
+	inboundCountryRowsHtml(countries) {
+		if (!countries.length) return `<tr><td colspan="7" class="pc-ranking-empty">${__("尚未建立FBA入库货件国家配置")}</td></tr>`;
+		const countryLabels = { "United States": __("美国"), Canada: __("加拿大"), Mexico: __("墨西哥"), Brazil: __("巴西") };
+		return countries.map((row) => {
+			const statusTone = this.statusTone(row.status, row.error);
+			const configUrl = `/app/amazon-fba-inbound-shipment-country-configuration/${encodeURIComponent(row.configuration_name || "")}`;
+			return `<tr class="${Number(row.enabled) ? "" : "is-disabled"}">
+				<td><div class="pc-ledger-country"><span>${this.initials(countryLabels[row.country] || row.country || row.store_name)}</span><div><b>${this.escape(countryLabels[row.country] || row.country || __("未知国家"))}</b><small>${this.escape(row.store_name || row.amazon_store || "—")}</small><em>${this.escape(row.marketplace_id || "—")}</em></div></div></td>
+				<td><span class="pc-product-state ${statusTone}">${this.escape(Number(row.enabled) ? this.translateStatus(row.status) : __("已停用"))}</span><small>${this.escape(this.translateExecution(row.execution_type) || (Number(row.history_completed) ? __("历史已完成") : __("历史未完成")))}</small>${row.error ? `<em class="pc-ledger-row-error" title="${this.escape(row.error)}">${this.escape(row.error)}</em>` : ""}</td>
+				<td><b>${this.formatCount(row.shipment_records)} ${__("条")}</b><small>${this.formatTime(row.shipment_latest_at)}</small></td>
+				<td><b>${this.formatCount(row.item_records)} ${__("条")}</b><small>${this.formatTime(row.item_latest_at)}</small></td>
+				<td><b>${this.formatCount(row.history_records)} ${__("条")}</b><small>${this.formatTime(row.history_latest_at)}</small></td>
 				<td><b>${this.formatTime(row.last_success_at)}</b><small>${this.escape(row.cost_center || "—")}</small></td>
 				<td><a class="pc-ledger-config-link" href="${configUrl}">${this.icon("settings")}${__("打开配置")}</a></td>
 			</tr>`;
@@ -503,6 +572,7 @@ class AmazonConfigurationCenter {
 		if (action === "delete") return this.deleteCurrent();
 		if (action === "run") return this.runTask(button.dataset.task, button);
 		if (action === "run-ledger-group") return this.runLedgerGroupTask(button.dataset.task, button);
+		if (action === "run-inbound-group") return this.runInboundGroupTask(button.dataset.task, button);
 	}
 
 	navigate(callback) {
@@ -574,6 +644,36 @@ class AmazonConfigurationCenter {
 		} else execute();
 	}
 
+	runInboundGroupTask(taskKey, button) {
+		const section = this.active;
+		const group = this.currentInboundGroup(section);
+		const task = group?.actions?.find((item) => item.key === taskKey);
+		if (!task || !group?.actions_ready || !group?.master_name) return;
+		const execute = async () => {
+			button.disabled = true;
+			button.classList.add("working");
+			try {
+				const result = await this.call(
+					"run_group_action",
+					{ section_key: section.key, action_key: taskKey, master_name: group.master_name },
+					true,
+					__("正在提交入库货件任务…")
+				);
+				frappe.show_alert({ message: result?.message || __("入库货件任务已提交"), indicator: "green" }, 8);
+				window.setTimeout(() => { if (!this.dirty) this.load(true); }, 900);
+			} finally {
+				button.disabled = false;
+				button.classList.remove("working");
+			}
+		};
+		if (task.confirm) {
+			frappe.confirm(
+				__("确定执行“{0}”吗？该总配置下所有已启用国家站点将共同执行。", [task.label]),
+				execute
+			);
+		} else execute();
+	}
+
 	toggleFullscreen() {
 		this.root.toggleClass("pc-fullscreen");
 		const fullscreen = this.root.hasClass("pc-fullscreen");
@@ -607,9 +707,14 @@ class AmazonConfigurationCenter {
 		return labels[status] || status;
 	}
 
+	translateExecution(value) {
+		return ({ history: __("历史同步"), incremental: __("增量同步"), recheck: __("定期核对") })[String(value || "").toLowerCase()] || String(value || "");
+	}
+
 	actionIcon(action) {
 		if (String(action).includes("recheck_")) return "recheck";
 		if (String(action).includes("history")) return "history";
+		if (String(action).includes("latest")) return "latest";
 		return action;
 	}
 
@@ -651,7 +756,7 @@ class AmazonConfigurationCenter {
 
 	icon(name) {
 		const icons = {
-			stores: "shop-window", ranking: "bar-chart-line", orders: "box-seam", finances: "wallet2", fba_inventory: "boxes", fba_ledger: "journal-text", awd_inventory: "building",
+			stores: "shop-window", ranking: "bar-chart-line", orders: "box-seam", finances: "wallet2", fba_inventory: "boxes", fba_ledger: "journal-text", fba_inbound: "truck", awd_inventory: "building",
 			prices: "tags", settlements: "receipt",
 			refresh: "arrow-clockwise", expand: "arrows-fullscreen", plus: "plus-lg", search: "search", chevron: "chevron-right",
 			info: "info-circle", warning: "exclamation-triangle", trash: "trash3", save: "check2-circle", check: "check-lg", settings: "gear",
