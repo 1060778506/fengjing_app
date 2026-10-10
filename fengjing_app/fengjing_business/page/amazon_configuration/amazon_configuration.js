@@ -178,6 +178,15 @@ class AmazonConfigurationCenter {
 			|| null;
 	}
 
+	currentBalanceGroup(section = this.active) {
+		if (!section || section.key !== "balances") return null;
+		const document = this.currentDocument(section);
+		const masterName = document?.values?.master_configuration;
+		return (section.groups || []).find((group) => group.master_name === masterName)
+			|| section.group
+			|| null;
+	}
+
 	currentInboundGroup(section = this.active) {
 		if (!section || !["fba_inbound", "awd_inbound"].includes(section.key)) return null;
 		const document = this.currentDocument(section);
@@ -193,6 +202,7 @@ class AmazonConfigurationCenter {
 		if (!section || (!store && !this.creatingStore)) {
 			return `<div class="pc-empty-state"><div class="pc-empty-icon">${this.icon("stores")}</div><span>${__("配置工作台")}</span><h3>${__("请先选择一个店铺")}</h3><p>${__("从左侧选择现有店铺，或者新建店铺，然后在中间选择要维护的配置。")}</p><button type="button" class="pc-button pc-button-primary" data-action="new-store">${this.icon("plus")}${__("新建店铺")}</button></div>`;
 		}
+		if (section.key === "balances" && this.currentBalanceGroup(section)) return this.balanceGroupEditorHtml(section);
 		if (section.key === "fba_ledger" && this.currentLedgerGroup(section)) return this.ledgerGroupEditorHtml(section);
 		if (["fba_inbound", "awd_inbound"].includes(section.key) && this.currentInboundGroup(section)) return this.inboundGroupEditorHtml(section);
 		const document = this.currentDocument(section);
@@ -209,6 +219,67 @@ class AmazonConfigurationCenter {
 				<div class="pc-form-sections">${this.formSectionsHtml(section)}</div>
 			</div>
 			<footer class="pc-editor-footer"><div>${document && section.permissions.delete ? `<button type="button" class="pc-button pc-button-danger" data-action="delete">${this.icon("trash")}${__("删除此配置")}</button>` : ""}</div><div class="pc-save-actions"><button type="button" class="pc-button pc-button-secondary" data-action="reset">${__("撤销修改")}</button>${(isNew ? section.permissions.create : section.permissions.write) ? `<button type="button" class="pc-button pc-button-primary" data-action="save">${this.icon("save")}${isNew ? __("创建并保存") : __("保存配置")}</button>` : ""}</div></footer>`;
+	}
+
+	balanceGroupEditorHtml(section) {
+		const group = this.currentBalanceGroup(section) || {};
+		const shared = group.shared || {};
+		const overallTone = this.statusTone(group.status, group.error || group.history_error);
+		const actions = (group.actions || []).map((action) => `<button type="button" data-action="run-balance-group" data-task="${this.escape(action.key)}" class="pc-task-${action.style || "ghost"}" ${group.actions_ready ? "" : "disabled"} title="${this.escape(group.action_notice || "")}">${this.icon(this.actionIcon(action.key))}${this.escape(action.label)}</button>`).join("");
+		const currentDocument = this.currentDocument(section);
+		const masterUrl = group.master_name
+			? `/app/amazon-balance-master-configuration/${encodeURIComponent(group.master_name)}`
+			: "/app/amazon-balance-master-configuration";
+		const countryUrl = currentDocument?.name
+			? `/app/amazon-balance-country-configuration/${encodeURIComponent(currentDocument.name)}`
+			: "/app/amazon-balance-country-configuration";
+		const masterLink = `<a class="pc-ledger-config-link" href="${masterUrl}">${this.icon("settings")}${group.master_name ? __("打开总配置") : __("总配置入口")}</a>`;
+		const countryLink = `<a class="pc-ledger-config-link" href="${countryUrl}">${this.icon("stores")}${currentDocument ? __("打开当前国家配置") : __("国家配置入口")}</a>`;
+		const progress = Math.max(0, Math.min(100, Number(group.history_progress || 0)));
+		const alertText = group.error || group.history_error || "";
+		const alert = alertText
+			? `<div class="pc-ledger-alert warning">${this.icon("warning")}<div><b>${__("余额任务提示")}</b><span>${this.escape(alertText)}</span></div></div>`
+			: "";
+		return `
+			<div class="pc-editor-head pc-ledger-editor-head"><div class="pc-editor-title"><span class="pc-editor-icon">${this.icon("balances")}</span><div><small>${this.escape(group.master_label || __("同一卖家 · 多国家站点"))}</small><h3>${this.escape(section.title)}</h3><p>${this.escape(section.description || "")}</p></div></div><div class="pc-editor-status"><span class="pc-status ${overallTone}"><i></i>${this.escape(this.translateStatus(group.status))}</span><span class="pc-runtime"><small>${__("历史进度")}</small><b>${progress.toFixed(2)}%</b></span><span class="pc-runtime"><small>${__("已启用站点")}</small><b>${Number(group.enabled_countries || 0)}</b></span><span class="pc-runtime"><small>${__("下次同步")}</small><b>${this.formatTime(group.next_sync_at)}</b></span></div></div>
+			<div class="pc-editor-scroll pc-ledger-scroll">
+				${alert}
+				<section class="pc-ledger-public-card">
+					<header><div><span>${__("公共区域")}</span><h4>${__("余额统一抓取设置与操作")}</h4><p>${__("同一卖家和API区域只提交一次请求，结果按国家、账户类型和币种分别保存。")}</p></div><div class="pc-ledger-actions">${masterLink}${countryLink}${actions}</div></header>
+					<div class="pc-ledger-shared-grid">
+						<div><small>${__("历史范围")}</small><b>${this.formatDate(shared.history_start_date)} <em>→</em> ${this.formatDate(shared.history_end_date)}</b><span>${__("每段 {0} 天", [shared.history_segment_days ?? "—"])}</span></div>
+						<div><small>${__("历史任务")}</small><b>${this.escape(this.translateStatus(group.history_status))} · ${progress.toFixed(2)}%</b><span>${__("下一日期：{0}", [this.formatDate(group.history_checkpoint)])}</span></div>
+						<div><small>${__("日常同步")}</small><b>${__("每 {0} 小时", [shared.sync_interval_hours ?? "—"])}</b><span>${__("复核最近 {0} 天", [shared.recent_recheck_days ?? 0])}</span></div>
+						<div><small>${__("余额快照")}</small><b>${this.formatCount(group.record_count)} ${__("条")}</b><span><a class="pc-ledger-config-link" href="/app/amazon-balance-snapshot">${__("打开余额快照")}</a></span></div>
+						<div><small>${__("快照日期范围")}</small><b>${this.formatDate(group.earliest_date)} <em>→</em> ${this.formatDate(group.latest_date)}</b><span>${this.formatCount(group.snapshot_dates)} ${__("个日期")}</span></div>
+						<div><small>${__("最后成功")}</small><b>${this.formatTime(group.last_success_at)}</b><span>${this.escape(this.translateExecution(group.execution_type) || __("等待下次运行"))}</span></div>
+					</div>
+					<div class="pc-ledger-action-note">${this.icon("info")}<span>${this.escape(group.action_notice || "")}</span></div>
+				</section>
+				<section class="pc-ledger-country-card">
+					<header><div><span>${__("国家结果")}</span><h4>${this.escape((group.api_regions || []).join(" · ") || __("已关联国家站点"))}</h4><p>${__("每个国家保留独立店铺、成本中心、历史进度和余额快照统计。")}</p></div></header>
+					<div class="pc-ledger-table-wrap"><table class="pc-ledger-table"><thead><tr><th>${__("国家与店铺")}</th><th>${__("运行状态")}</th><th>${__("历史抓取")}</th><th>${__("余额快照")}</th><th>${__("最后成功")}</th><th>${__("配置")}</th></tr></thead><tbody>${this.balanceCountryRowsHtml(group.countries || [])}</tbody></table></div>
+				</section>
+			</div>
+			<footer class="pc-editor-footer"><div><span class="pc-ledger-footer-note">${this.escape(group.action_notice || "")}</span></div><div class="pc-save-actions"><button type="button" class="pc-button pc-button-secondary" data-action="refresh">${this.icon("refresh")}${__("刷新状态")}</button></div></footer>`;
+	}
+
+	balanceCountryRowsHtml(countries) {
+		if (!countries.length) return `<tr><td colspan="6" class="pc-ranking-empty">${__("尚未建立余额国家配置")}</td></tr>`;
+		const countryLabels = { "United States": __("美国"), Canada: __("加拿大"), Mexico: __("墨西哥"), Brazil: __("巴西") };
+		return countries.map((row) => {
+			const statusTone = this.statusTone(row.status, row.error);
+			const historyTone = this.statusTone(row.history_status, row.error);
+			const configUrl = `/app/amazon-balance-country-configuration/${encodeURIComponent(row.configuration_name || "")}`;
+			return `<tr class="${Number(row.enabled) ? "" : "is-disabled"}">
+				<td><div class="pc-ledger-country"><span>${this.initials(countryLabels[row.country] || row.country || row.store_name)}</span><div><b>${this.escape(countryLabels[row.country] || row.country || __("未知国家"))}</b><small>${this.escape(row.store_name || row.amazon_store || "—")}</small><em>${this.escape(row.marketplace_id || "—")}</em></div></div></td>
+				<td><span class="pc-product-state ${statusTone}">${this.escape(Number(row.enabled) ? this.translateStatus(row.status) : __("已停用"))}</span><small>${this.escape(this.translateExecution(row.execution_type) || "—")}</small>${row.error ? `<em class="pc-ledger-row-error" title="${this.escape(row.error)}">${this.escape(row.error)}</em>` : ""}</td>
+				<td><span class="pc-product-state ${historyTone}">${this.escape(this.translateStatus(row.history_status))}</span><b>${this.formatDate(row.history_checkpoint)}</b><small>${Number(row.history_completed) ? __("历史已完成") : __("历史未完成")}</small></td>
+				<td><b>${this.formatCount(row.record_count)} ${__("条")}</b><small>${this.formatCount(row.snapshot_dates)} ${__("个日期")} · ${this.formatDate(row.earliest_date)} → ${this.formatDate(row.latest_date)}</small></td>
+				<td><b>${this.formatTime(row.last_success_at)}</b><small>${this.escape(row.cost_center || "—")}</small></td>
+				<td><a class="pc-ledger-config-link" href="${configUrl}">${this.icon("settings")}${__("打开配置")}</a></td>
+			</tr>`;
+		}).join("");
 	}
 
 	ledgerGroupEditorHtml(section) {
@@ -332,9 +403,9 @@ class AmazonConfigurationCenter {
 
 	statusTone(status, error = "") {
 		const value = String(status || "").toLowerCase();
-		if (error || value === "failed" || value === "unavailable") return "danger";
-		if (value === "running" || value === "waiting") return "running";
-		if (value === "completed" || value === "success" || value === "available") return "success";
+		if (error || value === "failed" || value === "unavailable" || value === "失败") return "danger";
+		if (["running", "waiting", "运行中", "等待中"].includes(value)) return "running";
+		if (["completed", "success", "available", "已完成", "成功"].includes(value)) return "success";
 		return "neutral";
 	}
 
@@ -573,6 +644,7 @@ class AmazonConfigurationCenter {
 		if (action === "save") return this.saveCurrent();
 		if (action === "delete") return this.deleteCurrent();
 		if (action === "run") return this.runTask(button.dataset.task, button);
+		if (action === "run-balance-group") return this.runBalanceGroupTask(button.dataset.task, button);
 		if (action === "run-ledger-group") return this.runLedgerGroupTask(button.dataset.task, button);
 		if (action === "run-inbound-group") return this.runInboundGroupTask(button.dataset.task, button);
 	}
@@ -614,6 +686,36 @@ class AmazonConfigurationCenter {
 			} finally { button.disabled = false; button.classList.remove("working"); }
 		};
 		if (task.confirm) frappe.confirm(__("确定执行“{0}”吗？任务将在后台运行。", [task.label]), execute); else execute();
+	}
+
+	runBalanceGroupTask(taskKey, button) {
+		const section = this.active;
+		const group = this.currentBalanceGroup(section);
+		const task = group?.actions?.find((item) => item.key === taskKey);
+		if (!task || !group?.actions_ready || !group?.master_name) return;
+		const execute = async () => {
+			button.disabled = true;
+			button.classList.add("working");
+			try {
+				const result = await this.call(
+					"run_group_action",
+					{ section_key: section.key, action_key: taskKey, master_name: group.master_name },
+					true,
+					__("正在提交余额任务…")
+				);
+				frappe.show_alert({ message: result?.message || __("余额任务已提交"), indicator: "green" }, 8);
+				window.setTimeout(() => { if (!this.dirty) this.load(true); }, 900);
+			} finally {
+				button.disabled = false;
+				button.classList.remove("working");
+			}
+		};
+		if (task.confirm) {
+			frappe.confirm(
+				__("确定执行“{0}”吗？该总配置下所有已启用国家站点将共同执行。", [task.label]),
+				execute
+			);
+		} else execute();
 	}
 
 	runLedgerGroupTask(taskKey, button) {
@@ -710,7 +812,7 @@ class AmazonConfigurationCenter {
 	}
 
 	translateExecution(value) {
-		return ({ history: __("历史同步"), incremental: __("增量同步"), recheck: __("定期核对") })[String(value || "").toLowerCase()] || String(value || "");
+		return ({ history: __("历史同步"), incremental: __("增量同步"), current: __("当前余额"), routine: __("日常余额"), recheck: __("定期核对") })[String(value || "").toLowerCase()] || String(value || "");
 	}
 
 	actionIcon(action) {
@@ -758,7 +860,7 @@ class AmazonConfigurationCenter {
 
 	icon(name) {
 		const icons = {
-			stores: "shop-window", ranking: "bar-chart-line", orders: "box-seam", finances: "wallet2", fba_inventory: "boxes", fba_ledger: "journal-text", fba_inbound: "truck", awd_inventory: "building", awd_inbound: "truck-front",
+			stores: "shop-window", ranking: "bar-chart-line", orders: "box-seam", finances: "wallet2", balances: "cash-stack", fba_inventory: "boxes", fba_ledger: "journal-text", fba_inbound: "truck", awd_inventory: "building", awd_inbound: "truck-front",
 			prices: "tags", settlements: "receipt",
 			refresh: "arrow-clockwise", expand: "arrows-fullscreen", plus: "plus-lg", search: "search", chevron: "chevron-right",
 			info: "info-circle", warning: "exclamation-triangle", trash: "trash3", save: "check2-circle", check: "check-lg", settings: "gear",

@@ -187,7 +187,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "亚马逊分析",
-   "link_count": 6,
+   "link_count": 7,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -218,6 +218,16 @@
    "label": "亚马逊财务交易中心",
    "link_count": 0,
    "link_to": "amazon-finance",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊余额中心",
+   "link_count": 0,
+   "link_to": "amazon-balance",
    "link_type": "Page",
    "onboard": 0,
    "type": "Link"
@@ -776,7 +786,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-10 18:43:15.479086",
+ "modified": "2026-10-10 21:45:00.000000",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "丰境业务APP",
