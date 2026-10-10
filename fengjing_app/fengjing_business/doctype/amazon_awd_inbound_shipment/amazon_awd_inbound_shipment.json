@@ -18,6 +18,16 @@
   "marketplace_id",
   "warehouse_reference_id",
   "destination_region",
+  "warehouse_mapping_section",
+  "warehousing_program",
+  "destination_mapping",
+  "amazon_destination_code",
+  "destination_country_code",
+  "warehouse_mapping_column",
+  "destination_state_or_region",
+  "destination_city",
+  "erpnext_destination_warehouse",
+  "erpnext_inbound_transit_warehouse",
   "transport_section",
   "carrier_code_type",
   "carrier_code_value",
@@ -138,6 +148,77 @@
    "fieldtype": "Data",
    "label": "Destination Region",
    "in_standard_filter": 1
+  },
+  {
+   "fieldname": "warehouse_mapping_section",
+   "fieldtype": "Section Break",
+   "label": "AWD/GWD Warehouse Assignment"
+  },
+  {
+   "fieldname": "warehousing_program",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Warehousing Program",
+   "options": "\nAWD\nGWD\nUnrecognized",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "destination_mapping",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "AWD/GWD Destination Mapping",
+   "options": "Amazon Warehousing Destination Mapping",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "amazon_destination_code",
+   "fieldtype": "Data",
+   "label": "Amazon Destination Warehouse Code",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "destination_country_code",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Destination Country Code",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "warehouse_mapping_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "destination_state_or_region",
+   "fieldtype": "Data",
+   "label": "Destination State or Region",
+   "read_only": 1
+  },
+  {
+   "fieldname": "destination_city",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Destination City",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "erpnext_destination_warehouse",
+   "fieldtype": "Link",
+   "label": "ERPNext Destination Warehouse",
+   "options": "Warehouse",
+   "read_only": 1
+  },
+  {
+   "fieldname": "erpnext_inbound_transit_warehouse",
+   "fieldtype": "Link",
+   "label": "ERPNext Inbound Transit Warehouse",
+   "options": "Warehouse",
+   "read_only": 1
   },
   {
    "fieldname": "transport_section",

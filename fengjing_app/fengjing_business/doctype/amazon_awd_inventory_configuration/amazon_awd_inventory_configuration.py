@@ -107,6 +107,8 @@ def _save_snapshot(store, row, batch_id, fetched_at):
 			"cost_center": store.cost_center,
 			"marketplace_id": store.marketplace_id,
 			"country": store.country,
+			"inventory_scope": "AWD Network Aggregate",
+			"warehouse_granularity": "Network Aggregate",
 			"seller_sku": sku,
 			"product_name": item_name,
 			"corresponding_item": item_code,

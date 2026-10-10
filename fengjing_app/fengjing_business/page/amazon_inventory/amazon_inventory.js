@@ -29,7 +29,7 @@ class AmazonInventoryOverview {
 			<style>${this.styles()}</style>
 			<div class="aiv-shell">
 				<section class="aiv-hero">
-					<div><span>AMAZON INVENTORY</span><h2>Amazon库存总览</h2><p>分别查看 FBA 站点库存与 AWD 账户级库存，库存数量不会跨体系重复相加。</p></div>
+					<div><span>AMAZON INVENTORY</span><h2>Amazon库存总览</h2><p>分别查看 FBA 站点库存与 AWD 网络汇总库存，库存数量不会跨体系重复相加。</p></div>
 				<nav><a href="/app/amazon-ledger">库存分类账</a><a href="/app/amazon_configuration">Amazon配置中心</a></nav>
 				</section>
 				<section class="aiv-filters">
@@ -44,12 +44,12 @@ class AmazonInventoryOverview {
 				</section>
 				<section class="aiv-system-grid">
 					<article class="aiv-system fba"><header><div><span>FBA</span><h3>站点库存</h3></div><small data-latest="fba">尚无快照</small></header><div class="aiv-kpis" data-kpis="fba"></div></article>
-					<article class="aiv-system awd"><header><div><span>AWD</span><h3>账户级库存</h3></div><small data-latest="awd">尚无快照</small></header><div class="aiv-kpis" data-kpis="awd"></div></article>
+					<article class="aiv-system awd"><header><div><span>AWD</span><h3>网络汇总库存</h3></div><small data-latest="awd">尚无快照</small></header><div class="aiv-kpis" data-kpis="awd"></div></article>
 				</section>
 				<section class="aiv-card aiv-chart-card"><header><div><span>库存趋势</span><h3>可用、库存与在途</h3></div><small>每天保留各店铺最后一次快照</small></header><div id="aiv-trend" class="aiv-chart"></div></section>
 				<section class="aiv-card aiv-table-card">
 					<header><div><span>当前快照</span><h3>SKU库存明细</h3></div><div class="aiv-table-note"></div></header>
-					<div class="aiv-notice">AWD 库存按每个店铺配置的原始返回结果分别显示；跨店铺出现相同 SKU 时不会合并，页面汇总会逐条计算。</div>
+					<div class="aiv-notice">亚马逊 listInventory 只返回SKU级AWD网络汇总，不提供单个仓库数量。这里按各店铺配置分别保留原始结果，不将其绑定到AWD/GWD目的仓。</div>
 					<div class="aiv-table-wrap"><table><thead><tr>
 						<th data-sort="platform">体系</th><th data-sort="seller_sku">商品 / SKU</th><th>ERPNext物料</th><th data-sort="country">店铺 / 国家</th><th data-sort="snapshot_at">快照时间</th>
 						<th class="num" data-sort="total">库存总量</th><th class="num" data-sort="available">可用</th><th class="num" data-sort="reserved">预留总数</th><th class="num" data-sort="reserved_customer_orders">客户订单</th><th class="num" data-sort="reserved_transshipment">仓库调拨</th><th class="num" data-sort="reserved_fc_processing">仓库处理中</th><th class="num" data-sort="inbound">在途</th><th class="num" data-sort="unavailable">不可售</th><th class="num" data-sort="replenishment">补货至FBA</th>
@@ -159,7 +159,7 @@ class AmazonInventoryOverview {
 			if (typeof av === "number" || typeof bv === "number") return (Number(av) - Number(bv)) * direction;
 			return String(av).localeCompare(String(bv), "zh-CN") * direction;
 		});
-		this.$.find(".aiv-table-note").html(`共 <b>${this.num(this.data.row_count)}</b> 条 · AWD按配置分别显示`);
+		this.$.find(".aiv-table-note").html(`共 <b>${this.num(this.data.row_count)}</b> 条 · AWD网络汇总按配置分别显示`);
 		this.$.find(".aiv-table-card tbody").html(rows.map((row) => {
 			const image = row.item_image ? `<img src="${this.esc(row.item_image)}" loading="lazy">` : `<i>${row.platform}</i>`;
 			const identity = [row.asin, row.fnsku].filter(Boolean).join(" · ") || "无ASIN/FNSKU";

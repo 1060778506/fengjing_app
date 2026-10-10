@@ -23,8 +23,10 @@ from .amazon_fba_inbound_api import (
 	amazon_datetime,
 	frappe_datetime,
 	get_inbound_plan,
+	get_legacy_shipments,
 	get_shipment,
 	iter_inbound_plan_pages,
+	iter_legacy_shipment_pages,
 	iter_received_item_pages,
 	iter_shipment_item_pages,
 )
@@ -36,6 +38,7 @@ PLAN_DOCTYPE = "Amazon FBA Inbound Plan"
 SHIPMENT_DOCTYPE = "Amazon FBA Inbound Shipment"
 ITEM_DOCTYPE = "Amazon FBA Inbound Shipment Item"
 HISTORY_DOCTYPE = "Amazon FBA Inbound Shipment History"
+LEDGER_DETAIL_DOCTYPE = "Amazon FBA Inventory Ledger Detail"
 RECHECK_DAYS = (7, 14, 30, 90, 180)
 TASK_TIMEOUT = 6 * 60 * 60
 QUOTA_RETRY_MINUTES = 10
@@ -746,6 +749,347 @@ def _remove_excluded_awd_plan(plan_name):
 	frappe.db.commit()
 
 
+def _preferred_legacy_target(configs, stores):
+	"""选择旧版FBA货件的请求凭证与归属配置。
+
+	旧接口没有Marketplace参数。北美统一账号优先使用美国配置，避免同一美国FBA
+	货件被加拿大、墨西哥和巴西重复保存；其他区域使用组内第一条配置。
+	"""
+	for config, store in zip(configs, stores):
+		if str(store.marketplace_id or "").strip().upper() == COUNTRY_MARKETPLACES["US"]:
+			return config, store
+	return configs[0], stores[0]
+
+
+def _legacy_address(payload):
+	address = payload.get("ShipFromAddress") or {}
+	return {
+		"source_name": address.get("Name"),
+		"source_company_name": address.get("Name"),
+		"source_address_line_1": address.get("AddressLine1"),
+		"source_address_line_2": address.get("AddressLine2"),
+		"source_city": address.get("City"),
+		"source_state_or_province": address.get("StateOrProvinceCode"),
+		"source_postal_code": address.get("PostalCode"),
+		"source_country_code": address.get("CountryCode"),
+	}
+
+
+def _legacy_plan(master, store, payload):
+	shipment_id = str(payload.get("ShipmentId") or "").strip()
+	plan_id = f"legacy::{shipment_id}"
+	values = {
+		"plan_name": payload.get("ShipmentName") or shipment_id,
+		"plan_status": payload.get("ShipmentStatus"),
+		"master_configuration": master.name,
+		"seller_id": store.seller_id,
+		"api_region": get_region(store),
+		"marketplace_ids_json": _json([store.marketplace_id]),
+		"amazon_created_at": frappe_datetime(payload.get("CreatedDate")),
+		"amazon_updated_at": frappe_datetime(payload.get("LastUpdatedDate")),
+		"last_fetched_at": now_datetime(),
+		"shipment_count": 1,
+		"plan_detail_completed": 1,
+		"shipment_discovery_completed": 1,
+		"sync_stage": "Shipment Details",
+		"sync_status": "Running",
+		"last_sync_at": now_datetime(),
+		"last_error": "",
+		"raw_json_hash": _hash(payload),
+		"raw_json": _json(payload),
+		**_legacy_address(payload),
+	}
+	if not frappe.db.exists(PLAN_DOCTYPE, plan_id):
+		values["first_fetched_at"] = now_datetime()
+	name, _created = _upsert(PLAN_DOCTYPE, "inbound_plan_id", plan_id, values)
+	frappe.db.commit()
+	return frappe.get_doc(PLAN_DOCTYPE, name)
+
+
+def _legacy_shipment(master, config, store, plan, payload, batch_id, sync_mode):
+	shipment_id = str(payload.get("ShipmentId") or "").strip()
+	if not shipment_id:
+		raise ValueError("Amazon旧版FBA货件缺少ShipmentId。")
+	old = frappe.db.get_value(
+		SHIPMENT_DOCTYPE,
+		shipment_id,
+		["shipment_status", "planned_quantity", "shipped_quantity", "received_quantity", "in_transit_quantity", "quantity_difference"],
+		as_dict=True,
+	)
+	address = payload.get("ShipFromAddress") or {}
+	values = {
+		"shipment_confirmation_id": shipment_id,
+		"shipment_name": payload.get("ShipmentName") or shipment_id,
+		"shipment_status": payload.get("ShipmentStatus"),
+		"inbound_plan": plan.name,
+		"master_configuration": master.name,
+		"country_configuration": config.name,
+		"amazon_store": store.name,
+		"marketplace_id": store.marketplace_id,
+		"destination_type": "AMAZON_FULFILLMENT_CENTER",
+		"fulfillment_center_id": payload.get("DestinationFulfillmentCenterId"),
+		"ship_to_country_code": next(
+			(code for code, marketplace_id in COUNTRY_MARKETPLACES.items() if marketplace_id == store.marketplace_id),
+			config.country,
+		),
+		"shipping_mode": payload.get("ShipmentType"),
+		"tracking_details_json": _json({}),
+		"amazon_created_at": frappe_datetime(payload.get("CreatedDate")),
+		"amazon_updated_at": frappe_datetime(payload.get("LastUpdatedDate")),
+		"last_fetched_at": now_datetime(),
+		"sync_stage": "Shipment Items",
+		"sync_status": "Running",
+		"shipment_detail_completed": 1,
+		"last_sync_at": now_datetime(),
+		"last_error": "",
+		"raw_json_hash": _hash(payload),
+		"raw_json": _json(payload),
+	}
+	if not old:
+		values["first_fetched_at"] = now_datetime()
+	name, created = _upsert(SHIPMENT_DOCTYPE, "shipment_id", shipment_id, values)
+	if created or str(old.shipment_status or "") != str(payload.get("ShipmentStatus") or ""):
+		_history({
+			"inbound_shipment": name,
+			"inbound_plan": plan.name,
+			"master_configuration": master.name,
+			"country_configuration": config.name,
+			"amazon_store": store.name,
+			"marketplace_id": store.marketplace_id,
+			"change_type": "SHIPMENT_CREATED" if created else "STATUS_CHANGED",
+			"previous_status": old.shipment_status if old else None,
+			"current_status": payload.get("ShipmentStatus"),
+			"event_source": "getShipmentsV0",
+			"sync_mode": sync_mode,
+			"sync_batch_id": batch_id,
+			"raw_json_hash": _hash(payload),
+			"raw_json": _json(payload),
+		})
+	frappe.db.commit()
+	return frappe.get_doc(SHIPMENT_DOCTYPE, name)
+
+
+def _sync_legacy_items(master, plan, shipment, config, store, batch_id, sync_mode):
+	try:
+		for rows, _next_token in iter_received_item_pages(store, shipment.shipment_id):
+			for row in rows:
+				adapted = {
+					"msku": row.get("SellerSKU"),
+					"fnsku": row.get("FulfillmentNetworkSKU"),
+					"quantity": row.get("QuantityShipped"),
+					"legacy": row,
+				}
+				_store_item(master, plan, shipment, config, store, adapted, batch_id, sync_mode)
+				_apply_received_item(master, plan, shipment, config, store, row, batch_id, sync_mode)
+	except AmazonAPIError as exc:
+		# 部分账号可以查询旧货件，却没有旧商品接口权限。分类账的Receipts事件
+		# 仍可确认SKU、FNSKU和实际收货数量，因此用它补齐历史商品。
+		if exc.status_code not in {403, 404}:
+			raise
+		frappe.logger("amazon_fba_inbound", allow_site=True).warning(
+			"Legacy FBA shipment items were unavailable for %s; using inventory ledger receipts: %s",
+			shipment.shipment_id,
+			exc,
+		)
+		_store_legacy_ledger_items(master, plan, shipment, config, store, batch_id, sync_mode)
+	items = frappe.get_all(
+		ITEM_DOCTYPE,
+		filters={"inbound_shipment": shipment.name},
+		fields=["planned_quantity", "shipped_quantity", "received_quantity", "in_transit_quantity", "quantity_difference"],
+	)
+	quantities = {
+		"planned_quantity": sum(flt(row.planned_quantity) for row in items),
+		"shipped_quantity": sum(flt(row.shipped_quantity) for row in items),
+		"received_quantity": sum(flt(row.received_quantity) for row in items),
+		"in_transit_quantity": sum(flt(row.in_transit_quantity) for row in items),
+		"quantity_difference": sum(flt(row.quantity_difference) for row in items),
+	}
+	frappe.db.set_value(
+		SHIPMENT_DOCTYPE,
+		shipment.name,
+		{
+			**quantities,
+			"shipment_items_completed": 1,
+			"items_pagination_token": "",
+			"sync_stage": "Completed",
+			"sync_status": "Completed",
+			"last_error": "",
+		},
+		update_modified=False,
+	)
+	frappe.db.set_value(
+		PLAN_DOCTYPE,
+		plan.name,
+		{
+			"total_sku_count": len(items),
+			"total_quantity": quantities["shipped_quantity"],
+			"sync_stage": "Completed",
+			"sync_status": "Completed",
+			"last_error": "",
+		},
+		update_modified=False,
+	)
+	frappe.db.commit()
+	return len(items)
+
+
+def _store_legacy_ledger_items(master, plan, shipment, config, store, batch_id, sync_mode):
+	rows = frappe.get_all(
+		LEDGER_DETAIL_DOCTYPE,
+		filters={
+			"amazon_store": store.name,
+			"event_type": "Receipts",
+			"reference_id": shipment.shipment_id,
+		},
+		fields=["seller_sku", "fnsku", "asin", "product_name", "quantity"],
+		limit_page_length=0,
+	)
+	grouped = {}
+	for row in rows:
+		key = (str(row.seller_sku or "").strip(), str(row.fnsku or "").strip(), str(row.asin or "").strip())
+		if not key[0]:
+			continue
+		entry = grouped.setdefault(key, {"received": 0, "product_name": row.product_name})
+		entry["received"] += flt(row.quantity)
+	for (msku, fnsku, asin), entry in grouped.items():
+		payload = {"msku": msku, "fnsku": fnsku or None, "asin": asin or None, "source": "inventory-ledger-receipts"}
+		key = _item_key(shipment.shipment_id, payload)
+		old = frappe.db.get_value(
+			ITEM_DOCTYPE,
+			{"external_key": key},
+			["name", "received_quantity"],
+			as_dict=True,
+		)
+		item_code, item_name = _item_mapping(store, msku, asin or None)
+		received = flt(entry["received"])
+		values = {
+			"inbound_shipment": shipment.name,
+			"inbound_plan": plan.name,
+			"master_configuration": master.name,
+			"country_configuration": config.name,
+			"amazon_store": store.name,
+			"marketplace_id": store.marketplace_id,
+			"msku": msku,
+			"asin": asin or None,
+			"fnsku": fnsku or None,
+			"item_code": item_code,
+			"item_name": item_name or entry["product_name"],
+			"received_quantity": received,
+			"quantity_updated_at": now_datetime(),
+			"sync_batch_id": batch_id,
+			"last_fetched_at": now_datetime(),
+			"raw_json_hash": _hash(payload),
+			"raw_json": _json(payload),
+		}
+		if not old:
+			values["first_fetched_at"] = now_datetime()
+		name, created = _upsert(ITEM_DOCTYPE, "external_key", key, values)
+		previous_received = flt(old.received_quantity) if old else 0
+		if created or previous_received != received:
+			_history({
+				"inbound_shipment": shipment.name,
+				"inbound_shipment_item": name,
+				"inbound_plan": plan.name,
+				"master_configuration": master.name,
+				"country_configuration": config.name,
+				"amazon_store": store.name,
+				"marketplace_id": store.marketplace_id,
+				"change_type": "ITEM_CREATED" if created else "RECEIPT_QUANTITY_CHANGED",
+				"current_status": shipment.shipment_status,
+				"event_source": "InventoryLedgerReceipts",
+				"sync_mode": sync_mode,
+				"sync_batch_id": batch_id,
+				"msku": msku,
+				"asin": asin or None,
+				"fnsku": fnsku or None,
+				"item_code": item_code,
+				"item_name": item_name or entry["product_name"],
+				"previous_received_quantity": previous_received,
+				"current_received_quantity": received,
+				"received_quantity_change": received - previous_received,
+				"raw_json_hash": _hash(payload),
+				"raw_json": _json(payload),
+			})
+	frappe.db.commit()
+
+
+def _process_legacy_shipment(master, config, store, payload, batch_id, sync_mode):
+	plan = _legacy_plan(master, store, payload)
+	shipment = _legacy_shipment(master, config, store, plan, payload, batch_id, sync_mode)
+	item_count = _sync_legacy_items(master, plan, shipment, config, store, batch_id, sync_mode)
+	return {"shipments": 1, "items": item_count}
+
+
+def _legacy_ledger_references(start, end):
+	"""从库存分类账收货事件取得日期接口可能遗漏的历史FBA货件编号。"""
+	if not frappe.db.exists("DocType", LEDGER_DETAIL_DOCTYPE):
+		return []
+	tz = ZoneInfo(get_system_timezone())
+	start_local = start.astimezone(tz).replace(tzinfo=None)
+	end_local = end.astimezone(tz).replace(tzinfo=None)
+	rows = frappe.get_all(
+		LEDGER_DETAIL_DOCTYPE,
+		filters={
+			"event_type": "Receipts",
+			"reference_id": ["like", "FBA%"],
+			"event_at": ["between", [start_local, end_local]],
+		},
+		pluck="reference_id",
+		limit_page_length=0,
+	)
+	return sorted({str(value or "").strip() for value in rows if str(value or "").strip()})
+
+
+def _legacy_date_ranges(start, end, segment_days):
+	current = start
+	step = timedelta(days=max(min(cint(segment_days), 180), 1))
+	while current < end:
+		segment_end = min(current + step, end)
+		yield current, segment_end
+		current = segment_end
+
+
+def _sync_legacy_shipments(master, configs, stores, start, end, batch_id, sync_mode):
+	config, store = _preferred_legacy_target(configs, stores)
+	payloads = {}
+	# 日期列表覆盖尚未产生库存收货事件的在途货件。
+	for segment_start, segment_end in _legacy_date_ranges(start, end, master.history_segment_days):
+		for shipments, _next_token in iter_legacy_shipment_pages(
+			store,
+			updated_after=segment_start,
+			updated_before=segment_end,
+		):
+			for payload in shipments:
+				shipment_id = str(payload.get("ShipmentId") or "").strip()
+				if shipment_id:
+					payloads[shipment_id] = payload
+	# 分类账参考编号补齐旧接口日期列表中不可见的历史货件。
+	references = _legacy_ledger_references(start, end)
+	missing = [shipment_id for shipment_id in references if shipment_id not in payloads]
+	for shipment_id in missing:
+		try:
+			rows = get_legacy_shipments(store, [shipment_id])
+		except AmazonAPIError as exc:
+			if exc.status_code not in {400, 404}:
+				raise
+			frappe.logger("amazon_fba_inbound", allow_site=True).warning(
+				"Inventory ledger reference %s could not be resolved as an FBA shipment: %s",
+				shipment_id,
+				exc,
+			)
+			continue
+		for payload in rows:
+			shipment_id = str(payload.get("ShipmentId") or "").strip()
+			if shipment_id:
+				payloads[shipment_id] = payload
+	stats = {"shipments": 0, "items": 0, "ledger_references": len(references)}
+	for shipment_id in sorted(payloads):
+		result = _process_legacy_shipment(master, config, store, payloads[shipment_id], batch_id, sync_mode)
+		stats["shipments"] += result["shipments"]
+		stats["items"] += result["items"]
+	return stats
+
+
 def execute_inbound_sync(master_name, mode="incremental", days=0):
 	master, configs, stores = _enabled_group(master_name)
 	mode = str(mode or "incremental").strip().lower()
@@ -766,6 +1110,9 @@ def execute_inbound_sync(master_name, mode="incremental", days=0):
 			"plans": 0,
 			"shipments": 0,
 			"items": 0,
+			"legacy_shipments": 0,
+			"legacy_items": 0,
+			"ledger_references": 0,
 			"skipped": 0,
 			"awd_plans_excluded": 0,
 			"range_start": start.isoformat(),
@@ -804,6 +1151,13 @@ def execute_inbound_sync(master_name, mode="incremental", days=0):
 				stats["items"] += result["items"]
 			if stop:
 				break
+		legacy = _sync_legacy_shipments(master, configs, stores, start, end, batch_id, mode)
+		stats["legacy_shipments"] = legacy["shipments"]
+		stats["legacy_items"] = legacy["items"]
+		stats["ledger_references"] = legacy["ledger_references"]
+		stats["plans"] += legacy["shipments"]
+		stats["shipments"] += legacy["shipments"]
+		stats["items"] += legacy["items"]
 		finished_at = now_datetime()
 		stats["expired_history_deleted"] = _delete_expired_history(master)
 		for config in configs:

@@ -12740,11 +12740,11 @@ Nov 2050,2050年11月
 Dec 2050,2050年12月
 Amazon FBA Inventory Configuration,亚马逊FBA库存配置
 Amazon FBA Inventory Ledger Configuration,亚马逊FBA库存分类账配置
-Amazon AWD Inventory Configuration,亚马逊AWD库存配置
+Amazon AWD Inventory Configuration,亚马逊AWD网络库存配置
 Amazon FBA Inventory Snapshot,亚马逊FBA站点库存快照
 Amazon FBA Inventory Ledger Summary,亚马逊FBA库存分类账汇总
 Amazon FBA Inventory Ledger Detail,亚马逊FBA库存分类账明细
-Amazon AWD Inventory Snapshot,亚马逊AWD库存快照
+Amazon AWD Inventory Snapshot,亚马逊AWD网络汇总库存
 Snapshot Schedule,库存快照计划
 Include Inventory Details,包含库存明细
 Snapshot Retention Days,快照保留天数
@@ -12849,7 +12849,7 @@ Reconciliation,库存核对
 Reconciled Quantity,已核对数量
 Unreconciled Quantity,未核对数量
 Expiration Details JSON,有效期明细JSON
-AWD Inventory Quantities,AWD库存数量
+AWD Inventory Quantities,AWD网络库存数量
 Total On-hand Quantity,AWD现有总数量
 Total Inbound Quantity,AWD入库在途总数量
 Available Distributable Quantity,可分配数量
@@ -13034,3 +13034,48 @@ Shipped Quantity Change,已发数量变化
 Received Quantity Change,已接收数量变化
 Inbound Transit Quantity Change,发往FBA在途数量变化
 Quantity Difference Change,数量差异变化
+AWD Inbound Shipment Master Configuration,AWD入库货件总配置
+AWD Inbound Shipment Country Configuration,AWD入库货件国家配置
+Amazon AWD Inbound Shipment Master Configuration,亚马逊AWD/GWD入库货件总配置
+Amazon AWD Inbound Shipment Country Configuration,亚马逊AWD/GWD入库货件国家配置
+Amazon AWD Inbound Order,亚马逊AWD/GWD入库单
+Amazon AWD Inbound Shipment,亚马逊AWD/GWD入库货件
+Amazon AWD Inbound Shipment Item,亚马逊AWD/GWD入库货件商品
+Amazon AWD Inbound Shipment History,亚马逊AWD/GWD入库货件历史
+AWD Inbound Order ID,AWD入库单编号
+AWD Inbound Order Status,AWD入库单状态
+AWD Inbound Shipment ID,AWD入库货件编号
+AWD Inbound Shipment Status,AWD入库货件状态
+AWD Warehouse,AWD仓库
+Total Expected Quantity,预计总数量
+Expected Quantity,预计数量
+Destination Region,目的地区域
+Warehouse Reference ID,仓库参考编号
+Carrier Code Type,承运商代码类型
+Carrier Code Value,承运商代码
+Ship By,最晚发货时间
+SKU Count,SKU数量
+Shipment Container Quantities JSON,货件容器数量JSON
+Amazon Warehousing Destination Mapping,亚马逊AWD/GWD目的仓映射
+Warehouse Mapping,AWD/GWD仓库映射
+Mapping Name,映射名称
+Warehousing Program,仓储类型
+ERPNext Warehouse,ERPNext仓库
+Inbound Transit Warehouse,入库在途仓库
+Amazon Destination Matching,亚马逊目的仓匹配
+Amazon Destination Warehouse Codes,亚马逊目的仓库代码
+Destination Country Code,目的国家代码
+Destination State or Region,目的省份或地区
+Destination City,目的城市
+Match Priority,匹配优先级
+Notes,备注
+AWD/GWD Warehouse Assignment,AWD/GWD仓库归属
+AWD/GWD Destination Mapping,AWD/GWD目的仓映射
+Amazon Destination Warehouse Code,亚马逊目的仓库代码
+ERPNext Destination Warehouse,ERPNext目的仓库
+ERPNext Inbound Transit Warehouse,ERPNext入库在途仓库
+Unrecognized,未识别
+Inventory Scope,库存范围
+Warehouse Granularity,仓库粒度
+AWD Network Aggregate,AWD网络汇总
+Network Aggregate,网络汇总（不分仓库）

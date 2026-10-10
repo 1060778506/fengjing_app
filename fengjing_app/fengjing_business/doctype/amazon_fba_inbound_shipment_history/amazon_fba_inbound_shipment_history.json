@@ -216,7 +216,7 @@
   },
   {
    "fieldname": "item_name",
-   "fieldtype": "Data",
+   "fieldtype": "Small Text",
    "label": "Item Name",
    "fetch_from": "item_code.item_name",
    "read_only": 1
@@ -375,4 +375,3 @@
  "title_field": "inbound_shipment",
  "track_changes": 1
 }
-

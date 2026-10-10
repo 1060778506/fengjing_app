@@ -46,6 +46,16 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "亚马逊余额快照",
+   "link_count": 0,
+   "link_to": "Amazon Balance Snapshot",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "亚马逊财务交易",
    "link_count": 0,
    "link_to": "Amazon Financial Transaction",
@@ -126,7 +136,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "亚马逊AWD库存",
+   "label": "亚马逊AWD网络汇总库存",
    "link_count": 0,
    "link_to": "Amazon AWD Inventory Snapshot",
    "link_type": "DocType",
@@ -136,7 +146,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "亚马逊AWD入库单",
+   "label": "亚马逊AWD/GWD入库单",
    "link_count": 0,
    "link_to": "Amazon AWD Inbound Order",
    "link_type": "DocType",
@@ -146,7 +156,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "亚马逊AWD入库货件",
+   "label": "亚马逊AWD/GWD入库货件",
    "link_count": 0,
    "link_to": "Amazon AWD Inbound Shipment",
    "link_type": "DocType",
@@ -156,7 +166,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "亚马逊AWD入库货件商品",
+   "label": "亚马逊AWD/GWD入库货件商品",
    "link_count": 0,
    "link_to": "Amazon AWD Inbound Shipment Item",
    "link_type": "DocType",
@@ -166,7 +176,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "亚马逊AWD入库货件历史",
+   "label": "亚马逊AWD/GWD入库货件历史",
    "link_count": 0,
    "link_to": "Amazon AWD Inbound Shipment History",
    "link_type": "DocType",
@@ -177,7 +187,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "亚马逊分析",
-   "link_count": 5,
+   "link_count": 6,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -235,8 +245,18 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "Amazon入库货件中心",
+   "link_count": 0,
+   "link_to": "amazon-inbound",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "亚马逊配置",
-   "link_count": 15,
+   "link_count": 16,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -287,6 +307,26 @@
    "label": "亚马逊订单配置",
    "link_count": 0,
    "link_to": "Amazon Order Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊余额总配置",
+   "link_count": 0,
+   "link_to": "Amazon Balance Master Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊余额国家配置",
+   "link_count": 0,
+   "link_to": "Amazon Balance Country Configuration",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -354,7 +394,17 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "亚马逊AWD库存配置",
+   "label": "亚马逊AWD/GWD目的仓映射",
+   "link_count": 0,
+   "link_to": "Amazon Warehousing Destination Mapping",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊AWD网络库存配置",
    "link_count": 0,
    "link_to": "Amazon AWD Inventory Configuration",
    "link_type": "DocType",
@@ -364,7 +414,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "亚马逊AWD入库货件总配置",
+   "label": "亚马逊AWD/GWD入库货件总配置",
    "link_count": 0,
    "link_to": "Amazon AWD Inbound Shipment Master Configuration",
    "link_type": "DocType",
@@ -374,7 +424,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "亚马逊AWD入库货件国家配置",
+   "label": "亚马逊AWD/GWD入库货件国家配置",
    "link_count": 0,
    "link_to": "Amazon AWD Inbound Shipment Country Configuration",
    "link_type": "DocType",
@@ -726,7 +776,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-09 22:41:38.082586",
+ "modified": "2026-10-10 18:43:15.479086",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "丰境业务APP",

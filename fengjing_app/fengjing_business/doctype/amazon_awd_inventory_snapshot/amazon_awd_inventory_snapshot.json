@@ -12,6 +12,8 @@
   "cost_center",
   "marketplace_id",
   "country",
+  "inventory_scope",
+  "warehouse_granularity",
   "product_column",
   "seller_sku",
   "product_name",
@@ -83,6 +85,23 @@
    "options": "Country",
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "inventory_scope",
+   "fieldtype": "Select",
+   "label": "Inventory Scope",
+   "options": "AWD Network Aggregate",
+   "default": "AWD Network Aggregate",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "warehouse_granularity",
+   "fieldtype": "Select",
+   "label": "Warehouse Granularity",
+   "options": "Network Aggregate",
+   "default": "Network Aggregate",
+   "read_only": 1
   },
   {
    "fieldname": "product_column",

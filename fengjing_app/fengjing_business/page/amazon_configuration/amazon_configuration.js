@@ -292,7 +292,7 @@ class AmazonConfigurationCenter {
 			<div class="pc-editor-head pc-ledger-editor-head"><div class="pc-editor-title"><span class="pc-editor-icon">${this.icon(section.key)}</span><div><small>${this.escape(group.master_label || __("同一卖家 · 多国家站点"))}</small><h3>${this.escape(section.title)}</h3><p>${this.escape(section.description || "")}</p></div></div><div class="pc-editor-status"><span class="pc-status ${overallTone}"><i></i>${this.escape(this.translateStatus(group.status))}</span><span class="pc-runtime"><small>${__("已启用站点")}</small><b>${Number(group.enabled_countries || 0)}</b></span><span class="pc-runtime"><small>${__("API区域")}</small><b>${Number(group.region_count || 0)}</b></span><span class="pc-runtime"><small>${__("下次同步")}</small><b>${this.formatTime(group.next_sync_at)}</b></span></div></div>
 			<div class="pc-editor-scroll pc-ledger-scroll">
 				<section class="pc-ledger-public-card">
-					<header><div><span>${__("公共区域")}</span><h4>${__("入库货件统一抓取设置")}</h4><p>${awd ? __("同一个卖家和API区域只读取一次AWD货件，再按目的国家分配到国家配置。") : __("同一个卖家和API区域只读取一次计划，再按目的国家分配到国家配置。")}</p></div><div class="pc-ledger-actions">${masterLink}${countryLink}${actions}</div></header>
+					<header><div><span>${__("公共区域")}</span><h4>${__("入库货件统一抓取设置")}</h4><p>${awd ? __("同一个卖家和API区域只读取一次AWD/GWD货件，再按目的仓映射和国家配置归类。") : __("同一个卖家和API区域只读取一次计划，再按目的国家分配到国家配置。")}</p></div><div class="pc-ledger-actions">${masterLink}${countryLink}${actions}</div></header>
 					<div class="pc-ledger-shared-grid">
 						<div><small>${__("历史范围")}</small><b>${this.escape(shared.history_start_datetime || "—")} <em>→</em> ${this.escape(shared.history_end_datetime || "—")}</b><span>${__("每段 {0} 天", [shared.history_segment_days || "—"])}</span></div>
 						<div><small>${__("日常同步")}</small><b>${this.escape(shared.sync_interval_minutes ?? "—")} ${__("分钟一次")}</b><span>${__("回看 {0} 小时", [shared.incremental_lookback_hours ?? "—"])}</span></div>
@@ -312,7 +312,7 @@ class AmazonConfigurationCenter {
 	}
 
 	inboundCountryRowsHtml(countries, awd = false) {
-		if (!countries.length) return `<tr><td colspan="7" class="pc-ranking-empty">${awd ? __("尚未建立AWD入库货件国家配置") : __("尚未建立FBA入库货件国家配置")}</td></tr>`;
+		if (!countries.length) return `<tr><td colspan="7" class="pc-ranking-empty">${awd ? __("尚未建立AWD/GWD入库货件国家配置") : __("尚未建立FBA入库货件国家配置")}</td></tr>`;
 		const countryLabels = { "United States": __("美国"), Canada: __("加拿大"), Mexico: __("墨西哥"), Brazil: __("巴西") };
 		return countries.map((row) => {
 			const statusTone = this.statusTone(row.status, row.error);

@@ -162,8 +162,8 @@ SECTIONS = {
 		],
 	},
 	"awd_inventory": {
-		"title": "AWD 库存配置",
-		"description": "按当前店铺和国家站点管理 AWD 实时库存及权限状态。",
+		"title": "AWD 网络库存配置",
+		"description": "读取亚马逊返回的SKU级AWD网络汇总库存；接口不提供单个目的仓数量。",
 		"doctype": "Amazon AWD Inventory Configuration",
 		"primary_field": "amazon_store",
 		"enabled_field": "enabled",
@@ -177,8 +177,8 @@ SECTIONS = {
 		],
 	},
 	"awd_inbound": {
-		"title": "AWD 入库货件配置",
-		"description": "统一读取同一卖家的AWD入库单、货件、商品明细与数量变化。",
+		"title": "AWD/GWD 入库货件配置",
+		"description": "统一读取同一卖家的AWD/GWD入库单、货件、商品明细与数量变化。",
 		"doctype": "Amazon AWD Inbound Shipment Country Configuration",
 		"primary_field": "amazon_store",
 		"enabled_field": "enabled",
@@ -448,6 +448,9 @@ def _aggregate_by_configuration(doctype, configuration_names, date_field):
 		"Amazon FBA Inbound Shipment": "tabAmazon FBA Inbound Shipment",
 		"Amazon FBA Inbound Shipment Item": "tabAmazon FBA Inbound Shipment Item",
 		"Amazon FBA Inbound Shipment History": "tabAmazon FBA Inbound Shipment History",
+		"Amazon AWD Inbound Shipment": "tabAmazon AWD Inbound Shipment",
+		"Amazon AWD Inbound Shipment Item": "tabAmazon AWD Inbound Shipment Item",
+		"Amazon AWD Inbound Shipment History": "tabAmazon AWD Inbound Shipment History",
 	}[doctype]
 	return {
 		row.country_configuration: row

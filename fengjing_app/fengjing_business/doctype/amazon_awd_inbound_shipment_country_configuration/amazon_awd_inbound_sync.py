@@ -5,6 +5,7 @@
 
 import hashlib
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -33,6 +34,7 @@ ORDER_DOCTYPE = "Amazon AWD Inbound Order"
 SHIPMENT_DOCTYPE = "Amazon AWD Inbound Shipment"
 ITEM_DOCTYPE = "Amazon AWD Inbound Shipment Item"
 HISTORY_DOCTYPE = "Amazon AWD Inbound Shipment History"
+MAPPING_DOCTYPE = "Amazon Warehousing Destination Mapping"
 RECHECK_DAYS = (7, 14, 30, 90, 180)
 TASK_TIMEOUT = 6 * 60 * 60
 QUOTA_RETRY_MINUTES = 10
@@ -150,6 +152,179 @@ def _address_values(prefix, address):
 	}
 
 
+def _normalize_match_value(value):
+	return str(value or "").strip().casefold()
+
+
+def _destination_identity(order_payload=None, shipment_payload=None):
+	order_payload = order_payload or {}
+	shipment_payload = shipment_payload or {}
+	order_destination = order_payload.get("destinationDetails") or {}
+	address = order_destination.get("destinationAddress") or shipment_payload.get("destinationAddress") or {}
+	return {
+		"amazon_destination_code": str(address.get("name") or "").strip(),
+		"destination_country_code": str(address.get("countryCode") or "").strip().upper(),
+		"destination_state_or_region": str(address.get("stateOrRegion") or "").strip(),
+		"destination_city": str(address.get("city") or "").strip(),
+	}
+
+
+def _destination_codes(value):
+	return {
+		_normalize_match_value(code)
+		for code in re.split(r"[\s,;，；]+", str(value or ""))
+		if _normalize_match_value(code)
+	}
+
+
+def _destination_mapping(destination):
+	code = _normalize_match_value(destination.get("amazon_destination_code"))
+	country = _normalize_match_value(destination.get("destination_country_code"))
+	state = _normalize_match_value(destination.get("destination_state_or_region"))
+	city = _normalize_match_value(destination.get("destination_city"))
+	matches = []
+	for mapping in frappe.get_all(
+		MAPPING_DOCTYPE,
+		filters={"enabled": 1},
+		fields=[
+			"name", "warehousing_program", "amazon_destination_codes",
+			"destination_country_code", "destination_state_or_region", "destination_city",
+			"erpnext_warehouse", "inbound_transit_warehouse", "match_priority",
+		],
+		order_by="match_priority asc, name asc",
+	):
+		mapping_country = _normalize_match_value(mapping.destination_country_code)
+		if mapping_country and mapping_country != country:
+			continue
+		codes = _destination_codes(mapping.amazon_destination_codes)
+		mapping_city = _normalize_match_value(mapping.destination_city)
+		mapping_state = _normalize_match_value(mapping.destination_state_or_region)
+		if code and code in codes:
+			score = 300
+		elif mapping_city and city == mapping_city and (not mapping_state or state == mapping_state):
+			score = 200
+		elif not codes and not mapping_city and mapping_country and country == mapping_country:
+			score = 100
+		else:
+			continue
+		matches.append((score, cint(mapping.match_priority), mapping.name, mapping))
+	if not matches:
+		return None
+	matches.sort(key=lambda row: (-row[0], row[1], row[2]))
+	return matches[0][3]
+
+
+def _warehouse_assignment(order_payload=None, shipment_payload=None):
+	destination = _destination_identity(order_payload, shipment_payload)
+	mapping = _destination_mapping(destination)
+	return {
+		**destination,
+		"warehousing_program": mapping.warehousing_program if mapping else "Unrecognized",
+		"destination_mapping": mapping.name if mapping else None,
+		"erpnext_destination_warehouse": mapping.erpnext_warehouse if mapping else None,
+		"erpnext_inbound_transit_warehouse": mapping.inbound_transit_warehouse if mapping else None,
+	}
+
+
+def _assignment_values(assignment, *, include_destination=False, include_transit=True):
+	values = {
+		"warehousing_program": assignment.get("warehousing_program"),
+		"destination_mapping": assignment.get("destination_mapping"),
+		"erpnext_destination_warehouse": assignment.get("erpnext_destination_warehouse"),
+	}
+	if include_transit:
+		values["erpnext_inbound_transit_warehouse"] = assignment.get("erpnext_inbound_transit_warehouse")
+	if include_destination:
+		values.update({
+			"amazon_destination_code": assignment.get("amazon_destination_code"),
+			"destination_country_code": assignment.get("destination_country_code"),
+			"destination_state_or_region": assignment.get("destination_state_or_region"),
+			"destination_city": assignment.get("destination_city"),
+		})
+	return values
+
+
+def _raw_payload(value):
+	if isinstance(value, dict):
+		return value
+	try:
+		payload = json.loads(value or "{}")
+	except (TypeError, ValueError):
+		return {}
+	return payload if isinstance(payload, dict) else {}
+
+
+def _set_assignment(doctype, name, assignment, *, include_destination=False, history=False):
+	values = _assignment_values(
+		assignment,
+		include_destination=include_destination and not history,
+		include_transit=not history,
+	)
+	if history:
+		values["amazon_destination_code"] = assignment.get("amazon_destination_code")
+	valid_columns = set(frappe.get_meta(doctype).get_valid_columns())
+	frappe.db.set_value(
+		doctype,
+		name,
+		{key: value for key, value in values.items() if key in valid_columns},
+		update_modified=False,
+	)
+
+
+def backfill_warehouse_assignments():
+	"""Re-evaluate stored AWD/GWD destinations without calling Amazon or moving stock."""
+	ensure_database_connection()
+	counts = {"AWD": 0, "GWD": 0, "Unrecognized": 0}
+	updated_orders = set()
+	shipments = frappe.get_all(
+		SHIPMENT_DOCTYPE,
+		fields=["name", "inbound_order", "raw_json"],
+		order_by="creation asc",
+		limit_page_length=0,
+	)
+	for shipment in shipments:
+		order_payload = {}
+		if shipment.inbound_order:
+			order_payload = _raw_payload(
+				frappe.db.get_value(ORDER_DOCTYPE, shipment.inbound_order, "raw_json")
+			)
+		assignment = _warehouse_assignment(order_payload, _raw_payload(shipment.raw_json))
+		_set_assignment(SHIPMENT_DOCTYPE, shipment.name, assignment, include_destination=True)
+		if shipment.inbound_order:
+			_set_assignment(ORDER_DOCTYPE, shipment.inbound_order, assignment)
+			updated_orders.add(shipment.inbound_order)
+		for item_name in frappe.get_all(
+			ITEM_DOCTYPE,
+			filters={"inbound_shipment": shipment.name},
+			pluck="name",
+			limit_page_length=0,
+		):
+			_set_assignment(ITEM_DOCTYPE, item_name, assignment)
+		for history_name in frappe.get_all(
+			HISTORY_DOCTYPE,
+			filters={"inbound_shipment": shipment.name},
+			pluck="name",
+			limit_page_length=0,
+		):
+			_set_assignment(HISTORY_DOCTYPE, history_name, assignment, history=True)
+		program = assignment.get("warehousing_program") or "Unrecognized"
+		counts[program] = counts.get(program, 0) + 1
+
+	for order in frappe.get_all(
+		ORDER_DOCTYPE,
+		fields=["name", "raw_json"],
+		order_by="creation asc",
+		limit_page_length=0,
+	):
+		if order.name in updated_orders:
+			continue
+		assignment = _warehouse_assignment(_raw_payload(order.raw_json), {})
+		_set_assignment(ORDER_DOCTYPE, order.name, assignment)
+
+	frappe.db.commit()
+	return {"shipments": len(shipments), "classification": counts}
+
+
 def _country_target(detail, configs, stores):
 	address = detail.get("destinationAddress") or {}
 	code = str(address.get("countryCode") or "").strip().upper()
@@ -199,7 +374,7 @@ def _package_products(packages):
 	return products
 
 
-def _save_order(master, config, store, payload, shipment_id):
+def _save_order(master, config, store, payload, shipment_id, assignment):
 	order_id = str(payload.get("orderId") or "").strip()
 	if not order_id:
 		return None, {}, False
@@ -230,6 +405,7 @@ def _save_order(master, config, store, payload, shipment_id):
 		"last_fetched_at": now,
 		"raw_json_hash": raw_hash,
 		"raw_json": _json(payload, pretty=True),
+		**_assignment_values(assignment),
 	}
 	if not existing:
 		values["first_fetched_at"] = now
@@ -237,7 +413,7 @@ def _save_order(master, config, store, payload, shipment_id):
 	return name, _package_products(packages), created or not existing or existing.raw_json_hash != raw_hash
 
 
-def _save_shipment(master, config, store, payload, order_name, batch_id):
+def _save_shipment(master, config, store, payload, order_name, batch_id, assignment):
 	shipment_id = str(payload.get("shipmentId") or "").strip()
 	if not shipment_id:
 		raise ValueError("AWD入库货件缺少shipmentId。")
@@ -283,6 +459,7 @@ def _save_shipment(master, config, store, payload, order_name, batch_id):
 		"last_error": "",
 		"raw_json_hash": raw_hash,
 		"raw_json": _json(payload, pretty=True),
+		**_assignment_values(assignment, include_destination=True),
 	}
 	if not existing:
 		values["first_fetched_at"] = now
@@ -296,7 +473,7 @@ def _save_shipment(master, config, store, payload, order_name, batch_id):
 	return name, existing, changed
 
 
-def _save_history(*, master, config, store, shipment_name, item_name, order_name, payload, old, batch_id, sync_mode):
+def _save_history(*, master, config, store, shipment_name, item_name, order_name, payload, old, batch_id, sync_mode, assignment):
 	observed = now_datetime()
 	expected = flt(payload.get("expected_quantity"))
 	received = flt(payload.get("received_quantity"))
@@ -330,10 +507,12 @@ def _save_history(*, master, config, store, shipment_name, item_name, order_name
 		"quantity_difference_change": difference - old_difference,
 		"raw_json_hash": _hash(payload.get("raw_payload") or payload),
 		"raw_json": _json(payload.get("raw_payload") or payload, pretty=True),
+		**_assignment_values(assignment, include_transit=False),
+		"amazon_destination_code": assignment.get("amazon_destination_code"),
 	}).insert(ignore_permissions=True)
 
 
-def _save_items(master, config, store, shipment_name, order_name, shipment_payload, package_products, batch_id, sync_mode):
+def _save_items(master, config, store, shipment_name, order_name, shipment_payload, package_products, batch_id, sync_mode, assignment):
 	now = now_datetime()
 	count = 0
 	for row in shipment_payload.get("shipmentSkuQuantities") or []:
@@ -377,6 +556,7 @@ def _save_items(master, config, store, shipment_name, order_name, shipment_paylo
 			"last_fetched_at": now,
 			"raw_json_hash": raw_hash,
 			"raw_json": _json(row, pretty=True),
+			**_assignment_values(assignment),
 		}
 		if not existing:
 			values["first_fetched_at"] = now
@@ -395,6 +575,7 @@ def _save_items(master, config, store, shipment_name, order_name, shipment_paylo
 					"item_code": item_code, "amazon_updated_at": frappe_datetime(shipment_payload.get("updatedAt")),
 					"expected_quantity": expected, "received_quantity": received, "raw_payload": row,
 				},
+				assignment=assignment,
 			)
 		count += 1
 	frappe.db.commit()
@@ -425,10 +606,11 @@ def _process_shipment(master, configs, stores, summary, batch_id, sync_mode):
 	detail = get_inbound_shipment(request_store, shipment_id)
 	config, store = _country_target(detail, configs, stores)
 	order_payload = _get_order_safely(request_store, detail.get("orderId") or summary.get("orderId"), summary)
-	order_name, package_products, order_changed = _save_order(master, config, store, order_payload, shipment_id)
-	shipment_name, old_shipment, shipment_changed = _save_shipment(master, config, store, detail, order_name, batch_id)
+	assignment = _warehouse_assignment(order_payload, detail)
+	order_name, package_products, order_changed = _save_order(master, config, store, order_payload, shipment_id, assignment)
+	shipment_name, old_shipment, shipment_changed = _save_shipment(master, config, store, detail, order_name, batch_id, assignment)
 	before_history = frappe.db.count(HISTORY_DOCTYPE, {"sync_batch_id": batch_id})
-	item_count = _save_items(master, config, store, shipment_name, order_name, detail, package_products, batch_id, sync_mode)
+	item_count = _save_items(master, config, store, shipment_name, order_name, detail, package_products, batch_id, sync_mode, assignment)
 	if shipment_changed and not (detail.get("shipmentSkuQuantities") or []):
 		_save_history(
 			master=master, config=config, store=store, shipment_name=shipment_name,
@@ -437,6 +619,7 @@ def _process_shipment(master, configs, stores, summary, batch_id, sync_mode):
 				"shipment_status": detail.get("shipmentStatus"), "amazon_updated_at": frappe_datetime(detail.get("updatedAt")),
 				"expected_quantity": 0, "received_quantity": 0, "raw_payload": detail,
 			},
+			assignment=assignment,
 		)
 		frappe.db.commit()
 	after_history = frappe.db.count(HISTORY_DOCTYPE, {"sync_batch_id": batch_id})

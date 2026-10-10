@@ -15,6 +15,12 @@
   "country_configuration",
   "amazon_store",
   "marketplace_id",
+  "warehouse_mapping_section",
+  "warehousing_program",
+  "destination_mapping",
+  "warehouse_mapping_column",
+  "erpnext_destination_warehouse",
+  "erpnext_inbound_transit_warehouse",
   "product_section",
   "seller_sku",
   "item_code",
@@ -108,6 +114,48 @@
    "fieldtype": "Data",
    "label": "Marketplace ID",
    "search_index": 1
+  },
+  {
+   "fieldname": "warehouse_mapping_section",
+   "fieldtype": "Section Break",
+   "label": "AWD/GWD Warehouse Assignment"
+  },
+  {
+   "fieldname": "warehousing_program",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Warehousing Program",
+   "options": "\nAWD\nGWD\nUnrecognized",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "destination_mapping",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "AWD/GWD Destination Mapping",
+   "options": "Amazon Warehousing Destination Mapping",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "warehouse_mapping_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "erpnext_destination_warehouse",
+   "fieldtype": "Link",
+   "label": "ERPNext Destination Warehouse",
+   "options": "Warehouse",
+   "read_only": 1
+  },
+  {
+   "fieldname": "erpnext_inbound_transit_warehouse",
+   "fieldtype": "Link",
+   "label": "ERPNext Inbound Transit Warehouse",
+   "options": "Warehouse",
+   "read_only": 1
   },
   {
    "fieldname": "product_section",

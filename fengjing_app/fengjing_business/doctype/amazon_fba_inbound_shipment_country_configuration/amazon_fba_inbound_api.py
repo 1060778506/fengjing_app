@@ -15,6 +15,19 @@ from fengjing_app.fengjing_business.doctype.amazon_store_configuration.amazon_st
 
 SERVICE = "fba-inbound"
 BASE_PATH = "/inbound/fba/2024-03-20"
+LEGACY_BASE_PATH = "/fba/inbound/v0"
+LEGACY_SHIPMENT_STATUSES = (
+	"WORKING",
+	"SHIPPED",
+	"RECEIVING",
+	"CANCELLED",
+	"DELETED",
+	"CLOSED",
+	"ERROR",
+	"IN_TRANSIT",
+	"DELIVERED",
+	"CHECKED_IN",
+)
 
 
 def amazon_datetime(value):
@@ -79,6 +92,52 @@ def get_shipment(store, inbound_plan_id, shipment_id):
 	)
 
 
+def iter_legacy_shipment_pages(store, *, updated_after, updated_before):
+	"""读取旧版 Send to Amazon/FBA 货件列表。
+
+	Amazon 仍保留 v0 只读接口，用于查询未进入新版 inboundPlans 的历史货件。
+	"""
+	params = {
+		"QueryType": "DATE_RANGE",
+		"ShipmentStatusList": list(LEGACY_SHIPMENT_STATUSES),
+		"LastUpdatedAfter": _legacy_iso(updated_after),
+		"LastUpdatedBefore": _legacy_iso(updated_before),
+	}
+	seen_tokens = set()
+	while True:
+		payload = amazon_api_json(store, SERVICE, "GET", f"{LEGACY_BASE_PATH}/shipments", params=params)
+		result = payload.get("payload") or payload
+		next_token = result.get("NextToken")
+		yield result.get("ShipmentData") or [], next_token
+		if not next_token:
+			break
+		if next_token in seen_tokens:
+			raise RuntimeError("Amazon旧版FBA货件接口返回了重复的分页标记。")
+		seen_tokens.add(next_token)
+		params = {"NextToken": next_token}
+
+
+def get_legacy_shipments(store, shipment_ids):
+	"""按货件编号读取旧版FBA货件。
+
+	Amazon网关对重复的ShipmentIdList参数只稳定返回第一项，因此逐个查询，
+	再由上层按ShipmentId合并。
+	"""
+	shipment_ids = [str(value or "").strip() for value in shipment_ids if str(value or "").strip()]
+	shipments = []
+	for shipment_id in dict.fromkeys(shipment_ids):
+		payload = amazon_api_json(
+			store,
+			SERVICE,
+			"GET",
+			f"{LEGACY_BASE_PATH}/shipments",
+			params={"QueryType": "SHIPMENT", "ShipmentIdList": [shipment_id]},
+		)
+		result = payload.get("payload") or payload
+		shipments.extend(result.get("ShipmentData") or [])
+	return shipments
+
+
 def iter_shipment_item_pages(store, inbound_plan_id, shipment_id, *, resume_token=None):
 	"""逐页返回一个货件的商品明细和下一页标记。"""
 	token = resume_token or None
@@ -125,3 +184,8 @@ def iter_received_item_pages(store, shipment_confirmation_id):
 			raise RuntimeError("Amazon货件收货数量接口返回了重复的分页标记。")
 		seen_tokens.add(next_token)
 		token = next_token
+
+
+def _legacy_iso(value):
+	value = amazon_datetime(value)
+	return value.isoformat(timespec="seconds").replace("+00:00", "Z") if value else None
