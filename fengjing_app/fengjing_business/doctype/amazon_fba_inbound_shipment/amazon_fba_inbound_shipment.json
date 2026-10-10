@@ -1,0 +1,464 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:shipment_id",
+ "creation": "2026-10-10 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "shipment_id",
+  "shipment_confirmation_id",
+  "shipment_name",
+  "shipment_status",
+  "identity_column",
+  "inbound_plan",
+  "master_configuration",
+  "country_configuration",
+  "amazon_store",
+  "marketplace_id",
+  "destination_section",
+  "destination_type",
+  "fulfillment_center_id",
+  "ship_to_name",
+  "destination_column",
+  "ship_to_address_line_1",
+  "ship_to_address_line_2",
+  "ship_to_city",
+  "ship_to_state_or_province",
+  "ship_to_postal_code",
+  "ship_to_country_code",
+  "transport_section",
+  "transportation_option_id",
+  "shipping_mode",
+  "carrier_name",
+  "transport_column",
+  "tracking_number",
+  "tracking_details_json",
+  "delivery_window_start",
+  "delivery_window_end",
+  "quantity_section",
+  "planned_quantity",
+  "shipped_quantity",
+  "received_quantity",
+  "quantity_column",
+  "in_transit_quantity",
+  "quantity_difference",
+  "box_count",
+  "pallet_count",
+  "amazon_time_section",
+  "amazon_created_at",
+  "amazon_updated_at",
+  "shipped_at",
+  "amazon_time_column",
+  "closed_at",
+  "first_fetched_at",
+  "last_fetched_at",
+  "sync_section",
+  "sync_stage",
+  "sync_status",
+  "shipment_detail_completed",
+  "shipment_items_completed",
+  "sync_column",
+  "items_pagination_token",
+  "last_sync_at",
+  "next_retry_at",
+  "retry_count",
+  "last_error",
+  "raw_section",
+  "raw_json_hash",
+  "raw_column",
+  "raw_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "Inbound Shipment Identity"
+  },
+  {
+   "fieldname": "shipment_id",
+   "fieldtype": "Data",
+   "label": "Inbound Shipment ID",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "shipment_confirmation_id",
+   "fieldtype": "Data",
+   "label": "Shipment Confirmation ID",
+   "search_index": 1
+  },
+  {
+   "fieldname": "shipment_name",
+   "fieldtype": "Data",
+   "label": "Inbound Shipment Name",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "shipment_status",
+   "fieldtype": "Data",
+   "label": "Inbound Shipment Status",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "identity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "inbound_plan",
+   "fieldtype": "Link",
+   "label": "Inbound Plan",
+   "options": "Amazon FBA Inbound Plan",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "master_configuration",
+   "fieldtype": "Link",
+   "label": "Inbound Shipment Master Configuration",
+   "options": "Amazon FBA Inbound Shipment Master Configuration",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "country_configuration",
+   "fieldtype": "Link",
+   "label": "Inbound Shipment Country Configuration",
+   "options": "Amazon FBA Inbound Shipment Country Configuration",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "amazon_store",
+   "fieldtype": "Link",
+   "label": "Amazon Store",
+   "options": "Amazon Store Configuration",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "marketplace_id",
+   "fieldtype": "Data",
+   "label": "Marketplace ID",
+   "search_index": 1
+  },
+  {
+   "fieldname": "destination_section",
+   "fieldtype": "Section Break",
+   "label": "FBA Destination"
+  },
+  {
+   "fieldname": "destination_type",
+   "fieldtype": "Data",
+   "label": "Destination Type"
+  },
+  {
+   "fieldname": "fulfillment_center_id",
+   "fieldtype": "Data",
+   "label": "Fulfillment Center ID",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "ship_to_name",
+   "fieldtype": "Data",
+   "label": "Ship To Name"
+  },
+  {
+   "fieldname": "destination_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ship_to_address_line_1",
+   "fieldtype": "Data",
+   "label": "Ship To Address Line 1"
+  },
+  {
+   "fieldname": "ship_to_address_line_2",
+   "fieldtype": "Data",
+   "label": "Ship To Address Line 2"
+  },
+  {
+   "fieldname": "ship_to_city",
+   "fieldtype": "Data",
+   "label": "Ship To City"
+  },
+  {
+   "fieldname": "ship_to_state_or_province",
+   "fieldtype": "Data",
+   "label": "Ship To State or Province"
+  },
+  {
+   "fieldname": "ship_to_postal_code",
+   "fieldtype": "Data",
+   "label": "Ship To Postal Code"
+  },
+  {
+   "fieldname": "ship_to_country_code",
+   "fieldtype": "Data",
+   "label": "Ship To Country Code",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "transport_section",
+   "fieldtype": "Section Break",
+   "label": "Transportation Information"
+  },
+  {
+   "fieldname": "transportation_option_id",
+   "fieldtype": "Data",
+   "label": "Transportation Option ID"
+  },
+  {
+   "fieldname": "shipping_mode",
+   "fieldtype": "Data",
+   "label": "Shipping Mode"
+  },
+  {
+   "fieldname": "carrier_name",
+   "fieldtype": "Data",
+   "label": "Carrier Name"
+  },
+  {
+   "fieldname": "transport_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "tracking_number",
+   "fieldtype": "Data",
+   "label": "Tracking Number"
+  },
+  {
+   "fieldname": "tracking_details_json",
+   "fieldtype": "Long Text",
+   "label": "Tracking Details JSON"
+  },
+  {
+   "fieldname": "delivery_window_start",
+   "fieldtype": "Datetime",
+   "label": "Delivery Window Start"
+  },
+  {
+   "fieldname": "delivery_window_end",
+   "fieldtype": "Datetime",
+   "label": "Delivery Window End"
+  },
+  {
+   "fieldname": "quantity_section",
+   "fieldtype": "Section Break",
+   "label": "Shipment Quantity Summary"
+  },
+  {
+   "fieldname": "planned_quantity",
+   "fieldtype": "Float",
+   "label": "Planned Quantity"
+  },
+  {
+   "fieldname": "shipped_quantity",
+   "fieldtype": "Float",
+   "label": "Shipped Quantity"
+  },
+  {
+   "fieldname": "received_quantity",
+   "fieldtype": "Float",
+   "label": "Received Quantity"
+  },
+  {
+   "fieldname": "quantity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "in_transit_quantity",
+   "fieldtype": "Float",
+   "label": "Inbound Transit Quantity"
+  },
+  {
+   "fieldname": "quantity_difference",
+   "fieldtype": "Float",
+   "label": "Quantity Difference"
+  },
+  {
+   "fieldname": "box_count",
+   "fieldtype": "Int",
+   "label": "Box Count",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "pallet_count",
+   "fieldtype": "Int",
+   "label": "Pallet Count",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "amazon_time_section",
+   "fieldtype": "Section Break",
+   "label": "Amazon Time Information"
+  },
+  {
+   "fieldname": "amazon_created_at",
+   "fieldtype": "Datetime",
+   "label": "Amazon Created At"
+  },
+  {
+   "fieldname": "amazon_updated_at",
+   "fieldtype": "Datetime",
+   "label": "Amazon Updated At",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "shipped_at",
+   "fieldtype": "Datetime",
+   "label": "Shipped At"
+  },
+  {
+   "fieldname": "amazon_time_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "closed_at",
+   "fieldtype": "Datetime",
+   "label": "Closed At"
+  },
+  {
+   "fieldname": "first_fetched_at",
+   "fieldtype": "Datetime",
+   "label": "First Fetched At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_fetched_at",
+   "fieldtype": "Datetime",
+   "label": "Last Fetched At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_section",
+   "fieldtype": "Section Break",
+   "label": "Synchronization Progress"
+  },
+  {
+   "fieldname": "sync_stage",
+   "fieldtype": "Select",
+   "label": "Sync Stage",
+   "options": "Discovered\nShipment Detail\nShipment Items\nCompleted\nFailed",
+   "default": "Discovered",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sync_status",
+   "fieldtype": "Select",
+   "label": "Sync Status",
+   "options": "Waiting\nRunning\nCompleted\nFailed",
+   "default": "Waiting",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "shipment_detail_completed",
+   "fieldtype": "Check",
+   "label": "Shipment Detail Completed",
+   "default": "0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shipment_items_completed",
+   "fieldtype": "Check",
+   "label": "Shipment Items Completed",
+   "default": "0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "items_pagination_token",
+   "fieldtype": "Small Text",
+   "label": "Shipment Items Pagination Token",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_at",
+   "fieldtype": "Datetime",
+   "label": "Last Sync At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "next_retry_at",
+   "fieldtype": "Datetime",
+   "label": "Next Retry At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "retry_count",
+   "fieldtype": "Int",
+   "label": "Retry Count",
+   "non_negative": 1,
+   "default": "0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Long Text",
+   "label": "Last Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_section",
+   "fieldtype": "Section Break",
+   "label": "Raw Data"
+  },
+  {
+   "fieldname": "raw_json_hash",
+   "fieldtype": "Data",
+   "label": "Raw JSON Hash",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Long Text",
+   "label": "Raw JSON",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-10 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon FBA Inbound Shipment",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "shipment_name",
+ "track_changes": 1
+}
+

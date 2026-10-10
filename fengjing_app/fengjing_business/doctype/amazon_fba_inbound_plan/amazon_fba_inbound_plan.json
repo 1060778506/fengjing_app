@@ -1,0 +1,368 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:inbound_plan_id",
+ "creation": "2026-10-10 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "inbound_plan_id",
+  "plan_name",
+  "plan_status",
+  "identity_column",
+  "master_configuration",
+  "seller_id",
+  "api_region",
+  "marketplace_ids_json",
+  "time_section",
+  "amazon_created_at",
+  "amazon_updated_at",
+  "time_column",
+  "first_fetched_at",
+  "last_fetched_at",
+  "source_address_section",
+  "source_name",
+  "source_company_name",
+  "source_phone_number",
+  "source_address_column",
+  "source_address_line_1",
+  "source_address_line_2",
+  "source_city",
+  "source_state_or_province",
+  "source_postal_code",
+  "source_country_code",
+  "plan_summary_section",
+  "packing_option_id",
+  "placement_option_id",
+  "shipment_count",
+  "plan_summary_column",
+  "total_sku_count",
+  "total_quantity",
+  "sync_section",
+  "sync_stage",
+  "sync_status",
+  "plan_detail_completed",
+  "shipment_discovery_completed",
+  "sync_column",
+  "plan_items_pagination_token",
+  "last_sync_at",
+  "next_retry_at",
+  "retry_count",
+  "last_error",
+  "raw_section",
+  "raw_json_hash",
+  "raw_column",
+  "raw_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "Inbound Plan Identity"
+  },
+  {
+   "fieldname": "inbound_plan_id",
+   "fieldtype": "Data",
+   "label": "Inbound Plan ID",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "plan_name",
+   "fieldtype": "Data",
+   "label": "Inbound Plan Name",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "plan_status",
+   "fieldtype": "Data",
+   "label": "Inbound Plan Status",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "identity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "master_configuration",
+   "fieldtype": "Link",
+   "label": "Inbound Shipment Master Configuration",
+   "options": "Amazon FBA Inbound Shipment Master Configuration",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "seller_id",
+   "fieldtype": "Data",
+   "label": "Seller ID",
+   "search_index": 1
+  },
+  {
+   "fieldname": "api_region",
+   "fieldtype": "Data",
+   "label": "API Region",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "marketplace_ids_json",
+   "fieldtype": "Small Text",
+   "label": "Marketplace IDs JSON"
+  },
+  {
+   "fieldname": "time_section",
+   "fieldtype": "Section Break",
+   "label": "Amazon Time Information"
+  },
+  {
+   "fieldname": "amazon_created_at",
+   "fieldtype": "Datetime",
+   "label": "Amazon Created At",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "amazon_updated_at",
+   "fieldtype": "Datetime",
+   "label": "Amazon Updated At",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "time_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "first_fetched_at",
+   "fieldtype": "Datetime",
+   "label": "First Fetched At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_fetched_at",
+   "fieldtype": "Datetime",
+   "label": "Last Fetched At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_address_section",
+   "fieldtype": "Section Break",
+   "label": "Source Address"
+  },
+  {
+   "fieldname": "source_name",
+   "fieldtype": "Data",
+   "label": "Source Name"
+  },
+  {
+   "fieldname": "source_company_name",
+   "fieldtype": "Data",
+   "label": "Source Company Name"
+  },
+  {
+   "fieldname": "source_phone_number",
+   "fieldtype": "Data",
+   "label": "Source Phone Number"
+  },
+  {
+   "fieldname": "source_address_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "source_address_line_1",
+   "fieldtype": "Data",
+   "label": "Source Address Line 1"
+  },
+  {
+   "fieldname": "source_address_line_2",
+   "fieldtype": "Data",
+   "label": "Source Address Line 2"
+  },
+  {
+   "fieldname": "source_city",
+   "fieldtype": "Data",
+   "label": "Source City"
+  },
+  {
+   "fieldname": "source_state_or_province",
+   "fieldtype": "Data",
+   "label": "Source State or Province"
+  },
+  {
+   "fieldname": "source_postal_code",
+   "fieldtype": "Data",
+   "label": "Source Postal Code"
+  },
+  {
+   "fieldname": "source_country_code",
+   "fieldtype": "Data",
+   "label": "Source Country Code"
+  },
+  {
+   "fieldname": "plan_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Inbound Plan Summary"
+  },
+  {
+   "fieldname": "packing_option_id",
+   "fieldtype": "Data",
+   "label": "Packing Option ID"
+  },
+  {
+   "fieldname": "placement_option_id",
+   "fieldtype": "Data",
+   "label": "Placement Option ID"
+  },
+  {
+   "fieldname": "shipment_count",
+   "fieldtype": "Int",
+   "label": "Shipment Count",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "plan_summary_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_sku_count",
+   "fieldtype": "Int",
+   "label": "Total SKU Count",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_quantity",
+   "fieldtype": "Float",
+   "label": "Total Quantity",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_section",
+   "fieldtype": "Section Break",
+   "label": "Synchronization Progress"
+  },
+  {
+   "fieldname": "sync_stage",
+   "fieldtype": "Select",
+   "label": "Sync Stage",
+   "options": "Listed\nPlan Detail\nShipment Discovery\nShipment Details\nShipment Items\nCompleted\nFailed",
+   "default": "Listed",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sync_status",
+   "fieldtype": "Select",
+   "label": "Sync Status",
+   "options": "Waiting\nRunning\nCompleted\nFailed",
+   "default": "Waiting",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "plan_detail_completed",
+   "fieldtype": "Check",
+   "label": "Plan Detail Completed",
+   "default": "0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shipment_discovery_completed",
+   "fieldtype": "Check",
+   "label": "Shipment Discovery Completed",
+   "default": "0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "plan_items_pagination_token",
+   "fieldtype": "Small Text",
+   "label": "Plan Items Pagination Token",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_at",
+   "fieldtype": "Datetime",
+   "label": "Last Sync At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "next_retry_at",
+   "fieldtype": "Datetime",
+   "label": "Next Retry At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "retry_count",
+   "fieldtype": "Int",
+   "label": "Retry Count",
+   "non_negative": 1,
+   "default": "0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Long Text",
+   "label": "Last Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_section",
+   "fieldtype": "Section Break",
+   "label": "Raw Data"
+  },
+  {
+   "fieldname": "raw_json_hash",
+   "fieldtype": "Data",
+   "label": "Raw JSON Hash",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Long Text",
+   "label": "Raw JSON",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-10 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon FBA Inbound Plan",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "inbound_plan_id",
+ "track_changes": 1
+}
+

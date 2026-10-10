@@ -18,7 +18,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "亚马逊数据",
-   "link_count": 7,
+   "link_count": 11,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -79,6 +79,46 @@
    "label": "亚马逊FBA库存分类账明细",
    "link_count": 0,
    "link_to": "Amazon FBA Inventory Ledger Detail",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊FBA入库计划",
+   "link_count": 0,
+   "link_to": "Amazon FBA Inbound Plan",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊FBA入库货件",
+   "link_count": 0,
+   "link_to": "Amazon FBA Inbound Shipment",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊FBA入库货件商品",
+   "link_count": 0,
+   "link_to": "Amazon FBA Inbound Shipment Item",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊FBA入库货件历史",
+   "link_count": 0,
+   "link_to": "Amazon FBA Inbound Shipment History",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -156,7 +196,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "亚马逊配置",
-   "link_count": 11,
+   "link_count": 13,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -247,6 +287,26 @@
    "label": "亚马逊FBA库存分类账配置",
    "link_count": 0,
    "link_to": "Amazon FBA Inventory Ledger Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊FBA入库货件总配置",
+   "link_count": 0,
+   "link_to": "Amazon FBA Inbound Shipment Master Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊FBA入库货件国家配置",
+   "link_count": 0,
+   "link_to": "Amazon FBA Inbound Shipment Country Configuration",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"

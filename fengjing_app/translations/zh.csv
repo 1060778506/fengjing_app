@@ -12877,3 +12877,160 @@ Configuration Name,配置名称
 Inventory Ledger History Result,库存分类账历史结果
 Ledger Summary Result,库存分类账汇总结果
 Ledger Detail Result,库存分类账明细结果
+Amazon FBA Inbound Shipment Master Configuration,亚马逊FBA入库货件总配置
+Amazon FBA Inbound Shipment Country Configuration,亚马逊FBA入库货件国家配置
+Inbound Shipment Master Configuration,入库货件总配置
+Inbound Shipment History,入库货件历史同步
+Inbound Shipment History Result,入库货件历史同步结果
+Routine Inbound Shipment Sync,日常入库货件同步
+Routine Inbound Shipment Result,日常入库货件同步结果
+Split the initial history synchronization into this many days per task.,首次历史同步按此天数分段执行。
+Record Retention Days,记录保留天数
+Sync Interval Minutes,同步间隔（分钟）
+Synchronize open and recently updated inbound shipments at this interval.,按此间隔同步未完成及最近更新的入库货件。
+Incremental Lookback Hours,增量回看小时数
+Look back this many hours during routine synchronization to catch delayed Amazon updates.,日常同步时回看这些小时，以接收亚马逊延迟更新的数据。
+ERPNext Warehouse Mapping,ERPNext仓库映射
+FBA Warehouse,FBA仓库
+Inbound Transit Warehouse,发往FBA在途仓库
+ERPNext warehouse used for goods shipped by the seller but not yet received by FBA.,用于记录卖家已经发出但FBA尚未接收货物的ERPNext仓库。
+History Status,历史同步状态
+History Completed,历史同步已完成
+History Last Error,历史同步最近错误
+Incremental Last Sync At,增量上次同步时间
+Incremental Next Sync At,增量下次同步时间
+Incremental Checkpoint,增量同步检查点
+Incremental Summary,增量同步摘要
+Current Execution Type,当前执行类型
+Started At,开始时间
+Completed At,完成时间
+Amazon FBA Inbound Plan,亚马逊FBA入库计划
+Amazon FBA Inbound Shipment,亚马逊FBA入库货件
+Amazon FBA Inbound Shipment Item,亚马逊FBA入库货件商品
+Amazon FBA Inbound Shipment History,亚马逊FBA入库货件历史
+Inbound Plan Identity,入库计划标识
+Inbound Plan ID,入库计划ID
+Inbound Plan Name,入库计划名称
+Inbound Plan Status,入库计划状态
+Marketplace IDs JSON,站点ID JSON
+Amazon Time Information,亚马逊时间信息
+Amazon Created At,亚马逊创建时间
+Amazon Updated At,亚马逊更新时间
+First Fetched At,首次抓取时间
+Last Fetched At,最近抓取时间
+Source Address,发货地址
+Source Name,发货人名称
+Source Company Name,发货公司名称
+Source Phone Number,发货联系电话
+Source Address Line 1,发货地址第一行
+Source Address Line 2,发货地址第二行
+Source City,发货城市
+Source State or Province,发货州或省
+Source Postal Code,发货邮政编码
+Source Country Code,发货国家代码
+Inbound Plan Summary,入库计划汇总
+Packing Option ID,装箱选项ID
+Placement Option ID,配置选项ID
+Shipment Count,货件数量
+Total SKU Count,SKU总数
+Total Quantity,总数量
+Synchronization Progress,同步进度
+Sync Stage,同步阶段
+Sync Status,同步状态
+Listed,已列出
+Plan Detail,计划详情
+Shipment Discovery,发现货件
+Shipment Details,货件详情
+Shipment Items,货件商品
+Plan Detail Completed,计划详情已完成
+Shipment Discovery Completed,货件发现已完成
+Plan Items Pagination Token,计划商品分页标记
+Next Retry At,下次重试时间
+Retry Count,重试次数
+Raw Data,原始数据
+Raw JSON Hash,原始JSON哈希
+Inbound Shipment Identity,入库货件标识
+Inbound Shipment ID,入库货件ID
+Shipment Confirmation ID,货件确认ID
+Inbound Shipment Name,入库货件名称
+Inbound Shipment Status,入库货件状态
+Inbound Plan,入库计划
+Inbound Shipment Country Configuration,入库货件国家配置
+FBA Destination,FBA目的地
+Destination Type,目的地类型
+Fulfillment Center ID,FBA配送中心ID
+Ship To Name,收货方名称
+Ship To Address Line 1,收货地址第一行
+Ship To Address Line 2,收货地址第二行
+Ship To City,收货城市
+Ship To State or Province,收货州或省
+Ship To Postal Code,收货邮政编码
+Ship To Country Code,收货国家代码
+Transportation Information,运输信息
+Transportation Option ID,运输选项ID
+Shipping Mode,运输方式
+Carrier Name,承运商名称
+Tracking Number,物流单号
+Tracking Details JSON,物流详情JSON
+Delivery Window Start,送达时间窗口开始
+Delivery Window End,送达时间窗口结束
+Shipment Quantity Summary,货件数量汇总
+Planned Quantity,计划数量
+Shipped Quantity,已发数量
+Received Quantity,已接收数量
+Inbound Transit Quantity,发往FBA在途数量
+Quantity Difference,数量差异
+Box Count,箱数
+Pallet Count,托盘数
+Shipped At,发货时间
+Closed At,关闭时间
+Discovered,已发现
+Shipment Detail,货件详情
+Shipment Detail Completed,货件详情已完成
+Shipment Items Completed,货件商品已完成
+Shipment Items Pagination Token,货件商品分页标记
+Inbound Shipment Item Identity,入库货件商品标识
+Inbound Shipment,入库货件
+External Key,外部唯一标识
+Amazon Product,亚马逊商品
+MSKU,卖家SKU
+FNSKU,FNSKU
+ERPNext Item,ERPNext物料
+Packing Group ID,装箱组ID
+Preparation Information,商品预处理信息
+Label Owner,标签负责人
+Prep Owner,预处理负责人
+Expiration Date,有效期
+Manufacturing Lot Code,生产批次代码
+Prep Instructions JSON,预处理说明JSON
+Inbound Shipment Item Quantity,入库货件商品数量
+Quantity Updated At,数量更新时间
+Synchronization Information,同步信息
+Sync Batch ID,同步批次ID
+Inbound Shipment History Identity,入库货件历史标识
+History Key,历史唯一标识
+Inbound Shipment Item,入库货件商品
+Change Event,变化事件
+Observed At,记录时间
+Change Type,变化类型
+Previous Status,原状态
+Event Source,事件来源
+Sync Mode,同步方式
+Previous Quantities,变化前数量
+Previous Planned Quantity,原计划数量
+Previous Shipped Quantity,原已发数量
+Previous Received Quantity,原已接收数量
+Previous Inbound Transit Quantity,原发往FBA在途数量
+Previous Quantity Difference,原数量差异
+Current Quantities,当前数量
+Current Planned Quantity,当前计划数量
+Current Shipped Quantity,当前已发数量
+Current Received Quantity,当前已接收数量
+Current Inbound Transit Quantity,当前发往FBA在途数量
+Current Quantity Difference,当前数量差异
+Quantity Changes,数量变化
+Planned Quantity Change,计划数量变化
+Shipped Quantity Change,已发数量变化
+Received Quantity Change,已接收数量变化
+Inbound Transit Quantity Change,发往FBA在途数量变化
+Quantity Difference Change,数量差异变化

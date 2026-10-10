@@ -1,0 +1,378 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:history_key",
+ "creation": "2026-10-10 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "history_key",
+  "inbound_shipment",
+  "inbound_shipment_item",
+  "inbound_plan",
+  "identity_column",
+  "master_configuration",
+  "country_configuration",
+  "amazon_store",
+  "marketplace_id",
+  "event_section",
+  "observed_at",
+  "change_type",
+  "previous_status",
+  "current_status",
+  "event_column",
+  "event_source",
+  "sync_mode",
+  "sync_batch_id",
+  "product_section",
+  "msku",
+  "asin",
+  "fnsku",
+  "product_column",
+  "item_code",
+  "item_name",
+  "before_quantity_section",
+  "previous_planned_quantity",
+  "previous_shipped_quantity",
+  "previous_received_quantity",
+  "before_quantity_column",
+  "previous_in_transit_quantity",
+  "previous_difference_quantity",
+  "current_quantity_section",
+  "current_planned_quantity",
+  "current_shipped_quantity",
+  "current_received_quantity",
+  "current_quantity_column",
+  "current_in_transit_quantity",
+  "current_difference_quantity",
+  "delta_section",
+  "planned_quantity_change",
+  "shipped_quantity_change",
+  "received_quantity_change",
+  "delta_column",
+  "in_transit_quantity_change",
+  "difference_quantity_change",
+  "raw_section",
+  "raw_json_hash",
+  "raw_column",
+  "raw_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "Inbound Shipment History Identity"
+  },
+  {
+   "fieldname": "history_key",
+   "fieldtype": "Data",
+   "label": "History Key",
+   "reqd": 1,
+   "unique": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "inbound_shipment",
+   "fieldtype": "Link",
+   "label": "Inbound Shipment",
+   "options": "Amazon FBA Inbound Shipment",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "inbound_shipment_item",
+   "fieldtype": "Link",
+   "label": "Inbound Shipment Item",
+   "options": "Amazon FBA Inbound Shipment Item",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "inbound_plan",
+   "fieldtype": "Link",
+   "label": "Inbound Plan",
+   "options": "Amazon FBA Inbound Plan",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "identity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "master_configuration",
+   "fieldtype": "Link",
+   "label": "Inbound Shipment Master Configuration",
+   "options": "Amazon FBA Inbound Shipment Master Configuration",
+   "reqd": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "country_configuration",
+   "fieldtype": "Link",
+   "label": "Inbound Shipment Country Configuration",
+   "options": "Amazon FBA Inbound Shipment Country Configuration",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "amazon_store",
+   "fieldtype": "Link",
+   "label": "Amazon Store",
+   "options": "Amazon Store Configuration",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "marketplace_id",
+   "fieldtype": "Data",
+   "label": "Marketplace ID",
+   "search_index": 1
+  },
+  {
+   "fieldname": "event_section",
+   "fieldtype": "Section Break",
+   "label": "Change Event"
+  },
+  {
+   "fieldname": "observed_at",
+   "fieldtype": "Datetime",
+   "label": "Observed At",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "change_type",
+   "fieldtype": "Data",
+   "label": "Change Type",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "previous_status",
+   "fieldtype": "Data",
+   "label": "Previous Status"
+  },
+  {
+   "fieldname": "current_status",
+   "fieldtype": "Data",
+   "label": "Current Status",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "event_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "event_source",
+   "fieldtype": "Data",
+   "label": "Event Source"
+  },
+  {
+   "fieldname": "sync_mode",
+   "fieldtype": "Data",
+   "label": "Sync Mode"
+  },
+  {
+   "fieldname": "sync_batch_id",
+   "fieldtype": "Data",
+   "label": "Sync Batch ID"
+  },
+  {
+   "fieldname": "product_section",
+   "fieldtype": "Section Break",
+   "label": "Amazon Product"
+  },
+  {
+   "fieldname": "msku",
+   "fieldtype": "Data",
+   "label": "MSKU",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "asin",
+   "fieldtype": "Data",
+   "label": "ASIN",
+   "search_index": 1
+  },
+  {
+   "fieldname": "fnsku",
+   "fieldtype": "Data",
+   "label": "FNSKU",
+   "search_index": 1
+  },
+  {
+   "fieldname": "product_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "ERPNext Item",
+   "options": "Item",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "label": "Item Name",
+   "fetch_from": "item_code.item_name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "before_quantity_section",
+   "fieldtype": "Section Break",
+   "label": "Previous Quantities"
+  },
+  {
+   "fieldname": "previous_planned_quantity",
+   "fieldtype": "Float",
+   "label": "Previous Planned Quantity"
+  },
+  {
+   "fieldname": "previous_shipped_quantity",
+   "fieldtype": "Float",
+   "label": "Previous Shipped Quantity"
+  },
+  {
+   "fieldname": "previous_received_quantity",
+   "fieldtype": "Float",
+   "label": "Previous Received Quantity"
+  },
+  {
+   "fieldname": "before_quantity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "previous_in_transit_quantity",
+   "fieldtype": "Float",
+   "label": "Previous Inbound Transit Quantity"
+  },
+  {
+   "fieldname": "previous_difference_quantity",
+   "fieldtype": "Float",
+   "label": "Previous Quantity Difference"
+  },
+  {
+   "fieldname": "current_quantity_section",
+   "fieldtype": "Section Break",
+   "label": "Current Quantities"
+  },
+  {
+   "fieldname": "current_planned_quantity",
+   "fieldtype": "Float",
+   "label": "Current Planned Quantity"
+  },
+  {
+   "fieldname": "current_shipped_quantity",
+   "fieldtype": "Float",
+   "label": "Current Shipped Quantity"
+  },
+  {
+   "fieldname": "current_received_quantity",
+   "fieldtype": "Float",
+   "label": "Current Received Quantity"
+  },
+  {
+   "fieldname": "current_quantity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "current_in_transit_quantity",
+   "fieldtype": "Float",
+   "label": "Current Inbound Transit Quantity"
+  },
+  {
+   "fieldname": "current_difference_quantity",
+   "fieldtype": "Float",
+   "label": "Current Quantity Difference"
+  },
+  {
+   "fieldname": "delta_section",
+   "fieldtype": "Section Break",
+   "label": "Quantity Changes"
+  },
+  {
+   "fieldname": "planned_quantity_change",
+   "fieldtype": "Float",
+   "label": "Planned Quantity Change"
+  },
+  {
+   "fieldname": "shipped_quantity_change",
+   "fieldtype": "Float",
+   "label": "Shipped Quantity Change"
+  },
+  {
+   "fieldname": "received_quantity_change",
+   "fieldtype": "Float",
+   "label": "Received Quantity Change"
+  },
+  {
+   "fieldname": "delta_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "in_transit_quantity_change",
+   "fieldtype": "Float",
+   "label": "Inbound Transit Quantity Change"
+  },
+  {
+   "fieldname": "difference_quantity_change",
+   "fieldtype": "Float",
+   "label": "Quantity Difference Change"
+  },
+  {
+   "fieldname": "raw_section",
+   "fieldtype": "Section Break",
+   "label": "Raw Data"
+  },
+  {
+   "fieldname": "raw_json_hash",
+   "fieldtype": "Data",
+   "label": "Raw JSON Hash",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Long Text",
+   "label": "Raw JSON",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-10 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon FBA Inbound Shipment History",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "inbound_shipment",
+ "track_changes": 1
+}
+
