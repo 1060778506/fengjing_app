@@ -63,6 +63,7 @@ SERVICE_MINIMUM_INTERVALS = {
 	"finances": 2.1,
 	"fba-inventory": 0.55,
 	"awd-inventory": 1.1,
+	"awd-inbound": 1.1,
 	"reports-create": 60.5,
 	"reports-status": 1.1,
 	"reports-document": 1.1,

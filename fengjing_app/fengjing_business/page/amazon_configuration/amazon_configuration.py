@@ -176,6 +176,28 @@ SECTIONS = {
 			{"key": "latest", "label": "立即同步库存", "style": "primary"},
 		],
 	},
+	"awd_inbound": {
+		"title": "AWD 入库货件配置",
+		"description": "统一读取同一卖家的AWD入库单、货件、商品明细与数量变化。",
+		"doctype": "Amazon AWD Inbound Shipment Country Configuration",
+		"primary_field": "amazon_store",
+		"enabled_field": "enabled",
+		"status_field": "current_status",
+		"last_field": "last_success_at",
+		"next_field": "incremental_next_at",
+		"error_field": "last_error",
+		"progress_field": None,
+		"actions": [],
+		"group_actions": [
+			{"key": "group_latest", "label": "立即同步", "style": "primary"},
+			{"key": "group_history", "label": "同步历史范围", "style": "soft", "confirm": True},
+			{"key": "group_recheck_7", "label": "核对7天", "style": "ghost", "confirm": True},
+			{"key": "group_recheck_14", "label": "核对14天", "style": "ghost", "confirm": True},
+			{"key": "group_recheck_30", "label": "核对30天", "style": "ghost", "confirm": True},
+			{"key": "group_recheck_90", "label": "核对90天", "style": "ghost", "confirm": True},
+			{"key": "group_recheck_180", "label": "核对180天", "style": "ghost", "confirm": True},
+		],
+	},
 }
 
 
@@ -441,7 +463,13 @@ def _aggregate_by_configuration(doctype, configuration_names, date_field):
 	}
 
 
-def _inbound_group_payload(documents, section, master_name=None):
+def _inbound_group_payload(documents, section, master_name=None, variant="fba"):
+	awd = variant == "awd"
+	master_doctype = "Amazon AWD Inbound Shipment Master Configuration" if awd else "Amazon FBA Inbound Shipment Master Configuration"
+	shipment_doctype = "Amazon AWD Inbound Shipment" if awd else "Amazon FBA Inbound Shipment"
+	item_doctype = "Amazon AWD Inbound Shipment Item" if awd else "Amazon FBA Inbound Shipment Item"
+	history_doctype = "Amazon AWD Inbound Shipment History" if awd else "Amazon FBA Inbound Shipment History"
+	root_doctype = "Amazon AWD Inbound Order" if awd else "Amazon FBA Inbound Plan"
 	if not documents:
 		return {
 			"master_name": master_name,
@@ -472,7 +500,7 @@ def _inbound_group_payload(documents, section, master_name=None):
 		"enable_recheck_180", "recheck_180_interval_days",
 	)
 	master = frappe.db.get_value(
-		"Amazon FBA Inbound Shipment Master Configuration",
+		master_doctype,
 		master_name,
 		["name", "configuration_name", "enabled", *shared_fields],
 		as_dict=True,
@@ -481,17 +509,17 @@ def _inbound_group_payload(documents, section, master_name=None):
 
 	configuration_names = [row["name"] for row in documents]
 	shipment_stats = _aggregate_by_configuration(
-		"Amazon FBA Inbound Shipment", configuration_names, "last_fetched_at"
+		shipment_doctype, configuration_names, "last_fetched_at"
 	)
 	item_stats = _aggregate_by_configuration(
-		"Amazon FBA Inbound Shipment Item", configuration_names, "last_fetched_at"
+		item_doctype, configuration_names, "last_fetched_at"
 	)
 	history_stats = _aggregate_by_configuration(
-		"Amazon FBA Inbound Shipment History", configuration_names, "observed_at"
+		history_doctype, configuration_names, "observed_at"
 	)
-	plan_stats = frappe.db.sql(
+	root_stats = frappe.db.sql(
 		"""SELECT COUNT(name) AS record_count, MAX(last_fetched_at) AS latest_date
-		FROM `tabAmazon FBA Inbound Plan` WHERE master_configuration = %s""",
+		FROM `{table_name}` WHERE master_configuration = %s""".format(table_name=f"tab{root_doctype}"),  # nosec: fixed internal mappings
 		master_name,
 		as_dict=True,
 	)[0] if master_name else frappe._dict(record_count=0, latest_date=None)
@@ -580,8 +608,10 @@ def _inbound_group_payload(documents, section, master_name=None):
 		),
 		"readiness_issues": readiness_issues,
 		"next_sync_at": min(next_times) if next_times else None,
-		"plan_records": cint(plan_stats.record_count),
-		"plan_latest_at": _serialise_value(plan_stats.latest_date),
+		"plan_records": cint(root_stats.record_count) if not awd else 0,
+		"plan_latest_at": _serialise_value(root_stats.latest_date) if not awd else None,
+		"order_records": cint(root_stats.record_count) if awd else 0,
+		"order_latest_at": _serialise_value(root_stats.latest_date) if awd else None,
 		"shipment_records": sum(row["shipment_records"] for row in enabled),
 		"item_records": sum(row["item_records"] for row in enabled),
 		"history_records": sum(row["history_records"] for row in enabled),
@@ -659,6 +689,16 @@ def _section_payload(section_key, section):
 			for master_name, rows in sorted(by_master.items(), key=lambda item: str(item[0] or ""))
 		]
 		payload["group"] = payload["groups"][0] if payload["groups"] else _inbound_group_payload([], section)
+	if section_key == "awd_inbound":
+		by_master = {}
+		for document in documents:
+			master_name = str(document["values"].get("master_configuration") or "").strip() or None
+			by_master.setdefault(master_name, []).append(document)
+		payload["groups"] = [
+			_inbound_group_payload(rows, section, master_name, variant="awd")
+			for master_name, rows in sorted(by_master.items(), key=lambda item: str(item[0] or ""))
+		]
+		payload["group"] = payload["groups"][0] if payload["groups"] else _inbound_group_payload([], section, variant="awd")
 	return payload
 
 
@@ -771,7 +811,7 @@ def run_action(section_key, name, action_key):
 def run_group_action(section_key, action_key, master_name):
 	frappe.only_for("System Manager")
 	section_key = str(section_key or "")
-	if section_key not in {"fba_ledger", "fba_inbound"}:
+	if section_key not in {"fba_ledger", "fba_inbound", "awd_inbound"}:
 		frappe.throw(_("该配置不支持公共任务。"))
 	action_key = str(action_key or "").strip()
 	allowed = {item["key"] for item in SECTIONS[section_key].get("group_actions", [])}
@@ -783,6 +823,17 @@ def run_group_action(section_key, action_key, master_name):
 		method = frappe.get_attr(
 			"fengjing_app.fengjing_business.doctype.amazon_fba_inbound_shipment_country_configuration."
 			"amazon_fba_inbound_sync.start_group_sync"
+		)
+		if action_key == "group_latest":
+			return method(master_name=master_name, mode="incremental")
+		if action_key == "group_history":
+			return method(master_name=master_name, mode="history")
+		days = cint(action_key.rsplit("_", 1)[-1])
+		return method(master_name=master_name, mode="recheck", days=days)
+	if section_key == "awd_inbound":
+		method = frappe.get_attr(
+			"fengjing_app.fengjing_business.doctype.amazon_awd_inbound_shipment_country_configuration."
+			"amazon_awd_inbound_sync.start_group_sync"
 		)
 		if action_key == "group_latest":
 			return method(master_name=master_name, mode="incremental")

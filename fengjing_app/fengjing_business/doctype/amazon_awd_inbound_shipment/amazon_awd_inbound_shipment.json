@@ -1,0 +1,356 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:shipment_id",
+ "creation": "2026-10-10 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "shipment_id",
+  "external_reference_id",
+  "shipment_status",
+  "identity_column",
+  "inbound_order",
+  "master_configuration",
+  "country_configuration",
+  "amazon_store",
+  "marketplace_id",
+  "warehouse_reference_id",
+  "destination_region",
+  "transport_section",
+  "carrier_code_type",
+  "carrier_code_value",
+  "tracking_id",
+  "transport_column",
+  "ship_by",
+  "shipment_container_quantities_json",
+  "quantity_section",
+  "expected_quantity",
+  "received_quantity",
+  "quantity_column",
+  "quantity_difference",
+  "sku_count",
+  "address_section",
+  "origin_address_json",
+  "address_column",
+  "destination_address_json",
+  "amazon_time_section",
+  "amazon_created_at",
+  "amazon_updated_at",
+  "amazon_time_column",
+  "first_fetched_at",
+  "last_fetched_at",
+  "sync_section",
+  "sync_batch_id",
+  "sync_status",
+  "sync_column",
+  "retry_count",
+  "next_retry_at",
+  "last_error",
+  "raw_section",
+  "raw_json_hash",
+  "raw_column",
+  "raw_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "AWD Inbound Shipment Identity"
+  },
+  {
+   "fieldname": "shipment_id",
+   "fieldtype": "Data",
+   "label": "AWD Inbound Shipment ID",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "external_reference_id",
+   "fieldtype": "Data",
+   "label": "External Reference ID",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "shipment_status",
+   "fieldtype": "Data",
+   "label": "AWD Inbound Shipment Status",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "identity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "inbound_order",
+   "fieldtype": "Link",
+   "label": "AWD Inbound Order",
+   "options": "Amazon AWD Inbound Order",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "master_configuration",
+   "fieldtype": "Link",
+   "label": "AWD Inbound Shipment Master Configuration",
+   "options": "Amazon AWD Inbound Shipment Master Configuration",
+   "reqd": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "country_configuration",
+   "fieldtype": "Link",
+   "label": "AWD Inbound Shipment Country Configuration",
+   "options": "Amazon AWD Inbound Shipment Country Configuration",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "amazon_store",
+   "fieldtype": "Link",
+   "label": "Amazon Store",
+   "options": "Amazon Store Configuration",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "marketplace_id",
+   "fieldtype": "Data",
+   "label": "Marketplace ID",
+   "search_index": 1
+  },
+  {
+   "fieldname": "warehouse_reference_id",
+   "fieldtype": "Data",
+   "label": "Warehouse Reference ID",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "destination_region",
+   "fieldtype": "Data",
+   "label": "Destination Region",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "transport_section",
+   "fieldtype": "Section Break",
+   "label": "Transportation Information"
+  },
+  {
+   "fieldname": "carrier_code_type",
+   "fieldtype": "Data",
+   "label": "Carrier Code Type"
+  },
+  {
+   "fieldname": "carrier_code_value",
+   "fieldtype": "Data",
+   "label": "Carrier Code Value",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "tracking_id",
+   "fieldtype": "Data",
+   "label": "Tracking ID",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "transport_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ship_by",
+   "fieldtype": "Datetime",
+   "label": "Ship By"
+  },
+  {
+   "fieldname": "shipment_container_quantities_json",
+   "fieldtype": "Long Text",
+   "label": "Shipment Container Quantities JSON"
+  },
+  {
+   "fieldname": "quantity_section",
+   "fieldtype": "Section Break",
+   "label": "AWD Inbound Shipment Quantity"
+  },
+  {
+   "fieldname": "expected_quantity",
+   "fieldtype": "Float",
+   "label": "Expected Quantity",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "received_quantity",
+   "fieldtype": "Float",
+   "label": "Received Quantity",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "quantity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "quantity_difference",
+   "fieldtype": "Float",
+   "label": "Quantity Difference",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sku_count",
+   "fieldtype": "Int",
+   "label": "SKU Count"
+  },
+  {
+   "fieldname": "address_section",
+   "fieldtype": "Section Break",
+   "label": "Shipment Addresses"
+  },
+  {
+   "fieldname": "origin_address_json",
+   "fieldtype": "Long Text",
+   "label": "Origin Address JSON"
+  },
+  {
+   "fieldname": "address_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "destination_address_json",
+   "fieldtype": "Long Text",
+   "label": "Destination Address JSON"
+  },
+  {
+   "fieldname": "amazon_time_section",
+   "fieldtype": "Section Break",
+   "label": "Amazon Time Information"
+  },
+  {
+   "fieldname": "amazon_created_at",
+   "fieldtype": "Datetime",
+   "label": "Amazon Created At",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "amazon_updated_at",
+   "fieldtype": "Datetime",
+   "label": "Amazon Updated At",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "amazon_time_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "first_fetched_at",
+   "fieldtype": "Datetime",
+   "label": "First Fetched At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_fetched_at",
+   "fieldtype": "Datetime",
+   "label": "Last Fetched At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_section",
+   "fieldtype": "Section Break",
+   "label": "Synchronization Status"
+  },
+  {
+   "fieldname": "sync_batch_id",
+   "fieldtype": "Data",
+   "label": "Sync Batch ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_status",
+   "fieldtype": "Select",
+   "label": "Sync Status",
+   "options": "Running\nCompleted\nFailed",
+   "default": "Running",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "retry_count",
+   "fieldtype": "Int",
+   "label": "Retry Count",
+   "default": "0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "next_retry_at",
+   "fieldtype": "Datetime",
+   "label": "Next Retry At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Small Text",
+   "label": "Last Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_section",
+   "fieldtype": "Section Break",
+   "label": "Raw Amazon Data"
+  },
+  {
+   "fieldname": "raw_json_hash",
+   "fieldtype": "Data",
+   "label": "Raw JSON Hash",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Long Text",
+   "label": "Raw JSON",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-10 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon AWD Inbound Shipment",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "shipment_id"
+}

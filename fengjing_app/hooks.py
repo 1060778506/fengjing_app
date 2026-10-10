@@ -69,6 +69,15 @@ def run_amazon_awd_inventory():
     return run_scheduled_inventory_sync()
 
 
+def run_amazon_awd_inbound_shipments():
+    """Amazon AWD 入库货件调度入口。"""
+    from fengjing_app.fengjing_business.doctype.amazon_awd_inbound_shipment_country_configuration.amazon_awd_inbound_shipment_country_configuration import (
+        run_scheduled_awd_inbound_sync,
+    )
+
+    return run_scheduled_awd_inbound_sync()
+
+
 def run_ozon_orders():
     """Short scheduler entry; Scheduled Job Type.method is limited to 140 chars."""
     from fengjing_app.fengjing_business.doctype.ozon_order_configuration.ozon_order_configuration import (
@@ -275,6 +284,7 @@ scheduler_events = {
         "fengjing_app.hooks.run_amazon_fba_inventory_ledger",
         "fengjing_app.hooks.run_amazon_fba_inbound_shipments",
         "fengjing_app.hooks.run_amazon_awd_inventory",
+        "fengjing_app.hooks.run_amazon_awd_inbound_shipments",
         "fengjing_app.hooks.run_ozon_orders",
         "fengjing_app.hooks.run_ozon_rankings",
         "fengjing_app.hooks.run_ozon_prices",

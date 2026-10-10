@@ -18,7 +18,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "亚马逊数据",
-   "link_count": 11,
+   "link_count": 15,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -136,6 +136,46 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "亚马逊AWD入库单",
+   "link_count": 0,
+   "link_to": "Amazon AWD Inbound Order",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊AWD入库货件",
+   "link_count": 0,
+   "link_to": "Amazon AWD Inbound Shipment",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊AWD入库货件商品",
+   "link_count": 0,
+   "link_to": "Amazon AWD Inbound Shipment Item",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊AWD入库货件历史",
+   "link_count": 0,
+   "link_to": "Amazon AWD Inbound Shipment History",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "亚马逊分析",
    "link_count": 5,
    "link_type": "DocType",
@@ -196,7 +236,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "亚马逊配置",
-   "link_count": 13,
+   "link_count": 15,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -317,6 +357,26 @@
    "label": "亚马逊AWD库存配置",
    "link_count": 0,
    "link_to": "Amazon AWD Inventory Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊AWD入库货件总配置",
+   "link_count": 0,
+   "link_to": "Amazon AWD Inbound Shipment Master Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊AWD入库货件国家配置",
+   "link_count": 0,
+   "link_to": "Amazon AWD Inbound Shipment Country Configuration",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"

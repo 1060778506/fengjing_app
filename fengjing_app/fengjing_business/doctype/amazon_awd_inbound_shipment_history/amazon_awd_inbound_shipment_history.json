@@ -1,0 +1,258 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:history_key",
+ "creation": "2026-10-10 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "history_key",
+  "observed_at",
+  "sync_mode",
+  "sync_batch_id",
+  "identity_column",
+  "inbound_shipment",
+  "inbound_shipment_item",
+  "inbound_order",
+  "master_configuration",
+  "country_configuration",
+  "amazon_store",
+  "marketplace_id",
+  "status_section",
+  "shipment_status",
+  "seller_sku",
+  "item_code",
+  "status_column",
+  "amazon_updated_at",
+  "quantity_section",
+  "expected_quantity",
+  "received_quantity",
+  "quantity_difference",
+  "quantity_column",
+  "expected_quantity_change",
+  "received_quantity_change",
+  "quantity_difference_change",
+  "raw_section",
+  "raw_json_hash",
+  "raw_column",
+  "raw_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "AWD Inbound Shipment History Identity"
+  },
+  {
+   "fieldname": "history_key",
+   "fieldtype": "Data",
+   "label": "History Key",
+   "reqd": 1,
+   "unique": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "observed_at",
+   "fieldtype": "Datetime",
+   "label": "Observed At",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "sync_mode",
+   "fieldtype": "Data",
+   "label": "Sync Mode",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "sync_batch_id",
+   "fieldtype": "Data",
+   "label": "Sync Batch ID",
+   "search_index": 1
+  },
+  {
+   "fieldname": "identity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "inbound_shipment",
+   "fieldtype": "Link",
+   "label": "AWD Inbound Shipment",
+   "options": "Amazon AWD Inbound Shipment",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "inbound_shipment_item",
+   "fieldtype": "Link",
+   "label": "AWD Inbound Shipment Item",
+   "options": "Amazon AWD Inbound Shipment Item",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "inbound_order",
+   "fieldtype": "Link",
+   "label": "AWD Inbound Order",
+   "options": "Amazon AWD Inbound Order",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "master_configuration",
+   "fieldtype": "Link",
+   "label": "AWD Inbound Shipment Master Configuration",
+   "options": "Amazon AWD Inbound Shipment Master Configuration",
+   "reqd": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "country_configuration",
+   "fieldtype": "Link",
+   "label": "AWD Inbound Shipment Country Configuration",
+   "options": "Amazon AWD Inbound Shipment Country Configuration",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "amazon_store",
+   "fieldtype": "Link",
+   "label": "Amazon Store",
+   "options": "Amazon Store Configuration",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "marketplace_id",
+   "fieldtype": "Data",
+   "label": "Marketplace ID",
+   "search_index": 1
+  },
+  {
+   "fieldname": "status_section",
+   "fieldtype": "Section Break",
+   "label": "Shipment State"
+  },
+  {
+   "fieldname": "shipment_status",
+   "fieldtype": "Data",
+   "label": "AWD Inbound Shipment Status",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "seller_sku",
+   "fieldtype": "Data",
+   "label": "Seller SKU",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "ERPNext Item",
+   "options": "Item",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amazon_updated_at",
+   "fieldtype": "Datetime",
+   "label": "Amazon Updated At"
+  },
+  {
+   "fieldname": "quantity_section",
+   "fieldtype": "Section Break",
+   "label": "Observed Quantity"
+  },
+  {
+   "fieldname": "expected_quantity",
+   "fieldtype": "Float",
+   "label": "Expected Quantity"
+  },
+  {
+   "fieldname": "received_quantity",
+   "fieldtype": "Float",
+   "label": "Received Quantity"
+  },
+  {
+   "fieldname": "quantity_difference",
+   "fieldtype": "Float",
+   "label": "Quantity Difference"
+  },
+  {
+   "fieldname": "quantity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "expected_quantity_change",
+   "fieldtype": "Float",
+   "label": "Expected Quantity Change"
+  },
+  {
+   "fieldname": "received_quantity_change",
+   "fieldtype": "Float",
+   "label": "Received Quantity Change"
+  },
+  {
+   "fieldname": "quantity_difference_change",
+   "fieldtype": "Float",
+   "label": "Quantity Difference Change"
+  },
+  {
+   "fieldname": "raw_section",
+   "fieldtype": "Section Break",
+   "label": "Raw Amazon Data"
+  },
+  {
+   "fieldname": "raw_json_hash",
+   "fieldtype": "Data",
+   "label": "Raw JSON Hash",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Long Text",
+   "label": "Raw JSON",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-10 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon AWD Inbound Shipment History",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "observed_at",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "inbound_shipment"
+}

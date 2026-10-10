@@ -652,6 +652,13 @@ def _process_plan(master, configs, stores, summary, batch_id, sync_mode):
 		frappe.db.commit()
 		return {"shipments": len(shipments), "items": item_count}
 	except Exception as exc:
+		if _is_awd_plan_error(exc):
+			_remove_excluded_awd_plan(plan_name)
+			frappe.logger("amazon_fba_inbound", allow_site=True).info(
+				"Excluded AWD inbound plan %s from FBA synchronization.",
+				summary.get("inboundPlanId"),
+			)
+			return {"shipments": 0, "items": 0, "awd_excluded": True}
 		retry_count = cint(frappe.db.get_value(PLAN_DOCTYPE, plan_name, "retry_count")) + 1
 		frappe.db.set_value(
 			PLAN_DOCTYPE,
@@ -714,6 +721,31 @@ def _is_quota(exc):
 	return (isinstance(exc, AmazonAPIError) and exc.status_code == 429) or "http 429" in str(exc).lower()
 
 
+def _is_awd_plan_error(exc):
+	"""识别被 FBA 列表混入、但只能由 AWD API 读取的入库计划。"""
+	message = str(exc or "").lower()
+	return bool(
+		isinstance(exc, AmazonAPIError)
+		and exc.status_code == 400
+		and "getinboundplan" in message
+		and "amazon warehousing and distribution" in message
+	)
+
+
+def _remove_excluded_awd_plan(plan_name):
+	"""AWD 计划不属于 FBA 存储；仅在没有 FBA 货件明细时移除误写的摘要。"""
+	if not plan_name or not frappe.db.exists(PLAN_DOCTYPE, plan_name):
+		return
+	if frappe.db.exists(SHIPMENT_DOCTYPE, {"inbound_plan": plan_name}):
+		frappe.logger("amazon_fba_inbound", allow_site=True).warning(
+			"AWD plan %s was not removed because FBA shipment rows already reference it.",
+			plan_name,
+		)
+		return
+	frappe.delete_doc(PLAN_DOCTYPE, plan_name, ignore_permissions=True, force=True)
+	frappe.db.commit()
+
+
 def execute_inbound_sync(master_name, mode="incremental", days=0):
 	master, configs, stores = _enabled_group(master_name)
 	mode = str(mode or "incremental").strip().lower()
@@ -728,7 +760,17 @@ def execute_inbound_sync(master_name, mode="incremental", days=0):
 	try:
 		for config in configs:
 			_update_configuration(config.name, current_status="Running", current_execution_type=mode, started_at=started_at, last_error="", history_status="Running" if mode == "history" else config.history_status)
-		stats = {"batch_id": batch_id, "mode": mode, "plans": 0, "shipments": 0, "items": 0, "skipped": 0, "range_start": start.isoformat(), "range_end": end.isoformat()}
+		stats = {
+			"batch_id": batch_id,
+			"mode": mode,
+			"plans": 0,
+			"shipments": 0,
+			"items": 0,
+			"skipped": 0,
+			"awd_plans_excluded": 0,
+			"range_start": start.isoformat(),
+			"range_end": end.isoformat(),
+		}
 		seen_plans = set()
 		stop = False
 		for plans, _next_token in iter_inbound_plan_pages(stores[0], sort_by=sort_by, sort_order="DESC"):
@@ -754,6 +796,9 @@ def execute_inbound_sync(master_name, mode="incremental", days=0):
 							stats["skipped"] += 1
 							continue
 				result = _process_plan(master, configs, stores, summary, batch_id, mode)
+				if result.get("awd_excluded"):
+					stats["awd_plans_excluded"] += 1
+					continue
 				stats["plans"] += 1
 				stats["shipments"] += result["shipments"]
 				stats["items"] += result["items"]
