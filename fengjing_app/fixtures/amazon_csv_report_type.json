@@ -23,16 +23,16 @@
   "report_type_code": "amazon_fba_inventory_ledger_detail",
   "report_type_name": "亚马逊库存分类账"
  },
-{
- "description": "亚马逊全部订单报告（All Orders Report），支持CSV、TXT和TSV格式，翻译订单、商品、配送、税务及状态字段。",
- "docstatus": 0,
- "doctype": "Amazon CSV Report Type",
- "enabled": 1,
- "modified": "2026-10-11 00:00:00.000000",
- "name": "amazon-all-orders-report",
- "recognition_fields": "amazon-order-id\npurchase-date\norder-status\nfulfillment-channel\nproduct-name\norder-item-id",
- "recognition_priority": 120,
- "report_type_code": "amazon_all_orders_report",
- "report_type_name": "亚马逊全部订单报告"
-}
+ {
+  "description": "亚马逊全部订单报告（All Orders Report），支持CSV、TXT和TSV格式，翻译订单、商品、配送、税务及状态字段。",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Report Type",
+  "enabled": 1,
+  "modified": "2026-10-11 00:00:00",
+  "name": "amazon-all-orders-report",
+  "recognition_fields": "amazon-order-id\npurchase-date\norder-status\nfulfillment-channel\nproduct-name\norder-item-id",
+  "recognition_priority": 120,
+  "report_type_code": "amazon_all_orders_report",
+  "report_type_name": "亚马逊全部订单报告"
+ }
 ]

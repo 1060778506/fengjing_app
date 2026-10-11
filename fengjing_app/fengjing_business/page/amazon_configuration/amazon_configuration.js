@@ -860,7 +860,7 @@ class AmazonConfigurationCenter {
 
 	icon(name) {
 		const icons = {
-			stores: "shop-window", ranking: "bar-chart-line", orders: "box-seam", finances: "wallet2", balances: "cash-stack", fba_inventory: "boxes", fba_ledger: "journal-text", fba_inbound: "truck", awd_inventory: "building", awd_inbound: "truck-front",
+			stores: "shop-window", ranking: "bar-chart-line", orders: "box-seam", finances: "wallet2", advertising: "megaphone", balances: "cash-stack", fba_inventory: "boxes", fba_ledger: "journal-text", fba_inbound: "truck", awd_inventory: "building", awd_inbound: "truck-front",
 			prices: "tags", settlements: "receipt",
 			refresh: "arrow-clockwise", expand: "arrows-fullscreen", plus: "plus-lg", search: "search", chevron: "chevron-right",
 			info: "info-circle", warning: "exclamation-triangle", trash: "trash3", save: "check2-circle", check: "check-lg", settings: "gear",

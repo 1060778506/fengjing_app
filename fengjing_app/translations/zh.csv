@@ -13079,3 +13079,11 @@ Inventory Scope,库存范围
 Warehouse Granularity,仓库粒度
 AWD Network Aggregate,AWD网络汇总
 Network Aggregate,网络汇总（不分仓库）
+Amazon Advertising Master Configuration,亚马逊广告总配置
+Amazon Advertising Site Configuration,亚马逊广告站点配置
+Amazon Advertising Structure,亚马逊广告活动、广告组、广告及投放结构
+Amazon Advertising Campaign Daily,亚马逊广告活动日报
+Amazon Advertising Product Daily,亚马逊广告商品SKU/ASIN日报
+Amazon Advertising Targeting Daily,亚马逊关键词、搜索词和商品定向日报
+Amazon Advertising Placement Daily,亚马逊广告位置日报
+Amazon Advertising Purchased Product Daily,亚马逊实际购买商品日报

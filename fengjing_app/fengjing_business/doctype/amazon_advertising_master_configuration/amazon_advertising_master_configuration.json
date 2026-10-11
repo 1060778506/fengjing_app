@@ -1,0 +1,303 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "field:configuration_name",
+ "creation": "2026-10-11 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_section",
+  "configuration_name",
+  "enabled",
+  "credential_store",
+  "advertising_client_id",
+  "advertising_client_secret",
+  "advertising_refresh_token",
+  "basic_column",
+  "api_region",
+  "advertising_api_endpoint",
+  "notes",
+  "history_section",
+  "history_start_date",
+  "history_end_date",
+  "history_segment_days",
+  "history_column",
+  "routine_lookback_days",
+  "sync_interval_hours",
+  "retention_days",
+  "report_section",
+  "sync_structure",
+  "sync_campaign_daily",
+  "sync_product_daily",
+  "report_column",
+  "sync_targeting_daily",
+  "sync_placement_daily",
+  "sync_purchased_product_daily",
+  "runtime_section",
+  "sync_status",
+  "current_job",
+  "started_at",
+  "completed_at",
+  "runtime_column",
+  "last_success_at",
+  "next_sync_at",
+  "last_sync_result",
+  "last_error"
+ ],
+ "fields": [
+  {
+   "fieldname": "basic_section",
+   "fieldtype": "Section Break",
+   "label": "广告总配置"
+  },
+  {
+   "fieldname": "configuration_name",
+   "fieldtype": "Data",
+   "label": "配置名称",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "启用",
+   "default": "1",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "credential_store",
+   "fieldtype": "Link",
+   "label": "请求凭证店铺",
+   "options": "Amazon Store Configuration",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "advertising_client_id",
+   "fieldtype": "Data",
+   "label": "广告API Client ID",
+   "description": "可选。广告API使用独立LWA应用时填写；留空则复用请求凭证店铺。"
+  },
+  {
+   "fieldname": "advertising_client_secret",
+   "fieldtype": "Password",
+   "label": "广告API Client Secret",
+   "description": "可选。必须与广告API Client ID属于同一个LWA应用。"
+  },
+  {
+   "fieldname": "advertising_refresh_token",
+   "fieldtype": "Password",
+   "label": "广告API Refresh Token",
+   "description": "可选。必须由已获Amazon Ads API授权的账户生成。"
+  },
+  {
+   "fieldname": "basic_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "api_region",
+   "fieldtype": "Select",
+   "label": "API区域",
+   "options": "\nNorth America\nEurope\nFar East",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "advertising_api_endpoint",
+   "fieldtype": "Data",
+   "label": "广告API地址",
+   "description": "留空时由API区域自动选择。"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "备注"
+  },
+  {
+   "fieldname": "history_section",
+   "fieldtype": "Section Break",
+   "label": "历史同步范围"
+  },
+  {
+   "fieldname": "history_start_date",
+   "fieldtype": "Date",
+   "label": "历史开始日期",
+   "reqd": 1
+  },
+  {
+   "fieldname": "history_end_date",
+   "fieldtype": "Date",
+   "label": "历史结束日期",
+   "description": "留空时同步到当前日期。"
+  },
+  {
+   "fieldname": "history_segment_days",
+   "fieldtype": "Int",
+   "label": "历史分段天数",
+   "default": "30",
+   "description": "单个广告报告任务覆盖的最大天数。"
+  },
+  {
+   "fieldname": "history_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "routine_lookback_days",
+   "fieldtype": "Int",
+   "label": "日常回看天数",
+   "default": "7",
+   "description": "日常同步时重新核对最近多少天。"
+  },
+  {
+   "fieldname": "sync_interval_hours",
+   "fieldtype": "Float",
+   "label": "日常同步间隔（小时）",
+   "default": "24"
+  },
+  {
+   "fieldname": "retention_days",
+   "fieldtype": "Int",
+   "label": "数据保留天数",
+   "default": "0",
+   "description": "0表示永久保留。"
+  },
+  {
+   "fieldname": "report_section",
+   "fieldtype": "Section Break",
+   "label": "报告范围"
+  },
+  {
+   "fieldname": "sync_structure",
+   "fieldtype": "Check",
+   "label": "同步广告结构",
+   "default": "1"
+  },
+  {
+   "fieldname": "sync_campaign_daily",
+   "fieldtype": "Check",
+   "label": "同步活动日报",
+   "default": "1"
+  },
+  {
+   "fieldname": "sync_product_daily",
+   "fieldtype": "Check",
+   "label": "同步商品日报",
+   "default": "1"
+  },
+  {
+   "fieldname": "report_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "sync_targeting_daily",
+   "fieldtype": "Check",
+   "label": "同步关键词与定向日报",
+   "default": "1"
+  },
+  {
+   "fieldname": "sync_placement_daily",
+   "fieldtype": "Check",
+   "label": "同步广告位置日报",
+   "default": "1"
+  },
+  {
+   "fieldname": "sync_purchased_product_daily",
+   "fieldtype": "Check",
+   "label": "同步实际购买商品日报",
+   "default": "1"
+  },
+  {
+   "fieldname": "runtime_section",
+   "fieldtype": "Section Break",
+   "label": "运行状态"
+  },
+  {
+   "fieldname": "sync_status",
+   "fieldtype": "Select",
+   "label": "同步状态",
+   "options": "\n未运行\n排队中\n运行中\n成功\n部分成功\n失败",
+   "default": "未运行",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "current_job",
+   "fieldtype": "Data",
+   "label": "当前任务",
+   "read_only": 1
+  },
+  {
+   "fieldname": "started_at",
+   "fieldtype": "Datetime",
+   "label": "开始时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completed_at",
+   "fieldtype": "Datetime",
+   "label": "完成时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "runtime_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_success_at",
+   "fieldtype": "Datetime",
+   "label": "最后成功时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "next_sync_at",
+   "fieldtype": "Datetime",
+   "label": "下次同步时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_result",
+   "fieldtype": "Small Text",
+   "label": "最后同步结果",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Small Text",
+   "label": "最近错误",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-11 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon Advertising Master Configuration",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "configuration_name"
+}

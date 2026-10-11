@@ -103,6 +103,29 @@ SECTIONS = {
 			{"key": "recheck_180", "label": "核对180天", "style": "ghost", "confirm": True},
 		],
 	},
+	"advertising": {
+		"title": "广告配置",
+		"description": "管理广告Profile、广告结构，以及活动、商品、定向、位置和购买商品日报。",
+		"doctype": "Amazon Advertising Site Configuration",
+		"primary_field": "amazon_store",
+		"enabled_field": "enabled",
+		"status_field": "sync_status",
+		"last_field": "last_success_at",
+		"next_field": "next_sync_at",
+		"error_field": "last_error",
+		"progress_field": None,
+		"actions": [
+			{"key": "test", "label": "测试广告Profile", "style": "ghost"},
+			{"key": "structure", "label": "同步广告结构", "style": "soft"},
+			{"key": "latest", "label": "立即同步日报", "style": "primary"},
+			{"key": "history", "label": "历史同步", "style": "soft", "confirm": True},
+			{"key": "recheck_7", "label": "核对7天", "style": "ghost", "confirm": True},
+			{"key": "recheck_14", "label": "核对14天", "style": "ghost", "confirm": True},
+			{"key": "recheck_30", "label": "核对30天", "style": "ghost", "confirm": True},
+			{"key": "recheck_60", "label": "核对60天", "style": "ghost", "confirm": True},
+			{"key": "recheck_90", "label": "核对90天", "style": "ghost", "confirm": True},
+		],
+	},
 	"balances": {
 		"title": "余额配置",
 		"description": "统一抓取同一卖家与API区域内各国家站点的当前余额和历史余额快照。",
@@ -232,6 +255,10 @@ ACTION_METHODS = {
 	("orders", "history"): "fengjing_app.fengjing_business.doctype.amazon_order_configuration.amazon_order_configuration.start_history_sync",
 	("finances", "latest"): "fengjing_app.fengjing_business.doctype.amazon_financial_configuration.amazon_financial_configuration.start_incremental_sync",
 	("finances", "history"): "fengjing_app.fengjing_business.doctype.amazon_financial_configuration.amazon_financial_configuration.start_history_sync",
+	("advertising", "test"): "fengjing_app.fengjing_business.doctype.amazon_advertising_site_configuration.amazon_advertising_site_configuration.test_advertising_access",
+	("advertising", "structure"): "fengjing_app.fengjing_business.doctype.amazon_advertising_site_configuration.amazon_advertising_site_configuration.start_structure_sync",
+	("advertising", "latest"): "fengjing_app.fengjing_business.doctype.amazon_advertising_site_configuration.amazon_advertising_site_configuration.start_latest_sync",
+	("advertising", "history"): "fengjing_app.fengjing_business.doctype.amazon_advertising_site_configuration.amazon_advertising_site_configuration.start_history_sync",
 	("fba_inventory", "latest"): "fengjing_app.fengjing_business.doctype.amazon_fba_inventory_configuration.amazon_fba_inventory_configuration.start_inventory_sync",
 	("fba_ledger", "history"): "fengjing_app.fengjing_business.doctype.amazon_fba_inventory_ledger_configuration.amazon_fba_inventory_ledger_configuration.start_ledger_sync",
 	("awd_inventory", "latest"): "fengjing_app.fengjing_business.doctype.amazon_awd_inventory_configuration.amazon_awd_inventory_configuration.start_inventory_sync",
@@ -961,13 +988,15 @@ def _action_method(section_key, action_key):
 	method = ACTION_METHODS.get((section_key, action_key))
 	if method:
 		return method, None
-	if section_key in {"orders", "finances", "fba_ledger"} and str(action_key).startswith("recheck_"):
+	if section_key in {"orders", "finances", "advertising", "fba_ledger"} and str(action_key).startswith("recheck_"):
 		days = cint(str(action_key).split("_")[-1])
-		if days not in {7, 14, 30, 90, 180}:
+		allowed_days = {7, 14, 30, 60, 90} if section_key == "advertising" else {7, 14, 30, 90, 180}
+		if days not in allowed_days:
 			frappe.throw(_("不支持的核对周期。"))
 		base = {
 			"orders": "amazon_order_configuration",
 			"finances": "amazon_financial_configuration",
+			"advertising": "amazon_advertising_site_configuration",
 			"fba_ledger": "amazon_fba_inventory_ledger_configuration",
 		}[section_key]
 		method_name = (

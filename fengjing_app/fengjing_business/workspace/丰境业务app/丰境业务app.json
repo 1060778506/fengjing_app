@@ -17,8 +17,8 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "亚马逊数据",
-   "link_count": 15,
+  "label": "亚马逊数据",
+  "link_count": 21,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -186,6 +186,66 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "亚马逊广告活动、广告组、广告及投放结构",
+   "link_count": 0,
+   "link_to": "Amazon Advertising Structure",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊广告活动日报",
+   "link_count": 0,
+   "link_to": "Amazon Advertising Campaign Daily",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊广告商品SKU/ASIN日报",
+   "link_count": 0,
+   "link_to": "Amazon Advertising Product Daily",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊关键词、搜索词和商品定向日报",
+   "link_count": 0,
+   "link_to": "Amazon Advertising Targeting Daily",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊广告位置日报",
+   "link_count": 0,
+   "link_to": "Amazon Advertising Placement Daily",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊实际购买商品日报",
+   "link_count": 0,
+   "link_to": "Amazon Advertising Purchased Product Daily",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "亚马逊分析",
    "link_count": 7,
    "link_type": "DocType",
@@ -265,8 +325,8 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "亚马逊配置",
-   "link_count": 16,
+  "label": "亚马逊配置",
+  "link_count": 18,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -448,6 +508,26 @@
    "link_count": 0,
    "link_to": "amazon-offline-tool",
    "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊广告总配置",
+   "link_count": 0,
+   "link_to": "Amazon Advertising Master Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊广告站点配置",
+   "link_count": 0,
+   "link_to": "Amazon Advertising Site Configuration",
+   "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
   },
@@ -786,7 +866,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-10 21:45:00.000000",
+ "modified": "2026-10-11 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "丰境业务APP",

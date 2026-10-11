@@ -1,0 +1,305 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 1,
+ "autoname": "field:configuration_name",
+ "creation": "2026-10-11 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_section",
+  "configuration_name",
+  "master_configuration",
+  "enabled",
+  "basic_column",
+  "amazon_store",
+  "company",
+  "cost_center",
+  "profile_section",
+  "profile_id",
+  "advertiser_id",
+  "seller_id",
+  "account_name",
+  "profile_column",
+  "marketplace_id",
+  "country",
+  "currency_code",
+  "timezone",
+  "scope_section",
+  "sponsored_products_enabled",
+  "sponsored_brands_enabled",
+  "sponsored_display_enabled",
+  "scope_column",
+  "last_structure_sync_at",
+  "last_report_date",
+  "last_report_request_id",
+  "runtime_section",
+  "sync_status",
+  "current_job",
+  "started_at",
+  "completed_at",
+  "runtime_column",
+  "last_success_at",
+  "next_sync_at",
+  "last_sync_result",
+  "last_error"
+ ],
+ "fields": [
+  {
+   "fieldname": "basic_section",
+   "fieldtype": "Section Break",
+   "label": "广告站点配置"
+  },
+  {
+   "fieldname": "configuration_name",
+   "fieldtype": "Data",
+   "label": "配置名称",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "master_configuration",
+   "fieldtype": "Link",
+   "label": "广告总配置",
+   "options": "Amazon Advertising Master Configuration",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "启用",
+   "default": "1",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "basic_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amazon_store",
+   "fieldtype": "Link",
+   "label": "亚马逊店铺",
+   "options": "Amazon Store Configuration",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "公司",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "成本中心",
+   "options": "Cost Center",
+   "reqd": 1
+  },
+  {
+   "fieldname": "profile_section",
+   "fieldtype": "Section Break",
+   "label": "广告账户与站点"
+  },
+  {
+   "fieldname": "profile_id",
+   "fieldtype": "Data",
+   "label": "广告Profile ID",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "advertiser_id",
+   "fieldtype": "Data",
+   "label": "广告主编号",
+   "search_index": 1
+  },
+  {
+   "fieldname": "seller_id",
+   "fieldtype": "Data",
+   "label": "卖家编号",
+   "search_index": 1
+  },
+  {
+   "fieldname": "account_name",
+   "fieldtype": "Data",
+   "label": "广告账户名称"
+  },
+  {
+   "fieldname": "profile_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "marketplace_id",
+   "fieldtype": "Data",
+   "label": "Marketplace ID",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "label": "国家",
+   "options": "Country",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "currency_code",
+   "fieldtype": "Link",
+   "label": "币种",
+   "options": "Currency",
+   "reqd": 1
+  },
+  {
+   "fieldname": "timezone",
+   "fieldtype": "Data",
+   "label": "广告账户时区",
+   "default": "Asia/Shanghai"
+  },
+  {
+   "fieldname": "scope_section",
+   "fieldtype": "Section Break",
+   "label": "广告产品范围"
+  },
+  {
+   "fieldname": "sponsored_products_enabled",
+   "fieldtype": "Check",
+   "label": "Sponsored Products",
+   "default": "1"
+  },
+  {
+   "fieldname": "sponsored_brands_enabled",
+   "fieldtype": "Check",
+   "label": "Sponsored Brands",
+   "default": "1"
+  },
+  {
+   "fieldname": "sponsored_display_enabled",
+   "fieldtype": "Check",
+   "label": "Sponsored Display",
+   "default": "1"
+  },
+  {
+   "fieldname": "scope_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_structure_sync_at",
+   "fieldtype": "Datetime",
+   "label": "广告结构最后同步时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_report_date",
+   "fieldtype": "Date",
+   "label": "日报最后日期",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_report_request_id",
+   "fieldtype": "Data",
+   "label": "最后报告请求编号",
+   "read_only": 1
+  },
+  {
+   "fieldname": "runtime_section",
+   "fieldtype": "Section Break",
+   "label": "运行状态"
+  },
+  {
+   "fieldname": "sync_status",
+   "fieldtype": "Select",
+   "label": "同步状态",
+   "options": "\n未运行\n排队中\n运行中\n成功\n部分成功\n失败",
+   "default": "未运行",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "current_job",
+   "fieldtype": "Data",
+   "label": "当前任务",
+   "read_only": 1
+  },
+  {
+   "fieldname": "started_at",
+   "fieldtype": "Datetime",
+   "label": "开始时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completed_at",
+   "fieldtype": "Datetime",
+   "label": "完成时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "runtime_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_success_at",
+   "fieldtype": "Datetime",
+   "label": "最后成功时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "next_sync_at",
+   "fieldtype": "Datetime",
+   "label": "下次同步时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_result",
+   "fieldtype": "Small Text",
+   "label": "最后同步结果",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Small Text",
+   "label": "最近错误",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-11 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon Advertising Site Configuration",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "configuration_name"
+}

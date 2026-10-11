@@ -1,0 +1,472 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-10-11 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "unique_key",
+  "master_configuration",
+  "site_configuration",
+  "amazon_store",
+  "identity_column",
+  "company",
+  "cost_center",
+  "country",
+  "marketplace_id",
+  "profile_id",
+  "report_section",
+  "report_date",
+  "ad_product",
+  "currency_code",
+  "report_column",
+  "campaign_id",
+  "campaign_name",
+  "campaign_status",
+  "advertised_product_section",
+  "ad_group_id",
+  "ad_group_name",
+  "ad_id",
+  "advertised_sku",
+  "advertised_asin",
+  "advertised_item",
+  "advertised_product_column",
+  "advertised_item_name",
+  "advertised_item_image",
+  "purchased_product_section",
+  "purchased_sku",
+  "purchased_asin",
+  "purchased_product_name",
+  "purchased_product_category",
+  "attribution_type",
+  "purchased_item",
+  "purchased_product_column",
+  "purchased_item_name",
+  "purchased_item_image",
+  "purchase_metric_section",
+  "purchases",
+  "units_sold",
+  "sales",
+  "purchase_metric_column",
+  "new_to_brand_purchases",
+  "new_to_brand_units",
+  "new_to_brand_sales",
+  "sync_section",
+  "sync_batch_id",
+  "sync_type",
+  "fetched_at",
+  "source_updated_at",
+  "sync_column",
+  "raw_json_hash",
+  "raw_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "记录身份与归属"
+  },
+  {
+   "fieldname": "unique_key",
+   "fieldtype": "Data",
+   "label": "实际购买商品日报唯一键",
+   "hidden": 1,
+   "read_only": 1,
+   "unique": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "master_configuration",
+   "fieldtype": "Link",
+   "label": "广告总配置",
+   "options": "Amazon Advertising Master Configuration",
+   "read_only": 1,
+   "reqd": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "site_configuration",
+   "fieldtype": "Link",
+   "label": "广告站点配置",
+   "options": "Amazon Advertising Site Configuration",
+   "read_only": 1,
+   "reqd": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "amazon_store",
+   "fieldtype": "Link",
+   "label": "亚马逊店铺",
+   "options": "Amazon Store Configuration",
+   "read_only": 1,
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "identity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "公司",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "成本中心",
+   "options": "Cost Center",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "label": "国家",
+   "options": "Country",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "marketplace_id",
+   "fieldtype": "Data",
+   "label": "Marketplace ID",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "profile_id",
+   "fieldtype": "Data",
+   "label": "广告Profile ID",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "report_section",
+   "fieldtype": "Section Break",
+   "label": "报告维度"
+  },
+  {
+   "fieldname": "report_date",
+   "fieldtype": "Date",
+   "label": "报告日期",
+   "read_only": 1,
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "ad_product",
+   "fieldtype": "Select",
+   "label": "广告产品",
+   "options": "\nSPONSORED_PRODUCTS\nSPONSORED_BRANDS\nSPONSORED_DISPLAY",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "currency_code",
+   "fieldtype": "Link",
+   "label": "币种",
+   "options": "Currency",
+   "read_only": 1,
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "report_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "campaign_id",
+   "fieldtype": "Data",
+   "label": "广告活动编号",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "campaign_name",
+   "fieldtype": "Data",
+   "label": "广告活动名称",
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "campaign_status",
+   "fieldtype": "Data",
+   "label": "广告活动状态",
+   "read_only": 1
+  },
+  {
+   "fieldname": "advertised_product_section",
+   "fieldtype": "Section Break",
+   "label": "广告商品"
+  },
+  {
+   "fieldname": "ad_group_id",
+   "fieldtype": "Data",
+   "label": "广告组编号",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "ad_group_name",
+   "fieldtype": "Data",
+   "label": "广告组名称",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "ad_id",
+   "fieldtype": "Data",
+   "label": "广告编号",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "advertised_sku",
+   "fieldtype": "Data",
+   "label": "广告商品SKU",
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "advertised_asin",
+   "fieldtype": "Data",
+   "label": "广告商品ASIN",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "advertised_item",
+   "fieldtype": "Link",
+   "label": "广告商品ERPNext物料",
+   "options": "Item",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "advertised_product_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "advertised_item_name",
+   "fieldtype": "Data",
+   "label": "广告商品名称",
+   "read_only": 1
+  },
+  {
+   "fieldname": "advertised_item_image",
+   "fieldtype": "Attach Image",
+   "label": "广告商品图片",
+   "read_only": 1
+  },
+  {
+   "fieldname": "purchased_product_section",
+   "fieldtype": "Section Break",
+   "label": "实际购买商品"
+  },
+  {
+   "fieldname": "purchased_sku",
+   "fieldtype": "Data",
+   "label": "实际购买SKU",
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "purchased_asin",
+   "fieldtype": "Data",
+   "label": "实际购买ASIN",
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "purchased_product_name",
+   "fieldtype": "Small Text",
+   "label": "Amazon购买商品名称",
+   "read_only": 1
+  },
+  {
+   "fieldname": "purchased_product_category",
+   "fieldtype": "Data",
+   "label": "Amazon购买商品分类",
+   "read_only": 1
+  },
+  {
+   "fieldname": "attribution_type",
+   "fieldtype": "Data",
+   "label": "归因类型",
+   "read_only": 1
+  },
+  {
+   "fieldname": "purchased_item",
+   "fieldtype": "Link",
+   "label": "实际购买ERPNext物料",
+   "options": "Item",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "purchased_product_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "purchased_item_name",
+   "fieldtype": "Data",
+   "label": "实际购买商品名称",
+   "read_only": 1
+  },
+  {
+   "fieldname": "purchased_item_image",
+   "fieldtype": "Attach Image",
+   "label": "实际购买商品图片",
+   "read_only": 1
+  },
+  {
+   "fieldname": "purchase_metric_section",
+   "fieldtype": "Section Break",
+   "label": "购买归因"
+  },
+  {
+   "fieldname": "purchases",
+   "fieldtype": "Float",
+   "label": "购买次数",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "units_sold",
+   "fieldtype": "Float",
+   "label": "销售件数",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sales",
+   "fieldtype": "Currency",
+   "label": "销售额",
+   "options": "currency_code",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "purchase_metric_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "new_to_brand_purchases",
+   "fieldtype": "Float",
+   "label": "品牌新客购买次数",
+   "read_only": 1
+  },
+  {
+   "fieldname": "new_to_brand_units",
+   "fieldtype": "Float",
+   "label": "品牌新客销售件数",
+   "read_only": 1
+  },
+  {
+   "fieldname": "new_to_brand_sales",
+   "fieldtype": "Currency",
+   "label": "品牌新客销售额",
+   "options": "currency_code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_section",
+   "fieldtype": "Section Break",
+   "label": "同步与原始数据"
+  },
+  {
+   "fieldname": "sync_batch_id",
+   "fieldtype": "Data",
+   "label": "同步批次编号",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "sync_type",
+   "fieldtype": "Select",
+   "label": "同步类型",
+   "options": "\n历史同步\n日常同步\n近期核对\n手动同步",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "fetched_at",
+   "fieldtype": "Datetime",
+   "label": "抓取时间",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "source_updated_at",
+   "fieldtype": "Datetime",
+   "label": "亚马逊更新时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "raw_json_hash",
+   "fieldtype": "Data",
+   "label": "原始JSON哈希",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Code",
+   "label": "原始JSON",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-11 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon Advertising Purchased Product Daily",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "report_date",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "purchased_sku"
+}

@@ -33,6 +33,15 @@ def run_amazon_balances():
     return run_scheduled_balance_sync()
 
 
+def run_amazon_advertising():
+    """Amazon广告结构与日报调度入口。"""
+    from fengjing_app.fengjing_business.doctype.amazon_advertising_master_configuration.amazon_advertising_master_configuration import (
+        run_scheduled_advertising_sync,
+    )
+
+    return run_scheduled_advertising_sync()
+
+
 def run_amazon_rankings():
     """Short scheduler entry; Scheduled Job Type.method is limited to 140 chars."""
     from fengjing_app.fengjing_business.doctype.amazon_ranking_configuration.amazon_ranking_configuration import (
@@ -290,6 +299,7 @@ scheduler_events = {
         "fengjing_app.hooks.run_amazon_orders",
         "fengjing_app.hooks.run_amazon_finances",
         "fengjing_app.hooks.run_amazon_balances",
+        "fengjing_app.hooks.run_amazon_advertising",
         "fengjing_app.hooks.run_amazon_fba_inventory",
         "fengjing_app.hooks.run_amazon_fba_inventory_ledger",
         "fengjing_app.hooks.run_amazon_fba_inbound_shipments",
