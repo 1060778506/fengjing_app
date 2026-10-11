@@ -85,8 +85,26 @@
                     "account_type": "Receivable",
                     "account_currency": "USD"
                 },
-                "应收账款-RUB": {
+                "应收账款-CAD": {
                     "account_number": "112203_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "CAD"
+                },
+                "应收账款-MXN": {
+                    "account_number": "112204_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "MXN"
+                },
+                "应收账款-BRL": {
+                    "account_number": "112205_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "BRL"
+                },
+                "应收账款-RUB": {
+                    "account_number": "112206_fj",
                     "is_group": 0,
                     "account_type": "Receivable",
                     "account_currency": "RUB"
@@ -258,8 +276,26 @@
                     "account_type": "Payable",
                     "account_currency": "USD"
                 },
-                "应付账款-RUB": {
+                "应付账款-CAD": {
                     "account_number": "220203_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "CAD"
+                },
+                "应付账款-MXN": {
+                    "account_number": "220204_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "MXN"
+                },
+                "应付账款-BRL": {
+                    "account_number": "220205_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "BRL"
+                },
+                "应付账款-RUB": {
+                    "account_number": "220206_fj",
                     "is_group": 0,
                     "account_type": "Payable",
                     "account_currency": "RUB"
