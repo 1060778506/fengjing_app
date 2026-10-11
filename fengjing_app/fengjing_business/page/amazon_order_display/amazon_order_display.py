@@ -1,9 +1,11 @@
 import json
 import os
+from datetime import timezone
+from zoneinfo import ZoneInfo
 
 import frappe
 import requests
-from frappe.utils import add_days, getdate, nowdate
+from frappe.utils import add_days, get_datetime, get_system_timezone, getdate, nowdate
 
 
 DOCTYPE = "Amazon order synchronization"
@@ -58,6 +60,82 @@ AMAZON_WAREHOUSE_QUERY = """
 nwr["building"="warehouse"]["operator"~"Amazon",i];
 out center tags;
 """
+
+
+def _system_time_to_amazon_utc(value):
+    """Return the original Amazon UTC representation of a stored system-local datetime."""
+    if not value:
+        return ""
+    local_time = get_datetime(value)
+    if local_time.tzinfo is None:
+        local_time = local_time.replace(tzinfo=ZoneInfo(get_system_timezone()))
+    return local_time.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+
+def _attach_order_financials(rows):
+    """Attach Shipment financial status and release information to order SKU rows."""
+    order_ids = sorted({str(row.get("amazon_order_id") or "") for row in rows if row.get("amazon_order_id")})
+    if not order_ids:
+        return
+
+    financial_rows = []
+    for offset in range(0, len(order_ids), 500):
+        financial_rows.extend(frappe.get_all(
+            "Amazon Financial Transaction",
+            filters={
+                "amazon_order_id": ["in", order_ids[offset:offset + 500]],
+                "transaction_type": "Shipment",
+            },
+            fields=[
+                "name", "amazon_order_id", "amazon_order_item_id", "sku",
+                "store", "marketplace_id", "transaction_id", "transaction_status",
+                "posted_date", "release_date", "net_amount", "currency_code",
+            ],
+            limit_page_length=0,
+        ))
+
+    by_order = {}
+    for financial in financial_rows:
+        key = (
+            str(financial.get("store") or ""),
+            str(financial.get("marketplace_id") or "").upper(),
+            str(financial.get("amazon_order_id") or ""),
+        )
+        by_order.setdefault(key, []).append(financial)
+
+    for row in rows:
+        row["purchase_date_utc"] = _system_time_to_amazon_utc(row.get("purchase_date"))
+        key = (
+            str(row.get("store") or ""),
+            str(row.get("marketplace_id") or "").upper(),
+            str(row.get("amazon_order_id") or ""),
+        )
+        candidates = by_order.get(key, [])
+        order_item_id = str(row.get("amazon_order_item_id") or "")
+        sku = str(row.get("sku") or "")
+        matched = [
+            financial for financial in candidates
+            if order_item_id and str(financial.get("amazon_order_item_id") or "") == order_item_id
+        ]
+        if not matched and sku:
+            matched = [financial for financial in candidates if str(financial.get("sku") or "") == sku]
+        if not matched and len({str(financial.get("sku") or "") for financial in candidates}) <= 1:
+            matched = candidates
+        if not matched:
+            continue
+
+        posted_dates = [financial.posted_date for financial in matched if financial.posted_date]
+        release_dates = [financial.release_date for financial in matched if financial.release_date]
+        statuses = {str(financial.transaction_status or "").upper() for financial in matched if financial.transaction_status}
+        row["financial_posted_date"] = min(posted_dates) if posted_dates else None
+        row["financial_release_date"] = max(release_dates) if release_dates else None
+        row["financial_status"] = "DEFERRED" if "DEFERRED" in statuses else ", ".join(sorted(statuses))
+        row["financial_net_amount"] = sum(float(financial.net_amount or 0) for financial in matched)
+        row["financial_currency_code"] = next(
+            (str(financial.currency_code or "") for financial in matched if financial.currency_code),
+            str(row.get("currency_code") or ""),
+        )
+        row["financial_transaction_count"] = len(matched)
 
 
 @frappe.whitelist()
@@ -495,6 +573,7 @@ def get_dashboard_data(filters=None):
             row["currency_code"] = CURRENCY_BY_MARKETPLACE.get(
                 str(row.get("marketplace_id") or "").upper(), ""
             )
+    _attach_order_financials(rows)
 
     mappings = frappe.get_all(
         "Fengjing - Product Corresponding Platform - Main Table",

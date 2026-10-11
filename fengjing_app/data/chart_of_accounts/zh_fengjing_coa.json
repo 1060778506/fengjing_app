@@ -108,6 +108,84 @@
                     "is_group": 0,
                     "account_type": "Receivable",
                     "account_currency": "RUB"
+                },
+                "应收账款-EUR": {
+                    "account_number": "112207_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "EUR"
+                },
+                "应收账款-GBP": {
+                    "account_number": "112208_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "GBP"
+                },
+                "应收账款-SEK": {
+                    "account_number": "112209_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "SEK"
+                },
+                "应收账款-PLN": {
+                    "account_number": "112210_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "PLN"
+                },
+                "应收账款-TRY": {
+                    "account_number": "112211_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "TRY"
+                },
+                "应收账款-ZAR": {
+                    "account_number": "112212_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "ZAR"
+                },
+                "应收账款-EGP": {
+                    "account_number": "112213_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "EGP"
+                },
+                "应收账款-SAR": {
+                    "account_number": "112214_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "SAR"
+                },
+                "应收账款-AED": {
+                    "account_number": "112215_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "AED"
+                },
+                "应收账款-INR": {
+                    "account_number": "112216_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "INR"
+                },
+                "应收账款-SGD": {
+                    "account_number": "112217_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "SGD"
+                },
+                "应收账款-AUD": {
+                    "account_number": "112218_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "AUD"
+                },
+                "应收账款-JPY": {
+                    "account_number": "112219_fj",
+                    "is_group": 0,
+                    "account_type": "Receivable",
+                    "account_currency": "JPY"
                 }
             },
             "预付账款": {
@@ -299,6 +377,84 @@
                     "is_group": 0,
                     "account_type": "Payable",
                     "account_currency": "RUB"
+                },
+                "应付账款-EUR": {
+                    "account_number": "220207_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "EUR"
+                },
+                "应付账款-GBP": {
+                    "account_number": "220208_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "GBP"
+                },
+                "应付账款-SEK": {
+                    "account_number": "220209_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "SEK"
+                },
+                "应付账款-PLN": {
+                    "account_number": "220210_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "PLN"
+                },
+                "应付账款-TRY": {
+                    "account_number": "220211_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "TRY"
+                },
+                "应付账款-ZAR": {
+                    "account_number": "220212_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "ZAR"
+                },
+                "应付账款-EGP": {
+                    "account_number": "220213_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "EGP"
+                },
+                "应付账款-SAR": {
+                    "account_number": "220214_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "SAR"
+                },
+                "应付账款-AED": {
+                    "account_number": "220215_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "AED"
+                },
+                "应付账款-INR": {
+                    "account_number": "220216_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "INR"
+                },
+                "应付账款-SGD": {
+                    "account_number": "220217_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "SGD"
+                },
+                "应付账款-AUD": {
+                    "account_number": "220218_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "AUD"
+                },
+                "应付账款-JPY": {
+                    "account_number": "220219_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "JPY"
                 }
             },
             "预收账款": {

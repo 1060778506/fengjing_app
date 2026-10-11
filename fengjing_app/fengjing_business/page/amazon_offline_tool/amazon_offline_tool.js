@@ -24,6 +24,7 @@ class AmazonOfflineTranslator {
         this.preview_page_size = 10000;
         this.preview_mode = "source";
         this.column_widths = {};
+        this.delimiter = ",";
         this.render();
         this.bind_events();
         this.load_configuration();
@@ -47,11 +48,11 @@ class AmazonOfflineTranslator {
 
                 <section class="aot-workspace">
                     <div class="aot-upload" data-action="pick-file" tabindex="0">
-                        <input class="aot-file-input" type="file" accept=".csv,text/csv" hidden>
-                        <div class="aot-upload-icon">CSV</div>
+                        <input class="aot-file-input" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain,text/tab-separated-values" hidden>
+                        <div class="aot-upload-icon">表格</div>
                         <div class="aot-upload-copy">
-                            <strong class="aot-file-title">拖入 CSV 文件，或点击选择</strong>
-                            <span class="aot-file-subtitle">支持 UTF-8、UTF-8 BOM；不会上传到服务器</span>
+                            <strong class="aot-file-title">拖入 CSV、TXT 或 TSV 文件，或点击选择</strong>
+                            <span class="aot-file-subtitle">支持逗号或制表符分隔；TXT/TSV 翻译后统一导出为 CSV</span>
                         </div>
                         <button class="btn btn-primary btn-sm" type="button">选择文件</button>
                     </div>
@@ -202,8 +203,8 @@ class AmazonOfflineTranslator {
 
     async receive_file(file) {
         if (!file) return;
-        if (!file.name.toLowerCase().endsWith(".csv")) {
-            frappe.msgprint({ title: "文件格式不正确", message: "请选择 .csv 文件。", indicator: "orange" });
+        if (!/\.(csv|txt|tsv)$/i.test(file.name)) {
+            frappe.msgprint({ title: "文件格式不正确", message: "请选择 .csv、.txt 或 .tsv 文件。", indicator: "orange" });
             return;
         }
         this.file = file;
@@ -213,7 +214,8 @@ class AmazonOfflineTranslator {
             const buffer = await file.arrayBuffer();
             let text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
             if (text.startsWith("\uFEFF")) text = text.slice(1);
-            this.rows = this.parse_csv(text);
+            this.delimiter = this.detect_delimiter(text);
+            this.rows = this.parse_delimited(text, this.delimiter);
             this.translated_rows = [];
             this.preview_page = 1;
             this.preview_mode = "source";
@@ -232,7 +234,14 @@ class AmazonOfflineTranslator {
         }
     }
 
-    parse_csv(text) {
+    detect_delimiter(text) {
+        const first_line = String(text || "").split(/\r?\n/, 1)[0] || "";
+        const tabs = (first_line.match(/\t/g) || []).length;
+        const commas = (first_line.match(/,/g) || []).length;
+        return tabs > commas ? "\t" : ",";
+    }
+
+    parse_delimited(text, delimiter = ",") {
         const rows = [];
         let row = [];
         let value = "";
@@ -244,7 +253,7 @@ class AmazonOfflineTranslator {
                 else if (char === '"') quoted = false;
                 else value += char;
             } else if (char === '"') quoted = true;
-            else if (char === ",") { row.push(value); value = ""; }
+            else if (char === delimiter) { row.push(value); value = ""; }
             else if (char === "\n") {
                 row.push(value.replace(/\r$/, ""));
                 rows.push(row);
@@ -366,9 +375,9 @@ class AmazonOfflineTranslator {
         const first_column = (aliases) => aliases
             .map((field) => source_headers.indexOf(field))
             .find((index) => index >= 0) ?? -1;
-        // 付款报表使用 sku / description；FBA 库存分类账使用 MSKU / Title。
+        // 付款报表使用 sku / description；库存分类账使用 MSKU / Title；全部订单报告使用 product-name。
         const sku_column = first_column(["sku", "MSKU"]);
-        const description_column = first_column(["description", "Title"]);
+        const description_column = first_column(["description", "Title", "product-name"]);
         let enriched_descriptions = 0;
         const preamble_rules = new Map(this.applicable_rules("字段内容")
             .filter((row) => row.file_field_name === "__preamble__")
@@ -377,13 +386,13 @@ class AmazonOfflineTranslator {
             if (row_index < this.header_index) {
                 return row.map((cell) => preamble_rules.get(String(cell)) || cell);
             }
-            if (row_index === this.header_index) return row.map((cell) => header_rules.get(String(cell)) || cell);
+            if (row_index === this.header_index) return row.map((cell) => header_rules.get(String(cell)) || header_rules.get(String(cell).trim()) || cell);
             const translated_row = row.map((cell, column) => {
                 const field = source_headers[column] || "";
                 return content_rules.get(`${field}\u0000${cell}`) || cell;
             });
             if (sku_column >= 0 && description_column >= 0) {
-                const mapping = this.find_item_mapping(row[sku_column]);
+                const mapping = this.find_item_mapping(row[sku_column], row, source_headers);
                 const amazon_title = String(row[description_column] || "").trim();
                 if (mapping?.物料名称 && amazon_title) {
                     translated_row[description_column] = `${mapping.物料名称}｜${amazon_title}`;
@@ -413,7 +422,7 @@ class AmazonOfflineTranslator {
         return count;
     }
 
-    find_item_mapping(sku) {
+    find_item_mapping(sku, row = [], headers = []) {
         const normalized = String(sku || "").trim().toUpperCase();
         if (!normalized) return null;
         const country_sites = {
@@ -422,7 +431,18 @@ class AmazonOfflineTranslator {
             "Mexico": ["A1AM78C64UM0Y8"],
             "Brazil": ["A2Q3Y263D00KWC"],
         };
-        const allowed_sites = country_sites[this.country] || [];
+        const value_for = (field) => {
+            const index = headers.indexOf(field);
+            return index >= 0 ? String(row[index] || "").trim() : "";
+        };
+        const channel = value_for("sales-channel").toLowerCase();
+        const ship_country = value_for("ship-country").toUpperCase();
+        const inferred_country = ({ US: "United States", CA: "Canada", MX: "Mexico", BR: "Brazil" })[ship_country]
+            || (channel.includes("amazon.com.mx") ? "Mexico"
+                : channel.includes("amazon.ca") ? "Canada"
+                : channel.includes("amazon.com.br") ? "Brazil"
+                : channel === "amazon.com" ? "United States" : "");
+        const allowed_sites = country_sites[inferred_country || this.country] || [];
         return (this.configuration.sku_item_mappings || []).find((row) =>
             String(row.平台sku || "").trim().toUpperCase() === normalized &&
             (!allowed_sites.length || allowed_sites.includes(String(row.站点id || "").trim()))
@@ -431,10 +451,11 @@ class AmazonOfflineTranslator {
 
     download() {
         if (!this.is_translated || !this.translated_rows.length) return;
-        const csv = this.translated_rows.map((row) => row.map((cell) => this.csv_cell(cell)).join(",")).join("\r\n");
-        const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+        const delimiter = ",";
+        const content = this.translated_rows.map((row) => row.map((cell) => this.delimited_cell(cell, delimiter)).join(delimiter)).join("\r\n");
+        const blob = new Blob(["\uFEFF", content], { type: "text/csv;charset=utf-8" });
         const link = document.createElement("a");
-        const base = this.file.name.replace(/\.csv$/i, "");
+        const base = this.file.name.replace(/\.(csv|txt|tsv)$/i, "");
         link.href = URL.createObjectURL(blob);
         link.download = `${base}-中文翻译.csv`;
         document.body.appendChild(link);
@@ -444,9 +465,10 @@ class AmazonOfflineTranslator {
         frappe.show_alert({ message: "翻译文件已下载", indicator: "green" });
     }
 
-    csv_cell(value) {
+    delimited_cell(value, delimiter = ",") {
         const text = String(value ?? "");
-        return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+        const must_quote = text.includes(delimiter) || /["\r\n]/.test(text);
+        return must_quote ? `"${text.replace(/"/g, '""')}"` : text;
     }
 
     update_file_ui() {
@@ -559,9 +581,10 @@ class AmazonOfflineTranslator {
         this.preview_page = 1;
         this.preview_mode = "source";
         this.column_widths = {};
+        this.delimiter = ",";
         this.$root.find(".aot-file-input").val("");
-        this.$root.find(".aot-file-title").text("拖入 CSV 文件，或点击选择");
-        this.$root.find(".aot-file-subtitle").text("支持 UTF-8、UTF-8 BOM；不会上传到服务器");
+        this.$root.find(".aot-file-title").text("拖入 CSV、TXT 或 TSV 文件，或点击选择");
+        this.$root.find(".aot-file-subtitle").text("支持逗号或制表符分隔；TXT/TSV 翻译后统一导出为 CSV");
         this.$root.find(".aot-report-select").val("");
         this.update_country_options();
         this.$root.find(".aot-clear, .aot-translate, .aot-download").prop("disabled", true);
@@ -592,7 +615,7 @@ class AmazonOfflineTranslator {
     }
 
     country_label(country) {
-        return ({ "United States": "美国" })[country] || country;
+        return ({ "United States": "美国", Canada: "加拿大", Mexico: "墨西哥", Brazil: "巴西" })[country] || country;
     }
 
     escape_html(value) {
