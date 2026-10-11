@@ -53,6 +53,144 @@
                     "account_type": "Bank",
                     "account_currency": "RUB"
                 },
+                "亚马逊美国站USD【其他货币资金】": {
+                    "account_number": "101204_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "USD"
+                },
+                "亚马逊加拿大站CAD【其他货币资金】": {
+                    "account_number": "101205_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "CAD"
+                },
+                "亚马逊墨西哥站MXN【其他货币资金】": {
+                    "account_number": "101206_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "MXN"
+                },
+                "亚马逊巴西站BRL【其他货币资金】": {
+                    "account_number": "101207_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "BRL"
+                },
+                "亚马逊爱尔兰站EUR【其他货币资金】": {
+                    "account_number": "101208_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "EUR"
+                },
+                "亚马逊西班牙站EUR【其他货币资金】": {
+                    "account_number": "101209_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "EUR"
+                },
+                "亚马逊英国站GBP【其他货币资金】": {
+                    "account_number": "101210_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "GBP"
+                },
+                "亚马逊法国站EUR【其他货币资金】": {
+                    "account_number": "101211_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "EUR"
+                },
+                "亚马逊比利时站EUR【其他货币资金】": {
+                    "account_number": "101212_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "EUR"
+                },
+                "亚马逊荷兰站EUR【其他货币资金】": {
+                    "account_number": "101213_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "EUR"
+                },
+                "亚马逊德国站EUR【其他货币资金】": {
+                    "account_number": "101214_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "EUR"
+                },
+                "亚马逊意大利站EUR【其他货币资金】": {
+                    "account_number": "101215_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "EUR"
+                },
+                "亚马逊瑞典站SEK【其他货币资金】": {
+                    "account_number": "101216_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "SEK"
+                },
+                "亚马逊南非站ZAR【其他货币资金】": {
+                    "account_number": "101217_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "ZAR"
+                },
+                "亚马逊波兰站PLN【其他货币资金】": {
+                    "account_number": "101218_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "PLN"
+                },
+                "亚马逊埃及站EGP【其他货币资金】": {
+                    "account_number": "101219_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "EGP"
+                },
+                "亚马逊土耳其站TRY【其他货币资金】": {
+                    "account_number": "101220_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "TRY"
+                },
+                "亚马逊沙特阿拉伯站SAR【其他货币资金】": {
+                    "account_number": "101221_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "SAR"
+                },
+                "亚马逊阿联酋站AED【其他货币资金】": {
+                    "account_number": "101222_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "AED"
+                },
+                "亚马逊印度站INR【其他货币资金】": {
+                    "account_number": "101223_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "INR"
+                },
+                "亚马逊新加坡站SGD【其他货币资金】": {
+                    "account_number": "101224_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "SGD"
+                },
+                "亚马逊澳大利亚站AUD【其他货币资金】": {
+                    "account_number": "101225_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "AUD"
+                },
+                "亚马逊日本站JPY【其他货币资金】": {
+                    "account_number": "101226_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "JPY"
+                },
                 "其他货币资金【其他货币资金】": {
                     "account_number": "101299_fj",
                     "is_group": 0,
