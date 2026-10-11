@@ -1,5 +1,6 @@
 from collections import defaultdict
 from decimal import Decimal
+import re
 
 import frappe
 from frappe.utils import cint, flt, getdate
@@ -14,9 +15,56 @@ AMOUNT_FIELDS = [
     "fba_fees", "other_transaction_fees", "other_amount", "net_amount",
 ]
 
+DETAIL_GROUPS = (
+    ("order", "订单"),
+    ("refund", "退款"),
+    ("storage", "仓储费"),
+    ("logistics", "入库与物流"),
+    ("promotion", "广告与推广"),
+    ("service", "订阅与服务"),
+    ("funds", "资金划转"),
+    ("adjustment", "调整与赔偿"),
+    ("other", "其他"),
+)
+
 
 def _money(value):
     return flt(value or 0, 2)
+
+
+def _transaction_group(row):
+    """Group Amazon's detailed event names into stable, accounting-friendly tabs."""
+    transaction_type = str(row.get("transaction_type") or "")
+    description = str(row.get("description") or "")
+    value = f"{transaction_type} {description}"
+
+    if transaction_type == "Shipment" and description == "Order Payment":
+        return "order"
+    if transaction_type in {"Refund", "RefundEvent", "Chargeback", "ChargebackEvent"}:
+        return "refund"
+    if re.search(r"StorageBilling|StorageFee|LongTermStorage|STARStorage", value, re.I):
+        return "storage"
+    if re.search(
+        r"Inbound|Transportation|ShipmentInjection|AWDProcessing|RemovalShipment|FBADisposal",
+        value,
+        re.I,
+    ):
+        return "logistics"
+    if re.search(r"ProductAds|Advertising|Coupon|Promotion", value, re.I):
+        return "promotion"
+    if transaction_type in {"Transfer", "DebtRecovery"} or re.search(
+        r"Disbursement|DebtPayment|Reserve", value, re.I
+    ):
+        return "funds"
+    if transaction_type in {"Adjustment", "FBAInventoryReimbursement", "Retrocharge"} or re.search(
+        r"Adjustment|Reimbursement|Clawback|WAREHOUSE_LOST|WAREHOUSE_DAMAGE|MISSING_FROM_INBOUND",
+        value,
+        re.I,
+    ):
+        return "adjustment"
+    if transaction_type == "ServiceFee" or re.search(r"Subscription|ServiceFee", value, re.I):
+        return "service"
+    return "other"
 
 
 def _filters(raw=None):
@@ -69,7 +117,7 @@ def _build_db_filters(f):
 
 
 @frappe.whitelist()
-def get_finance_dashboard_data(filters=None, page=1, page_size=50):
+def get_finance_dashboard_data(filters=None, page=1, page_size=300):
     f = _filters(filters)
     fields = [
         "name", "transaction_sku_key", "transaction_id", "amazon_order_id",
@@ -105,6 +153,7 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=50):
         row.item_image = (info.image if info else None) or ""
         row.is_bound = 1 if row.corresponding_item else 0
         row.is_product = 1 if (row.sku or row.asin or row.amazon_order_item_id) else 0
+        row.detail_group = _transaction_group(row)
 
     search = (f.search or "").strip().lower()
     binding = f.binding or ""
@@ -132,6 +181,14 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=50):
             filtered.append(row)
         rows = filtered
 
+    dashboard_rows = rows
+    group_counts = defaultdict(int)
+    for row in dashboard_rows:
+        group_counts[row.detail_group] += 1
+
+    detail_group = f.detail_group or ""
+    detail_rows = [row for row in dashboard_rows if not detail_group or row.detail_group == detail_group]
+
     currencies = defaultdict(lambda: {"inflow": 0.0, "outflow": 0.0, "net": 0.0, "sales": 0.0, "fees": 0.0})
     daily = defaultdict(lambda: defaultdict(lambda: {"net": 0.0, "sales": 0.0, "fees": 0.0, "tax": 0.0, "promotion": 0.0, "count": 0}))
     fee_totals = defaultdict(lambda: defaultdict(float))
@@ -144,7 +201,7 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=50):
     product_count = 0
     store_fee_count = 0
 
-    for row in rows:
+    for row in dashboard_rows:
         currency = row.currency_code or "未知"
         amount = _money(row.net_amount if row.net_amount is not None else row.total_amount)
         key = (row.store, row.marketplace_id, row.transaction_id)
@@ -188,22 +245,29 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=50):
         p["amounts"] = dict(p["amounts"]); product_list.append(p)
     product_list.sort(key=lambda x: (x["quantity"], sum(abs(v) for v in x["amounts"].values())), reverse=True)
     settlement_list = sorted(settlements.values(), key=lambda x: str(x["last_date"] or ""), reverse=True)
-    page, page_size = max(cint(page), 1), min(max(cint(page_size), 10), 200)
+    page, page_size = max(cint(page), 1), min(max(cint(page_size), 10), 500)
     start = (page - 1) * page_size
-    page_rows = rows[start:start + page_size]
+    page_rows = detail_rows[start:start + page_size]
     options = {
-        key: sorted({str(r.get(key)) for r in rows if r.get(key)})
+        key: sorted({str(r.get(key)) for r in dashboard_rows if r.get(key)})
         for key in ("store", "marketplace_id", "country", "currency_code", "transaction_type", "transaction_status")
     }
     return {
-        "summary": {"row_count": len(rows), "transaction_count": len(unique_transactions), "sku_count": len(products), "product_count": product_count, "store_fee_count": store_fee_count, "bound_count": bound, "unbound_count": product_count - bound, "binding_rate": round(bound * 100 / product_count, 1) if product_count else 0, "currencies": dict(currencies), "truncated": truncated},
+        "summary": {"row_count": len(dashboard_rows), "transaction_count": len(unique_transactions), "sku_count": len(products), "product_count": product_count, "store_fee_count": store_fee_count, "bound_count": bound, "unbound_count": product_count - bound, "binding_rate": round(bound * 100 / product_count, 1) if product_count else 0, "currencies": dict(currencies), "truncated": truncated},
         "daily": {day: dict(values) for day, values in sorted(daily.items())},
         "fees": {c: dict(v) for c, v in fee_totals.items()},
         "types": {c: dict(v) for c, v in type_totals.items()},
         "stores": {c: dict(v) for c, v in store_totals.items()},
         "products": product_list[:500], "settlements": settlement_list[:200],
         "rows": page_rows, "options": options,
-        "pagination": {"page": page, "page_size": page_size, "total": len(rows), "pages": max(1, (len(rows) + page_size - 1) // page_size)},
+        "detail_groups": [
+            {"key": "", "label": "全部", "count": len(dashboard_rows)},
+            *[
+                {"key": key, "label": label, "count": group_counts[key]}
+                for key, label in DETAIL_GROUPS
+            ],
+        ],
+        "pagination": {"page": page, "page_size": page_size, "total": len(detail_rows), "pages": max(1, (len(detail_rows) + page_size - 1) // page_size)},
     }
 
 

@@ -6,7 +6,7 @@ frappe.pages['amazon-finance'].on_page_show = wrapper => wrapper.amazon_finance?
 
 class AmazonFinancePage {
     constructor(page) {
-        this.page=page; this.pageNo=1; this.pageSize=50; this.charts=[]; this.loading=false;
+        this.page=page; this.pageNo=1; this.pageSize=300; this.detailGroup=''; this.charts=[]; this.loading=false;
         this.renderShell(); this.bindEvents();
     }
     renderShell() {
@@ -16,11 +16,12 @@ class AmazonFinancePage {
           <section class="af-filter-panel"><div class="af-ranges">${[7,30,90,180,365].map(n=>`<button data-days="${n}" class="af-range ${n===30?'active':''}">${n===365?'1年':n+'天'}</button>`).join('')}</div><div class="af-filters">
             ${this.input('date_from','开始日期','date',from)}${this.input('date_to','结束日期','date',today)}${this.select('store','店铺')}${this.select('marketplace_id','站点')}${this.select('country','国家')}${this.select('currency_code','币种')}${this.select('transaction_type','交易类型')}${this.select('transaction_status','状态')}
             <label>交易归属<select data-filter="scope"><option value="">全部</option><option value="product">商品级交易</option><option value="store">店铺级费用</option></select></label><label>物料绑定<select data-filter="binding"><option value="">全部</option><option value="bound">已绑定</option><option value="unbound">未绑定</option></select></label><label class="af-search-label">搜索<input data-filter="search" placeholder="订单号 / SKU / ASIN / 费用内容 / 物料 / 结算ID"></label></div></section>
-          <div class="af-loading"><i></i>正在分析财务交易…</div><main class="af-content"><section class="af-kpis"></section><section class="af-currencies"></section>
+          <div class="af-loading"><i></i>正在分析财务交易…</div><main class="af-content"><section class="af-kpis"></section>
+          <section class="af-card af-table-card"><header><div><h2>完整交易明细</h2><span class="af-table-count"></span></div><div class="af-table-actions"><div class="af-pages"></div><button class="af-table-expand" type="button" title="放大交易明细" aria-label="放大交易明细"><svg class="af-expand-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><svg class="af-compress-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button></div></header><div class="af-detail-tabs"></div><div class="af-table-wrap"><table><thead><tr><th>时间</th><th>店铺 / 站点</th><th>交易 / 订单</th><th>交易内容</th><th>物料 / 费用归属</th><th>类型 / 状态</th><th>币种</th><th>净额</th><th>销售额</th><th>费用</th><th>结算ID</th></tr></thead><tbody></tbody></table></div></section>
+          <section class="af-currencies"></section>
           <section class="af-grid af-grid-2"><article class="af-card af-wide"><header><h2>净额与费用趋势</h2><span>按记账日期与币种</span></header><div id="af-trend" class="af-chart"></div></article><article class="af-card"><header><h2>费用构成</h2><span>负值代表扣费</span></header><div id="af-fees" class="af-chart"></div></article></section>
           <section class="af-grid af-grid-2"><article class="af-card"><header><h2>交易类型</h2><span>金额与笔数</span></header><div id="af-types" class="af-chart"></div></article><article class="af-card"><header><h2>店铺贡献</h2><span>店铺净额</span></header><div id="af-stores" class="af-chart"></div></article></section>
-          <section class="af-grid af-grid-2"><article class="af-card"><header><h2>SKU 与物料表现</h2><span>未绑定商品可直接绑定</span></header><div class="af-products"></div></article><article class="af-card"><header><h2>结算批次</h2><span>最近200个批次</span></header><div class="af-settlements"></div></article></section>
-          <section class="af-card af-table-card"><header><div><h2>完整交易明细</h2><span class="af-table-count"></span></div><div class="af-pages"></div></header><div class="af-table-wrap"><table><thead><tr><th>时间</th><th>店铺 / 站点</th><th>交易 / 订单</th><th>交易内容</th><th>物料 / 费用归属</th><th>类型 / 状态</th><th>币种</th><th>净额</th><th>销售额</th><th>费用</th><th>结算ID</th></tr></thead><tbody></tbody></table></div></section></main></div>`);
+          <section class="af-grid af-grid-2"><article class="af-card"><header><h2>SKU 与物料表现</h2><span>未绑定商品可直接绑定</span></header><div class="af-products"></div></article><article class="af-card"><header><h2>结算批次</h2><span>最近200个批次</span></header><div class="af-settlements"></div></article></section></main></div>`);
         this.$=$(this.page.main).find('.af-root');
     }
     input(n,l,t,v){return `<label>${l}<input type="${t}" data-filter="${n}" value="${v}"></label>`}
@@ -30,9 +31,13 @@ class AmazonFinancePage {
         this.$.on('click','.af-range',e=>{let n=+e.currentTarget.dataset.days,to=frappe.datetime.get_today();this.$.find('.af-range').removeClass('active');$(e.currentTarget).addClass('active');this.$.find('[data-filter=date_to]').val(to);this.$.find('[data-filter=date_from]').val(frappe.datetime.add_days(to,-n+1));this.pageNo=1;this.load()});
         let timer;this.$.on('change','[data-filter]:not([data-filter=search])',()=>{this.pageNo=1;this.load()}).on('input','[data-filter=search]',()=>{clearTimeout(timer);timer=setTimeout(()=>{this.pageNo=1;this.load()},400)});
         this.$.on('click','[data-page]',e=>{this.pageNo=+e.currentTarget.dataset.page;this.load()}).on('click','.af-bind',e=>this.bindItem($(e.currentTarget).data())).on('click','[data-copy]',e=>{frappe.utils.copy_to_clipboard(String($(e.currentTarget).data('copy')||''));frappe.show_alert({message:'已复制',indicator:'green'})});
+        this.$.on('click','[data-detail-group]',e=>{const group=e.currentTarget.dataset.detailGroup||'';if(group===this.detailGroup)return;this.detailGroup=group;this.pageNo=1;this.load()});
+        this.$.on('click','.af-table-expand',()=>this.toggleTableExpand());
+        $(document).off('keydown.amazon-finance-table').on('keydown.amazon-finance-table',e=>{if(e.key==='Escape')this.toggleTableExpand(false)});
         $(window).on('resize.amazon-finance',()=>this.charts.forEach(c=>c?.resize()));
     }
-    filters(){const r={};this.$.find('[data-filter]').each((_,e)=>{if(e.value)r[e.dataset.filter]=e.value});return r}
+    filters(){const r={};this.$.find('[data-filter]').each((_,e)=>{if(e.value)r[e.dataset.filter]=e.value});if(this.detailGroup)r.detail_group=this.detailGroup;return r}
+    toggleTableExpand(force){const card=this.$.find('.af-table-card'),expand=typeof force==='boolean'?force:!card.hasClass('is-expanded');card.toggleClass('is-expanded',expand);$('body').toggleClass('af-table-expanded',expand);card.find('.af-table-expand').attr({'title':expand?'还原交易明细':'放大交易明细','aria-label':expand?'还原交易明细':'放大交易明细'})}
     async load(){if(this.loading)return;this.loading=true;this.$.addClass('is-loading');try{const r=await frappe.call({method:'fengjing_app.fengjing_business.page.amazon_finance.amazon_finance.get_finance_dashboard_data',args:{filters:this.filters(),page:this.pageNo,page_size:this.pageSize}});this.data=r.message||{};this.render()}catch(e){console.error(e);frappe.msgprint({title:'财务页面加载失败',message:e.message||'请检查后台日志',indicator:'red'})}finally{this.loading=false;this.$.removeClass('is-loading')}}
     render(){this.fillOptions();this.renderKpis();this.renderCurrencies();this.renderCharts();this.renderProducts();this.renderSettlements();this.renderTable()}
     fillOptions(){['store','marketplace_id','country','currency_code','transaction_type','transaction_status'].forEach(k=>{const e=this.$.find(`[data-filter=${k}]`),v=e.val(),o=(this.data.options?.[k]||[]).map(x=>`<option value="${this.esc(x)}">${this.esc(this.translate(x))}</option>`).join('');e.html(`<option value="">全部</option>${o}`).val(v)})}
@@ -46,9 +51,10 @@ class AmazonFinancePage {
     renderSettlements(){this.$.find('.af-settlements').html(`<div class="af-scroll-list">${(this.data.settlements||[]).map(s=>`<div class="af-settlement"><i>结</i><div><b>${this.esc(s.settlement_id)}</b><small>${this.esc(s.store||'未归属')} · ${s.count}条 · ${this.date(s.last_date)}</small></div><strong class="${s.amount>=0?'positive':'negative'}">${this.money(s.amount,s.currency)}</strong></div>`).join('')||'<div class="af-empty">暂无结算批次</div>'}</div>`)}
     renderTable(){
         const p=this.data.pagination||{};
-        this.$.find('.af-table-count').text(`共 ${this.num(p.total)} 条 · 第 ${p.page}/${p.pages} 页`);
+        this.$.find('.af-detail-tabs').html((this.data.detail_groups||[]).map(group=>`<button type="button" class="af-detail-tab ${group.key===this.detailGroup?'active':''}" data-detail-group="${this.esc(group.key)}"><span>${this.esc(group.label)}</span><b>${this.num(group.count)}</b></button>`).join(''));
+        this.$.find('.af-table-count').text(`共 ${this.num(p.total)} 条 · 第 ${p.page}/${p.pages} 页 · 每页 ${this.num(p.page_size||this.pageSize)} 条`);
         this.$.find('.af-pages').html(`<button class="btn btn-xs" data-page="${p.page-1}" ${p.page<=1?'disabled':''}>上一页</button><button class="btn btn-xs" data-page="${p.page+1}" ${p.page>=p.pages?'disabled':''}>下一页</button>`);
-        this.$.find('tbody').html((this.data.rows||[]).map(r=>{
+        this.$.find('.af-table-card tbody').html((this.data.rows||[]).map(r=>{
             const fees=(r.selling_fees||0)+(r.fba_fees||0)+(r.other_transaction_fees||0);
             const product=Boolean(r.is_product);
             const content=product
