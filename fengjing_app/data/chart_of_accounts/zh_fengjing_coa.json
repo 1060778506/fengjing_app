@@ -15,18 +15,6 @@
                 "account_number": "1002_fj",
                 "is_group": 1,
                 "account_type": "Bank",
-                "亚马逊美国站USD【银行存款】": {
-                    "account_number": "100230_fj",
-                    "is_group": 0,
-                    "account_type": "Bank",
-                    "account_currency": "USD"
-                },
-                "亚马逊加拿大站CAD【银行存款】": {
-                    "account_number": "100231_fj",
-                    "is_group": 0,
-                    "account_type": "Bank",
-                    "account_currency": "CAD"
-                },
                 "银行存款【银行存款】": {
                     "account_number": "100299_fj",
                     "is_group": 0,
