@@ -6,6 +6,17 @@
     const PARSE_METHOD =
         "fengjing_app.fengjing_business.doctype.analysis_material_movement.analysis_material_movement.parse_product_bundles_for_material_request";
 
+    function allowCustomLogisticsValues(frm) {
+        const grid = frm.fields_dict.custom_物流记录?.grid;
+        if (!grid) return;
+
+        for (const fieldname of ["custom_物流公司", "custom_货代"]) {
+            const field = frappe.meta.get_docfield("Material Request Logistics", fieldname, frm.doc.name);
+            if (field) field.ignore_validation = 1;
+            grid.update_docfield_property(fieldname, "ignore_validation", 1);
+        }
+    }
+
     function getBundleRows(frm) {
         return (frm.doc.custom_物料套件移动 || []).map(row => ({
             套件: row.套件 || "",
@@ -112,6 +123,9 @@
     }
 
     frappe.ui.form.on("Material Request", {
+        refresh(frm) {
+            allowCustomLogisticsValues(frm);
+        },
         async custom_解析套件(frm) {
             try {
                 await parseBundles(frm);
