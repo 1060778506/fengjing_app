@@ -1,0 +1,44 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "custom_物流公司",
+  "custom_物流单号",
+  "custom_货代"
+ ],
+ "fields": [
+  {
+   "fieldname": "custom_物流公司",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "物流公司",
+   "options": "韵达快递\n极兔速递\n安能物流\n百世快递\n中通快运特惠\n顺心捷达电商件"
+  },
+  {
+   "fieldname": "custom_物流单号",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "物流单号"
+  },
+  {
+   "fieldname": "custom_货代",
+   "fieldtype": "Autocomplete",
+   "in_list_view": 1,
+   "label": "货代",
+   "options": "凯奇\n递四方\n云途物流\n燕文物流\n纵腾谷仓\n其他"
+  }
+ ],
+ "grid_page_length": 50,
+ "istable": 1,
+ "links": [],
+ "module": "Fengjing Business",
+ "name": "Material Request Logistics",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

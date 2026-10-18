@@ -9,6 +9,9 @@ from frappe.model.document import Document
 from frappe.utils import cint, flt
 
 
+REQUEST_FIELDS = ("custom_目的地", "custom_货件编号", "custom_内部编号")
+
+
 class AnalysisMaterialmovement(Document):
 	pass
 
@@ -31,6 +34,10 @@ def _expand_bundle_rows(bundle_rows, preserve_package=False):
 		bundle_name = (source.get("套件") or "").strip()
 		bundle_qty = flt(source.get("数量"))
 		package_number = (source.get("temu包裹号") or "").strip()
+		request_fields = {
+			fieldname: str(source.get(fieldname) or "").strip()
+			for fieldname in REQUEST_FIELDS
+		} if preserve_package else {}
 
 		if not bundle_name:
 			frappe.throw(_(f"套件物料解析第 {index} 行：请选择物料套件。"))
@@ -69,8 +76,12 @@ def _expand_bundle_rows(bundle_rows, preserve_package=False):
 			if quantity <= 0:
 				frappe.throw(_(f"套件 {bundle_name} 中的物料 {item_code} 数量必须大于 0。"))
 
-			# 物料移动只需按物料合并；物料需求还要保留每个包裹的归属。
-			result_key = (package_number, item_code) if preserve_package else item_code
+			# 物料需求按包裹及三个业务字段区分；物料移动仍只按物料合并。
+			result_key = (
+				package_number,
+				*(request_fields[fieldname] for fieldname in REQUEST_FIELDS),
+				item_code,
+			) if preserve_package else item_code
 			if result_key not in result_by_key:
 				result_by_key[result_key] = {
 					"item_code": item_code,
@@ -80,6 +91,7 @@ def _expand_bundle_rows(bundle_rows, preserve_package=False):
 				}
 				if preserve_package:
 					result_by_key[result_key]["temu_package_no"] = package_number
+					result_by_key[result_key].update(request_fields)
 			result_by_key[result_key]["qty"] = flt(result_by_key[result_key]["qty"] + quantity, 6)
 
 	return list(result_by_key.values())
@@ -116,7 +128,7 @@ def parse_product_bundles(bundle_rows):
 
 @frappe.whitelist()
 def parse_product_bundles_for_material_request(bundle_rows):
-	"""供物料需求的“解析套件”按钮调用，并保留 Temu 包裹归属。"""
+	"""供物料需求的“解析套件”按钮调用，并保留包裹及业务字段归属。"""
 	_check_material_request_permission()
 	source_rows = _as_rows(bundle_rows)
 	rows = _expand_bundle_rows(source_rows, preserve_package=True)
@@ -173,6 +185,7 @@ def validate_material_request_product_bundles(doc, method=None):
 	def expected_key(row):
 		return (
 			(row.get("temu_package_no") or "").strip(),
+			*((row.get(fieldname) or "").strip() for fieldname in REQUEST_FIELDS),
 			row.get("item_code") or "",
 			flt(row.get("qty"), 6),
 		)
@@ -180,6 +193,7 @@ def validate_material_request_product_bundles(doc, method=None):
 	def generated_key(row):
 		return (
 			(row.get("custom_temu包裹号") or "").strip(),
+			*((row.get(fieldname) or "").strip() for fieldname in REQUEST_FIELDS),
 			row.get("item_code") or "",
 			flt(row.get("qty"), 6),
 		)
@@ -187,4 +201,4 @@ def validate_material_request_product_bundles(doc, method=None):
 	if Counter(expected_key(row) for row in expected_rows) != Counter(
 		generated_key(row) for row in generated_rows
 	):
-		frappe.throw(_("套件配置、包裹号与已生成的物料需求明细不一致，请重新点击“解析套件”。"))
+		frappe.throw(_("套件配置、包裹号或目的地及编号与已生成的物料需求明细不一致，请重新点击“解析套件”。"))

@@ -10,7 +10,10 @@
         return (frm.doc.custom_物料套件移动 || []).map(row => ({
             套件: row.套件 || "",
             数量: row.数量,
-            temu包裹号: row.temu包裹号 || ""
+            temu包裹号: row.temu包裹号 || "",
+            custom_目的地: row.custom_目的地 || "",
+            custom_货件编号: row.custom_货件编号 || "",
+            custom_内部编号: row.custom_内部编号 || ""
         }));
     }
 
@@ -38,6 +41,9 @@
         const values = {
             qty: data.qty,
             custom_temu包裹号: data.temu_package_no || "",
+            custom_目的地: data.custom_目的地 || "",
+            custom_货件编号: data.custom_货件编号 || "",
+            custom_内部编号: data.custom_内部编号 || "",
             custom_是否程序生成: 1
         };
 

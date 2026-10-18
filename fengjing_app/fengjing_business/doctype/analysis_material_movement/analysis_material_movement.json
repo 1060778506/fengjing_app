@@ -10,6 +10,9 @@
   "\u5957\u4ef6",
   "\u5957\u4ef6\u540d\u79f0",
   "temu\u5305\u88f9\u53f7",
+  "custom_\u76ee\u7684\u5730",
+  "custom_\u8d27\u4ef6\u7f16\u53f7",
+  "custom_\u5185\u90e8\u7f16\u53f7",
   "\u6570\u91cf"
  ],
  "fields": [
@@ -41,6 +44,24 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "TEMU\u5305\u88f9\u53f7"
+  },
+  {
+   "fieldname": "custom_\u76ee\u7684\u5730",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u76ee\u7684\u5730"
+  },
+  {
+   "fieldname": "custom_\u8d27\u4ef6\u7f16\u53f7",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u8d27\u4ef6\u7f16\u53f7"
+  },
+  {
+   "fieldname": "custom_\u5185\u90e8\u7f16\u53f7",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u5185\u90e8\u7f16\u53f7"
   }
  ],
  "grid_page_length": 50,
