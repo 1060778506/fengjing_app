@@ -1,19 +1,69 @@
+body.fjtc-full-height-page .main-section {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	scrollbar-gutter: auto;
+	padding-bottom: 0 !important;
+}
+
+body.fjtc-full-height-page #body,
+body.fjtc-full-height-page .page-container,
+body.fjtc-full-height-page .page-body,
+body.fjtc-full-height-page .page-wrapper {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+}
+
+.fjtc-page .page-head {
+	flex: none;
+}
+
+.fjtc-page .page-body {
+	width: 100%;
+	max-width: none !important;
+	padding: 0;
+}
+
+.fjtc-page .page-content {
+	flex: 1;
+	min-height: 0;
+	padding: 0;
+}
+
+.fjtc-page .layout-main,
+.fjtc-page .layout-main-section-wrapper,
 .fjtc-page .layout-main-section {
-	background: transparent;
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+	margin: 0;
+	padding: 0 !important;
+}
+
+.fjtc-page .layout-main-section {
+	background: var(--card-bg);
 }
 
 .fjtc-shell {
-	min-height: 680px;
-	padding: 18px;
-	border: 1px solid var(--border-color);
-	border-radius: 14px;
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
 	background: var(--card-bg);
-	box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+	box-shadow: none;
+	overflow: hidden;
 }
 
 .fjtc-loading {
 	display: flex;
-	min-height: 580px;
+	flex: 1;
+	min-height: 0;
 	align-items: center;
 	justify-content: center;
 	gap: 10px;
@@ -31,6 +81,249 @@
 
 .fjtc-calendar {
 	display: none;
+	flex: 1;
+	min-height: 0;
+	padding: 16px 20px 20px;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.fjtc-shell--settings .fjtc-calendar,
+.fjtc-shell--settings .fjtc-loading {
+	display: none !important;
+}
+
+.fjtc-settings[hidden] {
+	display: none;
+}
+
+.fjtc-settings:not([hidden]) {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.fjtc-settings-head,
+.fjtc-map-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.fjtc-settings-head h2 {
+	margin: 0 0 4px;
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.fjtc-settings-head {
+	flex: none;
+	padding: 10px 14px;
+}
+
+.fjtc-settings-layout {
+	display: grid;
+	flex: 1;
+	grid-template-columns: minmax(0, 1fr) 300px;
+	min-height: 0;
+	gap: 0;
+}
+
+.fjtc-map-column,
+.fjtc-settings-panel {
+	min-width: 0;
+	min-height: 0;
+	border: 0;
+	border-radius: 0;
+	background: var(--card-bg);
+}
+
+.fjtc-map-column {
+	display: flex;
+	flex-direction: column;
+	padding: 0;
+	border-right: 1px solid var(--border-color);
+}
+
+.fjtc-map-toolbar {
+	justify-content: flex-start;
+	flex: none;
+	margin: 0;
+	padding: 8px 12px;
+}
+
+.fjtc-map-breadcrumb {
+	color: var(--text-muted);
+	font-size: 13px;
+}
+
+.fjtc-map-stage {
+	position: relative;
+	flex: 1;
+	min-height: 0;
+	border-top: 1px solid var(--border-color);
+	border-bottom: 1px solid var(--border-color);
+	border-radius: 0;
+	background: var(--subtle-fg);
+}
+
+.fjtc-map-canvas {
+	width: 100%;
+	height: 100%;
+}
+
+.fjtc-map-status {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	max-width: calc(100% - 32px);
+	padding: 10px 14px;
+	transform: translate(-50%, -50%);
+	border-radius: 8px;
+	background: var(--card-bg);
+	box-shadow: 0 3px 14px rgba(15, 23, 42, 0.12);
+	color: var(--text-muted);
+	text-align: center;
+	font-size: 13px;
+}
+
+.fjtc-settings-panel {
+	height: 100%;
+	padding: 14px;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.fjtc-settings-panel h3 {
+	margin: 0 0 6px;
+	font-size: 16px;
+	font-weight: 700;
+}
+
+.fjtc-setting-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	margin: 0 0 8px;
+	padding: 10px;
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	cursor: pointer;
+}
+
+.fjtc-setting-row strong,
+.fjtc-setting-row small {
+	display: block;
+}
+
+.fjtc-setting-row strong {
+	font-size: 13px;
+}
+
+.fjtc-setting-row small {
+	margin-top: 2px;
+	color: var(--text-muted);
+	font-size: 11px;
+}
+
+.fjtc-setting-row input {
+	flex: none;
+	width: 16px;
+	height: 16px;
+	accent-color: var(--primary);
+}
+
+.fjtc-current-city {
+	margin-top: 12px;
+	color: var(--text-muted);
+	font-size: 12px;
+}
+
+.fjtc-current-city strong {
+	color: var(--text-color);
+}
+
+.fjtc-city-picker {
+	margin-top: 18px;
+}
+
+.fjtc-city-picker > label {
+	margin-bottom: 7px;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.fjtc-city-results {
+	max-height: 240px;
+	margin-top: 7px;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.fjtc-settings-panel,
+.fjtc-city-results {
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+
+.fjtc-settings-panel::-webkit-scrollbar,
+.fjtc-city-results::-webkit-scrollbar {
+	display: none;
+	width: 0;
+	height: 0;
+}
+
+.fjtc-city-result {
+	display: flex;
+	width: 100%;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 7px 8px;
+	border: 0;
+	border-bottom: 1px solid var(--border-color);
+	background: transparent;
+	color: var(--text-color);
+	text-align: left;
+	font-size: 12px;
+}
+
+.fjtc-city-result:hover,
+.fjtc-city-result:focus {
+	background: var(--subtle-fg);
+}
+
+.fjtc-city-result.is-selected {
+	background: #fef3c7;
+	color: #92400e;
+	font-weight: 700;
+}
+
+.fjtc-city-result small {
+	color: var(--text-muted);
+}
+
+.fjtc-city-empty {
+	display: block;
+	padding: 8px;
+	color: var(--text-muted);
+	font-size: 12px;
+}
+
+.fjtc-selection-summary {
+	margin-top: 18px;
+	padding-top: 12px;
+	border-top: 1px solid var(--border-color);
+	font-size: 12px;
+}
+
+.fjtc-selection-summary p {
+	margin: 5px 0 0;
+	color: var(--text-muted);
 }
 
 .fjtc-page .fc {
@@ -39,6 +332,7 @@
 	--fc-neutral-bg-color: var(--subtle-fg);
 	--fc-list-event-hover-bg-color: var(--subtle-fg);
 	--fc-today-bg-color: rgba(59, 130, 246, 0.08);
+	height: auto;
 	font-family: inherit;
 }
 
@@ -72,10 +366,20 @@
 }
 
 @media (max-width: 768px) {
+	.fjtc-settings-layout {
+		grid-template-columns: 1fr;
+		grid-template-rows: minmax(0, 1.1fr) minmax(0, 0.9fr);
+	}
+
+	.fjtc-map-column {
+		border-right: 0;
+		border-bottom: 1px solid var(--border-color);
+	}
+
 	.fjtc-shell {
-		min-height: 560px;
-		padding: 8px;
-		border-radius: 10px;
+		min-height: 0;
+		padding: 0;
+		border-radius: 0;
 	}
 
 	.fjtc-page .fc .fc-toolbar {
