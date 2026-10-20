@@ -191,13 +191,15 @@ body.fjtc-full-height-page .page-wrapper {
 }
 
 .fjtc-settings-panel {
+	display: flex;
+	flex-direction: column;
 	height: 100%;
 	padding: 14px;
-	overflow-y: auto;
-	overscroll-behavior: contain;
+	overflow: hidden;
 }
 
 .fjtc-settings-panel h3 {
+	flex: none;
 	margin: 0 0 6px;
 	font-size: 16px;
 	font-weight: 700;
@@ -205,6 +207,7 @@ body.fjtc-full-height-page .page-wrapper {
 
 .fjtc-setting-row {
 	display: flex;
+	flex: none;
 	align-items: center;
 	justify-content: space-between;
 	gap: 10px;
@@ -237,28 +240,28 @@ body.fjtc-full-height-page .page-wrapper {
 	accent-color: var(--primary);
 }
 
-.fjtc-current-city {
-	margin-top: 12px;
-	color: var(--text-muted);
-	font-size: 12px;
-}
-
-.fjtc-current-city strong {
-	color: var(--text-color);
-}
-
 .fjtc-city-picker {
-	margin-top: 18px;
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-height: 0;
+	margin-top: 12px;
 }
 
 .fjtc-city-picker > label {
+	flex: none;
 	margin-bottom: 7px;
 	font-size: 13px;
 	font-weight: 600;
 }
 
+.fjtc-city-picker > input {
+	flex: none;
+}
+
 .fjtc-city-results {
-	max-height: 240px;
+	flex: 1;
+	min-height: 0;
 	margin-top: 7px;
 	overflow-y: auto;
 	overscroll-behavior: contain;
@@ -312,18 +315,6 @@ body.fjtc-full-height-page .page-wrapper {
 	padding: 8px;
 	color: var(--text-muted);
 	font-size: 12px;
-}
-
-.fjtc-selection-summary {
-	margin-top: 18px;
-	padding-top: 12px;
-	border-top: 1px solid var(--border-color);
-	font-size: 12px;
-}
-
-.fjtc-selection-summary p {
-	margin: 5px 0 0;
-	color: var(--text-muted);
 }
 
 .fjtc-page .fc {

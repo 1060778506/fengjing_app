@@ -50,7 +50,6 @@ class FengjingTeamCalendarPage {
 		this.regionLookup = new Map();
 		this.cityLookup = new Map();
 		this.holidayCountries = new Map();
-		this.holidayRegions = new Map();
 		this.weatherEnabled = false;
 		this.weatherCity = null;
 		this.activeCountry = null;
@@ -247,6 +246,8 @@ class FengjingTeamCalendarPage {
 		this.activeCountry = null;
 		this.selectedRegion = null;
 		this.selectedCity = null;
+		this.weatherCity = null;
+		this.weatherEnabled = false;
 		this.searchQuery = "";
 		this.countryMapLoaded = false;
 		this.renderSettingsPanel();
@@ -323,12 +324,35 @@ class FengjingTeamCalendarPage {
 		return null;
 	}
 
+	fitCountryMap(index) {
+		if (!index.length || !this.mapContainer.clientWidth || !this.mapContainer.clientHeight) return;
+		const bounds = index.reduce((result, polygon) => ({
+			minLon: Math.min(result.minLon, polygon.minLon),
+			maxLon: Math.max(result.maxLon, polygon.maxLon),
+			minLat: Math.min(result.minLat, polygon.minLat),
+			maxLat: Math.max(result.maxLat, polygon.maxLat),
+		}), { minLon: Infinity, maxLon: -Infinity, minLat: Infinity, maxLat: -Infinity });
+		if (bounds.maxLon - bounds.minLon > 180) return;
+		const topLeft = this.mapChart.convertToPixel({ geoIndex: 0 }, [bounds.minLon, bounds.maxLat]);
+		const bottomRight = this.mapChart.convertToPixel({ geoIndex: 0 }, [bounds.maxLon, bounds.minLat]);
+		const width = Math.abs(bottomRight?.[0] - topLeft?.[0]);
+		const height = Math.abs(bottomRight?.[1] - topLeft?.[1]);
+		if (!Number.isFinite(width) || !Number.isFinite(height) || !width || !height) return;
+		const zoom = Math.min(
+			this.mapContainer.clientWidth * 0.92 / width,
+			this.mapContainer.clientHeight * 0.92 / height,
+		);
+		if (Number.isFinite(zoom) && zoom > 0) this.mapChart.setOption({ geo: { zoom } });
+	}
+
 	async openCountry(country) {
 		if (!country) return;
 		const token = ++this.countryLoadToken;
 		this.activeCountry = country;
 		this.selectedRegion = null;
 		this.selectedCity = null;
+		this.weatherCity = null;
+		this.weatherEnabled = false;
 		this.searchQuery = "";
 		this.countryMapLoaded = false;
 		this.regionLookup.clear();
@@ -336,7 +360,7 @@ class FengjingTeamCalendarPage {
 		this.cityRegionKeys.clear();
 		this.plottedCities = [];
 		this.renderSettingsPanel();
-		this.$main.find(".fjtc-map-breadcrumb").text(`世界 / ${country.properties.name}`);
+		this.$main.find(".fjtc-map-breadcrumb").text(country.properties.name);
 		this.setMapStatus(`正在加载${country.properties.name}的省州和城市…`);
 		try {
 			const isChina = country.properties.ADM0_A3 === "CHN";
@@ -407,9 +431,10 @@ class FengjingTeamCalendarPage {
 					mainCityByRegion.set(String(regionKey), city);
 				}
 			}
-			this.plottedCities = [...mainCityByRegion.values()]
-				.map((city) => ({
+			this.plottedCities = [...mainCityByRegion]
+				.map(([regionKey, city]) => ({
 					name: city.properties.name,
+					regionName: this.regionLookup.get(regionKey)?.properties.name || "",
 					cityKey: String(city.properties.NE_ID),
 					label: { show: true },
 					value: [Number(city.properties.LONGITUDE), Number(city.properties.LATITUDE)],
@@ -426,29 +451,25 @@ class FengjingTeamCalendarPage {
 					map: mapName,
 					roam: true,
 					layoutCenter: ["50%", "50%"],
-					layoutSize: "88%",
+					layoutSize: "96%",
+					aspectScale: 0.9,
 					itemStyle: { areaColor: "#e9eef5", borderColor: "#9aa9ba", borderWidth: 0.8 },
-					label: {
-						show: true,
-						color: "#334155",
-						fontSize: 11,
-						fontWeight: 600,
-						textBorderColor: "#fff",
-						textBorderWidth: 2,
-						formatter: (params) => this.regionLookup.get(String(params.name))?.properties.name || country.properties.name,
-					},
+					label: { show: false },
 					emphasis: { itemStyle: { areaColor: "#c8ddf9" } },
 				},
 				series: [{
 					type: "scatter", coordinateSystem: "geo", data: this.plottedCities,
+					labelLayout: { hideOverlap: true },
 					z: 20, symbolSize: 9,
 					itemStyle: { color: "#eab308", borderColor: "#fff", borderWidth: 1.5 },
 					label: { show: true, position: "right", color: "#713f12", fontSize: 12,
-						fontWeight: 600, textBorderColor: "#fff", textBorderWidth: 3, formatter: "{b}" },
+						fontWeight: 600, textBorderColor: "#fff", textBorderWidth: 3,
+						formatter: (params) => [params.data.regionName, params.data.name].filter(Boolean).join(" · ") },
 					emphasis: { scale: 1.5 },
 				}],
 			}, true);
 			this.mapChart.resize();
+			this.fitCountryMap(regionSpatialIndex);
 			this.countryMapLoaded = true;
 			this.renderSettingsPanel();
 			this.updateMapHighlights();
@@ -478,7 +499,15 @@ class FengjingTeamCalendarPage {
 		if (!region) return;
 		this.selectedRegion = region;
 		this.selectedCity = null;
+		this.weatherCity = null;
+		this.weatherEnabled = false;
 		if (!preserveSearch) this.searchQuery = "";
+		const mainCity = this.plottedCities.find((city) =>
+			this.cityRegionKeys.get(city.cityKey) === String(key));
+		if (mainCity) {
+			this.selectCity(mainCity.cityKey, preserveSearch);
+			return;
+		}
 		this.renderSettingsPanel();
 		this.updateMapHighlights();
 	}
@@ -486,8 +515,17 @@ class FengjingTeamCalendarPage {
 	selectCity(key, preserveSearch = false) {
 		const city = this.cityLookup.get(String(key));
 		if (!city) return;
+		if (String(this.selectedCity?.properties.NE_ID) === String(key)) {
+			this.selectedCity = null;
+			this.weatherCity = null;
+			this.weatherEnabled = false;
+			if (!preserveSearch) this.searchQuery = "";
+			this.renderSettingsPanel();
+			this.updateMapHighlights();
+			return;
+		}
 		this.selectedCity = city;
-		this.selectedRegion = null;
+		this.selectedRegion = this.regionLookup.get(this.cityRegionKeys.get(String(key))) || null;
 		if (!preserveSearch) this.searchQuery = "";
 		this.weatherCity = {
 			key: String(city.properties.NE_ID),
@@ -512,6 +550,7 @@ class FengjingTeamCalendarPage {
 			const cityKey = String(city.properties.NE_ID);
 			if (!plotted.has(cityKey)) plotted.set(cityKey, {
 				name: city.properties.name, cityKey,
+				regionName: this.regionLookup.get(this.cityRegionKeys.get(cityKey))?.properties.name || "",
 				value: [Number(city.properties.LONGITUDE), Number(city.properties.LATITUDE)],
 			});
 		}
@@ -542,10 +581,6 @@ class FengjingTeamCalendarPage {
 			const key = String(this.activeCountry.properties.NE_ID);
 			if (checked) this.holidayCountries.set(key, this.activeCountry.properties.name);
 			else this.holidayCountries.delete(key);
-		} else if (mapSetting === "region" && this.selectedRegion) {
-			const key = String(this.selectedRegion.properties.ne_id);
-			if (checked) this.holidayRegions.set(key, `${this.activeCountry.properties.name} / ${this.selectedRegion.properties.name}`);
-			else this.holidayRegions.delete(key);
 		} else if (mapSetting === "weather") {
 			this.weatherEnabled = checked;
 		}
@@ -555,25 +590,16 @@ class FengjingTeamCalendarPage {
 	renderSettingsPanel() {
 		const country = this.activeCountry;
 		const region = this.selectedRegion;
-		const city = this.selectedCity;
 		const escaped = (value) => this.escapeHtml(value);
 		const countryKey = country && String(country.properties.NE_ID);
-		const regionKey = region && String(region.properties.ne_id);
-		const summary = [
-			`节假日国家 ${this.holidayCountries.size} 个`,
-			`省州 ${this.holidayRegions.size} 个`,
-			this.weatherEnabled
-				? (this.weatherCity ? `天气城市 ${escaped(this.weatherCity.country)} / ${escaped(this.weatherCity.name)}` : "天气已开启，待选城市")
-				: "天气未开启",
-		];
+		const weatherLocation = this.selectedCity
+			? `${region?.properties.name || country?.properties.name || ""} / ${this.selectedCity.properties.name}`
+			: "";
 		this.$main.find(".fjtc-settings-panel").html(`
 			<h3>选择地区</h3>
-			<label class="fjtc-setting-row"><span><strong>显示天气</strong><small>${this.weatherCity ? `${escaped(this.weatherCity.country)} / ${escaped(this.weatherCity.name)}` : "请先选择一个城市"}</small></span><input type="checkbox" data-map-setting="weather" ${this.weatherEnabled ? "checked" : ""}></label>
-			${country ? `<label class="fjtc-setting-row"><span><strong>${escaped(country.properties.name)}</strong><small>国家节假日</small></span><input type="checkbox" data-map-setting="country" ${this.holidayCountries.has(countryKey) ? "checked" : ""}></label>` : ""}
-			${region ? `<label class="fjtc-setting-row"><span><strong>${escaped(region.properties.name)}</strong><small>省州节假日</small></span><input type="checkbox" data-map-setting="region" ${this.holidayRegions.has(regionKey) ? "checked" : ""}></label>` : ""}
-			${city ? `<div class="fjtc-current-city">当前选中城市：<strong>${escaped(city.properties.name)}</strong></div>` : ""}
+			<label class="fjtc-setting-row"><span><strong>${country ? escaped(country.properties.name) : "国家节假日"}</strong><small>${country ? "国家节假日" : "请先在地图中选择国家"}</small></span><input type="checkbox" data-map-setting="country" ${this.holidayCountries.has(countryKey) ? "checked" : ""} ${country ? "" : "disabled"}></label>
+			${this.selectedCity ? `<label class="fjtc-setting-row"><span><strong>省州 / 城市天气</strong><small>${escaped(weatherLocation)}</small></span><input type="checkbox" data-map-setting="weather" ${this.weatherEnabled ? "checked" : ""}></label>` : ""}
 			${country ? `<div class="fjtc-city-picker"><label for="fjtc-city-search">搜索省州或城市</label><input id="fjtc-city-search" type="search" class="form-control fjtc-city-search" placeholder="输入省州或城市名称" value="${escaped(this.searchQuery)}"><div class="fjtc-city-results"></div></div>` : ""}
-			<div class="fjtc-selection-summary"><strong>当前选择</strong><p>${summary.join(" · ")}</p></div>
 		`);
 		if (country) this.renderCityResults(this.searchQuery);
 	}
@@ -585,6 +611,8 @@ class FengjingTeamCalendarPage {
 			[region.properties.name, region.properties.name_en, region.properties.iso_3166_2]
 				.some((name) => String(name || "").toLocaleLowerCase().includes(term))) : [];
 		const cities = [...this.cityLookup.values()]
+			.filter((city) => term || !this.selectedRegion ||
+				this.cityRegionKeys.get(String(city.properties.NE_ID)) === String(this.selectedRegion.properties.ne_id))
 			.filter((city) => !term || [city.properties.name, city.properties.NAME_EN]
 				.some((name) => String(name || "").toLocaleLowerCase().includes(term)))
 			.sort((a, b) => (Number(b.properties.POP_MAX) || 0) - (Number(a.properties.POP_MAX) || 0))
