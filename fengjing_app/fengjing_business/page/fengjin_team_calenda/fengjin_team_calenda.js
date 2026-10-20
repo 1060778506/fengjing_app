@@ -1213,10 +1213,10 @@ class FengjingTeamCalendarPage {
 		this.$main.find(".fjtc-settings-panel").html(`
 			<div class="fjtc-weather-credentials">
 				<a href="https://console.qweather.com/" target="_blank" rel="noopener noreferrer">和风天气</a>
-				<label>API Host <input type="text" class="form-control" data-weather-credential="qweather_api_host" placeholder="专属 API Host" autocomplete="off"></label>
+				<label>API Host <input type="text" class="form-control" data-weather-credential="qweather_api_host" placeholder="在控制台「设置」查看，形如 xxx.qweatherapi.com" autocomplete="off"></label>
 				<label>凭据ID <input type="text" class="form-control" data-weather-credential="qweather_credential_id" autocomplete="off"></label>
 				<label>API秘钥 <input type="text" class="form-control" data-weather-credential="qweather_api_key" autocomplete="off"></label>
-				<small>备用请求使用 API Host 和 API 秘钥；凭据ID仅供记录。</small>
+				<small>API Host 是账号专属的接口域名，在和风天气控制台「设置」中查看。备用请求使用 API Host 和 API 秘钥；凭据ID仅供记录。</small>
 			</div>
 			<h3>选择地区</h3>
 			<label class="fjtc-setting-row"><span><strong>${country ? escaped(country.properties.name) : "国家节假日"}</strong><small>${country ? "国家节假日" : "请先在地图中选择国家"}</small></span><input type="checkbox" data-map-setting="country" ${this.holidayCountries.has(countryKey) ? "checked" : ""} ${country ? "" : "disabled"}></label>
@@ -1772,9 +1772,11 @@ class FengjingTeamCalendarPage {
 					return;
 				}
 				try {
+					// Frappe omits optional empty fields, so send an explicit blank to clear a saved color.
+					const eventValues = { ...values, color: dialog.get_value("color") || "" };
 					await frappe.call({
 						method: `${FENGJING_CALENDAR_METHOD}.${name ? "update_event" : "create_event"}`,
-						args: name ? { name, values } : { values },
+						args: name ? { name, values: eventValues } : { values: eventValues },
 						freeze: true,
 						freeze_message: "正在保存日程…",
 					});
