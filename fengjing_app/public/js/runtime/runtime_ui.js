@@ -1,5 +1,12 @@
 // 丰境日常运行所需的通用界面增强。
 
+// Frappe 将 Desk Page 的脚本和样式缓存到浏览器；每次重新打开 Desk 时读取最新日历页面。
+try {
+    localStorage.removeItem("_page:fengjin_team_calenda");
+} catch (error) {
+    // 浏览器禁用本地存储时，仍让其余界面脚本继续运行。
+}
+
 // 自动跳转到树状图科目表
 frappe.router.on('change', () => {
     let route = frappe.get_route();

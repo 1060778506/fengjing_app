@@ -280,7 +280,7 @@ extend_bootinfo = "fengjing_app.install.新系统公司执行的净化科目表"
 app_include_js = [
     "/assets/fengjing_app/js/runtime/fengjing_init_check.js?v=20261006-2",
     "/assets/fengjing_app/js/runtime/ai_gateway.js?v=20261006-1",
-    "/assets/fengjing_app/js/runtime/runtime_ui.js?v=20261006-1",
+    "/assets/fengjing_app/js/runtime/runtime_ui.js?v=20261020-1",
 ]
 
 # ERPNext 标准单据的丰境业务脚本，仅在打开对应单据时加载。

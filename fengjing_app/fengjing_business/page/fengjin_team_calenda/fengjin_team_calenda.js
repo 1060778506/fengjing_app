@@ -2,7 +2,7 @@ const FENGJING_CALENDAR_METHOD =
 	"fengjing_app.fengjing_business.page.fengjin_team_calenda.fengjin_team_calenda";
 const FENGJING_CALENDAR_MAP_FILES = {
 	countries: "/assets/fengjing_app/data/Vector_map/国家边界ne_10m_admin_0_countries_chn/ne_10m_admin_0_countries_chn.geojson",
-	regions: "/assets/fengjing_app/data/Vector_map/省州边界ne_10m_admin_1_states_provinces/ne_10m_admin_1_states_provinces.geojson",
+	regions: "/assets/fengjing_app/data/Vector_map/省州边界ne_10m_admin_1_states_provinces/countries",
 	cities: "/assets/fengjing_app/data/Vector_map/城市位置ne_10m_populated_places/ne_10m_populated_places.geojson",
 	taiwanProvince: "/assets/fengjing_app/data/Vector_map/国家边界ne_10m_admin_0_countries_chn/taiwan_province.geojson",
 };
@@ -23,6 +23,35 @@ const FENGJING_CALENDAR_CHINA_SPECIAL_REGIONS = {
 	HKG: { key: "CN-HK", name: "香港特别行政区", name_en: "Hong Kong" },
 	MAC: { key: "CN-MO", name: "澳门特别行政区", name_en: "Macau" },
 };
+const FENGJING_US_HOLIDAY_NAMES = Object.freeze({
+	"New Year's Day": "元旦",
+	"Martin Luther King, Jr. Day": "马丁·路德·金纪念日",
+	"Martin Luther King Jr. Day": "马丁·路德·金纪念日",
+	"Presidents Day": "总统日",
+	"Presidents' Day": "总统日",
+	"Washington's Birthday": "总统日",
+	"Memorial Day": "阵亡将士纪念日",
+	"Juneteenth National Independence Day": "六月节",
+	"Independence Day": "独立日",
+	"Labour Day": "劳动节",
+	"Labor Day": "劳动节",
+	"Columbus Day": "哥伦布日",
+	"Veterans Day": "退伍军人节",
+	"Thanksgiving Day": "感恩节",
+	"Christmas Day": "圣诞节",
+});
+
+function fengjingCountryFlag(code, countryName) {
+	const iso = String(code || "").toLowerCase();
+	if (!/^[a-z]{2}$/.test(iso)) return null;
+	const flag = document.createElement("img");
+	flag.className = "fjtc-country-flag";
+	flag.src = `/assets/fengjing_app/flags/4x3/${iso}.svg`;
+	flag.alt = `${countryName || iso.toUpperCase()}国旗`;
+	flag.width = 18;
+	flag.height = 14;
+	return flag;
+}
 
 frappe.pages["fengjin_team_calenda"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
@@ -57,10 +86,13 @@ class FengjingTeamCalendarPage {
 		this.timeCities = new Map();
 		this.defaultHolidayCountry = null;
 		this.defaultWeatherCity = null;
-		this.defaultTimeCity = null;
+		this.clockTimer = null;
+		this.clockFormatters = new Map();
+		this.pageVisible = false;
 		this.mapSettingsLoaded = false;
 		this.mapSettingsLoading = null;
 		this.mapSettingsSaveQueue = Promise.resolve();
+		this.holidayRequestToken = 0;
 		this.activeCountry = null;
 		this.selectedRegion = null;
 		this.selectedCity = null;
@@ -94,13 +126,15 @@ class FengjingTeamCalendarPage {
 				<div class="fjtc-settings" aria-label="地区设置" hidden>
 					<div class="fjtc-settings-head">
 						<h2>地区设置</h2>
-						<button type="button" class="btn btn-default btn-sm" data-map-action="calendar">返回日历</button>
+						<div class="fjtc-settings-actions">
+							<span class="fjtc-map-breadcrumb">世界</span>
+							<button type="button" class="btn btn-default btn-sm" data-map-action="world">世界地图</button>
+							<button type="button" class="btn btn-default btn-sm" data-map-action="calendar">返回日历</button>
+						</div>
 					</div>
 					<div class="fjtc-settings-layout">
 						<div class="fjtc-map-column">
 							<div class="fjtc-map-toolbar">
-								<button type="button" class="btn btn-default btn-sm" data-map-action="world">世界地图</button>
-								<span class="fjtc-map-breadcrumb">世界</span>
 								<div class="fjtc-map-selections"></div>
 							</div>
 							<div class="fjtc-map-stage">
@@ -122,6 +156,7 @@ class FengjingTeamCalendarPage {
 			this.selectCity($(event.currentTarget).attr("data-city-key"), true));
 		this.$main.on("click", "[data-region-key]", (event) => this.selectRegion($(event.currentTarget).attr("data-region-key"), true));
 		this.$main.on("click", "[data-map-remove-holiday]", (event) => {
+			if (this.mapSelectionClickSuppressedUntil > Date.now()) return;
 			const key = $(event.currentTarget).attr("data-map-remove-holiday");
 			this.holidayCountries.delete(key);
 			if (this.defaultHolidayCountry === key) {
@@ -131,6 +166,7 @@ class FengjingTeamCalendarPage {
 			this.scheduleMapSettingsSave();
 		});
 		this.$main.on("click", "[data-map-remove-weather]", (event) => {
+			if (this.mapSelectionClickSuppressedUntil > Date.now()) return;
 			const key = $(event.currentTarget).attr("data-map-remove-weather");
 			this.weatherCities.delete(key);
 			if (this.defaultWeatherCity === key) {
@@ -140,15 +176,14 @@ class FengjingTeamCalendarPage {
 			this.scheduleMapSettingsSave();
 		});
 		this.$main.on("click", "[data-map-remove-time]", (event) => {
+			if (this.mapSelectionClickSuppressedUntil > Date.now()) return;
 			const key = $(event.currentTarget).attr("data-map-remove-time");
 			this.timeCities.delete(key);
-			if (this.defaultTimeCity === key) {
-				this.defaultTimeCity = this.timeCities.keys().next().value || null;
-			}
 			this.renderSettingsPanel();
 			this.scheduleMapSettingsSave();
 		});
 		this.$main.on("click", "[data-map-default-holiday]", (event) => {
+			if (this.mapSelectionClickSuppressedUntil > Date.now()) return;
 			const key = $(event.currentTarget).attr("data-map-default-holiday");
 			if (!this.holidayCountries.has(key) || this.defaultHolidayCountry === key) return;
 			this.defaultHolidayCountry = key;
@@ -156,19 +191,15 @@ class FengjingTeamCalendarPage {
 			this.scheduleMapSettingsSave();
 		});
 		this.$main.on("click", "[data-map-default-weather]", (event) => {
+			if (this.mapSelectionClickSuppressedUntil > Date.now()) return;
 			const key = $(event.currentTarget).attr("data-map-default-weather");
 			if (!this.weatherCities.has(key) || this.defaultWeatherCity === key) return;
 			this.defaultWeatherCity = key;
 			this.renderMapSelections();
 			this.scheduleMapSettingsSave();
 		});
-		this.$main.on("click", "[data-map-default-time]", (event) => {
-			const key = $(event.currentTarget).attr("data-map-default-time");
-			if (!this.timeCities.has(key) || this.defaultTimeCity === key) return;
-			this.defaultTimeCity = key;
-			this.renderMapSelections();
-			this.scheduleMapSettingsSave();
-		});
+		this.$main.on("pointerdown", ".fjtc-map-selection-chip[data-map-order-kind]", (event) =>
+			this.startMapSelectionPointer(event));
 		this.$main.on("change", "[data-map-setting]", (event) => this.changeMapSetting(event));
 		this.$main.on("input", ".fjtc-city-search", (event) => this.renderCityResults(event.currentTarget.value));
 		this.renderSettingsPanel();
@@ -176,12 +207,16 @@ class FengjingTeamCalendarPage {
 
 	addActions() {
 		this.page.set_primary_action("新建日程", () => this.openEventDialog(), "add");
-		this.page.add_inner_button("刷新", () => this.calendar?.refetchEvents());
+		this.page.add_inner_button("刷新", () => {
+			this.calendar?.refetchEvents();
+			this.refreshVisibleHolidays();
+		});
 		this.page.add_inner_button("日程列表", () => frappe.set_route("List", "Event"));
 		this.page.add_inner_button("设置", () => this.openSettings());
 	}
 
 	async show() {
+		this.pageVisible = true;
 		document.body.classList.add("fjtc-full-height-page");
 		if (this.viewMode === "settings") {
 			this.mapChart?.resize();
@@ -194,13 +229,27 @@ class FengjingTeamCalendarPage {
 			// Frappe page becomes visible so it can measure the real container.
 			this.calendar.render();
 			this.calendar.refetchEvents();
+			this.refreshVisibleHolidays();
+			try {
+				await this.loadMapSettings();
+				await this.ensureCityTimezones();
+			} catch (error) {
+				this.showError("城市时间加载失败", error);
+			}
+			if (this.pageVisible && this.viewMode === "calendar") {
+				this.renderCityClocks();
+				this.startCityClock();
+			}
 		} catch (error) {
 			this.showError("日历加载失败", error);
 		}
 	}
 
 	hide() {
+		this.pageVisible = false;
 		document.body.classList.remove("fjtc-full-height-page");
+		this.cancelMapSelectionPointer();
+		this.stopCityClock();
 	}
 
 	ensureCalendar() {
@@ -233,6 +282,7 @@ class FengjingTeamCalendarPage {
 
 	async openSettings() {
 		this.viewMode = "settings";
+		this.stopCityClock();
 		this.$main.find(".fjtc-shell").addClass("fjtc-shell--settings");
 		this.$main.find(".fjtc-calendar, .fjtc-loading").hide();
 		this.container.style.setProperty("display", "none", "important");
@@ -265,19 +315,29 @@ class FengjingTeamCalendarPage {
 			this.weatherCities = new Map((settings.weather_cities || [])
 				.map(({ key, country, region, city }) => [String(key), { country, region, city }]));
 			this.timeCities = new Map((settings.time_cities || [])
-				.map(({ key, country, region, city }) => [String(key), { country, region, city }]));
+				.map(({ key, country, region, city, time_zone, country_code }) =>
+					[String(key), { country, region, city, timeZone: time_zone || "", countryCode: country_code || "" }]));
 			this.defaultHolidayCountry = settings.default_holiday_country ||
 				this.holidayCountries.keys().next().value || null;
 			this.defaultWeatherCity = settings.default_weather_city ||
 				this.weatherCities.keys().next().value || null;
-			this.defaultTimeCity = settings.default_time_city ||
-				this.timeCities.keys().next().value || null;
 			this.mapSettingsLoaded = true;
 			this.renderSettingsPanel();
 		}).finally(() => {
 			this.mapSettingsLoading = null;
 		});
 		return this.mapSettingsLoading;
+	}
+
+	async ensureCityTimezones() {
+		const missing = [...this.timeCities].filter(([, location]) => !location.timeZone);
+		if (!missing.length) return;
+		const data = await this.loadMapData("cities");
+		const zones = new Map((data.features || []).map(({ properties }) =>
+			[String(properties.NE_ID), properties.TIMEZONE || ""]));
+		for (const [key, location] of missing) {
+			location.timeZone = zones.get(key.split(":", 2)[1]) || "";
+		}
 	}
 
 	scheduleMapSettingsSave() {
@@ -287,7 +347,6 @@ class FengjingTeamCalendarPage {
 			time_cities: [...this.timeCities].map(([key, location]) => ({ key, ...location })),
 			default_holiday_country: this.defaultHolidayCountry,
 			default_weather_city: this.defaultWeatherCity,
-			default_time_city: this.defaultTimeCity,
 		});
 		// Keep writes in order when several checkboxes change while a request is running.
 		this.mapSettingsSaveQueue = this.mapSettingsSaveQueue.catch(() => {}).then(() =>
@@ -310,24 +369,36 @@ class FengjingTeamCalendarPage {
 			this.$main.find(".fjtc-calendar").show();
 			this.calendar.render();
 			this.calendar.refetchEvents();
+			this.refreshVisibleHolidays();
+			try {
+				await this.ensureCityTimezones();
+			} catch (error) {
+				this.showError("城市时区读取失败", error);
+			}
+			this.renderCityClocks();
+			this.startCityClock();
 		} catch (error) {
 			this.showError("日历加载失败", error);
 		}
 	}
 
-	loadMapData(kind) {
-		if (!this.mapDataPromises[kind]) {
-			this.mapDataPromises[kind] = fetch(encodeURI(FENGJING_CALENDAR_MAP_FILES[kind]), {
+	loadMapData(kind, countryCode = "") {
+		const cacheKey = kind === "regions" ? `regions:${countryCode}` : kind;
+		const path = kind === "regions"
+			? `${FENGJING_CALENDAR_MAP_FILES.regions}/${countryCode}.geojson`
+			: FENGJING_CALENDAR_MAP_FILES[kind];
+		if (!this.mapDataPromises[cacheKey]) {
+			this.mapDataPromises[cacheKey] = fetch(encodeURI(path), {
 				credentials: "same-origin",
 			}).then((response) => {
 				if (!response.ok) throw new Error(`${kind} 地图文件读取失败（HTTP ${response.status}）`);
 				return response.json();
 			}).catch((error) => {
-				delete this.mapDataPromises[kind];
+				delete this.mapDataPromises[cacheKey];
 				throw error;
 			});
 		}
-		return this.mapDataPromises[kind];
+		return this.mapDataPromises[cacheKey];
 	}
 
 	async ensureMap() {
@@ -533,7 +604,7 @@ class FengjingTeamCalendarPage {
 		try {
 			const isChina = country.properties.ADM0_A3 === "CHN";
 			const [regions, cities, taiwanProvince] = await Promise.all([
-				this.loadMapData("regions"),
+				this.loadMapData("regions", country.properties.ADM0_A3),
 				this.loadMapData("cities"),
 				isChina ? this.loadMapData("taiwanProvince") : Promise.resolve(null),
 			]);
@@ -699,6 +770,14 @@ class FengjingTeamCalendarPage {
 	selectRegion(key, preserveSearch = false) {
 		const region = this.regionLookup.get(String(key));
 		if (!region) return;
+		if (String(this.selectedRegion?.properties.ne_id) === String(key)) {
+			this.selectedRegion = null;
+			this.selectedCity = null;
+			if (!preserveSearch) this.searchQuery = "";
+			this.renderSettingsPanel();
+			this.updateMapHighlights();
+			return;
+		}
 		this.selectedRegion = region;
 		this.selectedCity = null;
 		if (!preserveSearch) this.searchQuery = "";
@@ -793,18 +872,21 @@ class FengjingTeamCalendarPage {
 			if (!city || !region) return;
 			const key = `${this.activeCountry.properties.NE_ID}:${cityKey}`;
 			const selectedCities = mapSetting === "weather" ? this.weatherCities : this.timeCities;
-			const defaultField = mapSetting === "weather" ? "defaultWeatherCity" : "defaultTimeCity";
 			if (checked) {
 				selectedCities.set(key, {
 					country: this.activeCountry.properties.name,
 					region: region.properties.name,
 					city: city.properties.name,
+					...(mapSetting === "time" ? {
+						timeZone: city.properties.TIMEZONE || "",
+						countryCode: this.activeCountry.properties.ISO_A2 || "",
+					} : {}),
 				});
-				this[defaultField] ||= key;
+				if (mapSetting === "weather") this.defaultWeatherCity ||= key;
 			} else {
 				selectedCities.delete(key);
-				if (this[defaultField] === key) {
-					this[defaultField] = selectedCities.keys().next().value || null;
+				if (mapSetting === "weather" && this.defaultWeatherCity === key) {
+					this.defaultWeatherCity = selectedCities.keys().next().value || null;
 				}
 			}
 			this.selectedRegion = region;
@@ -857,8 +939,9 @@ class FengjingTeamCalendarPage {
 			const selected = defaultKey === key;
 			const label = this.formatCitySelection(location.country, location.region, location.city, shownRegions);
 			const fullName = [location.country, location.region, location.city].filter(Boolean).join(" · ");
-			return `<span class="fjtc-map-selection-chip" title="${this.escapeHtml(fullName)}">
-				<button type="button" class="fjtc-map-default-btn${selected ? " is-default" : ""}" data-map-default-${kind}="${this.escapeHtml(key)}" aria-pressed="${selected}" title="设为默认${labelType}城市">默认</button>
+			return `<span class="fjtc-map-selection-chip" data-map-order-kind="${kind}" data-map-order-key="${this.escapeHtml(key)}" title="${this.escapeHtml(fullName)} · 在同一行拖拽排序">
+				<span class="fjtc-map-drag-handle" aria-hidden="true">⋮⋮</span>
+				${kind === "time" ? "" : `<button type="button" class="fjtc-map-default-btn${selected ? " is-default" : ""}" data-map-default-${kind}="${this.escapeHtml(key)}" aria-pressed="${selected}" title="设为默认${labelType}城市">默认</button>`}
 				<span>${this.escapeHtml(label)}</span>
 				<button type="button" class="fjtc-map-remove-btn" data-map-remove-${kind}="${this.escapeHtml(key)}" aria-label="移除${this.escapeHtml(fullName)}">×</button>
 			</span>`;
@@ -868,18 +951,140 @@ class FengjingTeamCalendarPage {
 	renderMapSelections() {
 		const holidays = [...this.holidayCountries].map(([key, name]) => {
 			const selected = this.defaultHolidayCountry === key;
-			return `<span class="fjtc-map-selection-chip">
+			return `<span class="fjtc-map-selection-chip" data-map-order-kind="holiday" data-map-order-key="${this.escapeHtml(key)}" title="${this.escapeHtml(name)} · 在同一行拖拽排序">
+				<span class="fjtc-map-drag-handle" aria-hidden="true">⋮⋮</span>
 				<button type="button" class="fjtc-map-default-btn${selected ? " is-default" : ""}" data-map-default-holiday="${this.escapeHtml(key)}" aria-pressed="${selected}" title="设为默认节日国家">默认</button>
 				<span>${this.escapeHtml(name)}</span>
 				<button type="button" class="fjtc-map-remove-btn" data-map-remove-holiday="${this.escapeHtml(key)}" aria-label="移除${this.escapeHtml(name)}">×</button>
 			</span>`;
 		});
 		const weather = this.renderCitySelectionChips(this.weatherCities, this.defaultWeatherCity, "weather");
-		const time = this.renderCitySelectionChips(this.timeCities, this.defaultTimeCity, "time");
+		const time = this.renderCitySelectionChips(this.timeCities, null, "time");
 		this.$main.find(".fjtc-map-selections")
-			.html(`<div class="fjtc-map-selection-row"><strong>国家节日</strong>${holidays.join("") || "<span>未选择</span>"}</div>
-				<div class="fjtc-map-selection-row"><strong>城市天气</strong>${weather.join("") || "<span>未选择</span>"}</div>
-				<div class="fjtc-map-selection-row"><strong>城市时间</strong>${time.join("") || "<span>未选择</span>"}</div>`);
+			.html(`<div class="fjtc-map-selection-row" data-map-order-row="holiday"><strong>国家节日</strong>${holidays.join("") || "<span>未选择</span>"}</div>
+				<div class="fjtc-map-selection-row" data-map-order-row="weather"><strong>城市天气</strong>${weather.join("") || "<span>未选择</span>"}</div>
+				<div class="fjtc-map-selection-row" data-map-order-row="time"><strong>城市时间</strong>${time.join("") || "<span>未选择</span>"}</div>`);
+	}
+
+	mapSelectionCollection(kind) {
+		return { holiday: this.holidayCountries, weather: this.weatherCities, time: this.timeCities }[kind];
+	}
+
+	startMapSelectionPointer(event) {
+		const pointer = event.originalEvent;
+		const chip = event.currentTarget;
+		if (pointer.button !== 0 ||
+			this.mapSelectionCollection(chip.dataset.mapOrderKind)?.size < 2) return;
+		this.cancelMapSelectionPointer();
+		const drag = {
+			kind: chip.dataset.mapOrderKind,
+			key: chip.dataset.mapOrderKey,
+			pointerId: pointer.pointerId,
+			startX: pointer.clientX,
+			startY: pointer.clientY,
+			startedOnButton: !!event.target.closest("button"),
+			source: chip,
+			active: false,
+			target: null,
+		};
+		drag.onMove = (move) => this.moveMapSelectionPointer(move);
+		drag.onUp = (up) => this.finishMapSelectionPointer(up);
+		drag.onCancel = () => this.cancelMapSelectionPointer();
+		this.mapPointerDrag = drag;
+		window.addEventListener("pointermove", drag.onMove);
+		window.addEventListener("pointerup", drag.onUp);
+		window.addEventListener("pointercancel", drag.onCancel);
+		window.addEventListener("blur", drag.onCancel);
+		if (!drag.startedOnButton) event.preventDefault();
+	}
+
+	moveMapSelectionPointer(event) {
+		const drag = this.mapPointerDrag;
+		if (!drag || event.pointerId !== drag.pointerId) return;
+		if (!drag.active) {
+			if (Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) < 4) return;
+			drag.active = true;
+			drag.source.classList.add("is-dragging");
+			drag.ghost = drag.source.cloneNode(true);
+			drag.ghost.classList.remove("is-dragging");
+			drag.ghost.classList.add("is-drag-ghost");
+			drag.ghost.style.width = `${drag.source.getBoundingClientRect().width}px`;
+			document.body.appendChild(drag.ghost);
+			document.body.classList.add("fjtc-map-reordering");
+		}
+		drag.ghost.style.left = `${event.clientX + 12}px`;
+		drag.ghost.style.top = `${event.clientY + 12}px`;
+		const element = document.elementFromPoint(event.clientX, event.clientY);
+		const row = element?.closest(".fjtc-map-selection-row");
+		const directChip = element?.closest(".fjtc-map-selection-chip");
+		const chip = row?.dataset.mapOrderRow === drag.kind && directChip !== drag.source
+			? directChip || this.mapSelectionTargetForRow(row, event.clientX) : null;
+		this.$main.find(".fjtc-map-selection-chip.is-drop-before, .fjtc-map-selection-chip.is-drop-after")
+			.removeClass("is-drop-before is-drop-after");
+		drag.target = chip;
+		if (chip) {
+			drag.before = this.mapSelectionDropBefore(chip, event.clientX, drag);
+			chip.classList.add(drag.before ? "is-drop-before" : "is-drop-after");
+		}
+		event.preventDefault();
+	}
+
+	mapSelectionTargetForRow(row, clientX) {
+		const chips = [...row.querySelectorAll(".fjtc-map-selection-chip")]
+			.filter((chip) => chip.dataset.mapOrderKey !== this.mapPointerDrag?.key);
+		return chips.reduce((nearest, chip) => {
+			const rect = chip.getBoundingClientRect();
+			const distance = Math.max(rect.left - clientX, 0, clientX - rect.right);
+			return !nearest || distance < nearest.distance ? { chip, distance } : nearest;
+		}, null)?.chip || null;
+	}
+
+	mapSelectionDropBefore(chip, clientX, drag) {
+		const rect = chip.getBoundingClientRect();
+		const position = (clientX - rect.left) / rect.width;
+		if (position < 0.35) return true;
+		if (position > 0.65) return false;
+		const keys = [...this.mapSelectionCollection(drag.kind).keys()];
+		return keys.indexOf(drag.key) > keys.indexOf(chip.dataset.mapOrderKey);
+	}
+
+	finishMapSelectionPointer(event) {
+		const drag = this.mapPointerDrag;
+		if (!drag || event.pointerId !== drag.pointerId) return;
+		if (drag.active) this.moveMapSelectionPointer(event);
+		const targetKey = drag.target?.dataset.mapOrderKey;
+		const { kind, key, before, active } = drag;
+		if (active) this.mapSelectionClickSuppressedUntil = Date.now() + 250;
+		this.cancelMapSelectionPointer();
+		if (!active || !targetKey) return;
+		const collection = this.mapSelectionCollection(kind);
+		const entries = [...collection.entries()];
+		const previousOrder = entries.map(([entryKey]) => entryKey);
+		const from = entries.findIndex(([entryKey]) => entryKey === key);
+		if (from < 0 || targetKey === key) return;
+		const [moved] = entries.splice(from, 1);
+		const target = entries.findIndex(([entryKey]) => entryKey === targetKey);
+		if (target < 0) return;
+		entries.splice(target + (before ? 0 : 1), 0, moved);
+		if (entries.every(([entryKey], index) => entryKey === previousOrder[index])) return;
+		collection.clear();
+		for (const [entryKey, value] of entries) collection.set(entryKey, value);
+		this.renderMapSelections();
+		this.scheduleMapSettingsSave();
+	}
+
+	cancelMapSelectionPointer() {
+		const drag = this.mapPointerDrag;
+		if (!drag) return;
+		window.removeEventListener("pointermove", drag.onMove);
+		window.removeEventListener("pointerup", drag.onUp);
+		window.removeEventListener("pointercancel", drag.onCancel);
+		window.removeEventListener("blur", drag.onCancel);
+		drag.ghost?.remove();
+		document.body.classList.remove("fjtc-map-reordering");
+		this.$main.find(".fjtc-map-selection-chip.is-dragging, .fjtc-map-selection-chip.is-drop-before, .fjtc-map-selection-chip.is-drop-after")
+			.removeClass("is-dragging is-drop-before is-drop-after");
+		this.mapPointerDrag = null;
 	}
 
 	renderSettingCityRows(cities, country, region, kind) {
@@ -983,8 +1188,23 @@ class FengjingTeamCalendarPage {
 			},
 			headerToolbar: {
 				left: "prev,next today",
-				center: "title",
+				center: "title cityClocks",
 				right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth",
+			},
+			toolbarElements: {
+				cityClocks: () => ({ html: '<span class="fjtc-city-clocks" aria-label="城市时间"></span>' }),
+			},
+			toolbarTitleClass: "fjtc-toolbar-title",
+			headerToolbarClass: "fjtc-toolbar",
+			toolbarSectionClass: ({ name }) => name === "center" ? "fjtc-toolbar-center" : "",
+			dayCellTopInnerClass: (info) => {
+				if (info.view.type !== "dayGridMonth") return "";
+				return `fjtc-day-label${[0, 6].includes(info.date.getDay()) ? " fjtc-weekend-day" : ""}`;
+			},
+			datesSet: (info) => {
+				this.formatCalendarMonthTitle(info);
+				this.loadHolidays(info);
+				this.renderCityClocks();
 			},
 			events: (info, success, failure) => this.loadEvents(info, success, failure),
 			select: (info) => this.openEventDialog(null, this.selectionDefaults(info)),
@@ -998,6 +1218,190 @@ class FengjingTeamCalendarPage {
 					: info.event.title;
 			},
 		});
+	}
+
+	formatCalendarMonthTitle(info) {
+		if (info.view.type !== "dayGridMonth") return;
+		const month = info.view.currentStart || this.calendar?.getDate();
+		const title = this.container.querySelector(".fjtc-toolbar-title");
+		if (month && title) {
+			title.textContent = `${month.getFullYear()}年${String(month.getMonth() + 1).padStart(2, "0")}月`;
+		}
+	}
+
+	renderCityClocks() {
+		const holder = this.container.querySelector(".fjtc-city-clocks");
+		if (!holder) return;
+		holder.replaceChildren();
+		holder.hidden = this.timeCities.size === 0;
+		for (const [key, location] of this.timeCities) {
+			const clock = document.createElement("span");
+			clock.className = "fjtc-city-clock";
+			clock.dataset.cityKey = key;
+			clock.dataset.timeZone = location.timeZone || "";
+			clock.dataset.fullName = [location.country, location.region, location.city].filter(Boolean).join(" · ");
+			const face = document.createElement("span");
+			face.className = "fjtc-clock-face";
+			face.setAttribute("aria-hidden", "true");
+			for (let number = 1; number <= 12; number++) {
+				const marker = document.createElement("span");
+				const angle = number * Math.PI / 6;
+				marker.className = "fjtc-clock-hour-number";
+				marker.textContent = String(number);
+				marker.style.left = `${50 + 35 * Math.sin(angle)}%`;
+				marker.style.top = `${50 - 35 * Math.cos(angle)}%`;
+				face.appendChild(marker);
+			}
+			for (const hand of ["hour", "minute", "second"]) {
+				const node = document.createElement("span");
+				node.className = `fjtc-clock-${hand}`;
+				face.appendChild(node);
+			}
+			const dial = document.createElement("span");
+			dial.className = "fjtc-clock-dial";
+			const city = document.createElement("span");
+			city.className = "fjtc-clock-city";
+			const cityName = [
+				String(location.region || "").replace(/(省|州)$/, ""), location.city,
+			].filter(Boolean).join("·");
+			const flag = fengjingCountryFlag(location.countryCode, location.country);
+			if (flag) city.appendChild(flag);
+			const cityLabel = document.createElement("span");
+			cityLabel.className = "fjtc-clock-city-name";
+			cityLabel.textContent = cityName;
+			city.appendChild(cityLabel);
+			const details = document.createElement("span");
+			details.className = "fjtc-clock-details";
+			const date = document.createElement("span");
+			date.className = "fjtc-clock-date";
+			date.textContent = "---- -- --";
+			const time = document.createElement("span");
+			time.className = "fjtc-clock-time";
+			time.textContent = "-- --:--:--";
+			dial.appendChild(face);
+			details.append(time, date, city);
+			clock.append(dial, details);
+			holder.appendChild(clock);
+		}
+		this.updateCityClocks();
+	}
+
+	updateCityClocks() {
+		const now = new Date();
+		for (const clock of this.container.querySelectorAll(".fjtc-city-clock")) {
+			const zone = clock.dataset.timeZone;
+			const date = clock.querySelector(".fjtc-clock-date");
+			const time = clock.querySelector(".fjtc-clock-time");
+			if (!zone) {
+				clock.title = `${clock.dataset.fullName} · 未找到时区`;
+				continue;
+			}
+			try {
+				if (!this.clockFormatters.has(zone)) {
+					this.clockFormatters.set(zone, new Intl.DateTimeFormat("zh-CN", {
+						timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit", weekday: "short",
+						hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+					}));
+				}
+				const parts = Object.fromEntries(this.clockFormatters.get(zone).formatToParts(now)
+					.map(({ type, value }) => [type, value]));
+				const hour = Number(parts.hour);
+				const minute = Number(parts.minute);
+				const second = Number(parts.second);
+				const period = hour < 6 ? "凌晨" : hour < 12 ? "上午" : hour < 18 ? "下午" : "晚上";
+				const weekday = String(parts.weekday || "").replace(/^(星期|礼拜)/, "周");
+				date.textContent = `${parts.year}-${parts.month}-${parts.day} ${weekday}`;
+				date.classList.toggle("is-weekend", weekday === "周六" || weekday === "周日");
+				time.textContent = `${period} ${String(hour % 12 || 12).padStart(2, "0")}:${parts.minute}:${parts.second}`;
+				clock.title = `${clock.dataset.fullName} · ${date.textContent} ${time.textContent} (${zone})`;
+				clock.querySelector(".fjtc-clock-hour").style.transform =
+					`rotate(${(hour % 12) * 30 + minute * 0.5 + second / 120}deg)`;
+				clock.querySelector(".fjtc-clock-minute").style.transform =
+					`rotate(${minute * 6 + second * 0.1}deg)`;
+				clock.querySelector(".fjtc-clock-second").style.transform = `rotate(${second * 6}deg)`;
+			} catch (error) {
+				date.textContent = "---- -- --";
+				date.classList.remove("is-weekend");
+				time.textContent = "-- --:--:--";
+				clock.title = `${clock.dataset.fullName} · 时区无效：${zone}`;
+			}
+		}
+	}
+
+	startCityClock() {
+		if (this.clockTimer || !this.timeCities.size || !this.pageVisible || this.viewMode !== "calendar") return;
+		this.clockTimer = window.setInterval(() => this.updateCityClocks(), 1000);
+	}
+
+	stopCityClock() {
+		if (this.clockTimer) window.clearInterval(this.clockTimer);
+		this.clockTimer = null;
+	}
+
+	refreshVisibleHolidays() {
+		const view = this.calendar?.view;
+		if (view?.activeStart && view?.activeEnd) {
+			this.loadHolidays({ view, start: view.activeStart, end: view.activeEnd });
+		}
+	}
+
+	async loadHolidays(info) {
+		const requestToken = ++this.holidayRequestToken;
+		this.container.querySelectorAll(".fjtc-holiday-badges").forEach((node) => node.remove());
+		if (this.viewMode !== "calendar" || info.view.type !== "dayGridMonth") return;
+		try {
+			// A setting changed immediately before returning from the map must be saved first.
+			await this.mapSettingsSaveQueue;
+			const response = await frappe.call({
+				method: `${FENGJING_CALENDAR_METHOD}.get_calendar_holidays`,
+				args: { start: this.dateOnly(info.start), end: this.dateOnly(info.end) },
+			});
+			if (requestToken !== this.holidayRequestToken || this.viewMode !== "calendar" ||
+				this.calendar?.view.type !== "dayGridMonth") return;
+			this.renderHolidayBadges(response.message || {});
+		} catch (error) {
+			if (requestToken === this.holidayRequestToken) this.showError("节假日读取失败", error);
+		}
+	}
+
+	renderHolidayBadges(result) {
+		const holidaysByDate = new Map();
+		const countryOrder = new Map((result.countries || []).map((code, index) => [code, index]));
+		for (const holiday of result.holidays || []) {
+			const date = holiday.holiday_date;
+			if (!holidaysByDate.has(date)) holidaysByDate.set(date, []);
+			holidaysByDate.get(date).push(holiday);
+		}
+		for (const holidays of holidaysByDate.values()) {
+			holidays.sort((left, right) =>
+				(countryOrder.get(left.country_code) ?? Infinity) -
+				(countryOrder.get(right.country_code) ?? Infinity));
+		}
+		for (const label of this.container.querySelectorAll(".fjtc-day-label")) {
+			const holidays = holidaysByDate.get(label.closest("[data-date]")?.dataset.date);
+			if (!holidays?.length) continue;
+			const badges = document.createElement("span");
+			badges.className = "fjtc-holiday-badges";
+			for (const holiday of holidays) {
+				const badge = document.createElement("span");
+				badge.className = `fjtc-holiday-badge${holiday.day_type === "补班工作日" ? " is-makeup" : ""}`;
+				const country = holiday.country_code === "CN" ? "中国" : holiday.country_name || holiday.country_code;
+				const holidayName = holiday.country_code === "US"
+					? FENGJING_US_HOLIDAY_NAMES[holiday.holiday_name] || holiday.holiday_name
+					: holiday.holiday_name;
+				const holidayLabel = holiday.day_type === "补班工作日"
+					? `${holidayName}补班` : holidayName;
+				const flag = fengjingCountryFlag(holiday.country_code, country);
+				if (flag) badge.appendChild(flag);
+				const text = document.createElement("span");
+				text.className = "fjtc-holiday-badge-text";
+				text.textContent = holidayLabel;
+				badge.appendChild(text);
+				badge.title = `${country} · ${holidayLabel}${holidayName !== holiday.holiday_name ? `（${holiday.holiday_name}）` : ""}`;
+				badges.appendChild(badge);
+			}
+			label.prepend(badges);
+		}
 	}
 
 	async loadEvents(info, success, failure) {

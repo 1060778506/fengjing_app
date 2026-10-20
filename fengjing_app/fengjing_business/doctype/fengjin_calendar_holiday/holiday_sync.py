@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 from datetime import date
+from functools import lru_cache
 from pathlib import Path
 
 import frappe
@@ -23,6 +24,7 @@ COUNTRY_MAP = (Path(__file__).resolve().parents[3] / "public" / "data" / "Vector
 REQUEST_TIMEOUT = (8, 30)
 
 
+@lru_cache(maxsize=1)
 def _country_map():
 	with COUNTRY_MAP.open(encoding="utf-8") as source:
 		features = json.load(source)["features"]

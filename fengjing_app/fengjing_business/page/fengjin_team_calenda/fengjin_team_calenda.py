@@ -1,14 +1,20 @@
 import json
 import re
+from functools import lru_cache
+from pathlib import Path
 
 import frappe
 from frappe import _
 from frappe.desk.doctype.event.event import get_events
 from frappe.utils import add_days, cint, get_datetime, getdate
 
+from fengjing_app.fengjing_business.doctype.fengjin_calendar_holiday.holiday_sync import _country_map
+
 
 DOCTYPE = "Event"
 SETTINGS_DOCTYPE = "Fengjin Team Calendar Settings"
+CITY_TIMEZONE_FILE = (Path(__file__).resolve().parents[3] / "public" / "data" / "Vector_map"
+	/ "城市位置ne_10m_populated_places" / "ne_10m_populated_places.geojson")
 EVENT_FIELDS = {
 	"subject",
 	"starts_on",
@@ -62,6 +68,14 @@ def _selected_default(value, entries):
 	return value if isinstance(value, str) and value in keys else (entries[0]["key"] if entries else "")
 
 
+@lru_cache(maxsize=1)
+def _city_timezones():
+	with CITY_TIMEZONE_FILE.open(encoding="utf-8") as source:
+		features = json.load(source)["features"]
+	return {str(feature["properties"]["NE_ID"]): feature["properties"].get("TIMEZONE") or ""
+		for feature in features}
+
+
 @frappe.whitelist()
 def get_calendar_map_settings():
 	user = _settings_user()
@@ -82,14 +96,58 @@ def get_calendar_map_settings():
 	time_cities = _normalize_map_entries(
 		frappe.parse_json(stored.time_cities_json or "[]"), "time"
 	)
+	city_timezones = _city_timezones() if time_cities else {}
+	country_codes = _country_map() if time_cities else {}
 	return {
 		"holiday_countries": holiday_countries,
 		"weather_cities": weather_cities,
-		"time_cities": time_cities,
+		"time_cities": [{**entry,
+			"time_zone": city_timezones.get(entry["key"].split(":", 1)[1], ""),
+			"country_code": country_codes.get(entry["key"].split(":", 1)[0], ("", ""))[0]}
+			for entry in time_cities],
 		"default_holiday_country": _selected_default(stored.default_holiday_country, holiday_countries),
 		"default_weather_city": _selected_default(stored.default_weather_city, weather_cities),
-		"default_time_city": _selected_default(stored.default_time_city, time_cities),
+		"default_time_city": "",
 	}
+
+
+@frappe.whitelist()
+def get_calendar_holidays(start, end):
+	"""Return the current user's selected national holidays for a month grid.
+
+	Holiday dates are local civil dates, not timestamps to convert to the site timezone.
+	The end date is exclusive, matching FullCalendar's visible range.
+	"""
+	user = _settings_user()
+	start_date, end_date = getdate(start), getdate(end)
+	if not 0 < (end_date - start_date).days <= 62:
+		frappe.throw(_("节假日查询日期范围无效。"))
+	stored = frappe.db.get_value(SETTINGS_DOCTYPE, {"user": user}, "holiday_countries_json")
+	if not stored:
+		return {"countries": [], "holidays": []}
+	selected = _normalize_map_entries(frappe.parse_json(stored), "holiday")
+	lookup = _country_map()
+	countries = list(dict.fromkeys(lookup[entry["key"]][0] for entry in selected
+		if entry["key"] in lookup
+		and re.fullmatch(r"[A-Z]{2}", lookup[entry["key"]][0])))
+	if not countries:
+		return {"countries": [], "holidays": []}
+	rows = frappe.get_all(
+		"Fengjin Calendar Holiday",
+		filters=[
+			["country_code", "in", countries],
+			["holiday_date", ">=", start_date],
+			["holiday_date", "<", end_date],
+			["active", "=", 1],
+			["scope", "=", "全国"],
+		],
+		fields=["country_code", "country_name", "holiday_date", "day_type", "holiday_name"],
+		order_by="holiday_date asc, country_code asc, holiday_name asc",
+		limit_page_length=1000,
+	)
+	return {"countries": countries, "holidays": [
+		{**row, "holiday_date": str(row.holiday_date)} for row in rows
+	]}
 
 
 @frappe.whitelist()
@@ -115,7 +173,7 @@ def save_calendar_map_settings(values):
 		"time_cities_json": json.dumps(time_cities, ensure_ascii=False),
 		"default_holiday_country": _selected_default(values.get("default_holiday_country"), holiday_countries),
 		"default_weather_city": _selected_default(values.get("default_weather_city"), weather_cities),
-		"default_time_city": _selected_default(values.get("default_time_city", doc.default_time_city if doc else ""), time_cities),
+		"default_time_city": "",
 	}
 	if doc:
 		doc.update(data)

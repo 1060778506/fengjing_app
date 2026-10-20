@@ -83,7 +83,7 @@ body.fjtc-full-height-page .page-wrapper {
 	display: none;
 	flex: 1;
 	min-height: 0;
-	padding: 16px 20px 20px;
+	padding: 16px 20px 0;
 	overflow-y: auto;
 	overscroll-behavior: contain;
 }
@@ -122,6 +122,21 @@ body.fjtc-full-height-page .page-wrapper {
 .fjtc-settings-head {
 	flex: none;
 	padding: 10px 14px;
+}
+
+.fjtc-settings-actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 10px;
+	min-width: 0;
+}
+
+.fjtc-settings-actions .fjtc-map-breadcrumb {
+	flex: 0 1 auto;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .fjtc-settings-layout {
@@ -207,6 +222,43 @@ body.fjtc-full-height-page .page-wrapper {
 	background: var(--subtle-fg);
 	color: var(--text-color);
 	line-height: 16px;
+	cursor: grab;
+	user-select: none;
+	touch-action: none;
+}
+
+.fjtc-map-selection-chip.is-dragging {
+	opacity: 0.35;
+}
+
+.fjtc-map-selection-chip.is-drag-ghost {
+	position: fixed;
+	z-index: 10000;
+	pointer-events: none;
+	opacity: 0.95;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+	cursor: grabbing;
+}
+
+body.fjtc-map-reordering,
+body.fjtc-map-reordering * {
+	cursor: grabbing !important;
+	user-select: none !important;
+}
+
+.fjtc-map-selection-chip.is-drop-before {
+	box-shadow: -3px 0 0 var(--primary, #2563eb);
+}
+
+.fjtc-map-selection-chip.is-drop-after {
+	box-shadow: 3px 0 0 var(--primary, #2563eb);
+}
+
+.fjtc-map-drag-handle {
+	color: var(--text-muted);
+	font-size: 11px;
+	line-height: 1;
+	cursor: grab;
 }
 
 .fjtc-map-default-btn,
@@ -450,6 +502,271 @@ body.fjtc-full-height-page .page-wrapper {
 	color: var(--text-color);
 }
 
+.fjtc-page .fjtc-toolbar {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
+	align-items: center;
+	min-height: 108px;
+}
+
+.fjtc-page .fjtc-toolbar > :first-child {
+	justify-self: start;
+}
+
+.fjtc-page .fjtc-toolbar > :last-child {
+	justify-self: end;
+}
+
+.fjtc-page .fjtc-toolbar-center {
+	position: relative;
+	justify-self: center;
+	min-width: 0;
+}
+
+.fjtc-page .fjtc-toolbar-title {
+	flex: none;
+	font-size: 20px;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+	white-space: nowrap;
+}
+
+.fjtc-page .fjtc-toolbar-title::before {
+	content: "北京时间：";
+}
+
+.fjtc-page .fjtc-city-clocks {
+	position: absolute;
+	left: calc(100% + 12px);
+	top: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 12px;
+	max-width: clamp(100px, calc(50vw - 300px), 360px);
+	min-width: 0;
+	overflow-x: auto;
+	scrollbar-width: none;
+	transform: translateY(-50%);
+}
+
+.fjtc-page .fjtc-city-clocks[hidden] {
+	display: none !important;
+}
+
+.fjtc-page .fjtc-city-clocks::-webkit-scrollbar {
+	display: none;
+}
+
+.fjtc-page .fjtc-city-clock {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	flex: none;
+	min-width: 145px;
+}
+
+.fjtc-page .fjtc-clock-dial {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: none;
+}
+
+.fjtc-page .fjtc-clock-face {
+	position: relative;
+	flex: none;
+	width: 56px;
+	height: 56px;
+	border: 1px solid var(--border-color);
+	border-radius: 50%;
+	background: var(--card-bg);
+	box-shadow: 0 1px 5px rgba(0, 0, 0, 0.08);
+}
+
+.fjtc-page .fjtc-clock-face::after {
+	content: "";
+	position: absolute;
+	z-index: 4;
+	left: 50%;
+	top: 50%;
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: var(--text-color);
+	transform: translate(-50%, -50%);
+}
+
+.fjtc-page .fjtc-clock-hour-number {
+	position: absolute;
+	width: 11px;
+	color: var(--text-muted);
+	font-size: 7px;
+	font-weight: 600;
+	line-height: 1;
+	text-align: center;
+	transform: translate(-50%, -50%);
+}
+
+.fjtc-page .fjtc-clock-hour,
+.fjtc-page .fjtc-clock-minute,
+.fjtc-page .fjtc-clock-second {
+	position: absolute;
+	left: calc(50% - 1px);
+	bottom: 50%;
+	width: 2px;
+	border-radius: 2px;
+	background: var(--text-color);
+	transform-origin: bottom center;
+}
+
+.fjtc-page .fjtc-clock-hour {
+	left: calc(50% - 1.5px);
+	width: 3px;
+	height: 15px;
+	z-index: 1;
+}
+
+.fjtc-page .fjtc-clock-minute {
+	height: 21px;
+	background: #374151;
+	z-index: 2;
+}
+
+.fjtc-page .fjtc-clock-second {
+	left: calc(50% - 1px);
+	width: 2px;
+	height: 23px;
+	background: #e11d48;
+	z-index: 3;
+}
+
+.fjtc-page .fjtc-clock-details {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	min-width: 0;
+	line-height: 1.25;
+}
+
+.fjtc-page .fjtc-clock-city {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 16px;
+	max-width: 155px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--text-muted);
+	font-size: 11px;
+	line-height: 16px;
+	text-align: center;
+}
+
+.fjtc-page .fjtc-clock-city-name {
+	position: relative;
+	top: 1px;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	line-height: 12px;
+}
+
+.fjtc-page .fjtc-country-flag {
+	display: block;
+	flex: none;
+	width: 16px;
+	height: 12px;
+	object-fit: cover;
+}
+
+.fjtc-page .fjtc-holiday-badge .fjtc-country-flag {
+	margin-right: 0;
+}
+
+.fjtc-page .fjtc-clock-date {
+	color: var(--text-muted);
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.fjtc-page .fjtc-clock-date.is-weekend {
+	color: #dc2626;
+}
+
+.fjtc-page .fjtc-clock-time {
+	color: var(--text-color);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.fjtc-page .fjtc-day-label.fjtc-weekend-day {
+	color: #dc2626 !important;
+}
+
+.fjtc-page .fjtc-day-label:has(.fjtc-holiday-badges) {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 4px;
+	width: 100%;
+	min-width: 0;
+	white-space: nowrap;
+	text-decoration: none !important;
+}
+
+.fjtc-page .fjtc-day-label .fjtc-holiday-badges {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 0;
+	min-width: 0;
+	gap: 2px;
+}
+
+.fjtc-page .fjtc-holiday-badge {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	box-sizing: border-box;
+	width: 100%;
+	padding: 0 4px;
+	border-radius: 4px;
+	background: #f1eafd;
+	color: #6d28a8;
+	font-size: 10px;
+	font-weight: 600;
+	line-height: 17px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.fjtc-page .fjtc-holiday-badge-text {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.fjtc-page .fjtc-day-label:hover,
+.fjtc-page .fjtc-day-label:hover .fjtc-holiday-badge {
+	text-decoration: none !important;
+}
+
+.fjtc-page .fjtc-holiday-badge.is-makeup {
+	background: #fff1df;
+	color: #a4570b;
+}
+
 .fjtc-delete-event {
 	margin-right: auto;
 }
@@ -459,6 +776,27 @@ body.fjtc-full-height-page .page-wrapper {
 }
 
 @media (max-width: 768px) {
+	.fjtc-page .fjtc-toolbar {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8px;
+		min-height: 0;
+	}
+
+	.fjtc-page .fjtc-toolbar-center {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		max-width: 100%;
+	}
+
+	.fjtc-page .fjtc-city-clocks {
+		position: static;
+		max-width: 80vw;
+		transform: none;
+	}
+
 	.fjtc-settings-layout {
 		grid-template-columns: 1fr;
 		grid-template-rows: minmax(0, 1.1fr) minmax(0, 0.9fr);
