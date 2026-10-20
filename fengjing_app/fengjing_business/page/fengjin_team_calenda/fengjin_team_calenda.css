@@ -167,14 +167,11 @@ body.fjtc-full-height-page .page-wrapper {
 
 .fjtc-map-selections {
 	display: grid;
+	grid-template-rows: repeat(3, 22px);
 	flex: 1;
 	min-width: 0;
 	gap: 3px;
 	font-size: 11px;
-}
-
-.fjtc-map-selections[hidden] {
-	display: none;
 }
 
 .fjtc-map-selection-row {
@@ -199,13 +196,50 @@ body.fjtc-full-height-page .page-wrapper {
 }
 
 .fjtc-map-selection-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
 	flex: none;
-	padding: 2px 6px;
+	height: 22px;
+	padding: 1px 3px;
 	border: 1px solid var(--border-color);
 	border-radius: 4px;
 	background: var(--subtle-fg);
 	color: var(--text-color);
+	line-height: 16px;
+}
+
+.fjtc-map-default-btn,
+.fjtc-map-remove-btn {
+	flex: none;
+	border: 0;
+	background: transparent;
+	color: var(--text-muted);
 	cursor: pointer;
+}
+
+.fjtc-map-default-btn {
+	padding: 0 3px;
+	border: 1px solid var(--border-color);
+	border-radius: 3px;
+	font-size: 10px;
+	line-height: 14px;
+}
+
+.fjtc-map-default-btn.is-default {
+	border-color: var(--primary);
+	background: var(--primary);
+	color: #fff;
+}
+
+.fjtc-map-remove-btn {
+	padding: 0 2px;
+	font-size: 15px;
+	line-height: 16px;
+}
+
+.fjtc-map-remove-btn:hover {
+	color: var(--text-color);
 }
 
 .fjtc-map-stage {
@@ -286,6 +320,26 @@ body.fjtc-full-height-page .page-wrapper {
 	width: 16px;
 	height: 16px;
 	accent-color: var(--primary);
+}
+
+.fjtc-setting-groups {
+	flex: 0 1 auto;
+	min-height: 0;
+	max-height: 45%;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-width: none;
+}
+
+.fjtc-setting-groups::-webkit-scrollbar {
+	display: none;
+}
+
+.fjtc-setting-group-title {
+	margin: 2px 0 6px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-muted);
 }
 
 .fjtc-city-picker {

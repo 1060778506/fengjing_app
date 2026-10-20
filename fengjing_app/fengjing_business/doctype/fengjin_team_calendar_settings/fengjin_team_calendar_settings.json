@@ -1,0 +1,86 @@
+{
+ "actions": [],
+ "autoname": "field:user",
+ "creation": "2026-10-20 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "holiday_countries_json",
+  "weather_cities_json",
+  "time_cities_json",
+  "default_holiday_country",
+  "default_weather_city",
+  "default_time_city"
+ ],
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "用户",
+   "options": "User",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "[]",
+   "fieldname": "holiday_countries_json",
+   "fieldtype": "Code",
+   "label": "国家节日设置",
+   "options": "JSON"
+  },
+  {
+   "default": "[]",
+   "fieldname": "weather_cities_json",
+   "fieldtype": "Code",
+   "label": "城市天气设置",
+   "options": "JSON"
+  },
+  {
+   "default": "[]",
+   "fieldname": "time_cities_json",
+   "fieldtype": "Code",
+   "label": "城市时间设置",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "default_holiday_country",
+   "fieldtype": "Data",
+   "label": "默认节日国家编号",
+   "read_only": 1
+  },
+  {
+   "fieldname": "default_weather_city",
+   "fieldtype": "Data",
+   "label": "默认天气城市编号",
+   "read_only": 1
+  },
+  {
+   "fieldname": "default_time_city",
+   "fieldtype": "Data",
+   "label": "默认时间城市编号",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-20 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Fengjin Team Calendar Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "user"
+}
