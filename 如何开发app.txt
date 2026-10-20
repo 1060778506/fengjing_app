@@ -80,6 +80,12 @@ cd "/root/Desktop/erpnext-os-py/fengjing_app" && git add -A && git commit -m "20
 			whoami
 			yarn outdated
 
+			#安装组件
+			docker exec -u frappe -it neizhang-backend-1 bash
+			cd /home/frappe/frappe-bench/apps/fengjing_app
+			yarn add @meteocons/svg @meteocons/svg-static @meteocons/lottie
+
+
 			# 查看日志
 			docker logs -f --tail 100 neizhang-backend-1
 
