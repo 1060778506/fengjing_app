@@ -16,6 +16,9 @@ const FENGJING_CALENDAR_REGION_ALIASES = {
 const FENGJING_CALENDAR_CITY_REGION_OVERRIDES = {
 	"1159150819": "CN-QH", // Natural Earth mistakenly lists Xining under Gansu.
 };
+const FENGJING_CALENDAR_EXTRA_WEATHER_CITIES = {
+	"CN-SD": ["1159149919"], // 山东省：临沂；济南仍由省会规则加入。
+};
 const FENGJING_CALENDAR_CHINA_SPECIAL_REGIONS = {
 	HKG: { key: "CN-HK", name: "香港特别行政区", name_en: "Hong Kong" },
 	MAC: { key: "CN-MO", name: "澳门特别行政区", name_en: "Macau" },
@@ -50,8 +53,7 @@ class FengjingTeamCalendarPage {
 		this.regionLookup = new Map();
 		this.cityLookup = new Map();
 		this.holidayCountries = new Map();
-		this.weatherEnabled = false;
-		this.weatherCity = null;
+		this.weatherCities = new Map();
 		this.activeCountry = null;
 		this.selectedRegion = null;
 		this.selectedCity = null;
@@ -59,6 +61,7 @@ class FengjingTeamCalendarPage {
 		this.countryMapLoaded = false;
 		this.searchQuery = "";
 		this.plottedCities = [];
+		this.regionOnlyMarkers = [];
 		this.cityRegionKeys = new Map();
 		this.renderShell();
 		$(this.wrapper).on("hide.fjtc", () => this.hide());
@@ -91,6 +94,7 @@ class FengjingTeamCalendarPage {
 							<div class="fjtc-map-toolbar">
 								<button type="button" class="btn btn-default btn-sm" data-map-action="world">世界地图</button>
 								<span class="fjtc-map-breadcrumb">世界</span>
+								<div class="fjtc-map-selections" hidden></div>
 							</div>
 							<div class="fjtc-map-stage">
 								<div class="fjtc-map-canvas" role="img" aria-label="离线矢量地图"></div>
@@ -106,8 +110,17 @@ class FengjingTeamCalendarPage {
 		this.mapContainer = this.$main.find(".fjtc-map-canvas")[0];
 		this.$main.on("click", "[data-map-action='calendar']", () => this.returnToCalendar());
 		this.$main.on("click", "[data-map-action='world']", () => this.renderWorldMap());
-		this.$main.on("click", "[data-city-key]", (event) => this.selectCity($(event.currentTarget).attr("data-city-key"), true));
+		this.$main.on("click", ".fjtc-city-result[data-city-key]", (event) =>
+			this.selectCity($(event.currentTarget).attr("data-city-key"), true));
 		this.$main.on("click", "[data-region-key]", (event) => this.selectRegion($(event.currentTarget).attr("data-region-key"), true));
+		this.$main.on("click", "[data-map-remove-holiday]", (event) => {
+			this.holidayCountries.delete($(event.currentTarget).attr("data-map-remove-holiday"));
+			this.renderSettingsPanel();
+		});
+		this.$main.on("click", "[data-map-remove-weather]", (event) => {
+			this.weatherCities.delete($(event.currentTarget).attr("data-map-remove-weather"));
+			this.renderSettingsPanel();
+		});
 		this.$main.on("change", "[data-map-setting]", (event) => this.changeMapSetting(event));
 		this.$main.on("input", ".fjtc-city-search", (event) => this.renderCityResults(event.currentTarget.value));
 		this.renderSettingsPanel();
@@ -246,8 +259,6 @@ class FengjingTeamCalendarPage {
 		this.activeCountry = null;
 		this.selectedRegion = null;
 		this.selectedCity = null;
-		this.weatherCity = null;
-		this.weatherEnabled = false;
 		this.searchQuery = "";
 		this.countryMapLoaded = false;
 		this.renderSettingsPanel();
@@ -326,7 +337,13 @@ class FengjingTeamCalendarPage {
 
 	fitCountryMap(index) {
 		if (!index.length || !this.mapContainer.clientWidth || !this.mapContainer.clientHeight) return;
-		const bounds = index.reduce((result, polygon) => ({
+		// 阿拉斯加的岛屿跨越 180° 经线；美国初次进入时以本土州为视野中心。
+		const mainland = this.activeCountry?.properties.ADM0_A3 === "USA"
+			? index.filter((polygon) => !["US-AK", "US-HI"].includes(
+				this.regionLookup.get(polygon.key)?.properties.iso_3166_2))
+			: index;
+		const focus = mainland.length ? mainland : index;
+		const bounds = focus.reduce((result, polygon) => ({
 			minLon: Math.min(result.minLon, polygon.minLon),
 			maxLon: Math.max(result.maxLon, polygon.maxLon),
 			minLat: Math.min(result.minLat, polygon.minLat),
@@ -342,7 +359,59 @@ class FengjingTeamCalendarPage {
 			this.mapContainer.clientWidth * 0.92 / width,
 			this.mapContainer.clientHeight * 0.92 / height,
 		);
-		if (Number.isFinite(zoom) && zoom > 0) this.mapChart.setOption({ geo: { zoom } });
+		if (Number.isFinite(zoom) && zoom > 0) this.mapChart.setOption({ geo: {
+			center: [(bounds.minLon + bounds.maxLon) / 2, (bounds.minLat + bounds.maxLat) / 2],
+			zoom,
+		} });
+	}
+
+	createMapLabelLayout() {
+		let placed = [];
+		let previousSeries = Infinity;
+		let previousIndex = Infinity;
+		return ({ seriesIndex, dataIndex, rect, labelRect }) => {
+			// 每次地图重新布局时，从空白画布重新安排所有标签。
+			if (seriesIndex < previousSeries ||
+				(seriesIndex === previousSeries && dataIndex <= previousIndex)) placed = [];
+			previousSeries = seriesIndex;
+			previousIndex = dataIndex;
+			if (!rect || !labelRect || !Number.isFinite(rect.x) || !Number.isFinite(labelRect.width)) {
+				return { hideOverlap: false };
+			}
+			const width = this.mapChart.getWidth();
+			const height = this.mapChart.getHeight();
+			const labelWidth = labelRect.width;
+			const labelHeight = labelRect.height;
+			const centerX = rect.x + rect.width / 2;
+			const centerY = rect.y + rect.height / 2;
+			const gap = 7;
+			const candidates = [];
+			for (const offset of [0, -18, 18, -36, 36, -54, 54]) {
+				candidates.push([centerX + gap, centerY - labelHeight / 2 + offset]);
+				candidates.push([centerX - gap - labelWidth, centerY - labelHeight / 2 + offset]);
+			}
+			for (const offset of [0, -25, 25, -50, 50]) {
+				candidates.push([centerX - labelWidth / 2 + offset, centerY - gap - labelHeight]);
+				candidates.push([centerX - labelWidth / 2 + offset, centerY + gap]);
+			}
+			const padding = 2;
+			const options = candidates.map(([x, y], index) => {
+				const overlap = placed.reduce((total, label) => total +
+					Math.max(0, Math.min(x + labelWidth + padding, label.x + label.width + padding) -
+						Math.max(x - padding, label.x - padding)) *
+					Math.max(0, Math.min(y + labelHeight + padding, label.y + label.height + padding) -
+						Math.max(y - padding, label.y - padding)), 0);
+				const overflow = Math.max(0, -x) + Math.max(0, -y) +
+					Math.max(0, x + labelWidth - width) + Math.max(0, y + labelHeight - height);
+				const distance = Math.hypot(x + labelWidth / 2 - centerX, y + labelHeight / 2 - centerY);
+				return { x, y, score: (overlap + overflow) * 10000 + distance + index * 0.01 };
+			});
+			options.sort((a, b) => a.score - b.score);
+			const choice = options[0];
+			placed.push({ x: choice.x, y: choice.y, width: labelWidth, height: labelHeight });
+			return { x: choice.x, y: choice.y + labelHeight / 2,
+				align: "left", verticalAlign: "middle", hideOverlap: false };
+		};
 	}
 
 	async openCountry(country) {
@@ -351,14 +420,13 @@ class FengjingTeamCalendarPage {
 		this.activeCountry = country;
 		this.selectedRegion = null;
 		this.selectedCity = null;
-		this.weatherCity = null;
-		this.weatherEnabled = false;
 		this.searchQuery = "";
 		this.countryMapLoaded = false;
 		this.regionLookup.clear();
 		this.cityLookup.clear();
 		this.cityRegionKeys.clear();
 		this.plottedCities = [];
+		this.regionOnlyMarkers = [];
 		this.renderSettingsPanel();
 		this.$main.find(".fjtc-map-breadcrumb").text(country.properties.name);
 		this.setMapStatus(`正在加载${country.properties.name}的省州和城市…`);
@@ -439,6 +507,28 @@ class FengjingTeamCalendarPage {
 					label: { show: true },
 					value: [Number(city.properties.LONGITUDE), Number(city.properties.LATITUDE)],
 				}));
+			for (const cityKey of Object.values(FENGJING_CALENDAR_EXTRA_WEATHER_CITIES).flat()) {
+				const city = this.cityLookup.get(cityKey);
+				const regionKey = this.cityRegionKeys.get(cityKey);
+				if (!city || !regionKey || this.plottedCities.some((entry) => entry.cityKey === cityKey)) continue;
+				this.plottedCities.push({
+					name: city.properties.name,
+					regionName: this.regionLookup.get(regionKey)?.properties.name || "",
+					cityKey,
+					isExtraCity: true,
+					label: { show: true, position: "bottom" },
+					value: [Number(city.properties.LONGITUDE), Number(city.properties.LATITUDE)],
+				});
+			}
+			this.regionOnlyMarkers = [...this.regionLookup]
+				.filter(([key]) => !mainCityByRegion.has(key))
+				.map(([key, region]) => ({
+					name: region.properties.name,
+					regionKey: key,
+					value: [Number(region.properties.longitude), Number(region.properties.latitude)],
+				}))
+				.filter((marker) => marker.value.every(Number.isFinite));
+			const labelLayout = this.createMapLabelLayout();
 			this.mapChart.setOption({
 				animation: false,
 				tooltip: {
@@ -459,13 +549,23 @@ class FengjingTeamCalendarPage {
 				},
 				series: [{
 					type: "scatter", coordinateSystem: "geo", data: this.plottedCities,
-					labelLayout: { hideOverlap: true },
+					labelLayout,
 					z: 20, symbolSize: 9,
 					itemStyle: { color: "#eab308", borderColor: "#fff", borderWidth: 1.5 },
 					label: { show: true, position: "right", color: "#713f12", fontSize: 12,
 						fontWeight: 600, textBorderColor: "#fff", textBorderWidth: 3,
-						formatter: (params) => [params.data.regionName, params.data.name].filter(Boolean).join(" · ") },
+						formatter: (params) => isChina && !params.data.isExtraCity
+							? `${params.data.regionName.replace(/(特别行政区|维吾尔自治区|壮族自治区|回族自治区|自治区|省|市|州|区)$/, "")}·${params.data.name}`
+							: params.data.name },
 					emphasis: { scale: 1.5 },
+				}, {
+					type: "scatter", coordinateSystem: "geo", data: this.regionOnlyMarkers,
+					labelLayout,
+					z: 19, symbolSize: 8,
+					itemStyle: { color: "#eab308", borderColor: "#fff", borderWidth: 1.5 },
+					label: { show: true, position: "right", color: "#713f12", fontSize: 12,
+						fontWeight: 600, textBorderColor: "#fff", textBorderWidth: 3,
+						formatter: (params) => params.data.name },
 				}],
 			}, true);
 			this.mapChart.resize();
@@ -486,6 +586,10 @@ class FengjingTeamCalendarPage {
 			this.selectCity(params.data.cityKey);
 			return;
 		}
+		if (params.seriesType === "scatter" && params.data?.regionKey) {
+			this.selectRegion(params.data.regionKey);
+			return;
+		}
 		if (params.componentType !== "geo") return;
 		if (!this.activeCountry) {
 			this.openCountry(this.countryLookup.get(String(params.name)));
@@ -499,8 +603,6 @@ class FengjingTeamCalendarPage {
 		if (!region) return;
 		this.selectedRegion = region;
 		this.selectedCity = null;
-		this.weatherCity = null;
-		this.weatherEnabled = false;
 		if (!preserveSearch) this.searchQuery = "";
 		const mainCity = this.plottedCities.find((city) =>
 			this.cityRegionKeys.get(city.cityKey) === String(key));
@@ -517,8 +619,6 @@ class FengjingTeamCalendarPage {
 		if (!city) return;
 		if (String(this.selectedCity?.properties.NE_ID) === String(key)) {
 			this.selectedCity = null;
-			this.weatherCity = null;
-			this.weatherEnabled = false;
 			if (!preserveSearch) this.searchQuery = "";
 			this.renderSettingsPanel();
 			this.updateMapHighlights();
@@ -527,11 +627,6 @@ class FengjingTeamCalendarPage {
 		this.selectedCity = city;
 		this.selectedRegion = this.regionLookup.get(this.cityRegionKeys.get(String(key))) || null;
 		if (!preserveSearch) this.searchQuery = "";
-		this.weatherCity = {
-			key: String(city.properties.NE_ID),
-			name: city.properties.name,
-			country: this.activeCountry.properties.name,
-		};
 		this.renderSettingsPanel();
 		this.updateMapHighlights();
 	}
@@ -581,10 +676,51 @@ class FengjingTeamCalendarPage {
 			const key = String(this.activeCountry.properties.NE_ID);
 			if (checked) this.holidayCountries.set(key, this.activeCountry.properties.name);
 			else this.holidayCountries.delete(key);
-		} else if (mapSetting === "weather") {
-			this.weatherEnabled = checked;
+		} else if (mapSetting === "weather" && this.activeCountry) {
+			const cityKey = event.currentTarget.dataset.cityKey;
+			const city = this.cityLookup.get(cityKey);
+			const region = this.regionLookup.get(this.cityRegionKeys.get(cityKey));
+			if (!city || !region) return;
+			const key = `${this.activeCountry.properties.NE_ID}:${cityKey}`;
+			if (checked) this.weatherCities.set(key, {
+				country: this.activeCountry.properties.name,
+				region: region.properties.name,
+				city: city.properties.name,
+			});
+			else this.weatherCities.delete(key);
+			this.selectedRegion = region;
+			this.selectedCity = city;
 		}
 		this.renderSettingsPanel();
+		this.updateMapHighlights();
+	}
+
+	getRegionWeatherCities(region) {
+		if (!region) return [];
+		const regionKey = String(region.properties.ne_id);
+		const keys = [
+			this.plottedCities.find((city) => this.cityRegionKeys.get(city.cityKey) === regionKey)?.cityKey,
+			...(FENGJING_CALENDAR_EXTRA_WEATHER_CITIES[region.properties.iso_3166_2] || []),
+			...[...this.weatherCities.keys()].filter((key) => key.startsWith(`${this.activeCountry?.properties.NE_ID}:`))
+				.map((key) => key.split(":")[1])
+				.filter((key) => this.cityRegionKeys.get(key) === regionKey),
+			this.selectedCity && this.cityRegionKeys.get(String(this.selectedCity.properties.NE_ID)) === regionKey
+				? String(this.selectedCity.properties.NE_ID) : null,
+		];
+		return [...new Set(keys.filter(Boolean))]
+			.map((key) => this.cityLookup.get(key))
+			.filter(Boolean);
+	}
+
+	renderMapSelections() {
+		const holidays = [...this.holidayCountries].map(([key, name]) =>
+			`<button type="button" class="fjtc-map-selection-chip" data-map-remove-holiday="${this.escapeHtml(key)}" title="移除国家节日">${this.escapeHtml(name)} ×</button>`);
+		const weather = [...this.weatherCities].map(([key, location]) =>
+			`<button type="button" class="fjtc-map-selection-chip" data-map-remove-weather="${this.escapeHtml(key)}" title="移除城市天气">${this.escapeHtml([location.country, location.region, location.city].join(" · "))} ×</button>`);
+		this.$main.find(".fjtc-map-selections")
+			.html(`<div class="fjtc-map-selection-row"><strong>国家节日</strong>${holidays.join("") || "<span>未选择</span>"}</div>
+				<div class="fjtc-map-selection-row"><strong>城市天气</strong>${weather.join("") || "<span>未选择</span>"}</div>`)
+			.prop("hidden", !holidays.length && !weather.length);
 	}
 
 	renderSettingsPanel() {
@@ -592,15 +728,17 @@ class FengjingTeamCalendarPage {
 		const region = this.selectedRegion;
 		const escaped = (value) => this.escapeHtml(value);
 		const countryKey = country && String(country.properties.NE_ID);
-		const weatherLocation = this.selectedCity
-			? `${region?.properties.name || country?.properties.name || ""} / ${this.selectedCity.properties.name}`
-			: "";
+		const weatherCities = this.getRegionWeatherCities(region);
 		this.$main.find(".fjtc-settings-panel").html(`
 			<h3>选择地区</h3>
 			<label class="fjtc-setting-row"><span><strong>${country ? escaped(country.properties.name) : "国家节假日"}</strong><small>${country ? "国家节假日" : "请先在地图中选择国家"}</small></span><input type="checkbox" data-map-setting="country" ${this.holidayCountries.has(countryKey) ? "checked" : ""} ${country ? "" : "disabled"}></label>
-			${this.selectedCity ? `<label class="fjtc-setting-row"><span><strong>省州 / 城市天气</strong><small>${escaped(weatherLocation)}</small></span><input type="checkbox" data-map-setting="weather" ${this.weatherEnabled ? "checked" : ""}></label>` : ""}
+			${weatherCities.map((city) => {
+				const cityKey = String(city.properties.NE_ID);
+				return `<label class="fjtc-setting-row"><span><strong>${escaped(region.properties.name)} / ${escaped(city.properties.name)}</strong><small>城市天气</small></span><input type="checkbox" data-map-setting="weather" data-city-key="${escaped(cityKey)}" ${this.weatherCities.has(`${countryKey}:${cityKey}`) ? "checked" : ""}></label>`;
+			}).join("")}
 			${country ? `<div class="fjtc-city-picker"><label for="fjtc-city-search">搜索省州或城市</label><input id="fjtc-city-search" type="search" class="form-control fjtc-city-search" placeholder="输入省州或城市名称" value="${escaped(this.searchQuery)}"><div class="fjtc-city-results"></div></div>` : ""}
 		`);
+		this.renderMapSelections();
 		if (country) this.renderCityResults(this.searchQuery);
 	}
 
@@ -610,12 +748,17 @@ class FengjingTeamCalendarPage {
 		const regions = term ? [...this.regionLookup].filter(([, region]) =>
 			[region.properties.name, region.properties.name_en, region.properties.iso_3166_2]
 				.some((name) => String(name || "").toLocaleLowerCase().includes(term))) : [];
+		const preferredCityOrder = this.selectedRegion && !term
+			? new Map(this.getRegionWeatherCities(this.selectedRegion)
+				.map((city, index) => [String(city.properties.NE_ID), index]))
+			: null;
 		const cities = [...this.cityLookup.values()]
-			.filter((city) => term || !this.selectedRegion ||
-				this.cityRegionKeys.get(String(city.properties.NE_ID)) === String(this.selectedRegion.properties.ne_id))
+			.filter((city) => !preferredCityOrder || preferredCityOrder.has(String(city.properties.NE_ID)))
 			.filter((city) => !term || [city.properties.name, city.properties.NAME_EN]
 				.some((name) => String(name || "").toLocaleLowerCase().includes(term)))
-			.sort((a, b) => (Number(b.properties.POP_MAX) || 0) - (Number(a.properties.POP_MAX) || 0))
+			.sort((a, b) => preferredCityOrder
+				? preferredCityOrder.get(String(a.properties.NE_ID)) - preferredCityOrder.get(String(b.properties.NE_ID))
+				: (Number(b.properties.POP_MAX) || 0) - (Number(a.properties.POP_MAX) || 0))
 			.slice(0, Math.max(0, 12 - regions.length));
 		const results = [
 			...regions.slice(0, 12).map(([key, region]) => `<button type="button" class="fjtc-city-result${String(this.selectedRegion?.properties.ne_id) === key ? " is-selected" : ""}" data-region-key="${key}">${this.escapeHtml(region.properties.name)}<small>省州</small></button>`),

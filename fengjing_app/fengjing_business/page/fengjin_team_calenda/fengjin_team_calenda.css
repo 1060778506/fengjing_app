@@ -155,9 +155,57 @@ body.fjtc-full-height-page .page-wrapper {
 	padding: 8px 12px;
 }
 
+.fjtc-map-toolbar > button {
+	flex: none;
+}
+
 .fjtc-map-breadcrumb {
+	flex: none;
 	color: var(--text-muted);
 	font-size: 13px;
+}
+
+.fjtc-map-selections {
+	display: grid;
+	flex: 1;
+	min-width: 0;
+	gap: 3px;
+	font-size: 11px;
+}
+
+.fjtc-map-selections[hidden] {
+	display: none;
+}
+
+.fjtc-map-selection-row {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	min-width: 0;
+	overflow-x: auto;
+	white-space: nowrap;
+	scrollbar-width: none;
+	color: var(--text-muted);
+}
+
+.fjtc-map-selection-row::-webkit-scrollbar {
+	display: none;
+}
+
+.fjtc-map-selection-row strong {
+	flex: none;
+	min-width: 50px;
+	color: var(--text-color);
+}
+
+.fjtc-map-selection-chip {
+	flex: none;
+	padding: 2px 6px;
+	border: 1px solid var(--border-color);
+	border-radius: 4px;
+	background: var(--subtle-fg);
+	color: var(--text-color);
+	cursor: pointer;
 }
 
 .fjtc-map-stage {
