@@ -112,6 +112,7 @@ class FengjingTeamCalendarPage {
 		this.mapSettingsLoading = null;
 		this.mapSettingsSaveQueue = Promise.resolve();
 		this.holidayRequestToken = 0;
+		this.holidayPollTimer = null;
 		this.weatherRequestToken = 0;
 		this.weatherByCity = new Map();
 		this.weatherLoaded = false;
@@ -330,6 +331,9 @@ class FengjingTeamCalendarPage {
 		this.stopCityClock();
 		if (this.weatherPollTimer) window.clearTimeout(this.weatherPollTimer);
 		this.weatherPollTimer = null;
+		if (this.holidayPollTimer) window.clearTimeout(this.holidayPollTimer);
+		this.holidayPollTimer = null;
+		this.holidayRequestToken += 1;
 	}
 
 	ensureCalendar() {
@@ -364,6 +368,9 @@ class FengjingTeamCalendarPage {
 		this.closeWindyMap();
 		this.viewMode = "settings";
 		this.stopCityClock();
+		if (this.holidayPollTimer) window.clearTimeout(this.holidayPollTimer);
+		this.holidayPollTimer = null;
+		this.holidayRequestToken += 1;
 		this.$main.find(".fjtc-shell").addClass("fjtc-shell--settings");
 		this.$main.find(".fjtc-calendar, .fjtc-loading").hide();
 		this.container.style.setProperty("display", "none", "important");
@@ -1358,7 +1365,10 @@ class FengjingTeamCalendarPage {
 			expand.title = "点击放大风场地图";
 			expand.textContent = "⤢";
 			preview.append(windy, expand);
-			title.replaceChildren(today, preview);
+			const maps = document.createElement("div");
+			maps.className = "fjtc-map-previews";
+			maps.append(preview);
+			title.replaceChildren(today, maps);
 			this.updateBeijingDate();
 		}
 	}
@@ -1621,15 +1631,17 @@ class FengjingTeamCalendarPage {
 		this.clockTimer = null;
 	}
 
-	refreshVisibleHolidays() {
+	refreshVisibleHolidays(attempt = 0) {
 		const view = this.calendar?.view;
 		if (view?.activeStart && view?.activeEnd) {
-			this.loadHolidays({ view, start: view.activeStart, end: view.activeEnd });
+			this.loadHolidays({ view, start: view.activeStart, end: view.activeEnd }, attempt);
 		}
 	}
 
-	async loadHolidays(info) {
+	async loadHolidays(info, attempt = 0) {
 		const requestToken = ++this.holidayRequestToken;
+		if (this.holidayPollTimer) window.clearTimeout(this.holidayPollTimer);
+		this.holidayPollTimer = null;
 		this.container.querySelectorAll(".fjtc-holiday-badges").forEach((node) => node.remove());
 		if (this.viewMode !== "calendar" || info.view.type !== "dayGridMonth") return;
 		try {
@@ -1641,7 +1653,11 @@ class FengjingTeamCalendarPage {
 			});
 			if (requestToken !== this.holidayRequestToken || this.viewMode !== "calendar" ||
 				this.calendar?.view.type !== "dayGridMonth") return;
-			this.renderHolidayBadges(response.message || {});
+			const result = response.message || {};
+			this.renderHolidayBadges(result);
+			if (result.sync_pending?.length && attempt < 18 && this.pageVisible) {
+				this.holidayPollTimer = window.setTimeout(() => this.refreshVisibleHolidays(attempt + 1), 10000);
+			}
 		} catch (error) {
 			if (requestToken === this.holidayRequestToken) this.showError("节假日读取失败", error);
 		}

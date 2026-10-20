@@ -3,14 +3,14 @@
 import hashlib
 import json
 import re
-from datetime import date
+from datetime import date, timedelta
 from functools import lru_cache
 from pathlib import Path
 
 import frappe
 import requests
 from frappe import _
-from frappe.utils import getdate, now_datetime
+from frappe.utils import getdate, get_datetime, now_datetime
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -40,9 +40,14 @@ def _country_map():
 def _selected_countries():
 	lookup = _country_map()
 	selected = {}
-	for settings in frappe.get_all(SETTINGS_DOCTYPE, fields=["holiday_countries_json"]):
+	settings_rows = frappe.get_all(SETTINGS_DOCTYPE, fields=["holiday_countries_json"],
+		limit_page_length=10000)
+	if not settings_rows:
+		from fengjing_app.fengjing_business.page.fengjin_team_calenda.fengjin_team_calenda import _calendar_defaults
+		settings_rows = [{"holiday_countries_json": json.dumps(_calendar_defaults()["holiday_countries"])}]
+	for settings in settings_rows:
 		try:
-			countries = frappe.parse_json(settings.holiday_countries_json or "[]")
+			countries = frappe.parse_json(settings.get("holiday_countries_json") or "[]")
 		except (TypeError, ValueError):
 			continue
 		if not isinstance(countries, list):
@@ -54,6 +59,44 @@ def _selected_countries():
 			if re.fullmatch(r"[A-Z]{2}", code):
 				selected[code] = name
 	return selected
+
+
+def ensure_holidays_for_view(countries, start_date, end_date):
+	"""Queue missing country/year data without delaying the calendar response."""
+	current_year = getdate().year
+	years = range(start_date.year, (end_date - timedelta(days=1)).year + 1)
+	pending = []
+	for country_code, country_name in countries.items():
+		for year in years:
+			if not current_year - 1 <= year <= current_year + 1:
+				continue
+			if frappe.db.exists(HOLIDAY_DOCTYPE, {
+				"country_code": country_code,
+				"holiday_date": ["between", [f"{year}-01-01", f"{year}-12-31"]],
+				"active": 1,
+				"source_name": "holiday-cn" if country_code == "CN" else "Nager.Date",
+			}):
+				continue
+			cache_key = f"fengjing:calendar-holiday-sync:{frappe.local.site}:{country_code}:{year}"
+			queued_at = frappe.cache().get_value(cache_key)
+			if queued_at:
+				if now_datetime() - get_datetime(queued_at) < timedelta(minutes=3):
+					pending.append({"country_code": country_code, "year": year})
+				continue
+			frappe.enqueue(
+				sync_country_holidays,
+				queue="short",
+				timeout=180,
+				job_id=f"fengjing-calendar-holiday-{frappe.local.site}-{country_code}-{year}",
+				deduplicate=True,
+				country_code=country_code,
+				year=year,
+				country_name=country_name,
+			)
+			# Avoid repeated requests for unpublished years or a temporarily unavailable source.
+			frappe.cache().set_value(cache_key, now_datetime().isoformat(), expires_in_sec=3600)
+			pending.append({"country_code": country_code, "year": year})
+	return pending
 
 
 def _fetch_json(url):

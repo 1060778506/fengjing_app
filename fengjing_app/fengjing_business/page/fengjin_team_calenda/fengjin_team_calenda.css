@@ -544,7 +544,7 @@ body.fjtc-map-reordering * {
 	grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 	align-items: center;
 	column-gap: 12px;
-	min-height: 196px;
+	min-height: 230px;
 }
 
 .fjtc-page .fjtc-toolbar > :first-child {
@@ -593,11 +593,19 @@ body.fjtc-map-reordering * {
 	font-weight: inherit;
 }
 .fjtc-page .fjtc-beijing-date::before { content: "北京时间："; }
+.fjtc-page .fjtc-map-previews {
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	gap: 12px;
+	max-width: 100%;
+}
+
 .fjtc-page .fjtc-windy-preview {
 	position: relative;
 	display: block;
 	width: 348px;
-	max-width: 100%;
+	max-width: min(348px, 45vw);
 	height: 154px;
 }
 
@@ -999,7 +1007,7 @@ body.fjtc-map-reordering * {
 	to { transform: rotate(360deg); }
 }
 
-@media (max-width: 1250px) {
+@media (max-width: 1600px) {
 	.fjtc-page .fjtc-toolbar {
 		display: flex;
 		flex-direction: column;
@@ -1025,6 +1033,14 @@ body.fjtc-map-reordering * {
 }
 
 @media (max-width: 768px) {
+	.fjtc-page .fjtc-map-previews {
+		gap: 6px;
+	}
+
+	.fjtc-page .fjtc-windy-preview {
+		width: min(348px, calc(100vw - 24px));
+	}
+
 	.fjtc-page .fjtc-toolbar > :first-child,
 	.fjtc-page .fjtc-toolbar > :last-child {
 		width: 100%;

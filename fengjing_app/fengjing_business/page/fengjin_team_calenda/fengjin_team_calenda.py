@@ -155,11 +155,16 @@ def get_calendar_holidays(start, end):
 	selected = (_normalize_map_entries(_calendar_defaults()["holiday_countries"], "holiday")
 		if stored is None else _normalize_map_entries(frappe.parse_json(stored or "[]"), "holiday"))
 	lookup = _country_map()
-	countries = list(dict.fromkeys(lookup[entry["key"]][0] for entry in selected
-		if entry["key"] in lookup
-		and re.fullmatch(r"[A-Z]{2}", lookup[entry["key"]][0])))
+	country_names = {}
+	for entry in selected:
+		code, name = lookup.get(entry["key"], ("", ""))
+		if re.fullmatch(r"[A-Z]{2}", code):
+			country_names.setdefault(code, name)
+	countries = list(country_names)
 	if not countries:
-		return {"countries": [], "holidays": []}
+		return {"countries": [], "holidays": [], "sync_pending": []}
+	from fengjing_app.fengjing_business.doctype.fengjin_calendar_holiday.holiday_sync import ensure_holidays_for_view
+	pending = ensure_holidays_for_view(country_names, start_date, end_date)
 	rows = frappe.get_all(
 		"Fengjin Calendar Holiday",
 		filters=[
@@ -175,7 +180,7 @@ def get_calendar_holidays(start, end):
 	)
 	return {"countries": countries, "holidays": [
 		{**row, "holiday_date": str(row.holiday_date)} for row in rows
-	]}
+	], "sync_pending": pending}
 
 
 @frappe.whitelist()
