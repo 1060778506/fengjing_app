@@ -312,7 +312,8 @@ scheduler_events = {
         "fengjing_app.hooks.run_ozon_settlement_statements"
     ],
     "daily": [
-        "fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log.清理过期排名日志"
+        "fengjing_app.fengjing_business.doctype.amazon_rank_sku_log.amazon_rank_sku_log.清理过期排名日志",
+        "fengjing_app.fengjing_business.doctype.fengjin_calendar_holiday.holiday_sync.sync_selected_holidays",
     ]
 }
 

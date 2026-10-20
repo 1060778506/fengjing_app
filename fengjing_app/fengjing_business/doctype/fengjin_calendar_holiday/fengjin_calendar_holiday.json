@@ -21,6 +21,7 @@
   "source_updated_at",
   "verification_status",
   "notes",
+  "active",
   "record_key"
  ],
  "fields": [
@@ -62,7 +63,7 @@
    "fieldname": "holiday_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "中文名称",
+   "label": "节假日名称",
    "reqd": 1,
    "search_index": 1
   },
@@ -120,6 +121,14 @@
    "fieldname": "notes",
    "fieldtype": "Small Text",
    "label": "备注"
+  },
+  {
+   "default": "1",
+   "description": "来源更新后，已撤销的日期会停用并保留记录。",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "有效"
   },
   {
    "description": "预留给后续同步程序，防止同一来源的同一日期重复写入。",
