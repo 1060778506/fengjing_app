@@ -23,6 +23,7 @@
   "precipitation_sum_mm",
   "rain_sum_mm",
   "snowfall_sum_cm",
+  "wind_speed_max_kmh",
   "source_name",
   "source_model",
   "observed_at",
@@ -134,6 +135,11 @@
    "fieldname": "snowfall_sum_cm",
    "fieldtype": "Float",
    "label": "降雪量 cm"
+  },
+  {
+   "fieldname": "wind_speed_max_kmh",
+   "fieldtype": "Float",
+   "label": "最大风速 km/h"
   },
   {
    "fieldname": "source_name",

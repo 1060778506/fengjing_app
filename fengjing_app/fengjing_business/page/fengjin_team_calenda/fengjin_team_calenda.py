@@ -1,12 +1,14 @@
 import json
 import re
+from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import frappe
 from frappe import _
 from frappe.desk.doctype.event.event import get_events
-from frappe.utils import add_days, cint, get_datetime, getdate
+from frappe.utils import add_days, cint, get_datetime, getdate, now_datetime
 
 from fengjing_app.fengjing_business.doctype.fengjin_calendar_holiday.holiday_sync import _country_map
 
@@ -15,6 +17,7 @@ DOCTYPE = "Event"
 SETTINGS_DOCTYPE = "Fengjin Team Calendar Settings"
 CITY_TIMEZONE_FILE = (Path(__file__).resolve().parents[3] / "public" / "data" / "Vector_map"
 	/ "城市位置ne_10m_populated_places" / "ne_10m_populated_places.geojson")
+CALENDAR_DEFAULTS_FILE = Path(__file__).with_name("calendar_defaults.json")
 EVENT_FIELDS = {
 	"subject",
 	"starts_on",
@@ -69,6 +72,12 @@ def _selected_default(value, entries):
 
 
 @lru_cache(maxsize=1)
+def _calendar_defaults():
+	with CALENDAR_DEFAULTS_FILE.open(encoding="utf-8") as source:
+		return json.load(source)
+
+
+@lru_cache(maxsize=1)
 def _city_timezones():
 	with CITY_TIMEZONE_FILE.open(encoding="utf-8") as source:
 		features = json.load(source)["features"]
@@ -82,11 +91,28 @@ def get_calendar_map_settings():
 	stored = frappe.db.get_value(
 		SETTINGS_DOCTYPE, {"user": user},
 		["holiday_countries_json", "weather_cities_json", "time_cities_json",
-		 "default_holiday_country", "default_weather_city", "default_time_city"], as_dict=True,
+		 "default_holiday_country", "default_weather_city", "default_time_city",
+		 "qweather_credential_id", "qweather_api_key", "qweather_api_host"], as_dict=True,
 	)
 	if not stored:
-		return {"holiday_countries": [], "weather_cities": [], "time_cities": [],
-			"default_holiday_country": "", "default_weather_city": "", "default_time_city": ""}
+		defaults = _calendar_defaults()
+		holiday_countries = _normalize_map_entries(defaults["holiday_countries"], "holiday")
+		weather_cities = _normalize_map_entries(defaults["weather_cities"], "weather")
+		time_cities = _normalize_map_entries(defaults["time_cities"], "time")
+		city_timezones = _city_timezones()
+		country_codes = _country_map()
+		return {
+			"holiday_countries": holiday_countries,
+			"weather_cities": weather_cities,
+			"time_cities": [{**entry,
+				"time_zone": city_timezones.get(entry["key"].split(":", 1)[1], ""),
+				"country_code": country_codes.get(entry["key"].split(":", 1)[0], ("", ""))[0]}
+				for entry in time_cities],
+			"default_holiday_country": _selected_default(defaults.get("default_holiday_country"), holiday_countries),
+			"default_weather_city": _selected_default(defaults.get("default_weather_city"), weather_cities),
+			"default_time_city": _selected_default(defaults.get("default_time_city"), time_cities),
+			"qweather_credential_id": "", "qweather_api_key": "", "qweather_api_host": "",
+		}
 	holiday_countries = _normalize_map_entries(
 		frappe.parse_json(stored.holiday_countries_json or "[]"), "holiday"
 	)
@@ -107,7 +133,10 @@ def get_calendar_map_settings():
 			for entry in time_cities],
 		"default_holiday_country": _selected_default(stored.default_holiday_country, holiday_countries),
 		"default_weather_city": _selected_default(stored.default_weather_city, weather_cities),
-		"default_time_city": "",
+		"default_time_city": _selected_default(stored.default_time_city, time_cities),
+		"qweather_credential_id": stored.qweather_credential_id or "",
+		"qweather_api_key": stored.qweather_api_key or "",
+		"qweather_api_host": stored.qweather_api_host or "",
 	}
 
 
@@ -123,9 +152,8 @@ def get_calendar_holidays(start, end):
 	if not 0 < (end_date - start_date).days <= 62:
 		frappe.throw(_("节假日查询日期范围无效。"))
 	stored = frappe.db.get_value(SETTINGS_DOCTYPE, {"user": user}, "holiday_countries_json")
-	if not stored:
-		return {"countries": [], "holidays": []}
-	selected = _normalize_map_entries(frappe.parse_json(stored), "holiday")
+	selected = (_normalize_map_entries(_calendar_defaults()["holiday_countries"], "holiday")
+		if stored is None else _normalize_map_entries(frappe.parse_json(stored or "[]"), "holiday"))
 	lookup = _country_map()
 	countries = list(dict.fromkeys(lookup[entry["key"]][0] for entry in selected
 		if entry["key"] in lookup
@@ -151,6 +179,89 @@ def get_calendar_holidays(start, end):
 
 
 @frappe.whitelist()
+def get_calendar_weather(refresh=0):
+	"""Read this user's cities; request a background refresh for stale data."""
+	from fengjing_app.fengjing_business.doctype.fengjin_calendar_weather_forecast.weather_sync import (
+		FORECAST_DOCTYPE, HISTORY_DOCTYPE, WEATHER_NAMES, selected_weather_cities, weather_needs_sync,
+	)
+
+	selected = selected_weather_cities(user=_settings_user())
+	keys = list(selected)
+	if not keys:
+		return {"cities": []}
+	if cint(refresh):
+		for key in keys:
+			forecast = weather_needs_sync(key)
+			history = weather_needs_sync(key, history=True)
+			if forecast or history:
+				frappe.enqueue(
+					"fengjing_app.fengjing_business.doctype.fengjin_calendar_weather_forecast.weather_sync.sync_city_weather",
+					queue="short", city_key=key, forecast=forecast, history=history,
+				)
+	forecast_rows = frappe.get_all(FORECAST_DOCTYPE,
+		filters={"city_key": ["in", keys], "forecast_date": [">=", add_days(getdate(), -1)]},
+		fields=["city_key", "forecast_date", "fetched_at", "weather_code", "weather_description",
+			"temperature_min_c", "temperature_max_c", "precipitation_probability_pct",
+			"precipitation_sum_mm", "wind_speed_max_kmh", "current_temperature_c",
+			"current_weather_code", "current_weather_description", "current_wind_speed_kmh", "current_is_day", "source_name"],
+		order_by="fetched_at desc", limit_page_length=10000)
+	history_rows = frappe.get_all(HISTORY_DOCTYPE,
+		filters={"city_key": ["in", keys], "weather_date": [">=", "2026-10-01"]},
+		fields=["city_key", "weather_date", "fetched_at", "weather_code", "weather_description",
+			"temperature_min_c", "temperature_max_c", "precipitation_sum_mm", "wind_speed_max_kmh", "source_name"],
+		order_by="fetched_at desc", limit_page_length=10000)
+	result = {key: {"city_key": key, "days": [], "current": None} for key in keys}
+	seen = set()
+	for row in forecast_rows:
+		day = str(row.forecast_date)
+		local_today = datetime.now(ZoneInfo(selected[row.city_key]["timezone"])).date().isoformat()
+		if day < local_today:
+			continue
+		identity = (row.city_key, day)
+		if identity in seen:
+			continue
+		seen.add(identity)
+		result[row.city_key]["days"].append({
+			"date": day, "kind": "forecast", "weather_code": row.weather_code,
+			"description": row.weather_description, "temperature_min_c": row.temperature_min_c,
+			"temperature_max_c": row.temperature_max_c,
+			"precipitation_probability_pct": row.precipitation_probability_pct,
+			"precipitation_sum_mm": row.precipitation_sum_mm,
+			"wind_speed_max_kmh": row.wind_speed_max_kmh,
+			"source_name": row.source_name,
+		})
+		if (row.current_temperature_c is not None and result[row.city_key]["current"] is None
+				and row.fetched_at and now_datetime() - get_datetime(row.fetched_at) <= timedelta(hours=6)
+				and day == local_today):
+			result[row.city_key]["current"] = {
+				"temperature_c": row.current_temperature_c,
+				"weather_code": row.current_weather_code,
+				"description": row.current_weather_description or WEATHER_NAMES.get(row.current_weather_code, "当前天气"),
+				"wind_speed_kmh": row.current_wind_speed_kmh,
+				"source_name": row.source_name,
+				"is_day": row.current_is_day,
+				"fetched_at": str(row.fetched_at), "date": day,
+			}
+	for row in history_rows:
+		day = str(row.weather_date)
+		if day >= datetime.now(ZoneInfo(selected[row.city_key]["timezone"])).date().isoformat():
+			continue
+		identity = (row.city_key, day)
+		if identity in seen:
+			continue
+		seen.add(identity)
+		result[row.city_key]["days"].append({
+			"date": day, "kind": "history", "weather_code": row.weather_code,
+			"description": row.weather_description, "temperature_min_c": row.temperature_min_c,
+			"temperature_max_c": row.temperature_max_c,
+			"precipitation_sum_mm": row.precipitation_sum_mm,
+			"wind_speed_max_kmh": row.wind_speed_max_kmh,
+			"source_name": row.source_name,
+		})
+	return {"cities": list(result.values())}
+
+
+@frappe.whitelist()
 def save_calendar_map_settings(values):
 	user = _settings_user()
 	if isinstance(values, str) and len(values) > 200000:
@@ -167,13 +278,26 @@ def save_calendar_map_settings(values):
 	if raw_time_cities is None:
 		raw_time_cities = frappe.parse_json(doc.time_cities_json or "[]") if doc else []
 	time_cities = _normalize_map_entries(raw_time_cities, "time")
+	default_time_city = values.get("default_time_city")
+	if default_time_city is None and doc:
+		default_time_city = doc.default_time_city
+	qweather_fields = {}
+	for field in ("qweather_credential_id", "qweather_api_key", "qweather_api_host"):
+		value = values.get(field, getattr(doc, field, "") if doc else "")
+		if not isinstance(value, str) or len(value.strip()) > 140:
+			frappe.throw(_("和风天气凭据格式无效。"))
+		qweather_fields[field] = value.strip()
+	if qweather_fields["qweather_api_host"] and not re.fullmatch(
+			r"(?:[a-z0-9-]+\.)+qweatherapi\.com", qweather_fields["qweather_api_host"], re.I):
+		frappe.throw(_("和风天气 API Host 必须是控制台提供的 qweatherapi.com 专属域名。"))
 	data = {
 		"holiday_countries_json": json.dumps(holiday_countries, ensure_ascii=False),
 		"weather_cities_json": json.dumps(weather_cities, ensure_ascii=False),
 		"time_cities_json": json.dumps(time_cities, ensure_ascii=False),
 		"default_holiday_country": _selected_default(values.get("default_holiday_country"), holiday_countries),
 		"default_weather_city": _selected_default(values.get("default_weather_city"), weather_cities),
-		"default_time_city": "",
+		"default_time_city": _selected_default(default_time_city, time_cities),
+		**qweather_fields,
 	}
 	if doc:
 		doc.update(data)
@@ -211,7 +335,11 @@ def _event_payload(event):
 	is_repeating = cint(event.get("repeat_this_event"))
 	can_write = bool(frappe.has_permission(DOCTYPE, "write", doc=name)) and not is_repeating
 	can_delete = bool(frappe.has_permission(DOCTYPE, "delete", doc=name))
-	color = event.get("color") or ("#16a34a" if event.get("event_type") == "Public" else "#2563eb")
+	color = event.get("color") or "#7da7d4"
+	if not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+		color = "#7da7d4"
+	red, green, blue = (int(color[index:index + 2], 16) for index in (1, 3, 5))
+	contrast_color = "#111827" if (red * 299 + green * 587 + blue * 114) / 1000 >= 150 else "#ffffff"
 	instance_id = f"{name}::{starts_on}" if is_repeating else name
 
 	return {
@@ -220,8 +348,8 @@ def _event_payload(event):
 		"start": starts_on,
 		"end": _calendar_end(event),
 		"allDay": bool(cint(event.get("all_day"))),
-		"backgroundColor": color,
-		"borderColor": color,
+		"color": color,
+		"contrastColor": contrast_color,
 		"editable": can_write,
 		"extendedProps": {
 			"event_name": name,

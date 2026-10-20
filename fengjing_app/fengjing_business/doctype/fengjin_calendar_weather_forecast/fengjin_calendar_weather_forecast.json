@@ -15,12 +15,18 @@
   "forecast_date",
   "forecast_issued_at",
   "fetched_at",
+  "current_temperature_c",
+  "current_weather_code",
+  "current_weather_description",
+  "current_wind_speed_kmh",
+  "current_is_day",
   "weather_code",
   "weather_description",
   "temperature_min_c",
   "temperature_max_c",
   "precipitation_probability_pct",
   "precipitation_sum_mm",
+  "wind_speed_max_kmh",
   "source_name",
   "model_name",
   "raw_json",
@@ -94,6 +100,31 @@
    "label": "获取时间"
   },
   {
+   "fieldname": "current_temperature_c",
+   "fieldtype": "Float",
+   "label": "当前温度 ℃"
+  },
+  {
+   "fieldname": "current_weather_code",
+   "fieldtype": "Int",
+   "label": "当前天气代码"
+  },
+  {
+   "fieldname": "current_weather_description",
+   "fieldtype": "Data",
+   "label": "当前天气描述"
+  },
+  {
+   "fieldname": "current_wind_speed_kmh",
+   "fieldtype": "Float",
+   "label": "当前风速 km/h"
+  },
+  {
+   "fieldname": "current_is_day",
+   "fieldtype": "Check",
+   "label": "当前为白天"
+  },
+  {
    "description": "保留天气服务返回的原始天气代码，供以后选择图标。",
    "fieldname": "weather_code",
    "fieldtype": "Int",
@@ -123,6 +154,11 @@
    "fieldname": "precipitation_sum_mm",
    "fieldtype": "Float",
    "label": "预计降水量 mm"
+  },
+  {
+   "fieldname": "wind_speed_max_kmh",
+   "fieldtype": "Float",
+   "label": "最大风速 km/h"
   },
   {
    "fieldname": "source_name",

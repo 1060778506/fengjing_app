@@ -11,7 +11,10 @@
   "time_cities_json",
   "default_holiday_country",
   "default_weather_city",
-  "default_time_city"
+  "default_time_city",
+  "qweather_credential_id",
+  "qweather_api_key",
+  "qweather_api_host"
  ],
  "fields": [
   {
@@ -61,6 +64,21 @@
    "fieldtype": "Data",
    "label": "默认时间城市编号",
    "read_only": 1
+  },
+  {
+   "fieldname": "qweather_credential_id",
+   "fieldtype": "Data",
+   "label": "和风天气凭据ID"
+  },
+  {
+   "fieldname": "qweather_api_key",
+   "fieldtype": "Data",
+   "label": "和风天气API秘钥"
+  },
+  {
+   "fieldname": "qweather_api_host",
+   "fieldtype": "Data",
+   "label": "和风天气专属API Host"
   }
  ],
  "index_web_pages_for_search": 0,

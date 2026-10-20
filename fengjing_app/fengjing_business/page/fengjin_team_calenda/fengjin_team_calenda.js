@@ -53,6 +53,19 @@ function fengjingCountryFlag(code, countryName) {
 	return flag;
 }
 
+function fengjingWeatherIcon(code, isDay = true) {
+	if (code == null || code === "") return "🌡️";
+	const value = Number(code);
+	if (value === 0) return isDay ? "☀️" : "🌙";
+	if ([1, 2].includes(value)) return isDay ? "🌤️" : "☁️";
+	if (value === 3) return "☁️";
+	if ([45, 48].includes(value)) return "🌫️";
+	if ([71, 73, 75, 77, 85, 86].includes(value)) return "❄️";
+	if ([95, 96, 99].includes(value)) return "⛈️";
+	if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(value)) return "🌧️";
+	return "🌡️";
+}
+
 frappe.pages["fengjin_team_calenda"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
 		parent: wrapper,
@@ -86,6 +99,12 @@ class FengjingTeamCalendarPage {
 		this.timeCities = new Map();
 		this.defaultHolidayCountry = null;
 		this.defaultWeatherCity = null;
+		this.defaultTimeCity = null;
+		this.qweatherCredentialId = "";
+		this.qweatherApiKey = "";
+		this.qweatherApiHost = "";
+		this.weatherViewActive = false;
+		this.weatherViewCity = null;
 		this.clockTimer = null;
 		this.clockFormatters = new Map();
 		this.pageVisible = false;
@@ -93,6 +112,10 @@ class FengjingTeamCalendarPage {
 		this.mapSettingsLoading = null;
 		this.mapSettingsSaveQueue = Promise.resolve();
 		this.holidayRequestToken = 0;
+		this.weatherRequestToken = 0;
+		this.weatherByCity = new Map();
+		this.weatherLoaded = false;
+		this.weatherPollTimer = null;
 		this.activeCountry = null;
 		this.selectedRegion = null;
 		this.selectedCity = null;
@@ -123,6 +146,10 @@ class FengjingTeamCalendarPage {
 					<span>正在加载丰境日历…</span>
 				</div>
 				<div class="fjtc-calendar" aria-label="丰境日历"></div>
+				<div class="fjtc-windy-overlay" role="dialog" aria-modal="true" aria-label="Windy 风场地图" hidden>
+					<button type="button" class="fjtc-windy-close" aria-label="关闭放大的风场地图" title="关闭">×</button>
+					<iframe class="fjtc-windy-expanded-map" title="Windy 风场地图" frameborder="0"></iframe>
+				</div>
 				<div class="fjtc-settings" aria-label="地区设置" hidden>
 					<div class="fjtc-settings-head">
 						<h2>地区设置</h2>
@@ -150,6 +177,11 @@ class FengjingTeamCalendarPage {
 		this.container = this.$main.find(".fjtc-calendar")[0];
 		this.mapContainer = this.$main.find(".fjtc-map-canvas")[0];
 		this.$main.on("click", "[data-map-action='calendar']", () => this.returnToCalendar());
+		this.$main.on("click", ".fjtc-windy-expand", (event) => this.openWindyMap(event.currentTarget));
+		this.$main.on("click", ".fjtc-windy-close", () => this.closeWindyMap());
+		this.$main.on("keydown", ".fjtc-windy-overlay", (event) => {
+			if (event.key === "Escape") this.closeWindyMap();
+		});
 		this.$main.on("click", "[data-map-action='world']", () =>
 			this.renderWorldMap().catch((error) => this.showError("地图加载失败", error)));
 		this.$main.on("click", ".fjtc-city-result[data-city-key]", (event) =>
@@ -172,6 +204,11 @@ class FengjingTeamCalendarPage {
 			if (this.defaultWeatherCity === key) {
 				this.defaultWeatherCity = this.weatherCities.keys().next().value || null;
 			}
+			if (this.weatherViewCity === key) {
+				this.weatherViewCity = this.defaultWeatherCity;
+				this.weatherViewActive = Boolean(this.weatherViewCity);
+				this.container.classList.toggle("fjtc-weather-mode", this.weatherViewActive);
+			}
 			this.renderSettingsPanel();
 			this.scheduleMapSettingsSave();
 		});
@@ -179,6 +216,9 @@ class FengjingTeamCalendarPage {
 			if (this.mapSelectionClickSuppressedUntil > Date.now()) return;
 			const key = $(event.currentTarget).attr("data-map-remove-time");
 			this.timeCities.delete(key);
+			if (this.defaultTimeCity === key) {
+				this.defaultTimeCity = this.timeCities.keys().next().value || null;
+			}
 			this.renderSettingsPanel();
 			this.scheduleMapSettingsSave();
 		});
@@ -195,12 +235,46 @@ class FengjingTeamCalendarPage {
 			const key = $(event.currentTarget).attr("data-map-default-weather");
 			if (!this.weatherCities.has(key) || this.defaultWeatherCity === key) return;
 			this.defaultWeatherCity = key;
+			this.weatherViewCity = key;
+			this.weatherViewActive = true;
+			this.container.classList.add("fjtc-weather-mode");
+			this.renderMapSelections();
+			this.scheduleMapSettingsSave();
+		});
+		this.$main.on("click", "[data-map-default-time]", (event) => {
+			if (this.mapSelectionClickSuppressedUntil > Date.now()) return;
+			const key = $(event.currentTarget).attr("data-map-default-time");
+			if (!this.timeCities.has(key) || this.defaultTimeCity === key) return;
+			this.defaultTimeCity = key;
 			this.renderMapSelections();
 			this.scheduleMapSettingsSave();
 		});
 		this.$main.on("pointerdown", ".fjtc-map-selection-chip[data-map-order-kind]", (event) =>
 			this.startMapSelectionPointer(event));
 		this.$main.on("change", "[data-map-setting]", (event) => this.changeMapSetting(event));
+		this.$main.on("change", "[data-weather-credential]", (event) => {
+			const field = event.currentTarget.dataset.weatherCredential;
+			if (field === "qweather_credential_id") this.qweatherCredentialId = event.currentTarget.value;
+			if (field === "qweather_api_key") this.qweatherApiKey = event.currentTarget.value;
+			if (field === "qweather_api_host") this.qweatherApiHost = event.currentTarget.value;
+			this.scheduleMapSettingsSave();
+		});
+		this.$main.on("click", '[data-weather-credential="qweather_credential_id"], [data-weather-credential="qweather_api_key"]', (event) => {
+			const credential = this.$main.find('[data-weather-credential="qweather_credential_id"]').val() || "";
+			const apiKey = this.$main.find('[data-weather-credential="qweather_api_key"]').val() || "";
+			if (!event.currentTarget.value.trim() && !credential.trim() && !apiKey.trim()) {
+				window.open("https://console.qweather.com/", "_blank", "noopener,noreferrer");
+			}
+		});
+		this.$main.on("click", ".fjtc-weather-view-toggle", (event) => {
+			const key = event.currentTarget.dataset.cityKey;
+			this.weatherViewActive = this.weatherViewCity === key ? !this.weatherViewActive : true;
+			this.weatherViewCity = key;
+			if (this.weatherViewActive && this.calendar?.view.type !== "dayGridMonth") this.calendar.changeView("dayGridMonth");
+			this.container.classList.toggle("fjtc-weather-mode", this.weatherViewActive);
+			this.renderWeatherPreview();
+			this.renderDailyWeather();
+		});
 		this.$main.on("input", ".fjtc-city-search", (event) => this.renderCityResults(event.currentTarget.value));
 		this.renderSettingsPanel();
 	}
@@ -210,6 +284,7 @@ class FengjingTeamCalendarPage {
 		this.page.add_inner_button("刷新", () => {
 			this.calendar?.refetchEvents();
 			this.refreshVisibleHolidays();
+			this.loadWeather(true);
 		});
 		this.page.add_inner_button("日程列表", () => frappe.set_route("List", "Event"));
 		this.page.add_inner_button("设置", () => this.openSettings());
@@ -238,6 +313,8 @@ class FengjingTeamCalendarPage {
 			}
 			if (this.pageVisible && this.viewMode === "calendar") {
 				this.renderCityClocks();
+				this.renderWeatherPreview();
+				this.loadWeather(true);
 				this.startCityClock();
 			}
 		} catch (error) {
@@ -247,9 +324,12 @@ class FengjingTeamCalendarPage {
 
 	hide() {
 		this.pageVisible = false;
+		this.closeWindyMap();
 		document.body.classList.remove("fjtc-full-height-page");
 		this.cancelMapSelectionPointer();
 		this.stopCityClock();
+		if (this.weatherPollTimer) window.clearTimeout(this.weatherPollTimer);
+		this.weatherPollTimer = null;
 	}
 
 	ensureCalendar() {
@@ -281,6 +361,7 @@ class FengjingTeamCalendarPage {
 	}
 
 	async openSettings() {
+		this.closeWindyMap();
 		this.viewMode = "settings";
 		this.stopCityClock();
 		this.$main.find(".fjtc-shell").addClass("fjtc-shell--settings");
@@ -321,8 +402,17 @@ class FengjingTeamCalendarPage {
 				this.holidayCountries.keys().next().value || null;
 			this.defaultWeatherCity = settings.default_weather_city ||
 				this.weatherCities.keys().next().value || null;
+			this.weatherViewCity = this.defaultWeatherCity;
+			this.weatherViewActive = Boolean(this.weatherViewCity);
+			this.container.classList.toggle("fjtc-weather-mode", this.weatherViewActive);
+			this.defaultTimeCity = settings.default_time_city ||
+				this.timeCities.keys().next().value || null;
+			this.qweatherCredentialId = settings.qweather_credential_id || "";
+			this.qweatherApiKey = settings.qweather_api_key || "";
+			this.qweatherApiHost = settings.qweather_api_host || "";
 			this.mapSettingsLoaded = true;
 			this.renderSettingsPanel();
+			this.renderWeatherPreview();
 		}).finally(() => {
 			this.mapSettingsLoading = null;
 		});
@@ -347,6 +437,10 @@ class FengjingTeamCalendarPage {
 			time_cities: [...this.timeCities].map(([key, location]) => ({ key, ...location })),
 			default_holiday_country: this.defaultHolidayCountry,
 			default_weather_city: this.defaultWeatherCity,
+			default_time_city: this.defaultTimeCity,
+			qweather_credential_id: this.qweatherCredentialId,
+			qweather_api_key: this.qweatherApiKey,
+			qweather_api_host: this.qweatherApiHost,
 		});
 		// Keep writes in order when several checkboxes change while a request is running.
 		this.mapSettingsSaveQueue = this.mapSettingsSaveQueue.catch(() => {}).then(() =>
@@ -376,6 +470,8 @@ class FengjingTeamCalendarPage {
 				this.showError("城市时区读取失败", error);
 			}
 			this.renderCityClocks();
+			this.renderWeatherPreview();
+			this.loadWeather(true);
 			this.startCityClock();
 		} catch (error) {
 			this.showError("日历加载失败", error);
@@ -883,11 +979,20 @@ class FengjingTeamCalendarPage {
 					} : {}),
 				});
 				if (mapSetting === "weather") this.defaultWeatherCity ||= key;
+				if (mapSetting === "time") this.defaultTimeCity ||= key;
 			} else {
 				selectedCities.delete(key);
 				if (mapSetting === "weather" && this.defaultWeatherCity === key) {
 					this.defaultWeatherCity = selectedCities.keys().next().value || null;
 				}
+				if (mapSetting === "time" && this.defaultTimeCity === key) {
+					this.defaultTimeCity = selectedCities.keys().next().value || null;
+				}
+			}
+			if (mapSetting === "weather") {
+				this.weatherViewCity = this.defaultWeatherCity;
+				this.weatherViewActive = Boolean(this.weatherViewCity);
+				this.container.classList.toggle("fjtc-weather-mode", this.weatherViewActive);
 			}
 			this.selectedRegion = region;
 			this.selectedCity = city;
@@ -941,7 +1046,7 @@ class FengjingTeamCalendarPage {
 			const fullName = [location.country, location.region, location.city].filter(Boolean).join(" · ");
 			return `<span class="fjtc-map-selection-chip" data-map-order-kind="${kind}" data-map-order-key="${this.escapeHtml(key)}" title="${this.escapeHtml(fullName)} · 在同一行拖拽排序">
 				<span class="fjtc-map-drag-handle" aria-hidden="true">⋮⋮</span>
-				${kind === "time" ? "" : `<button type="button" class="fjtc-map-default-btn${selected ? " is-default" : ""}" data-map-default-${kind}="${this.escapeHtml(key)}" aria-pressed="${selected}" title="设为默认${labelType}城市">默认</button>`}
+				<button type="button" class="fjtc-map-default-btn${selected ? " is-default" : ""}" data-map-default-${kind}="${this.escapeHtml(key)}" aria-pressed="${selected}" title="设为默认${labelType}城市">默认</button>
 				<span>${this.escapeHtml(label)}</span>
 				<button type="button" class="fjtc-map-remove-btn" data-map-remove-${kind}="${this.escapeHtml(key)}" aria-label="移除${this.escapeHtml(fullName)}">×</button>
 			</span>`;
@@ -959,7 +1064,7 @@ class FengjingTeamCalendarPage {
 			</span>`;
 		});
 		const weather = this.renderCitySelectionChips(this.weatherCities, this.defaultWeatherCity, "weather");
-		const time = this.renderCitySelectionChips(this.timeCities, null, "time");
+		const time = this.renderCitySelectionChips(this.timeCities, this.defaultTimeCity, "time");
 		this.$main.find(".fjtc-map-selections")
 			.html(`<div class="fjtc-map-selection-row" data-map-order-row="holiday"><strong>国家节日</strong>${holidays.join("") || "<span>未选择</span>"}</div>
 				<div class="fjtc-map-selection-row" data-map-order-row="weather"><strong>城市天气</strong>${weather.join("") || "<span>未选择</span>"}</div>
@@ -1106,6 +1211,13 @@ class FengjingTeamCalendarPage {
 		const countryKey = country && String(country.properties.NE_ID);
 		const selectableCities = this.getRegionSelectableCities(region);
 		this.$main.find(".fjtc-settings-panel").html(`
+			<div class="fjtc-weather-credentials">
+				<a href="https://console.qweather.com/" target="_blank" rel="noopener noreferrer">和风天气</a>
+				<label>API Host <input type="text" class="form-control" data-weather-credential="qweather_api_host" placeholder="专属 API Host" autocomplete="off"></label>
+				<label>凭据ID <input type="text" class="form-control" data-weather-credential="qweather_credential_id" autocomplete="off"></label>
+				<label>API秘钥 <input type="text" class="form-control" data-weather-credential="qweather_api_key" autocomplete="off"></label>
+				<small>备用请求使用 API Host 和 API 秘钥；凭据ID仅供记录。</small>
+			</div>
 			<h3>选择地区</h3>
 			<label class="fjtc-setting-row"><span><strong>${country ? escaped(country.properties.name) : "国家节假日"}</strong><small>${country ? "国家节假日" : "请先在地图中选择国家"}</small></span><input type="checkbox" data-map-setting="country" ${this.holidayCountries.has(countryKey) ? "checked" : ""} ${country ? "" : "disabled"}></label>
 			<div class="fjtc-setting-groups">
@@ -1116,6 +1228,9 @@ class FengjingTeamCalendarPage {
 			</div>
 			${country ? `<div class="fjtc-city-picker"><label for="fjtc-city-search">搜索省州或城市</label><input id="fjtc-city-search" type="search" class="form-control fjtc-city-search" placeholder="输入省州或城市名称" value="${escaped(this.searchQuery)}"><div class="fjtc-city-results"></div></div>` : ""}
 		`);
+		this.$main.find('[data-weather-credential="qweather_api_host"]').val(this.qweatherApiHost);
+		this.$main.find('[data-weather-credential="qweather_credential_id"]').val(this.qweatherCredentialId);
+		this.$main.find('[data-weather-credential="qweather_api_key"]').val(this.qweatherApiKey);
 		this.renderMapSelections();
 		if (country) this.renderCityResults(this.searchQuery);
 	}
@@ -1168,7 +1283,7 @@ class FengjingTeamCalendarPage {
 			themeSystem: "classic",
 			locale: library.zhCnLocale,
 			initialView: "dayGridMonth",
-			height: "auto",
+			height: "100%",
 			firstDay: 1,
 			nowIndicator: true,
 			navLinks: true,
@@ -1187,11 +1302,12 @@ class FengjingTeamCalendarPage {
 				list: "列表",
 			},
 			headerToolbar: {
-				left: "prev,next today",
-				center: "title cityClocks",
-				right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth",
+				left: "prev,next today weatherPreview",
+				center: "title",
+				right: "cityClocks dayGridMonth,timeGridWeek,timeGridDay,listMonth",
 			},
 			toolbarElements: {
+				weatherPreview: () => ({ html: '<span class="fjtc-weather-preview" aria-label="城市天气预览"></span>' }),
 				cityClocks: () => ({ html: '<span class="fjtc-city-clocks" aria-label="城市时间"></span>' }),
 			},
 			toolbarTitleClass: "fjtc-toolbar-title",
@@ -1205,6 +1321,8 @@ class FengjingTeamCalendarPage {
 				this.formatCalendarMonthTitle(info);
 				this.loadHolidays(info);
 				this.renderCityClocks();
+				this.renderWeatherPreview();
+				this.renderDailyWeather();
 			},
 			events: (info, success, failure) => this.loadEvents(info, success, failure),
 			select: (info) => this.openEventDialog(null, this.selectionDefaults(info)),
@@ -1221,11 +1339,174 @@ class FengjingTeamCalendarPage {
 	}
 
 	formatCalendarMonthTitle(info) {
-		if (info.view.type !== "dayGridMonth") return;
-		const month = info.view.currentStart || this.calendar?.getDate();
 		const title = this.container.querySelector(".fjtc-toolbar-title");
-		if (month && title) {
-			title.textContent = `${month.getFullYear()}年${String(month.getMonth() + 1).padStart(2, "0")}月`;
+		if (title) {
+			const today = document.createElement("span");
+			today.className = "fjtc-beijing-date";
+			const windy = document.createElement("iframe");
+			windy.className = "fjtc-windy-map";
+			windy.title = "Windy 风场地图";
+			windy.loading = "lazy";
+			windy.setAttribute("frameborder", "0");
+			windy.src = "https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=°C&metricWind=km/h&zoom=3&overlay=wind&product=ecmwf&level=surface&lat=39.749&lon=-99.876";
+			const preview = document.createElement("span");
+			preview.className = "fjtc-windy-preview";
+			const expand = document.createElement("button");
+			expand.type = "button";
+			expand.className = "fjtc-windy-expand";
+			expand.setAttribute("aria-label", "放大 Windy 风场地图");
+			expand.title = "点击放大风场地图";
+			expand.textContent = "⤢";
+			preview.append(windy, expand);
+			title.replaceChildren(today, preview);
+			this.updateBeijingDate();
+		}
+	}
+
+	openWindyMap(trigger) {
+		const overlay = this.$main.find(".fjtc-windy-overlay")[0];
+		if (!overlay) return;
+		this.windyTrigger = trigger;
+		overlay.querySelector(".fjtc-windy-expanded-map").src = "https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=°C&metricWind=km/h&zoom=3&overlay=wind&product=ecmwf&level=surface&lat=28.15&lon=-94.395&detailLat=41.085&detailLon=-94.401&detail=true&pressure=false&message=true";
+		overlay.hidden = false;
+		overlay.querySelector(".fjtc-windy-close").focus();
+	}
+
+	closeWindyMap() {
+		const overlay = this.$main?.find(".fjtc-windy-overlay")[0];
+		if (!overlay || overlay.hidden) return;
+		overlay.hidden = true;
+		overlay.querySelector(".fjtc-windy-expanded-map").removeAttribute("src");
+		if (this.windyTrigger?.isConnected && this.pageVisible && this.viewMode === "calendar") {
+			this.windyTrigger.focus();
+		}
+		this.windyTrigger = null;
+	}
+
+	updateBeijingDate() {
+		const date = this.container.querySelector(".fjtc-beijing-date");
+		if (!date) return;
+		const parts = Object.fromEntries(new Intl.DateTimeFormat("zh-CN", {
+			timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit",
+		}).formatToParts(new Date()).map(({ type, value }) => [type, value]));
+		date.textContent = `${parts.year}年${parts.month}月${parts.day}日`;
+	}
+
+	renderWeatherPreview() {
+		const holder = this.container.querySelector(".fjtc-weather-preview");
+		if (!holder) return;
+		holder.replaceChildren();
+		const locations = this.weatherCities.size ? [...this.weatherCities] : [[null, null]];
+		for (const [key, location] of locations) {
+			const card = document.createElement("span");
+			card.className = "fjtc-weather-city";
+			const weather = this.weatherByCity.get(key);
+			const today = weather?.days?.find((day) => day.date === weather.current?.date);
+			const icon = document.createElement("span");
+			icon.className = "fjtc-weather-icon";
+			icon.textContent = fengjingWeatherIcon(weather?.current?.weather_code ?? today?.weather_code,
+				weather?.current ? Number(weather.current.is_day) === 1 : true);
+			icon.setAttribute("aria-hidden", "true");
+			const details = document.createElement("span");
+			details.className = "fjtc-weather-details";
+			const place = document.createElement("span");
+			place.className = "fjtc-weather-place";
+			place.textContent = location ? [location.region, location.city].filter(Boolean).join("·") : "请选择天气城市";
+			const state = document.createElement("span");
+			state.className = "fjtc-weather-state";
+			const temperature = weather?.current?.temperature_c;
+			state.textContent = temperature == null ? (location ? (this.weatherLoaded ? "当前天气暂不可用" : "正在获取天气") : "天气待接入")
+				: `${Math.round(Number(temperature))}°C · ${weather.current.description || "当前天气"}`;
+			details.append(place, state);
+			if (weather?.current?.wind_speed_kmh != null) {
+				const wind = document.createElement("span");
+				wind.className = "fjtc-weather-wind";
+				wind.textContent = `风速 ${weather.current.wind_speed_kmh} km/h`;
+				details.appendChild(wind);
+			}
+			if (weather?.current?.source_name === "QWeather") {
+				const credit = document.createElement("a");
+				credit.className = "fjtc-weather-credit";
+				credit.href = "https://developer.qweather.com/attribution.html";
+				credit.target = "_blank";
+				credit.rel = "noopener noreferrer";
+				credit.textContent = "和风天气";
+				details.appendChild(credit);
+			}
+			if (location) {
+				const toggle = document.createElement("button");
+				toggle.type = "button";
+				toggle.className = "fjtc-weather-view-toggle";
+				toggle.dataset.cityKey = key;
+				toggle.setAttribute("aria-pressed", String(this.weatherViewActive && this.weatherViewCity === key));
+				toggle.textContent = "当前天气";
+				details.appendChild(toggle);
+			}
+			card.append(icon, details);
+			card.title = location ? [location.country, place.textContent,
+				today?.description,
+				today ? `最高 ${today.temperature_max_c}°C / 最低 ${today.temperature_min_c}°C` : "",
+				today?.precipitation_probability_pct != null ? `降水概率 ${today.precipitation_probability_pct}%` : "",
+				weather?.current?.wind_speed_kmh != null ? `当前风速 ${weather.current.wind_speed_kmh} km/h` : "",
+				`数据：${weather?.current?.source_name || today?.source_name || "天气服务"}`,
+			].filter(Boolean).join(" · ") : "请先在地区设置中选择天气城市";
+			holder.appendChild(card);
+		}
+	}
+
+	async loadWeather(refresh = false, attempt = 0) {
+		if (!this.weatherCities.size || !this.pageVisible || this.viewMode !== "calendar") return;
+		const token = ++this.weatherRequestToken;
+		if (this.weatherPollTimer) window.clearTimeout(this.weatherPollTimer);
+		this.weatherPollTimer = null;
+		try {
+			await this.mapSettingsSaveQueue;
+			const response = await frappe.call({
+				method: `${FENGJING_CALENDAR_METHOD}.get_calendar_weather`,
+				args: { refresh: refresh ? 1 : 0 },
+			});
+			if (token !== this.weatherRequestToken || !this.pageVisible || this.viewMode !== "calendar") return;
+			const cities = response.message?.cities || [];
+			this.weatherByCity = new Map(cities.map((city) => [city.city_key, city]));
+			this.weatherLoaded = true;
+			this.renderWeatherPreview();
+			this.renderDailyWeather();
+			if (attempt < 6 && cities.some((city) => !city.current)) {
+				this.weatherPollTimer = window.setTimeout(() => this.loadWeather(false, attempt + 1), 5000);
+			}
+		} catch (error) {
+			if (token === this.weatherRequestToken) this.showError("天气读取失败", error);
+		}
+	}
+
+	renderDailyWeather() {
+		if (!this.container) return;
+		this.container.querySelectorAll(".fjtc-day-weather").forEach((node) => node.remove());
+		if (this.calendar?.view.type !== "dayGridMonth" || !this.defaultWeatherCity) return;
+		const cityKey = this.weatherViewActive ? this.weatherViewCity : this.defaultWeatherCity;
+		const weather = this.weatherByCity.get(cityKey);
+		if (!weather) return;
+		const location = this.weatherCities.get(cityKey);
+		const place = [location?.country, location?.region, location?.city].filter(Boolean).join(" · ");
+		const byDate = new Map((weather.days || []).map((day) => [day.date, day]));
+		for (const label of this.container.querySelectorAll(".fjtc-day-label")) {
+			const day = byDate.get(label.closest("[data-date]")?.dataset.date);
+			if (!day) continue;
+			const badge = document.createElement("span");
+			badge.className = "fjtc-day-weather";
+			const icon = document.createElement("span");
+			icon.className = "fjtc-day-weather-icon";
+			icon.textContent = fengjingWeatherIcon(day.weather_code);
+			const temperature = document.createElement("span");
+			temperature.textContent = `${Math.round(Number(day.temperature_min_c))}～${Math.round(Number(day.temperature_max_c))}°`;
+			badge.append(icon, temperature);
+			badge.title = [place, day.kind === "history" ? "历史天气" : "天气预报", day.description,
+				`最低 ${day.temperature_min_c}°C / 最高 ${day.temperature_max_c}°C`,
+				day.precipitation_probability_pct != null ? `降水概率 ${day.precipitation_probability_pct}%` : "",
+				day.wind_speed_max_kmh != null ? `最大风速 ${day.wind_speed_max_kmh} km/h` : "",
+				`数据：${day.source_name || "天气服务"}`,
+			].filter(Boolean).join(" · ");
+			label.insertBefore(badge, label.lastChild);
 		}
 	}
 
@@ -1287,6 +1568,7 @@ class FengjingTeamCalendarPage {
 	}
 
 	updateCityClocks() {
+		this.updateBeijingDate();
 		const now = new Date();
 		for (const clock of this.container.querySelectorAll(".fjtc-city-clock")) {
 			const zone = clock.dataset.timeZone;
@@ -1328,8 +1610,9 @@ class FengjingTeamCalendarPage {
 		}
 	}
 
+
 	startCityClock() {
-		if (this.clockTimer || !this.timeCities.size || !this.pageVisible || this.viewMode !== "calendar") return;
+		if (this.clockTimer || !this.pageVisible || this.viewMode !== "calendar") return;
 		this.clockTimer = window.setInterval(() => this.updateCityClocks(), 1000);
 	}
 
