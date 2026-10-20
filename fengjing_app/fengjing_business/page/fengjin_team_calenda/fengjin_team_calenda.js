@@ -1,9 +1,10 @@
 const FENGJING_CALENDAR_METHOD =
 	"fengjing_app.fengjing_business.page.fengjin_team_calenda.fengjin_team_calenda";
 const FENGJING_CALENDAR_MAP_FILES = {
-	countries: "/assets/fengjing_app/data/Vector_map/国家边界ne_10m_admin_0_countries/ne_10m_admin_0_countries.geojson",
+	countries: "/assets/fengjing_app/data/Vector_map/国家边界ne_10m_admin_0_countries_chn/ne_10m_admin_0_countries_chn.geojson",
 	regions: "/assets/fengjing_app/data/Vector_map/省州边界ne_10m_admin_1_states_provinces/ne_10m_admin_1_states_provinces.geojson",
 	cities: "/assets/fengjing_app/data/Vector_map/城市位置ne_10m_populated_places/ne_10m_populated_places.geojson",
+	taiwanProvince: "/assets/fengjing_app/data/Vector_map/国家边界ne_10m_admin_0_countries_chn/taiwan_province.geojson",
 };
 const FENGJING_CALENDAR_REGION_ALIASES = {
 	"CN-NM": "Nei Mongol",
@@ -14,6 +15,10 @@ const FENGJING_CALENDAR_REGION_ALIASES = {
 };
 const FENGJING_CALENDAR_CITY_REGION_OVERRIDES = {
 	"1159150819": "CN-QH", // Natural Earth mistakenly lists Xining under Gansu.
+};
+const FENGJING_CALENDAR_CHINA_SPECIAL_REGIONS = {
+	HKG: { key: "CN-HK", name: "香港特别行政区", name_en: "Hong Kong" },
+	MAC: { key: "CN-MO", name: "澳门特别行政区", name_en: "Macau" },
 };
 
 frappe.pages["fengjin_team_calenda"].on_page_load = function (wrapper) {
@@ -334,22 +339,35 @@ class FengjingTeamCalendarPage {
 		this.$main.find(".fjtc-map-breadcrumb").text(`世界 / ${country.properties.name}`);
 		this.setMapStatus(`正在加载${country.properties.name}的省州和城市…`);
 		try {
-			const [regions, cities] = await Promise.all([
+			const isChina = country.properties.ADM0_A3 === "CHN";
+			const [regions, cities, taiwanProvince] = await Promise.all([
 				this.loadMapData("regions"),
 				this.loadMapData("cities"),
+				isChina ? this.loadMapData("taiwanProvince") : Promise.resolve(null),
 			]);
 			if (token !== this.countryLoadToken || this.viewMode !== "settings") return;
 			const iso2 = country.properties.ISO_A2;
 			const iso3 = country.properties.ADM0_A3;
+			const specialRegions = isChina ? [...this.countryLookup.values()].flatMap((feature) => {
+				const region = FENGJING_CALENDAR_CHINA_SPECIAL_REGIONS[feature.properties.ADM0_A3];
+				return region ? [{
+					type: "Feature",
+					properties: { ...region, iso_a2: "CN", adm0_a3: "CHN",
+						iso_3166_2: region.key, ne_id: region.key, NE_ID: region.key },
+					geometry: feature.geometry,
+				}] : [];
+			}) : [];
 			const countryRegions = regions.features.filter((feature) =>
 				feature.properties.iso_a2 === iso2 || feature.properties.adm0_a3 === iso3
-			).map((feature) => {
+			).concat(taiwanProvince?.features || [], specialRegions).map((feature) => {
 				const key = String(feature.properties.NE_ID ?? feature.properties.ne_id);
 				this.regionLookup.set(key, feature);
 				return { ...feature, properties: { ...feature.properties, name: key } };
 			});
 			const countryCities = cities.features.filter((feature) =>
-				feature.properties.ISO_A2 === iso2 || feature.properties.ADM0_A3 === iso3
+				feature.properties.ISO_A2 === iso2 || feature.properties.ADM0_A3 === iso3 ||
+				(isChina && (feature.properties.ADM0_A3 === "TWN" ||
+					FENGJING_CALENDAR_CHINA_SPECIAL_REGIONS[feature.properties.ADM0_A3]))
 			);
 			for (const city of countryCities) this.cityLookup.set(String(city.properties.NE_ID), city);
 			const mapName = `fjtc-country-${country.properties.NE_ID}`;
@@ -371,7 +389,9 @@ class FengjingTeamCalendarPage {
 			for (const city of countryCities) {
 				if (!Number.isFinite(Number(city.properties.LONGITUDE)) || !Number.isFinite(Number(city.properties.LATITUDE))) continue;
 				const cityKey = String(city.properties.NE_ID);
-				const regionKey = (FENGJING_CALENDAR_CITY_REGION_OVERRIDES[cityKey]
+				const regionKey = (isChina && (city.properties.ADM0_A3 === "TWN" ? "CN-TW"
+					: FENGJING_CALENDAR_CHINA_SPECIAL_REGIONS[city.properties.ADM0_A3]?.key)) ||
+					(FENGJING_CALENDAR_CITY_REGION_OVERRIDES[cityKey]
 					? [...this.regionLookup.values()].find((region) =>
 						region.properties.iso_3166_2 === FENGJING_CALENDAR_CITY_REGION_OVERRIDES[cityKey])?.properties.ne_id
 					: null) || this.regionAtPoint(regionSpatialIndex,
