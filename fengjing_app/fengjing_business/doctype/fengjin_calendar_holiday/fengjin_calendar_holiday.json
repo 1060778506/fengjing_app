@@ -1,0 +1,153 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "hash",
+ "creation": "2026-10-20 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "country_code",
+  "country_name",
+  "holiday_date",
+  "day_type",
+  "holiday_name",
+  "local_name",
+  "english_name",
+  "scope",
+  "region_code",
+  "region_name",
+  "source_name",
+  "source_url",
+  "source_updated_at",
+  "verification_status",
+  "notes",
+  "record_key"
+ ],
+ "fields": [
+  {
+   "description": "ISO 3166-1 两位国家代码，例如 CN、US。",
+   "fieldname": "country_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "国家代码",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "country_name",
+   "fieldtype": "Data",
+   "label": "国家名称"
+  },
+  {
+   "fieldname": "holiday_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "日期",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "节假日",
+   "description": "补班工作日用于记录中国等国家的周末调休上班日期。",
+   "fieldname": "day_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "日期类型",
+   "options": "节假日\n补班工作日",
+   "reqd": 1
+  },
+  {
+   "fieldname": "holiday_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "中文名称",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "local_name",
+   "fieldtype": "Data",
+   "label": "当地名称"
+  },
+  {
+   "fieldname": "english_name",
+   "fieldtype": "Data",
+   "label": "英文名称"
+  },
+  {
+   "default": "全国",
+   "fieldname": "scope",
+   "fieldtype": "Select",
+   "label": "适用范围",
+   "options": "全国\n省州"
+  },
+  {
+   "description": "省州假日适用的地区代码；全国假日留空。",
+   "fieldname": "region_code",
+   "fieldtype": "Data",
+   "label": "省州代码"
+  },
+  {
+   "fieldname": "region_name",
+   "fieldtype": "Data",
+   "label": "省州名称"
+  },
+  {
+   "fieldname": "source_name",
+   "fieldtype": "Data",
+   "label": "数据来源"
+  },
+  {
+   "fieldname": "source_url",
+   "fieldtype": "Small Text",
+   "label": "来源链接"
+  },
+  {
+   "fieldname": "source_updated_at",
+   "fieldtype": "Datetime",
+   "label": "来源核对时间"
+  },
+  {
+   "default": "待核对",
+   "fieldname": "verification_status",
+   "fieldtype": "Select",
+   "label": "核对状态",
+   "options": "待核对\n已核对"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "备注"
+  },
+  {
+   "description": "预留给后续同步程序，防止同一来源的同一日期重复写入。",
+   "fieldname": "record_key",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "记录唯一键",
+   "unique": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-20 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Fengjin Calendar Holiday",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "holiday_date",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "holiday_name"
+}

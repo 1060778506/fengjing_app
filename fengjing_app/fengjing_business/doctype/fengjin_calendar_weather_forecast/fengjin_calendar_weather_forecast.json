@@ -1,0 +1,172 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-20 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "city_key",
+  "country_code",
+  "region_name",
+  "city_name",
+  "latitude",
+  "longitude",
+  "timezone",
+  "forecast_date",
+  "forecast_issued_at",
+  "fetched_at",
+  "weather_code",
+  "weather_description",
+  "temperature_min_c",
+  "temperature_max_c",
+  "precipitation_probability_pct",
+  "precipitation_sum_mm",
+  "source_name",
+  "model_name",
+  "raw_json",
+  "record_key"
+ ],
+ "fields": [
+  {
+   "description": "地图数据中城市的稳定编号；同一城市的天气由所有用户共享。",
+   "fieldname": "city_key",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "城市编号",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "country_code",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "国家代码",
+   "search_index": 1
+  },
+  {
+   "fieldname": "region_name",
+   "fieldtype": "Data",
+   "label": "省州名称"
+  },
+  {
+   "fieldname": "city_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "城市",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "latitude",
+   "fieldtype": "Float",
+   "label": "纬度"
+  },
+  {
+   "fieldname": "longitude",
+   "fieldtype": "Float",
+   "label": "经度"
+  },
+  {
+   "description": "城市的 IANA 时区，例如 Asia/Shanghai。预报日期按此时区解释。",
+   "fieldname": "timezone",
+   "fieldtype": "Data",
+   "label": "城市时区"
+  },
+  {
+   "fieldname": "forecast_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "预报日期",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "description": "天气服务提供的预报发布时间；无此信息时可留空。",
+   "fieldname": "forecast_issued_at",
+   "fieldtype": "Datetime",
+   "label": "预报发布时间"
+  },
+  {
+   "fieldname": "fetched_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "获取时间"
+  },
+  {
+   "description": "保留天气服务返回的原始天气代码，供以后选择图标。",
+   "fieldname": "weather_code",
+   "fieldtype": "Int",
+   "label": "天气代码"
+  },
+  {
+   "fieldname": "weather_description",
+   "fieldtype": "Data",
+   "label": "天气描述"
+  },
+  {
+   "fieldname": "temperature_min_c",
+   "fieldtype": "Float",
+   "label": "最低温度 ℃"
+  },
+  {
+   "fieldname": "temperature_max_c",
+   "fieldtype": "Float",
+   "label": "最高温度 ℃"
+  },
+  {
+   "fieldname": "precipitation_probability_pct",
+   "fieldtype": "Percent",
+   "label": "降水概率 %"
+  },
+  {
+   "fieldname": "precipitation_sum_mm",
+   "fieldtype": "Float",
+   "label": "预计降水量 mm"
+  },
+  {
+   "fieldname": "source_name",
+   "fieldtype": "Data",
+   "label": "天气数据来源"
+  },
+  {
+   "fieldname": "model_name",
+   "fieldtype": "Data",
+   "label": "预报模型"
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Code",
+   "label": "来源原始数据",
+   "options": "JSON"
+  },
+  {
+   "description": "预留给后续同步程序，可按城市、预报日期和发布时间生成。",
+   "fieldname": "record_key",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "记录唯一键",
+   "unique": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-20 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Fengjin Calendar Weather Forecast",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "forecast_date",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "city_name"
+}
