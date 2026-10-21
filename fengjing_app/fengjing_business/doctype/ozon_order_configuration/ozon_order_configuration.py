@@ -247,6 +247,15 @@ def _financial_product(posting, sku, product_id):
 	return {}
 
 
+def _money_amount(value):
+	"""Read both legacy scalar prices and current Ozon money objects."""
+	if isinstance(value, dict):
+		if "amount" not in value:
+			raise ValueError("Ozon money object has no amount")
+		value = value["amount"]
+	return flt(value)
+
+
 def _line_key(store, fulfillment_type, posting_number, sku, offer_id, product_id):
 	identity = "|".join(
 		str(value or "").strip()
@@ -352,8 +361,14 @@ def _save_order(posting, store, ozon_id, fulfillment_type, sync_type):
 		product_id = str(first.get("product_id") or sku or "").strip()
 		financial = _financial_product(posting, sku, product_id)
 		quantity = sum(cint(row.get("quantity")) for row in product_rows)
-		unit_price = flt(first.get("price") or financial.get("price"))
-		currency = first.get("currency_code") or financial.get("currency_code")
+		price = first.get("price") if first.get("price") is not None else financial.get("price")
+		unit_price = _money_amount(price)
+		currency = first.get("currency_code") or (
+			price.get("currency") if isinstance(price, dict) else financial.get("currency_code")
+		)
+		commission = financial.get("commission_amount")
+		if commission is None:
+			commission = financial.get("commission")
 		item_code, item_name, item_image = _find_corresponding_item(store, sku, offer_id, product_id)
 		unique_key = _line_key(store, fulfillment_type, posting_number, sku, offer_id, product_id)
 		line_data = {
@@ -368,10 +383,13 @@ def _save_order(posting, store, ozon_id, fulfillment_type, sync_type):
 			"corresponding_item_image": item_image,
 			"currency_code": currency,
 			"unit_price": unit_price,
-			"line_amount": sum(flt(row.get("price")) * cint(row.get("quantity")) for row in product_rows),
+			"line_amount": sum(
+				_money_amount(row.get("price") if row.get("price") is not None else financial.get("price"))
+				* cint(row.get("quantity")) for row in product_rows
+			),
 			"quantity": quantity,
-			"commission_amount": flt(financial.get("commission_amount")) if "commission_amount" in financial else None,
-			"payout_amount": flt(financial.get("payout")) if "payout" in financial else None,
+			"commission_amount": _money_amount(commission) if commission is not None else None,
+			"payout_amount": _money_amount(financial["payout"]) if "payout" in financial else None,
 		}
 		line_data = {key: value for key, value in line_data.items() if value not in (None, "")}
 		existing_name = _find_existing_order_line(
@@ -395,18 +413,19 @@ def _save_order(posting, store, ozon_id, fulfillment_type, sync_type):
 
 def _query_fbs_window(store, sync_label, start_utc, end_utc):
 	summary = _empty_summary()
-	offset = 0
-	limit = 1000
+	cursor = ""
+	seen_cursors = {cursor}
+	limit = 100
 	while True:
 		response = ozon_seller_request(
 			store,
 			"POST",
-			"/v3/posting/fbs/list",
+			"/v4/posting/fbs/list",
 			json_data={
-				"dir": "ASC",
+				"sort_dir": "asc",
 				"filter": {"since": _ozon_datetime(start_utc), "to": _ozon_datetime(end_utc)},
 				"limit": limit,
-				"offset": offset,
+				"cursor": cursor,
 				"with": {
 					"analytics_data": True,
 					"barcodes": True,
@@ -421,8 +440,9 @@ def _query_fbs_window(store, sync_label, start_utc, end_utc):
 			status = response.status_code if response is not None else "no response"
 			raise RuntimeError(f"Ozon FBS orders API failed (HTTP {status}): {response_error_summary(response)}")
 		payload = response.json() or {}
-		result = payload.get("result") or {}
-		postings = result.get("postings") or []
+		if not isinstance(payload, dict) or not isinstance(payload.get("postings"), list):
+			raise RuntimeError("Ozon FBS API returned an invalid postings response")
+		postings = payload["postings"]
 		for posting in postings:
 			save_result = _save_order(
 				posting,
@@ -435,28 +455,32 @@ def _query_fbs_window(store, sync_label, start_utc, end_utc):
 		frappe.db.commit()
 		summary["pages"] += 1
 		summary["postings"] += len(postings)
-		if not result.get("has_next"):
+		if not payload.get("has_next"):
 			break
 		if not postings:
 			raise RuntimeError("Ozon FBS API returned has_next but the current page is empty")
-		offset += len(postings)
+		cursor = payload.get("cursor")
+		if not cursor or cursor in seen_cursors:
+			raise RuntimeError("Ozon FBS API returned has_next without a new cursor")
+		seen_cursors.add(cursor)
 	return summary
 
 
 def _query_fbo_window(store, sync_label, start_utc, end_utc):
 	summary = _empty_summary()
-	offset = 0
-	limit = 1000
+	cursor = ""
+	seen_cursors = {cursor}
+	limit = 100
 	while True:
 		response = ozon_seller_request(
 			store,
 			"POST",
-			"/v2/posting/fbo/list",
+			"/v3/posting/fbo/list",
 			json_data={
-				"dir": "ASC",
+				"sort_dir": "asc",
 				"filter": {"since": _ozon_datetime(start_utc), "to": _ozon_datetime(end_utc)},
 				"limit": limit,
-				"offset": offset,
+				"cursor": cursor,
 				"translit": True,
 				"with": {"analytics_data": True, "financial_data": True},
 			},
@@ -467,13 +491,9 @@ def _query_fbo_window(store, sync_label, start_utc, end_utc):
 			status = response.status_code if response is not None else "no response"
 			raise RuntimeError(f"Ozon FBO orders API failed (HTTP {status}): {response_error_summary(response)}")
 		payload = response.json() or {}
-		result = payload.get("result") or []
-		if isinstance(result, dict):
-			postings = result.get("postings") or []
-			has_next = bool(result.get("has_next"))
-		else:
-			postings = result if isinstance(result, list) else []
-			has_next = len(postings) >= limit
+		if not isinstance(payload, dict) or not isinstance(payload.get("postings"), list):
+			raise RuntimeError("Ozon FBO API returned an invalid postings response")
+		postings = payload["postings"]
 		for posting in postings:
 			save_result = _save_order(
 				posting,
@@ -486,11 +506,14 @@ def _query_fbo_window(store, sync_label, start_utc, end_utc):
 		frappe.db.commit()
 		summary["pages"] += 1
 		summary["postings"] += len(postings)
-		if not has_next:
+		if not payload.get("has_next"):
 			break
 		if not postings:
 			raise RuntimeError("Ozon FBO API requires another page but the current page is empty")
-		offset += len(postings)
+		cursor = payload.get("cursor")
+		if not cursor or cursor in seen_cursors:
+			raise RuntimeError("Ozon FBO API returned has_next without a new cursor")
+		seen_cursors.add(cursor)
 	return summary
 
 
@@ -819,4 +842,3 @@ def run_scheduled_order_sync():
 启动Ozon历史订单同步 = start_history_sync
 启动Ozon最新订单同步 = start_incremental_sync
 定时执行Ozon订单同步 = run_scheduled_order_sync
-
