@@ -13087,3 +13087,1896 @@ Amazon Advertising Product Daily,亚马逊广告商品SKU/ASIN日报
 Amazon Advertising Targeting Daily,亚马逊关键词、搜索词和商品定向日报
 Amazon Advertising Placement Daily,亚马逊广告位置日报
 Amazon Advertising Purchased Product Daily,亚马逊实际购买商品日报
+" Enable this if you want the bot to be able to process files like Excel sheets or data from Insights.
+                    <br>
+                    OpenAI Assistants run code in a sandboxed environment (on OpenAI servers) to do this.","如果您希望机器人能够处理 Excel 工作表或 Insights 中的数据等文件，请启用此选项。
+                    <br>
+                    OpenAI 助手在沙盒环境（在 OpenAI 服务器上）中运行代码来执行此操作。"
+"## Adding Users
+
+To access Raven, users need to have the **Raven User** role.
+
+Go to the ""Users"" list and add the role to the users you want on Raven.","## 添加用户
+
+要访问 Raven，用户需要具有 **Raven User** 角色。
+
+转到“用户”列表并将角色添加到 Raven 上所需的用户。"
+"## Channels
+
+Raven helps you and your team communicate with each other.
+
+Conversation happen in **channels**. 
+
+All users who have access to Raven can view and send messages in **Open** channels. 
+
+**Public** channels are visible to everyone, but only members can take send messages in them. Any user can join public channels. 
+
+**Private** channels are only visible to members and new members can only be added by the channel admin - which is the creator of the channel. 
+
+You could also send messages to other users privately via **Direct messages** - including yourself!
+
+A user could create as many channels and add as many users as they want to in them. ","## 频道
+
+Raven 帮助您和您的团队相互沟通。
+
+对话发生在**频道**。 
+
+所有有权访问 Raven 的用户都可以在 **Open** 频道中查看和发送消息。 
+
+**公共**频道对所有人可见，但只有成员可以在其中发送消息。任何用户都可以加入公共频道。 
+
+**私人**频道仅对成员可见，并且新成员只能由频道管理员（即频道的创建者）添加。 
+
+您还可以通过**私信**私下向其他用户发送消息 - 包括您自己！
+
+用户可以创建任意数量的频道并在其中添加任意数量的用户。"
+"## Raven Settings
+
+
+<em>**Automatically adding users to Raven**</em>
+
+To make it easy for you, the Raven User role is assigned to any user who has access to Desk. If you wish to turn this off, please head to Raven Settings.","## Raven设置
+
+
+<em>**自动将用户添加到 Raven**</em>
+
+为了方便您使用，Raven 用户角色被分配给任何有权访问 Desk 的用户。如果您想关闭此功能，请前往 Raven 设置。"
+"### Access the web and mobile apps
+
+
+Raven is available at <a href=""/raven"">**/raven**</a> for both web and mobile. On mobile, Raven can be installed as a PWA.","### 访问网络和移动应用程序
+
+
+Raven 可在 <a href=""/raven"">**/raven**</a> 上使用，适用于网络和移动设备。在移动设备上，Raven 可以作为 PWA 安装。"
+(Default: 1),（默认值：1）
+(required),（必填）
+1 Option,1 个选项
+1 attachment,1 个附件
+1 channel,1 个频道
+1 link blocked,1 个链接被阻止
+1 member added,已添加 1 名成员
+1 member selected,已选定 1 名成员
+1 reply,1 条回复
+1 site,1 个站点
+1 vote,1 票
+12 Hour (e.g. 2:00 PM),12 小时（例如下午 2:00）
+12-hour,12小时
+"128px × 128px PNG, SVG or GIF recommended.",建议使用 128 像素 × 128 像素 PNG、SVG 或 GIF。
+24 Hour (e.g. 14:00),24 小时（例如 14:00）
+24-hour,24小时
+"<p>To disable the user from accessing Raven, go to ""Users"" and remove the ""Raven User"" role.</p>",<p>要禁止用户访问 Raven，请转到“用户”并删除“Raven 用户”角色。</p>
+"<span class=""h4""><a href=""/raven"">Raven</a></span>","<span class=""h4""><a href=""/raven"">Raven</a></span>"
+A bot to handle accounts,处理账户的机器人
+A channel is created per department and employees are synced as members.,每个部门创建一个频道，并将员工同步为成员。
+A channel with this name already exists in the target workspace,目标工作区中已存在具有此名称的频道
+A channel with this name already exists in this workspace.,此工作区中已存在具有此名称的频道。
+A group with this name already exists,同名的组已存在
+A new update is available.,有新的更新可用。
+A new version of the app is available. Refresh to load it - some things may not work until you do.,该应用程序有新版本可用。刷新以加载它 - 有些事情在您完成之前可能无法正常工作。
+A piece of craft by Frappe.,Frappe 精心打造。
+"A row blocks its whole domain. Tick Exact to block just that one URL - like ""frappe.io"" can be blocked without losing previews on ""frappe.io/blog"".",一行阻挡了它的整个域。勾选“精确”即可仅阻止一个 URL - 例如“frappe.io”可以被阻止，而不会丢失“frappe.io/blog”上的预览。
+A scheduled message failed to send.,预定消息发送失败。
+AI,人工智能
+"AI Agents can use files as data sources to get more context, read instructions and execute tasks.",AI 智能体可以使用文件作为数据源来获取更多上下文、读取指令和执行任务。
+AI Instruction Templates,AI教学模板
+AI Integration is not enabled,AI 集成未启用
+AI Settings,人工智能设置
+AI threads will appear here when you start conversations with an AI bot.,开始与 AI 机器人对话后，AI 话题会显示在这里。
+API Docs,API文档
+API Key cannot be more than 140 characters.,API 密钥不能超过 140 个字符。
+API URL,API网址
+Access them by right clicking any message and selecting,通过右键单击任何消息并选择来访问它们
+Access updated,访问已更新
+Action Type is required,操作类型为必填项
+Action completed,行动已完成
+Actions for this message,针对此消息的操作
+Actions for this reminder,针对此提醒的操作
+Active Processors ({0}),活动处理器 ({0})
+Add 1 member,添加 1 名成员
+Add Emoji,添加表情符号
+Add Field,添加字段
+Add Function,添加功能
+Add Members,添加成员
+Add Recipient,添加收件人
+Add Users to Raven,将用户添加到 Raven
+Add Variable,添加变量
+Add a Webhook Secret so Raven can sign requests. An X-Frappe-Webhook-Signature header (a base64 HMAC-SHA256 of the payload) is added before the request is sent. Do not share the secret publicly.,添加 Webhook Secret，以便 Raven 可以签署请求。在发送请求之前添加 X-Frappe-Webhook-Signature 标头（有效负载的 base64 HMAC-SHA256）。不要公开分享这个秘密。
+Add a custom emoji to use in your chats and reactions.,添加自定义表情符号以在聊天和表情回应中使用。
+Add a description to help others understand what this channel is for...,添加描述以帮助其他人了解此频道的用途...
+Add a new option on a new line.,在新行添加新选项。
+Add a new variable in the function.,在函数中添加一个新变量。
+Add a new variable to your function schema.,将新变量添加到您的函数架构中。
+Add actions that allow you to create documents or make API calls from the contents of a message - like creating a support ticket or project issue from a message sent in a channel.,添加允许您创建文档或从消息内容进行 API 调用的操作 - 例如从频道中发送的消息创建支持票证或项目问题。
+"Add custom emojis to use for your reactions. PNG, SVG and GIFs supported.",添加自定义表情符号以用于您的表情回应。支持 PNG、SVG 和 GIF。
+Add files that can be used by AI Agents.,添加 AI 智能体可以使用的文件。
+Add functions that the bot can use to create or update documents in the system.,添加机器人可用于在系统中创建或更新文档的功能。
+Add link,添加链接
+Add members,添加成员
+Add members to your workspace.,将成员添加到您的工作区。
+Add option,添加选项
+Add options on new lines,在新行上添加选项
+Add options separated by a new line.,添加由新行分隔的选项。
+Add reaction,添加表情回应
+Add site,添加站点
+Add the headers you want to send with the request.,添加您想要随请求一起发送的标头。
+Add to Favorites,添加到收藏夹
+Add users,添加用户
+Add {0} members,添加 {0} 个成员
+Adding members...,添加成员...
+Adding...,添加...
+Admin,管理员
+Admin added,管理员已添加
+Admin removed,管理员已删除
+Admin rights removed,管理员权限已删除
+Admins,管理员
+Afternoon,下午
+Agent is required.,需要智能体。
+Agents,智能体
+All Notifications,所有通知
+All activity,所有活动
+All attachments sent together will be forwarded.,所有一起发送的附件都将被转发。
+All files shared in this channel will become private and will be accessible only to the channel members,此频道中共享的所有文件都将变为私有，并且只有频道成员才能访问
+All members,所有成员
+All members removed from selection,所有成员均已从选择中删除
+All messages,所有消息
+"All messages, including files and images will be removed",所有消息，包括文件和图像都将被删除
+Allow Agent to Write Documents,允许智能体撰写文件
+Allow Bot to Write Documents,允许机器人写入文档
+Allow multiple choices,允许多项选择
+Alphabetical,按字母顺序
+Alphabetical Order,按字母顺序排列
+Always send silently,总是默默发送
+"An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. So 0.1 means only the tokens comprising the top 10% probability mass are considered.
+
+We generally recommend altering this or temperature but not both.","温度采样的替代方法称为核采样，其中模型考虑具有 top_p 概率质量的标记的结果。因此 0.1 意味着仅考虑包含前 10% 概率质量的标记。
+
+我们通常建议更改此值或温度，但不能同时更改两者。"
+"An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. So 0.1 means only the tokens comprising the top 10% probability mass are considered.\n\nWe generally recommend altering this or temperature but not both.",温度采样的替代方法称为核采样，其中模型考虑具有 top_p 概率质量的标记的结果。因此 0.1 表示仅考虑包含前 10% 概率质量的标记。\n\n我们通常建议更改此值或温度，但不要同时更改两者。
+An invite will be sent on their email.,邀请将通过他们的电子邮件发送。
+Anonymous,匿名
+Anonymous poll,匿名投票
+Any,任意
+Any Channel,任意频道
+Any channel,任意频道
+Any source,任何来源
+Any type,任何类型
+Anyone,任何人
+Anyone can view but is not a member by default,任何人都可以查看，但默认不是成员
+Anyone from your organisation can join this channel and view its message history.,您组织中的任何人都可以加入此频道并查看其消息历史记录。
+Apple Music,苹果音乐
+Apple Podcasts,苹果播客
+Archive channel,存档频道
+Archiving,归档
+Are you sure you want to delete the file,您确定要删除该文件吗
+"Are you sure you want to delete this workspace? If you proceed, all channels, threads and messages within the workspace will be deleted. This action cannot be undone.",您确定要删除此工作区吗？如果继续，工作区中的所有频道、话题和消息都将被删除。此操作无法撤消。
+Are you sure you want to delete {0}?,您确定要删除 {0} 吗？
+Are you sure you want to log out of your account?,您确定要退出您的帐户吗？
+Are you sure you want to unarchive ,您确定要取消存档吗
+Array,数组
+Ask a question and add options for people to vote on.,提出问题并添加选项供人们投票。
+At least 2 options are required,至少需要2个选项
+At what time?,什么时间？
+Attach ({0}),附加 ({0})
+Attach File to Document,将文件附加到文档
+Attach document from other apps,附加来自其他应用程序的文档
+Attach file,附加文件
+Attach file to document,将文件附加到文档
+Attach files to document,将文件附加到文档
+"Attach files, polls and more",附加文件、投票等
+Attach to document,附加到文档
+Attached to {0},附于{0}
+Attendance and Leaves,出勤和请假
+Audio,音频
+Auto Fill Options,自动填充选项
+Auto Silent,自动静音
+Automatically Create a Channel for each Department,自动为每个部门创建频道
+Automatically add system users to Raven,自动将系统用户添加到Raven
+Availability,可用性
+Availability Status,可用性状态
+Back to agents,返回智能体
+Back to channels,返回频道
+Back to functions,返回功能
+Back to instruction templates,返回说明模板
+Back to message actions,返回消息操作
+Back to notifications,返回通知
+Back to scheduled messages,返回预定消息
+Back to webhooks,返回Webhook
+Back to workspaces,返回工作区
+Block only this exact URL instead of the whole domain,仅阻止这个确切的 URL，而不是整个域
+Blocked Links,被阻止的链接
+Blocked link previews,阻止的链接预览
+Blurhash,模糊哈希
+Boolean,布尔值
+Bot Functions,机器人功能
+Bot Name,机器人名称
+Bot is mandatory,机器人是强制性的
+Bot model is not configured,机器人模型未配置
+Bots,机器人
+Bots + Functions = AI Magic,机器人 + 功能 = AI 魔法
+Bots can be used to send messages to channels with HTML formatted content.,机器人可用于向具有 HTML 格式内容的频道发送消息。
+Browse and manage every channel in this workspace.,浏览和管理此工作区中的每个频道。
+Bulk Operations,批量操作
+CRON Expression,CRON 表达式
+Can Write Documents,可以写文档
+Can be HTML/Markdown/Plain Text. Support Jinja tags,可以是 HTML/Markdown/纯文本。支持 Jinja 标签
+Can only join via invite?,只能通过邀请加入吗？
+Cancel Document,取消文件
+Cancel reply,取消回复
+Cannot select the same option multiple times.,无法多次选择同一选项。
+Cannot send an empty message,无法发送空消息
+Change double-tap reaction,更改双击表情回应
+Change logo,更改标志
+Change organization's working hours,更改组织的工作时间
+Change photo,更改照片
+Change quick emoji {0},更改快速表情符号 {0}
+Change to a {0} channel?,更改为 {0} 频道？
+Change to {0},更改为{0}
+Channel Created,频道已创建
+Channel Deleted,频道已删除
+Channel Description,频道说明
+Channel Details,频道详情
+Channel Group,频道分组
+Channel Groups,频道组
+Channel ID,频道号
+Channel Member Added,已添加频道成员
+Channel Member Deleted,频道成员已删除
+Channel Members,频道成员
+Channel Name,频道名称
+Channel Type,频道类型
+Channel Type cannot be triggered on other doctypes,频道类型无法在其他文档类型上触发
+Channel cannot be triggered on User,无法在用户上触发频道
+Channel changed to {0},频道更改为{0}
+Channel created,频道已创建
+Channel description,频道说明
+Channel details,频道详情
+Channel in {0},{0} 中的频道
+Channel information and settings,频道信息和设置
+Channel is required.,需要频道。
+Channel name,频道名称
+"Channel name can only contain letters, numbers and hyphens.",频道名称只能包含字母、数字和连字符。
+Channel name cannot be less than 3 characters.,频道名称不能少于 3 个字符。
+Channel name cannot be more than 50 characters.,频道名称不能超过 50 个字符。
+Channel options,频道选项
+Channel type,频道类型
+Channel updated,频道已更新
+Channel {0} deleted,频道 {0} 已删除
+Channel {0} does not exist in Raven.,Raven 中不存在频道 {0}。
+Channels,频道
+Channels and lists,频道和列表
+Channels in this workspace will show up here.,此工作区中的频道将显示在此处。
+Channels with no activity in the last 30 days will be hidden from the sidebar automatically.,过去 30 天内没有活动的频道将自动从侧边栏隐藏。
+Chaos is a ladder.,混沌是一个阶梯。
+Chat Layout,聊天布局
+Chat Style,聊天风格
+Chat style updated,聊天风格更新
+Check this if the function you have selected requires write permissions.,如果您选择的功能需要写入权限，请选中此项。
+Check to enable AI features for this bot,检查以启用此机器人的 AI 功能
+Checkbox,复选框
+Checking this will allow the bot to create/update/delete documents in the system.,检查此项将允许机器人在系统中创建/更新/删除文档。
+Checking this will remove channels without any activity in the last 30 days from the sidebar. ,选中此项将从侧边栏删除过去 30 天内没有任何活动的频道。
+Child Table Name,子表名称
+Child Table:,子表：
+Child table {0} is not a valid doctype,子表 {0} 不是有效的文档类型
+Child table {0} not found in {1},在 {1} 中找不到子表 {0}
+Choose a direct message from the sidebar to start chatting.,从侧边栏中选择一条私信即可开始聊天。
+Choose a document from the system to send with your message.,从系统中选择一个文档以与您的消息一起发送。
+"Choose a name and type for your channel, then add members.",为您的频道选择名称和类型，然后添加成员。
+Choose an existing document processor for this bot. Processors can be shared across multiple bots.,为此机器人选择现有的文档处理器。处理器可以在多个机器人之间共享。
+Choose how to sort channels in the sidebar.,选择如何对侧边栏中的频道进行排序。
+Choose how you appear to others,选择您在他人眼中的形象
+Choose what Raven should do when you message someone outside working hours ({0}). Silent messages don't ping anyone - they'll see it when they're back.,选择当您在工作时间 ({0}) 之外向某人发送消息时 Raven 应执行的操作。无声消息不会通知任何人 - 他们回来后会看到它。
+Choose where to forward this message.,选择将此消息转发到哪里。
+Choose whether to display times in 12-hour or 24-hour format.,选择是以 12 小时还是 24 小时格式显示时间。
+Choose whether to send a message or start a new line when pressing the Enter key.,选择按 Enter 键时是发送消息还是开始新行。
+Choose workspaces based on companies,根据公司选择工作区
+Clear all,全部清除
+Clear filter,清除过滤器
+Clear search,清除搜索
+Click to apply these emojis as your quick reactions,单击以应用这些表情符号作为您的快速表情回应
+Click to copy,点击复制
+Click to pause,点击暂停
+Click to play,点击播放
+Click to preview,点击预览
+Close poll,关闭投票
+Close the channel to new messages and hide it from your list,关闭新消息的频道并将其从列表中隐藏
+"Close the open thread, drawer or panel. In the message box, cancel the reply.",关闭打开的螺纹、抽屉或面板。在消息框中取消回复。
+Close this poll automatically,自动关闭此投票
+Close this poll?,关闭此投票？
+Close thread,关闭话题
+Closing...,关闭...
+Code Interpreter,代码解释器
+Collapse message,折叠消息
+Command Menu,命令菜单
+Command menu,命令菜单
+Command palette,命令面板
+Commands,命令
+Company Workspace Mapping,公司工作区映射
+Company in Row {0},第 {0} 行的公司
+Company is required,公司为必填项
+Composer actions,消息编辑操作
+Condition is required,需要条件
+Conditions On,条件开启
+Configure AI providers to use AI features in Raven.,配置 AI 提供程序以使用 Raven 中的 AI 功能。
+Configure alerts to be sent to users or channels when documents are updated in the system.,配置在系统中更新文档时发送给用户或频道的警报。
+Configure behavior and preferences.,配置行为和偏好。
+Configure how you want Raven to look.,配置您希望 Raven 的外观。
+Configure the push notification service here.,在此配置推送通知服务。
+Configure {0},配置{0}
+Connect your HR system to Raven to sync employee data and send notifications.,将您的 HR 系统连接到 Raven 以同步员工数据并发送通知。
+Connection successful!,连接成功！
+Connection to OpenAI API failed. Please check your Organization ID and API Key for any extra spaces. Error: {0},连接 OpenAI API 失败。请检查您的组织 ID 和 API 密钥是否有多余空格。错误：{0}
+Contact Number,联系电话
+Content (plain text),内容（纯文本）
+Conversation not found,找不到对话
+Copied meeting ID,复制的会议 ID
+Copied to clipboard,已复制到剪贴板
+Copied {0},已复制 {0}
+Copied!,复制了！
+Copy ID,复制 ID
+Copy code,复制代码
+Copy file link,复制文件链接
+Copy link,复制链接
+Copy message link,复制消息链接
+Copy variable,复制变量
+Could not add function,无法添加功能
+Could not apply workflow action,无法应用工作流程操作
+Could not attach file,无法附加文件
+Could not close the poll,无法关闭投票
+Could not copy ID,无法复制 ID
+Could not copy link,无法复制链接
+Could not create a DM channel,无法创建 DM 频道
+Could not create poll,无法创建投票
+Could not create thread,无法创建话题
+Could not delete the reminder,无法删除提醒
+Could not delete the thread,无法删除该话题
+Could not download files,无法下载文件
+Could not forward message,无法转发消息
+Could not leave the thread,无法离开话题
+Could not load messages,无法加载消息
+Could not load this action.,无法加载此操作。
+Could not load workflow actions,无法加载工作流程操作
+Could not log out,无法注销
+Could not pin message,无法固定消息
+Could not record your vote,无法记录您的投票
+Could not remove member,无法删除成员
+Could not remove photo,无法删除照片
+Could not retract your vote,无法撤回您的投票
+Could not run this action,无法运行此操作
+Could not save message,无法保存消息
+Could not schedule your message,无法安排您的消息
+Could not send message,无法发送消息
+Could not send your message,无法发送您的消息
+Could not set the reminder,无法设置提醒
+Could not snooze the reminder,无法暂停提醒
+Could not unpin message,无法取消固定消息
+Could not unsave message,无法取消保存消息
+Could not update chat style,无法更新聊天样式
+Could not update link preview style,无法更新链接预览样式
+Could not update member,无法更新成员
+Could not update message,无法更新消息
+Could not update notifications,无法更新通知
+Could not update photo,无法更新照片
+Could not update preference,无法更新偏好设置
+Could not update profile,无法更新个人资料
+Could not update reaction,无法更新表情回应
+Could not update settings,无法更新设置
+Could not update status,无法更新状态
+Couldn't load Raven,无法加载 Raven
+Couldn't load threads,无法加载话题
+Create Channel,新建频道
+Create Document,创建文档
+Create Document Template,创建文档模板
+Create New {0},创建新的{0}
+Create Poll,创建投票
+Create Processor,创建处理器
+Create a Document Notification,创建文档通知
+Create a Function,创建一个函数
+Create a Message Action,创建消息操作
+Create a Raven Cloud account,创建 Raven Cloud 账号
+Create a Scheduled Message,创建预定消息
+Create a Webhook,创建Webhook
+Create a channel for each department,为每个部门创建一个频道
+Create a new channel,创建新频道
+Create a new processor,创建一个新处理器
+Create a poll,创建投票
+Create a support ticket from the message.,根据消息创建支持票证。
+Create a thread by right-clicking a message and selecting 'Create Thread'.,通过右键单击消息并选择“创建话题”来创建话题。
+Create agents to run automations on Raven.,创建智能体以在 Raven 上运行自动化。
+Create an Agent,创建智能体
+Create an Instruction Template,创建说明模板
+Create and manage document processors for your bots.,为您的机器人创建和管理文档处理器。
+Create functions in the,在中创建函数
+Create one from the menu above.,从上面的菜单中创建一个。
+Create support ticket,创建支持票
+Create thread,创建话题
+Create your first action,创建你的第一个动作
+Create your first agent,创建您的第一个智能体
+Create your first function,创建您的第一个函数
+Create your first notification,创建您的第一个通知
+Create your first template,创建您的第一个模板
+Create your first webhook,创建您的第一个 Webhook
+Creating,创造
+Creating...,创造...
+Cron expression,克朗表达式
+Cron expression is required.,需要 Cron 表达式。
+"Currently, code interpreter features are not available for Local LLM providers. These features require OpenAI's infrastructure.",目前，本地 LLM 提供商无法使用代码解释器功能。这些功能需要 OpenAI 的基础设施。
+Custom Function,自定义功能
+Custom Function (API),自定义函数（API）
+Custom Function Path,自定义函数路径
+Custom Status,自定义状态
+Custom date & time…,自定义日期和时间...
+Customise how document links are displayed in the chat. You can add/remove fields to be displayed in the preview.,自定义文档链接在聊天中的显示方式。您可以添加/删除要在预览中显示的字段。
+Customize Sidebar,自定义侧边栏
+Customize your sidebar channels and groups,自定义您的侧边栏频道和组
+DM User 1,DM 用户 1
+DM User 2,DM 用户 2
+DMs,DM
+Data synced to Raven Cloud.,数据同步到Raven Cloud。
+Date of the month,该月的日期
+Day of the month is required.,需要该月的具体日期。
+Days past the 28th are skipped in shorter months.,较短的月份中会跳过 28 日之后的日子。
+Debug Mode,调试模式
+Decide how a group of images should appear in the chat stream. 4+ images always use the carousel.,决定一组图像在聊天流中的显示方式。 4+ 图像始终使用轮播。
+Declare functions to be used by your AI bots.,声明您的人工智能机器人要使用的功能。
+Default Value Type,默认值类型
+Default Value:,默认值：
+Default Values,默认值
+Default value is required if AI is not asked to fill this field,如果不要求 AI 填写此字段，则需要默认值
+Delete ({0}),删除 ({0})
+Delete :{0}:?,删除：{0}：？
+Delete Agent?,删除智能体？
+Delete Document,删除文档
+Delete Document Notification?,删除文档通知？
+Delete File?,删除文件？
+Delete Function?,删除功能？
+Delete Instruction Template?,删除指令模板？
+Delete Message Action?,删除消息操作？
+Delete Multiple Documents,删除多个文档
+Delete Processor,删除处理器
+Delete Scheduled Message?,删除预定消息？
+Delete Webhook?,删除Webhook？
+Delete attachments?,删除附件？
+Delete channel,删除频道
+Delete emoji,删除表情符号
+Delete message?,删除消息？
+Delete reminder?,删除提醒？
+Delete scheduled message?,删除预定消息？
+Delete this channel?,删除该频道？
+Delete this thread?,删除这个帖子？
+Delete thread,删除话题
+Delete {0}?,删除{0}？
+Deleting,正在删除
+Deleting…,正在删除...
+Delivery time,交货时间
+Delivery time is in the past,交货时间已过去
+Department Channel Type,部门频道类型
+Department channel type,部门频道类型
+Describe what this function does.,描述一下这个函数的作用。
+Description is required,描述为必填项
+Device Information,设备信息
+Dialog Properties,对话框属性
+Direct Message,私信
+Direct Messages,私信
+Direct message,直接消息
+Direct message conversation,私信对话
+Direct messages,私信
+Direct modification of message_reactions is not allowed. Use the Reactions API.,不允许直接修改message_reactions。使用表情回应 API。
+Disable Notifications,禁用通知
+Discard changes,放弃更改
+Display a leave indicator on users who are off today.,显示今天休假的用户的休假指示器。
+Do not ask AI,别问人工智能
+Do not ask AI to fill this field?,不要求AI来填补这个领域吗？
+Do not ask AI to fill this variable,不要让 AI 填充这个变量
+Do not attach document with message,不要在消息中附加文档
+Do not disturb,请勿打扰
+Do nothing,什么也不做
+Do you want to autofill these as options?,您想将这些自动填充为选项吗？
+DocTypes,文档类型
+Document Field,文档字段
+Document Notifications,文件通知
+Document Parsing,文档解析
+Document Previews,文档预览
+Document Processor Selection,送稿器选择
+Document Processors,文件处理器
+Document Processors require Google Cloud APIs to be enabled in your Raven settings.,文档处理器需要在 Raven 设置中启用 Google Cloud API。
+Document Type is required.,文档类型为必填项。
+Document is required,需要文件
+Dotted path to the custom function/API. Cannot contain spaces.,自定义函数/API 的虚线路径。不能包含空格。
+Double-tap reaction,双击表情回应
+Download all ({0}),下载全部 ({0})
+Download {0},下载{0}
+"Drop a file here, or click to select a file",将文件拖放到此处，或单击以选择文件
+Drop files to upload,删除要上传的文件
+"Drop some files here, or click to select files",将一些文件拖放到此处，或单击以选择文件
+Due,由于
+Dynamic Instructions,动态指令
+"Dynamic Instructions allow you to embed Jinja tags in your instruction to the bot. Hence the instruction would be different based on the user who is calling the bot or the data in your system. These instructions are computed every time the bot is called. Check this if you want to embed things like Employee ID, Company Name etc in your instructions dynamically",动态指令允许您在机器人指令中嵌入 Jinja 标签。因此，根据调用机器人的用户或系统中的数据，指令会有所不同。每次调用机器人时都会计算这些指令。如果您想在指令中动态嵌入员工 ID、公司名称等内容，请选中此项
+Dynamic Instructions allow you to embed Jinja tags in your instruction to the bot. Instructions would be different based on the user who is calling the bot or the data in your system as they are computed every time the bot is called.,动态指令允许您在机器人指令中嵌入 Jinja 标签。根据调用机器人的用户或系统中的数据，指令会有所不同，因为每次调用机器人时都会计算这些数据。
+Edit Field,编辑字段
+Edit Variable,编辑变量
+Edit channel,编辑频道
+Edit channel details,编辑频道详细信息
+Edit channel form,编辑频道形式
+Edit channel name and description,编辑频道名称和描述
+Edit field,编辑字段
+Edit last message,编辑最后一条消息
+Edit message...,编辑消息...
+Edit profile,编辑个人资料
+Edit reminder,编辑提醒
+Edit scheduled message,编辑预定消息
+Edit the variable in your function schema.,编辑函数架构中的变量。
+Edit variable - {0} in the function.,编辑函数中的变量 - {0}。
+Editor,编辑
+Email is required,电子邮件为必填项
+Emoji,表情符号
+Emoji Name,表情符号名称
+Emoji {0} already exists.,表情符号 {0} 已存在。
+Emojis,表情符号
+Enable AI Integration,启用人工智能集成
+Enable Code Interpreter,启用代码解释器
+Enable Debug Mode,启用调试模式
+Enable File Search,启用文件搜索
+Enable Google APIs,启用 Google API
+Enable Local LLM,启用本地法学硕士
+Enable Notifications,启用通知
+Enable OpenAI Services,启用 OpenAI 服务
+Enable Quiet Hours,启用安静时间
+Enable Security?,启用安全性？
+Enable quiet hours,启用安静时间
+Enable this if you want the bot to be able to process files like Excel sheets or data from Insights.\n\nOpenAI Assistants run code in a sandboxed environment (on OpenAI servers) to do this.,如果您希望机器人能够处理 Excel 工作表或 Insights 中的数据等文件，请启用此功能。\n\nOpenAI 助手在沙盒环境（在 OpenAI 服务器上）中运行代码来执行此操作。
+"Enable this if you want the bot to be able to read PDF files and scan them.
+
+File search enables the assistant with knowledge from files that you upload. Once a file is uploaded, the assistant automatically decides when to retrieve content based on user requests.","如果您希望机器人能够读取 PDF 文件并扫描它们，请启用此选项。
+
+文件搜索使助手能够了解您上传的文件中的知识。文件上传后，助手会根据用户请求自动决定何时检索内容。"
+"Enable this if you want the bot to be able to read PDF files and scan them.\n\nFile search enables the assistant with knowledge from files that you upload.\nOnce a file is uploaded, the assistant automatically decides when to retrieve content based on user requests.",如果您希望机器人能够读取 PDF 文件并扫描它们，请启用此选项。\n\n文件搜索使助手能够了解您上传的文件中的知识。\n上传文件后，助手会自动决定何时根据用户请求检索内容。
+Enabling…,启用...
+End date,结束日期
+End time,结束时间
+Enter a description for this variable,输入该变量的描述
+Enter a valid time.,输入有效时间。
+Enter key behaviour,输入关键行为
+Enter the credentials below and save.,输入下面的凭据并保存。
+Enter the workspace name to confirm deletion,输入工作区名称以确认删除
+Environment,环境
+Error fetching processors: {0},获取处理器时出错：{0}
+Error formatting JSON. Please check your JSON.,JSON 格式错误。请检查您的 JSON。
+Error in Raven Notification,Raven 通知错误
+Error loading processor types: {0},加载处理器类型时出错：{0}
+Error loading processors: {0},加载处理器时出错：{0}
+Error loading variables in the builder. Please check your JSON structure.,在构建器中加载变量时出错。请检查您的 JSON 结构。
+Error reacting to message {0},对消息 {0} 做出表情回应时出错
+Error sending message,发送消息时出错
+Error uploading file. Remove and try again.,上传文件时出错。删除并重试。
+Error while evaluating Raven Notification {0}. Please fix your template.,评估 Raven 通知 {0} 时出错。请修复您的模板。
+Esc to cancel,Esc 取消
+Evening,晚上
+Every Day of the week,一周中的每一天
+Every day,每天
+Everyone from your organisation will become a channel member and will be able to view its message history.,您组织中的每个人都将成为频道成员，并且能够查看其消息历史记录。
+Everyone in this workspace is already a member of this channel.,此工作区中的每个人都已经是此频道的成员。
+Everyone is a member,每个人都是成员
+Everyone is already a member of this workspace.,每个人都已经是这个工作区的成员。
+Exact,准确
+Expand message,展开消息
+Failed to copy to clipboard,无法复制到剪贴板
+Failed to create chat channel,创建聊天频道失败
+Failed to create document processor,创建文档处理器失败
+Failed to create processor,创建处理器失败
+Failed to delete document processor,删除文档处理器失败
+Failed to delete processor,删除处理器失败
+Failed to register site on Raven Cloud,在 Raven Cloud 上注册站点失败
+Failed to send,发送失败
+Failed to submit the ticket,提交工单失败
+Failed to sync data to Raven Cloud,无法将数据同步到Raven Cloud
+Failed to test connection,测试连接失败
+Favorites,收藏夹
+Fetched,已获取
+Fetched On,已获取
+Field info,现场信息
+Field is required,字段为必填项
+Field on which the condition will be applied,将应用条件的字段
+Field {0} does not exist in {1}.,{1} 中不存在字段 {0}。
+Field {0} not found in {1},在 {1} 中找不到字段 {0}
+Fieldname is required,字段名称为必填项
+Fields to collect from the user when this action runs.,运行此操作时从用户收集的字段。
+Fields updated,字段已更新
+Figma,菲格玛
+File Search,文件搜索
+File Sources,文件来源
+File Thumbnail,文件缩略图
+File link copied,文件链接已复制
+File name is required,文件名是必填项
+File not found,找不到文件
+File size should not exceed {0}MB,文件大小不得超过 {0}MB
+File type,文件类型
+"Files like manuals, sheets etc can be added to the AI agent as instructions.",手册、表格等文件可以作为说明添加到 AI 智能体中。
+Files view,文件视图
+Filter and Sort,过滤和排序
+Filter by source,按来源过滤
+Filter members,过滤成员
+Filtering & sorting,过滤和排序
+"Find messages, files, links and polls. Type a query or pick a filter to start.",查找消息、文件、链接和投票。输入查询或选择一个过滤器来启动。
+Fire webhooks on specific events like when a message is sent or channel is created.,在特定事件（例如发送消息或创建频道时）触发 Webhook。
+First Name is required,名字为必填项
+First name must be less than 140 characters,名字必须少于 140 个字符
+"For OpenAI: gpt-4o, gpt-4, etc. For Local LLM: use model name from /v1/models endpoint",对于 OpenAI：gpt-4o、gpt-4 等。对于本地 LLM：使用 /v1/models 端点中的模型名称
+"For example, you could schedule a reminder for a meeting to be sent to a channel every week.",例如，您可以安排每周向某个频道发送会议提醒。
+Format JSON,格式化 JSON
+Formatting,格式化
+Forward message,转发消息
+Forwarded,转发
+Forwarding,转发
+Frappe Cloud,Frappe Cloud
+Frappe HR isn't installed,Frappe HR 未安装
+Frappe Integrations,Frappe 集成
+Frappe Meet,Frappe Meet
+Frappe Meet Hosted URLs,Frappe Meet 托管 URL
+Frappe Meet sites,Frappe Meet 站点
+Frequency is required.,需要频率。
+Full name,全名
+Function Definition,功能定义
+Function Name,函数名称
+Function Path,函数路径
+Function Path is required.,函数路径是必需的。
+Function name cannot be one of the core functions. Please choose a different name.,函数名称不能是核心函数之一。请选择不同的名称。
+Function not found,未找到功能
+Function path is required for Custom Functions,自定义函数需要函数路径
+Function {0} not found,未找到函数 {0}
+Function {0} not found.,未找到函数 {0}。
+Functions,功能
+Get Amended Document,获取修改后的文件
+Get Document,获取文件
+Get List,获取列表
+Get Multiple Documents,获取多个文档
+Get Report Result,获取报告结果
+Get Value,获得价值
+Get around Raven quickly with keyboard shortcuts.,使用键盘快捷键快速绕过 Raven。
+Get started with agents,开始使用智能体
+Go back to the previous channel or page.,返回上一个频道或页面。
+Go forward again.,再往前走吧。
+Go home,回家吧
+Go to,前往
+Go to Raven,前往Raven
+Go to channel,前往频道
+Google APIs are not enabled. Please enable them in Raven Settings,未启用 Google API。请在 Raven 设置中启用它们
+Google APIs are not enabled. Please enable them in the Raven Settings.,未启用 Google API。请在 Raven 设置中启用它们。
+Google Calendar not found for the current user,未找到当前用户的 Google 日历
+Google Document Processor ID,Google 文档处理器 ID
+Google Meet,谷歌见面
+Google Processor Location,Google 处理器位置
+Google Project ID,谷歌项目ID
+Google Service Account JSON Key,Google 服务帐户 JSON 密钥
+Google Vision and Document AI,谷歌视觉和文档人工智能
+Grid view,网格视图
+Group Name,群组名称
+Group name,团体名称
+Group name is required,群组名称为必填项
+Group name {0} is already used.,组名称 {0} 已被使用。
+Group name {0} is reserved.,组名称 {0} 已保留。
+Group not found,找不到组
+Group options,组选项
+Grouped Channels,分组频道
+Hacker News,黑客新闻
+Helper Text,辅助文本
+Here are some variables you can use in your instruction. Simply copy by clicking on the variable.,以下是您可以在指令中使用的一些变量。只需单击变量即可复制。
+Hidden from sidebar,从侧边栏隐藏
+Hidden from your sidebar - no activity in the last 30 days.,从侧边栏隐藏 - 过去 30 天内没有任何活动。
+Hidden from your sidebar - your preferences only show channels you have joined.,隐藏在侧边栏 - 您的偏好仅显示您已加入的频道。
+Hide Read Receipts,隐藏已读回执
+Hide channels that have not been active in the last 30 days,隐藏过去 30 天内不活跃的频道
+Hide document preview in the notification message,在通知消息中隐藏文档预览
+Hide link preview,隐藏链接预览
+Hide voter identities from other participants,对其他参与者隐藏选民身份
+How many options each person can select,每个人可以选择多少个选项
+How often?,多久一次？
+ID cannot be more than 140 characters.,ID 不能超过 140 个字符。
+ID copied,身份证已复制
+"If added, this prompt will only be shown when interacting with the bot",如果添加，则仅在与机器人交互时才会显示此提示
+"If checked, a channel will be created in Raven for each department and employees will be synced with Raven Users.",如果选中，将在 Raven 中为每个部门创建一个频道，并且员工将与 Raven 用户同步。
+"If checked, new messages will not show up in unread count",如果选中，新消息将不会显示在未读计数中
+"If checked, the document preview will not be attached to the notification message.",如果选中，文档预览将不会附加到通知消息中。
+"If checked, the params will be passed as a JSON object instead of named parameters",如果选中，参数将作为 JSON 对象而不是命名参数传递
+"If checked, this prompt will be available to all users on Raven",如果选中，Raven 上的所有用户都可以看到此提示
+"If enabled, stack traces of errors will be sent as messages by the bot ",如果启用，错误的堆栈跟踪将由机器人作为消息发送
+"If enabled, stack traces of errors will be sent as messages by the bot during runs.\nThis is helpful when you're testing your bots and want to know where things are going wrong.",如果启用，错误的堆栈跟踪将在运行期间由机器人作为消息发送。\n当您测试机器人并想知道哪里出了问题时，这非常有用。
+"If enabled, the message won't have a document preview",如果启用，消息将不会有文档预览
+"If not set, the integration uses the default project.",如果未设置，集成将使用默认项目。
+"If not set, the integration will use the default project",如果未设置，集成将使用默认项目
+"If unchecked, any workspace member can create a channel",如果未选中，任何工作区成员都可以创建频道
+If you later intend to make this private you will have to manually remove members that should not have access to this channel.,如果您稍后打算将其设为私有，则必须手动删除不应访问此频道的成员。
+"If you make this channel private, it will be visible to anyone who has joined the channel up until that point.",如果您将此频道设为私有，则在此之前加入该频道的任何人都可以看到该频道。
+"If you want this variable to have a default value, just add one option.",如果你想让这个变量有一个默认值，只需添加一个选项即可。
+Image Height,图像高度
+Image Width,图像宽度
+Image carousel,图片轮播
+Image group layout,图像组布局
+Import fields from {0},从 {0} 导入字段
+Import from Template,从模板导入
+In 1 hour,1小时内
+In 20 minutes,20分钟后
+In 3 hours,3小时后
+"In a settings list, create a new record.",在设置列表中，创建一条新记录。
+"In the attachment viewer, or while hovering a gallery of images in a message.",在附件查看器中，或将鼠标悬停在消息中的图像库时。
+In-app notifications,应用内通知
+"Install Frappe HR on this site to sync employees, departments and leaves with Raven.",在此站点上安装 Frappe HR，以将员工、部门和休假与 Raven 同步。
+Installed apps,已安装的应用程序
+Instruction,说明
+Instruction Templates,说明模板
+Instruction is required,需要说明
+Instruction view,指令视图
+Insufficient permissions. Please contact your administrator.,权限不足。请联系您的管理员。
+Integer,整数
+Invalid Channel Type,频道类型无效
+Invalid JSON in params,参数中的 JSON 无效
+Invalid recipient variable type: {0},收件人变量类型无效：{0}
+Invisible,隐形
+Invite a new user to Raven.,邀请新用户加入 Raven。
+Invite sent,邀请已发送
+Is AI Agent,是AI智能体
+Is AI Bot?,是人工智能机器人吗？
+Is AI Thread,是AI话题
+Is Admin,是管理员
+Is Anonymous,是匿名的
+Is Archived,已存档
+Is Bot Message,是机器人消息
+Is DM Thread,是 DM 螺纹
+Is Direct Message,是私信
+Is Disabled,已禁用
+Is Edited,已编辑
+Is Forwarded,已转发
+Is Multi Choice,是多项选择
+Is Read,已读
+Is Reply,是回复
+Is Required?,是必需的吗？
+Is Self Message,是自消息
+Is Synced,已同步
+Is Thread,是话题
+It will be removed from your channel list,它将从您的频道列表中删除
+It's time. Send a Raven.,现在就发送 Raven 消息吧。
+Join,加入
+Join by invitation only,仅通过邀请加入
+Join channel,加入频道
+Joined,已加入
+Joining {0}...,正在加入{0}...
+Joining…,正在加入……
+Jump to message with link: {0},跳转至带有链接的消息：{0}
+Jump to pinned message,跳转到固定消息
+Jump to the next item with unread messages.,跳转到下一个包含未读消息的项目。
+Jump to the previous item with unread messages.,跳转到上一个包含未读消息的项目。
+Key is required,需要钥匙
+Keywords,关键词
+LM Studio,LM工作室
+Label is required,需要标签
+Last Mention Viewed On,最后提及查看时间
+Last Message Details,最后消息详情
+Last Message ID,最后一条消息 ID
+Last Message Timestamp,最后一条消息时间戳
+Last Name is required,姓氏为必填项
+Last Visit,最后一次访问
+Last name must be less than 140 characters,姓氏必须少于 140 个字符
+Later,后来
+Leave channel,离开频道
+Leave thread,留下线索
+Leave {0}?,离开{0}？
+Leaving,离开
+Leaving {0}...,离开{0}...
+Left-Right,左-右
+Let's setup Raven,让我们设置 Raven
+Letterhead,信笺
+Link Doctype,链接文档类型
+Link Document,链接文件
+Link Hover,链接悬停
+Link Previews,链接预览
+Link copied,链接已复制
+Link preview style updated,链接预览样式已更新
+Link previews,链接预览
+Link to the company,公司链接
+Linked DocType,链接文档类型
+Linked Document,链接文档
+Linked message should be in the same channel,链接消息应位于同一频道
+Linked to the notification that triggered this message,链接到触发此消息的通知
+Links Table,链接表
+Links matching these never show previews. Applies to everyone.,匹配这些的链接从不显示预览。适用于所有人。
+List view,列表视图
+Loading action details,加载动作详情
+Loading more threads...,正在加载更多话题...
+Local LLM,本地法学硕士
+Local LLM API URL,本地LLM API URL
+Local LLM API URL is not configured in Raven Settings,Raven 设置中未配置本地 LLM API URL
+Local LLM Provider,本地法学硕士提供者
+LocalAI,本地人工智能
+Log out of your account?,退出您的帐户？
+Logging out…,正在退出…
+Looks like you've logged in as another user from another tab. Refresh this page to continue.,您似乎已从另一个选项卡以其他用户身份登录。刷新此页面以继续。
+Loom,织布机
+Loom video player,织机视频播放器
+Make Admin,设为管理员
+Make admin,设为管理员
+Make sure LM Studio is running with the server enabled on the specified URL.,确保 LM Studio 正在运行，并且在指定 URL 上启用了服务器。
+Make sure LocalAI is running on the specified URL.,确保 LocalAI 正在指定的 URL 上运行。
+Make sure Ollama is running. Default URL is usually http://localhost:11434/v1,确保 Ollama 正在运行。默认 URL 通常是 http://localhost:11434/v1
+Make sure your OpenAI compatible service is running on the specified URL and that you have provided a valid API key.,确保您的 OpenAI 兼容服务正在指定的 URL 上运行，并且您已提供有效的 API 密钥。
+Manage Channels,管理频道
+Manage access,管理访问权限
+Manage users added to Raven.,管理添加到 Raven 的用户。
+Manage your Raven profile,管理您的 Raven 个人资料
+Match Exact,精确匹配
+Max Choices,最大选择
+Maximum choices,最多选择
+Maximum file size: {0}MB,最大文件大小：{0}MB
+Maximum options that a user can select in a multi-select poll,用户在多选投票中可以选择的最大选项
+Meeting links from these sites show a join card in chat.,这些网站的会议链接会在聊天中显示加入卡。
+Meeting links from these sites show a join card in chat. Applies to everyone.,这些网站的会议链接会在聊天中显示加入卡。适用于所有人。
+Member actions,成员操作
+Member is now an admin,成员现已成为管理员
+Member options,成员选项
+Member removed,成员已删除
+Members added,已添加成员
+Members of this workspace will show up here.,该工作区的成员将显示在此处。
+Mention,提及
+Mention someone,提及某人
+Mentions Only,仅提及
+Mentions and reactions to your messages will appear here.,对您的消息的提及和表情回应将显示在此处。
+Message Action {0} is disabled,消息操作 {0} 已禁用
+Message Actions,消息操作
+Message Batch ID,消息批次ID
+Message Content,消息内容
+Message Deleted,消息已删除
+Message Edited,消息已编辑
+Message Field,消息字段
+Message Reacted On,消息已回复
+Message Reaction cannot be triggered on Channel,频道上无法触发消息表情回应
+Message Reactions,消息表情回应
+Message URL,消息网址
+Message action deleted,消息操作已删除
+Message actions,消息操作
+Message deleted,消息已删除
+Message does not belong to this channel,消息不属于该频道
+Message does not exist in this channel,该频道不存在该消息
+Message forwarded,消息已转发
+Message is required.,需要消息。
+Message not found,未找到消息
+Message not found.,未找到消息。
+Message reactions,消息表情回应
+Message scheduled for {0}.,消息安排在{0}。
+Message sent,消息已发送
+Messages you've scheduled to send later.,您计划稍后发送的消息。
+Messaging,消息传递
+Messaging after hours,下班后发消息
+"Minute, hour, day of month, month, day of week. Use * for any, lists like 1,3,5 and ranges like 1-5.",分钟、小时、月份中的某一天、月份、星期中的某一天。使用 * 表示任何列表（如 1、3、5）和范围（如 1-5）。
+Miscellaneous,杂项
+Model Provider,模型提供者
+Monday at {0},星期一{0}
+More reactions,更多表情回应
+Morning,早上
+"Move to the next channel, direct message, thread or notification.",移至下一个频道、私信、话题或通知。
+Move to the previous one.,移至上一篇。
+Multiple choice,多项选择
+Mute Channel,静音频道
+Name cannot be more than 140 characters.,名称不能超过 140 个字符。
+Name cannot contain spaces,名称不能包含空格
+Name is required,姓名为必填项
+Name is required.,姓名为必填项。
+Name must be less than 20 characters,名称必须少于 20 个字符
+Name should not exceed 140 characters,名称不得超过 140 个字符
+"Narrow results by person, channel, type or source",按人员、频道、类型或来源缩小结果范围
+Navigation,导航
+Need help finding one? Download from,需要帮忙找一个吗？下载自
+New Document,新文件
+New group,新组
+New line,新线
+New messages,新消息
+Next image,下一张图片
+Next unread,下一个未读
+No AI providers are configured. Please configure OpenAI or Local LLM in AI Settings.,未配置 AI 提供程序。请在AI设置中配置OpenAI或Local LLM。
+No AI providers are configured. Please configure at least one provider in,未配置 AI 提供程序。请至少配置一个提供商
+No Google Project ID is set. Please set a Project ID in Raven Settings,未设置 Google 项目 ID。请在 Raven 设置中设置项目 ID
+No Nudge,无轻推
+No actions available,没有可用的操作
+No channels found,没有找到频道
+No channels match your search.,没有频道符合您的搜索。
+No channels or DMs found.,找不到频道或 DM。
+No channels or people found.,找不到频道或人员。
+No channels yet,还没有频道
+No completed reminders,没有完成的提醒
+No conversations found,未找到任何对话
+No conversations yet,还没有对话
+No document processors have been created yet. You need to create at least one processor before you can assign it to this bot.,尚未创建任何文档处理器。您需要创建至少一个处理器，然后才能将其分配给该机器人。
+No email added,未添加电子邮件
+No emojis found,没有找到表情符号
+"No fields are selected for preview, so all mandatory fields of {0} are shown.",未选择任何字段进行预览，因此会显示 {0} 的所有必填字段。
+No file found on this message,在此消息中找不到文件
+No files attached yet. Upload a file or select one from your file sources.,尚未附加任何文件。上传文件或从文件源中选择一个文件。
+No files found,没有找到文件
+No files found matching your search.,未找到与您的搜索匹配的文件。
+No files found on these messages,在这些邮件中找不到文件
+No files shared in this channel yet.,此频道中尚未共享任何文件。
+No links found,没有找到链接
+No links found matching your search.,未找到与您的搜索匹配的链接。
+No links shared in this channel yet.,此频道中尚未共享链接。
+No matches,没有匹配项
+No matching threads,没有匹配的话题
+No members found,没有找到成员
+No members found matching your search.,未找到与您的搜索匹配的成员。
+No members in this channel.,该频道没有成员。
+No members match,没有匹配的成员
+No messages found,没有找到消息
+No messages yet,还没有消息
+No models available,无可用型号
+No more file sources to add.,无需添加更多文件源。
+No notifications yet,还没有通知
+No one has viewed this yet,还没有人看过这个
+No one to add,没有人可以添加
+No one will be able to send messages to this channel,没有人能够向此频道发送消息
+"No one will be able to vote once it's closed, and this can't be undone.",一旦关闭，任何人都无法投票，并且无法撤消。
+No phone number,没有电话号码
+No pinned messages in this channel yet.,此频道中还没有固定消息。
+No polls found,未找到投票
+No preview available,没有可用的预览
+No processors created yet. Select a type below to create your first processor.,尚未创建处理器。选择下面的类型来创建您的第一个处理器。
+No results found.,没有找到结果。
+No saved messages,没有保存的消息
+No scheduled messages,没有预定消息
+No templates found,没有找到模板
+No threads found matching your search.,未找到与您的搜索相符的话题。
+No threads in this channel yet.,该频道中还没有主题。
+No threads yet,还没有话题
+No times left today,今天没有时间了
+No unread notifications at the moment.,目前没有未读通知。
+No users found,没有找到用户
+No users found matching your search.,未找到与您的搜索匹配的用户。
+No users found.,没有找到用户。
+No users match your search.,没有用户与您的搜索匹配。
+No variables defined,没有定义变量
+No workspaces found,未找到工作区
+Normalized URL,标准化网址
+Not a member,还不是成员
+Not seen yet,还没见过
+Nothing in progress,没有任何进展
+Nothing to forward,没有什么可转发的
+Nothing to preview,没有可预览的内容
+Notification Name,通知名称
+Notification deleted,通知已删除
+Notification for an event on {0} is not allowed.,不允许通知 {0} 上的活动。
+Notifications are sent via bots. Select the bot to send the notification.,通知通过机器人发送。选择发送通知的机器人。
+Notified,已通知
+Nudge,轻推
+Object,对象
+Offline,离线
+Ollama,奥拉马
+On Leave,休假中
+On hover,悬停时
+On leave,休假中
+On which day of the month?,每月的哪一天？
+On which days?,在哪几天？
+Only Public or Private channels can be transferred,只能转移公共或私人频道
+Only admins can create channels,只有管理员可以创建频道
+Only allow admins to create channels in the workspace,仅允许管理员在工作区中创建频道
+Only applicable for OpenAI o-series models,仅适用于 OpenAI o 系列型号
+Only change this if you are using a custom Raven Cloud instance.,仅当您使用自定义 Raven Cloud 实例时才更改此设置。
+"Only lowercase letters, numbers, and underscores allowed",只允许使用小写字母、数字和下划线
+Only show channels I have joined,仅显示我加入的频道
+Only show channels that I have joined,仅显示我已加入的频道
+Only show channels with recent activity,仅显示最近活动的频道
+Only the poll owner can close the poll,只有投票所有者可以关闭投票
+Open Chat,打开聊天
+Open channel,开放频道
+Open in channel,在频道中打开
+Open the link popover for the selected text.,打开所选文本的链接弹出窗口。
+"Open the search page. With the palette open, it carries the typed query along.",打开搜索页面。当调色板打开时，它会携带键入的查询。
+Open until {0},营业至{0}
+Open your profile and settings.,打开您的个人资料和设置。
+OpenAI,开放人工智能
+OpenAI API Key,OpenAI API 密钥
+OpenAI API key is not configured in Raven Settings,Raven 设置中未配置 OpenAI API 密钥
+OpenAI Assistant ID,OpenAI 助手 ID
+OpenAI Compatible,兼容 OpenAI
+OpenAI Compatible API Key,OpenAI 兼容 API 密钥
+OpenAI File ID,OpenAI 文件 ID
+OpenAI Organisation ID,OpenAI 组织 ID
+OpenAI Organization ID,OpenAI 组织 ID
+OpenAI Project ID,OpenAI 项目 ID
+OpenAI Python SDK Version:,OpenAI Python SDK版本：
+OpenAI Thread ID,OpenAI 话题 ID
+OpenAI Vector Store ID,OpenAI 矢量商店 ID
+Option,选项
+Option {0},选项{0}
+Option {0} is not valid for field {1} in {2},选项 {0} 对于 {2} 中的字段 {1} 无效
+Optional,可选
+Optional — only if your provider requires it.,可选 - 仅当您的提供商需要时。
+"Optional. Checks the value is a valid email, phone number or URL.",可选。检查该值是否为有效的电子邮件、电话号码或 URL。
+Optional: the notification is sent only if this expression is true.,可选：仅当该表达式为 true 时才发送通知。
+Options are required,选项为必填项
+Options are required for select fields,选择字段需要选项
+Options:,选项：
+Page Not Found,找不到页面
+Parameters,参数
+Params,参数
+Pass parameters as JSON,以 JSON 形式传递参数
+Paste a link,粘贴链接
+Path cannot contain spaces,路径不能包含空格
+Path is required,路径为必填项
+Pause,暂停
+Permanently delete this channel and all of its messages,永久删除该频道及其所有消息
+Permission denied for push notifications,推送通知的权限被拒绝
+Person,人
+Personalize your chats with custom emojis.,使用自定义表情符号个性化您的聊天。
+Phone number,电话号码
+Photo,照片
+Photo removed,照片已删除
+Photo updated,照片已更新
+Photos,照片
+Pick a Create/Update document type or Custom Function on the Details tab to define variables.,在“详细信息”选项卡上选择“创建/更新文档类型”或“自定义函数”来定义变量。
+Pick a date to close the poll on,选择结束投票的日期
+Pick a delivery time,选择交货时间
+Pick a field,选择一个字段
+Pick a function type,选择函数类型
+Pick an action type,选择动作类型
+Pick at least one day.,至少选择一天。
+Pick when to be reminded about this message.,选择何时提醒此消息。
+Pinned Channels,固定频道
+Pinned Messages,置顶消息
+Pinned Messages String,固定消息字符串
+Pinned Workspaces,固定工作区
+Pins,针脚
+Play,玩
+Play video,播放视频
+Please add a channel name,请添加频道名称
+Please add the Google Service Account JSON Key,请添加 Google 服务帐户 JSON 密钥
+Please add your OpenAI API Key,请添加您的 OpenAI API 密钥
+Please add your OpenAI Organization ID,请添加您的 OpenAI 组织 ID
+Please add your Push Notification API Secret,请添加您的推送通知 API 密钥
+Please add your Push Notification Server URL,请添加您的推送通知服务器 URL
+Please enter the Google Project ID,请输入 Google 项目 ID
+Please enter the Push Notification API Key,请输入推送通知 API 密钥
+Please enter the Push Notification API Secret,请输入推送通知 API 密钥
+Please enter the Push Notification Server URL,请输入推送通知服务器 URL
+Please map the companies to the workspace before enabling this feature.,启用此功能之前，请将公司映射到工作区。
+Please provide an instruction for this AI Agent.,请提供此 AI 智能体的说明。
+Please select a DocType for this function.,请为此功能选择一个文档类型。
+Please select a Document Processor for this bot.,请为此机器人选择文档处理器。
+Please select a model,请选择型号
+Please select a model provider,请选择型号提供商
+Please select at least one option.,请至少选择一个选项。
+Please select the Google Processor Location,请选择 Google 处理器位置
+Please submit your choice(s) to view the results.,请提交您的选择以查看结果。
+Please understand that when you archive,请您理解，当您存档时
+Please understand that when you make,请理解，当您制作时
+Poll,投票
+Poll ID,投票ID
+Poll ID is mandatory for a poll message,轮询 ID 对于轮询消息是必需的
+Poll Option,投票选项
+Poll Options,投票选项
+Poll Question,投票问题
+Poll Settings,投票设置
+Poll Votes,投票
+Poll details and votes,投票详情和投票
+Poll question is required,投票问题为必填项
+Polls,投票
+Pressing Enter will add a new line. Use Ctrl / ⌘ + Enter to send your message.,按 Enter 键将添加新行。使用 Ctrl / ⌘ + Enter 发送消息。
+Pressing Enter will immediately send your message. Use Shift+Enter to add a new line.,按 Enter 将立即发送您的消息。使用 Shift+Enter 添加新行。
+Preview Card,预览卡
+Preview card,预览卡
+Preview the webhook payload for the selected example.,预览所选示例的 Webhook 负载。
+Preview {0},预览{0}
+Previous image,上一张图片
+Previous unread,上一篇未读
+Print format,打印格式
+Print preview,打印预览
+Print {0},打印{0}
+Private workspaces can only be viewed or joined by invitation. Public workspaces are open to everyone.,私人工作区只能通过邀请查看或加入。公共工作区向所有人开放。
+Processor created successfully,处理器创建成功
+Processor deleted successfully,处理器删除成功
+Profile updated,个人资料已更新
+Prompt,提示
+Public channels that you have not joined will be hidden,您未加入的公共频道将被隐藏
+Public channels that you have not joined will be hidden from the sidebar.,您尚未加入的公共频道将从侧边栏隐藏。
+Push Notification API Key,推送通知 API 密钥
+Push Notification API Secret,推送通知 API 秘密
+Push Notification Server URL,推送通知服务器 URL
+Push Notification Service,推送通知服务
+Push notification service is not set to Raven Cloud.,推送通知服务未设置为 Raven Cloud。
+Push notifications,推送通知
+Push notifications are not supported in the current framework version,当前框架版本不支持推送通知
+Push notifications are sent through Raven Cloud. To set it up:,推送通知通过 Raven Cloud 发送。设置方法：
+Push notifications disabled,推送通知已禁用
+Push notifications enabled,已启用推送通知
+Quick emojis,快速表情符号
+Quick reactions,快速表情回应
+Quick reactions and composer preferences,快捷表情回应与消息编辑偏好
+Quickly import {0}s?,快速导入 {0}？
+Quiet Hours,安静时间
+Quiet Hours Nudge,安静时间助推
+Quiet hours,安静时间
+Quiet hours - sending silently,安静时间 - 静默发送
+Quiet hours options,安静时间选项
+Quote,报价
+Raven,Raven
+Raven AI Bot Files,Raven AI 机器人文件
+Raven AI File Source,Raven AI 文件源
+Raven AI Function,Raven人工智能功能
+Raven AI Function Params,Raven AI 函数参数
+Raven AI is not enabled. Please enable it in,Raven AI 未启用。请在中启用它
+Raven Admin,Raven 管理员
+Raven Blocked Links,Raven阻止的链接
+Raven Bot,Raven 机器人
+Raven Bot AI Prompt,Raven Bot AI 提示
+Raven Bot Functions,Raven 机器人功能
+Raven Bot Instruction Template,Raven 机器人指令模板
+Raven Channel,Raven 频道
+Raven Channel Groups,Raven 频道组
+Raven Channel Member,Raven 频道成员
+Raven Custom Emoji,Raven自定义表情符号
+Raven Document Notification,Raven文档通知
+Raven Document Notification Recipients,Raven 文档通知收件人
+Raven Grouped Channels,Raven 分组频道
+Raven HR Company Workspace,Raven HR 公司工作区
+Raven Incoming Webhook,Raven 传入 Webhook
+Raven Link,Raven 链接
+Raven Link Preview,Raven 链接预览
+Raven Mention,Raven提及
+Raven Message,Raven 消息
+Raven Message Action,Raven 消息操作
+Raven Message Action Fields,Raven 消息操作字段
+Raven Message Links,Raven 消息链接
+Raven Message Reaction,Raven 消息表情回应
+Raven Mobile,Raven 移动端
+Raven Pinned Channels,Raven 固定频道
+Raven Pinned Messages,Raven 置顶消息
+Raven Poll,Raven 投票
+Raven Poll Option,Raven 投票选项
+Raven Poll Vote,Raven 投票记录
+Raven Poll Vote Selection,Raven 投票选择
+Raven Push Token,Raven 推送令牌
+Raven Reminder,Raven提醒
+Raven Scheduled Message,Raven 定时消息
+Raven Scheduler Event,Raven 调度程序事件
+Raven Settings,Raven 设置
+Raven User,Raven 用户
+Raven User Pinned Workspaces,Raven 用户固定工作区
+Raven User cannot be triggered on Channel,Raven 用户无法在频道上触发
+Raven Users,Raven 用户
+Raven Webhook,Raven Webhook
+Raven Workspace,Raven工作区
+Raven Workspace Member,Raven 工作区成员
+Raven can nudge users to send messages silently outside work hours.,Raven 可以促使用户在工作时间之外悄悄发送消息。
+Raven is setup!,Raven 已设置完成！
+"Raven version, installed apps, and resource links.",Raven 版本、已安装的应用程序和资源链接。
+Raven was updated,Raven 已更新
+Re-Register Site on Raven Cloud,在 Raven Cloud 上重新注册网站
+React with {0},与 {0} 做出表情回应
+Reacted to your message.,已回复您的消息。
+Reacted {0} to your message.,对您的消息做出了表情回应 {0}。
+Reaction,表情回应
+Reaction Escaped,表情回应已转义
+Reactions,表情回应
+Read by,阅读者
+Read receipts,阅读收据
+Read receipts are not available for anonymous polls.,已读回执不适用于匿名投票。
+Realtime events aren't working. Please refresh the page.,实时事件不起作用。请刷新页面。
+Reasoning Effort,推理努力
+Recent Activity,最近的活动
+Recent activity,最近的活动
+Recently used,最近使用过
+Recipients are the users who will receive the notification. Send to channels or specific users.,收件人是将收到通知的用户。发送给频道或特定用户。
+Recommended,推荐
+Reddit,红迪网
+Reddit post,红迪网帖子
+Reference Doctype is required,需要参考文档类型
+Register Site on Raven Cloud,在 Raven Cloud 上注册站点
+"Register the site on Raven Cloud, then sync your users' devices.",在 Raven Cloud 上注册网站，然后同步用户的设备。
+Registering site on Raven Cloud...,正在 Raven Cloud 上注册网站...
+Reload the page,重新加载页面
+Reload to pick up the latest version - everything will be right where you left it.,重新加载以获取最新版本 - 一切都将在您离开时的位置。
+Remind me,提醒我
+Remind me again,再次提醒我
+Remind me to…,提醒我……
+Reminder actions,提醒动作
+Reminder cannot be set in the past.,无法设置过去的提醒。
+Reminder deleted,提醒已删除
+Reminder set for {0},为{0}设置的提醒
+Reminders you've opened or checked off show here.,您已打开或关闭的提醒会在此处显示。
+Remove Admin,删除管理员
+Remove Member,删除成员
+Remove admin,删除管理员
+Remove blocked link,删除被阻止的链接
+Remove document,删除文档
+Remove file,删除文件
+Remove from channel,从频道中删除
+Remove header,删除标题
+Remove logo,删除标志
+Remove mapping,删除映射
+Remove option {0},删除选项{0}
+Remove photo,删除照片
+Remove recipient,删除收件人
+Remove site,删除站点
+Rename Workspace,重命名工作区
+Rename group,重命名组
+Renaming,重命名
+Replied Message Details,回复消息详情
+Replied Message ID,回复消息ID
+Replies,回复
+Replying to {0},正在回复{0}
+Request URL is required,请求网址为必填项
+Request URL should not exceed 140 characters,请求 URL 不应超过 140 个字符
+Requires Write Permissions,需要写入权限
+Reschedule this message to edit it.,重新安排此消息以对其进行编辑。
+Response Data,响应数据
+Restore the channel and allow new messages again,恢复频道并再次允许新消息
+Retract my vote,撤回我的投票
+Retract vote,撤回投票
+Review Settings,查看设置
+Rows per page,每页行数
+Run action,奔跑动作
+Salary Slip Notification,工资单通知
+"Save a message to find it here, or adjust your search.",保存消息以便在此处查找，或调整您的搜索。
+Save commonly used instructions as templates for your AI bots.,将常用指令保存为 AI 机器人的模板。
+Save commonly used instructions as templates for your bots.,将常用指令保存为机器人的模板。
+Save the open settings form.,保存打开的设置表单。
+Saved Prompts,保存的提示
+Schedule a message from any channel's send menu.,从任何频道的发送菜单安排消息。
+Schedule a reminder,安排提醒
+Schedule message,安排消息
+Schedule messages and reminders to be sent to you at a specific date and time.,安排在特定日期和时间向您发送消息和提醒。
+Scheduled Messages,定时消息
+Scheduled for {0},预定于{0}
+Scheduled message actions,预定的消息操作
+Scheduled message deleted,预定消息已删除
+Scheduled messages,预定消息
+Scheduled messages run as server scripts. Ask your site administrator to set server_script_enabled in the site config and restart the site.,计划的消息作为服务器脚本运行。请站点管理员在站点配置中设置 server_script_enabled 并重新启动站点。
+Scheduled time must be in the future.,预定的时间必须是将来的时间。
+Scheduler Event ID,调度程序事件 ID
+Search Raven,搜索Raven
+Search and pick a document,搜索并选择文档
+Search and pick an option to filter results,搜索并选择一个选项来过滤结果
+Search anywhere,随处搜索
+Search by name or email,按姓名或电子邮件搜索
+Search by name or email...,按姓名或电子邮件搜索...
+Search channels,搜索频道
+Search channels and people,搜索频道和人员
+"Search channels, people and messages, or run a command.",搜索频道、人员和消息，或运行命令。
+Search completed reminders,搜索已完成的提醒
+Search conversations,搜索对话
+Search emojis,搜索表情符号
+Search for a user and start a conversation.,搜索用户并开始对话。
+Search for channels,搜索频道
+Search for people in this workspace and add them to the channel.,在此工作区中搜索人员并将他们添加到频道中。
+Search for {0} anywhere,在任意位置搜索 {0}
+Search for {0} in DMs with {1},在包含 {1} 的私信中搜索 {0}
+Search for {0} in {1},在{1}中搜索{0}
+Search in DMs with {0},在私信中搜索带有 {0} 的内容
+Search in {0},在{0}中搜索
+Search members,搜索成员
+Search reminders,搜索提醒
+Search saved messages,搜索已保存的消息
+Search team members,搜索团队成员
+Search threads...,搜索主题...
+Search users,搜索用户
+Seek,寻找
+Select Files,选择文件
+Select a DocType,选择文档类型
+Select a Reference Doctype on the Details tab to define variables.,在“详细信息”选项卡上选择参考文档类型以定义变量。
+Select a Trigger Event in the General tab to choose payload fields.,在常规选项卡中选择触发事件以选择负载字段。
+Select a channel,选择频道
+Select a channel type,选择频道类型
+Select a conversation,选择一个对话
+Select a document,选择一个文档
+Select a function type from the dropdown above.,从上面的下拉列表中选择函数类型。
+Select a group,选择一个组
+Select a model available on your local LLM server.,选择本地 LLM 服务器上可用的模型。
+Select a new name for your workspace,为您的工作区选择一个新名称
+Select a notification to view the message.,选择通知以查看消息。
+Select a provider to see specific instructions.,选择提供商以查看具体说明。
+Select a reminder to view the conversation.,选择一个提醒来查看对话。
+Select a result to view the message.,选择结果以查看消息。
+Select a saved message to view the conversation.,选择已保存的消息以查看对话。
+Select a template,选择模板
+Select a thread to view the conversation.,选择一个话题来查看对话。
+Select a user,选择一个用户
+Select a variable type,选择变量类型
+Select a workspace,选择一个工作区
+Select an agent,选择智能体
+Select channel type,选择频道类型
+Select channels,选择频道
+Select date,选择日期
+Select example,选择示例
+Select files from the list below.,从下面的列表中选择文件。
+Select image group layout,选择图像组布局
+Select link preview style,选择链接预览样式
+Select members to add,选择要添加的成员
+Select quiet hours behavior,选择安静时间行为
+Select sort order,选择排序顺序
+Select the fields you want in the webhook payload.,选择 Webhook 负载中所需的字段。
+Select time format,选择时间格式
+Select what to delete. This can't be undone.,选择要删除的内容。这无法撤消。
+Select {0}s,选择{0}
+Selections,选集
+Self Message,自我消息
+Send Invite,发送邀请
+Send Message,发送消息
+Send a Raven,发送 Raven 消息
+Send message,发送消息
+Send message now?,现在发送消息吗？
+Send message silently,默默发送消息
+Send messages to channels or users based on document activity in your ERP system. Keep your team informed about important changes in real-time with rich document previews.,根据 ERP 系统中的文档活动向频道或用户发送消息。通过丰富的文档预览让您的团队实时了解重要变化。
+Send now,立即发送
+"Send now, send silently, or schedule the message",立即发送、静默发送或安排消息发送
+Send options,发送选项
+"Send reminders, document notifications and run AI assistants.",发送提醒、文档通知并运行 AI 助手。
+Send silently,静默发送
+Send the message.,发送消息。
+Send to,发送至
+Send with notification,发送通知
+Send without notification,发送而不通知
+Send without notifying anyone.,发送而不通知任何人。
+Sender is required,发件人为必填项
+Sending Invite...,正在发送邀请...
+Sending a direct message to a user,向用户发送私信
+Sending a message to a channel,向频道发送消息
+Sending a message to a channel in markdown format,以 Markdown 格式向频道发送消息
+Sending a message with a document link,发送带有文档链接的消息
+Sending...,正在发送...
+Sent Message,已发送消息
+Sent a file,发送了一个文件
+Sent a photo,发送了一张照片
+Sent every day at {0}.,每天发送于 {0}。
+Sent every weekday at {0}.,每个工作日的 {0} 发送。
+Sent every {0} at {1}.,每 {0} 的 {1} 发送一次。
+Sent on the {0} of every month at {1}.,每月 {0} 的 {1} 发送。
+Server Script is required,需要服务器脚本
+Server Script is required.,需要服务器脚本。
+Server Script must be of type API.,服务器脚本必须是 API 类型。
+Server Script {0} is disabled,服务器脚本 {0} 已禁用
+Server Script {0} is disabled.,服务器脚本 {0} 已禁用。
+Server scripts are not enabled on this site.,此站点上未启用服务器脚本。
+Set a reminder from a message's actions — Remind me — or adjust your search.,通过消息操作设置提醒 - 提醒我 - 或调整您的搜索。
+Set availability,设置可用性
+Set both start and end times,设置开始时间和结束时间
+Set reminder,设置提醒
+Set status to {0},将状态设置为 {0}
+"Set working hours for your organization, so Raven can nudge users to send messages silently during off-work hours.",为您的组织设置工作时间，以便 Raven 可以促使用户在下班时间静默发送消息。
+Set your favorite emojis for quick reactions.,设置您最喜欢的表情符号以实现快速表情回应。
+Settings updated,设置已更新
+Share to…,分享到...
+Share what you are up to,分享你在做什么
+Shared {0},共享{0}
+Show Raven on Desk,在桌面显示 Raven
+"Show a preview card under messages with links, or keep the stream compact and preview links on hover. On mobile, previews only appear as cards.",在带有链接的消息下显示预览卡，或保持流紧凑并在悬停时预览链接。在移动设备上，预览仅显示为卡片。
+Show channels that I have joined,显示我加入的频道
+Show error details,显示错误详细信息
+Show if a user is on leave,显示用户是否正在休假
+Show the next image.,显示下一张图片。
+Show the previous image.,显示上一张图片。
+Showing {0}-{1} of {2},显示第 {0}-{1} 个（共 {2} 个）
+Shown in the toast after the action runs.,操作运行后显示在 Toast 中。
+Shown on the dialog,显示在对话框中
+Shown on the message action dialog.,显示在消息操作对话框上。
+Shown on your profile,显示在您的个人资料上
+Simple,简单
+"Simple, work messaging tool",简单的工作消息传递工具
+Site Document Link,站点文档链接
+Site Name,站点名称
+Site URLs of where Frappe Meet is hosted to show previews of meeting links. Separated by newline characters.,托管 Frappe Meet 的站点 URL，用于显示会议链接的预览。由换行符分隔。
+Site registered on Raven Cloud. You can now send push notifications.,网站在 Raven Cloud 上注册。您现在可以发送推送通知。
+Skip for now,暂时跳过
+Some examples:,一些例子：
+Some files failed to upload. Remove them and send again.,部分文件上传失败。删除它们并重新发送。
+Some files failed to upload. Remove them and try again.,部分文件上传失败。删除它们并重试。
+Sort channels by,频道排序依据
+SoundCloud,声云
+SoundCloud player,音云播放器
+Speed up your workflow with keyboard shortcuts.,使用键盘快捷键加快您的工作流程。
+Spoiler,剧透
+Spoiler — click to reveal,剧透——点击查看
+Spotify player,Spotify 播放器
+Stack,堆栈
+Stale After,陈旧之后
+Star,明星
+Start a new line,开始新的一行
+Start a new line without sending.,开始新行而不发送。
+Start and end times cannot be the same,开始时间和结束时间不能相同
+Start call,开始通话
+Start the conversation by sending a message.,通过发送消息开始对话。
+Static,静态
+"Static value, a field from the selected message, or a Jinja template with the message as context.",静态值、所选消息中的字段或以消息作为上下文的 Jinja 模板。
+Status cannot be more than 140 characters.,状态不能超过 140 个字符。
+Status set to {0},状态设置为 {0}
+Stay in the Loop,留在循环中
+Stop accepting votes at a chosen date and time,在选定的日期和时间停止接受投票
+Stores the ID of the last message sent,存储最后发送的消息的 ID
+Strict,严格
+String,字符串
+Submit Document,提交文件
+Success Message,成功消息
+Suggest sending silently,建议静默发送
+Suggested,建议
+Suggested based on your recent usage,根据您最近的使用情况推荐
+Suggested:,建议：
+Supported formats: {0},支持的格式：{0}
+"Switch between light, dark, or system theme",在浅色、深色或系统主题之间切换
+Switch between simple and left-right chat layout,在简单和左右聊天布局之间切换
+Switch to Dark Mode,切换到深色模式
+Switch to Light Mode,切换到灯光模式
+Switch to Raven Cloud,切换到Raven云
+Sync Data to Raven Cloud,将数据同步到Raven Cloud
+Syncing Data to Raven Cloud...,正在将数据同步到 Raven Cloud...
+Tap a slot to change its emoji - these are your one-tap reactions.,点击一个插槽即可更改其表情符号 - 这些是您的一键表情回应。
+Target workspace does not exist,目标工作区不存在
+Temperature,温度
+Tenor API Key,Tenor API 密钥
+Test Connection,测试连接
+Text (with HTML),文本（带有 HTML）
+"That is you! No invite needed, you are already in.",那就是你！无需邀请，您已经加入了。
+The ID of the employee,员工 ID
+The ID of the user,用户ID
+The channel is already in this workspace,该频道已在此工作区中
+"The code interpreter tool is not available for the model {0}, hence it has been disabled.",代码解释器工具不可用于模型 {0}，因此已被禁用。
+The company of the employee (value in Employee DocType),员工的公司（员工 DocType 中的值）
+The current user language,当前用户语言
+The default company in the system,系统默认公司
+The department of the employee,员工所属部门
+The document type to send the notification for.,要发送通知的文档类型。
+The document you want this action to create.,您希望此操作创建的文档。
+The document you want this function to operate on.,您希望此函数操作的文档。
+The email of the user,用户的电子邮件
+The end date must be in the future,结束日期必须是将来的日期
+"The file search tool is not available for the model {0}, hence it has been disabled.",文件搜索工具不适用于型号 {0}，因此已被禁用。
+The file stays on this message and is also attached to the document you pick.,该文件保留在此消息中，并且还附加到您选择的文档中。
+The first name of the user,用户的名字
+The following code sample shows how to use the message action values in a {0}.,以下代码示例展示了如何使用 {0} 中的消息操作值。
+The following code samples show how to use the bot/agent in a Frappe app or Server Script.,以下代码示例展示了如何在 Frappe 应用程序或服务器脚本中使用机器人/智能体。
+The following people are on leave today and aren't in this channel: {0},以下人员今天休假并且不在此频道中：{0}
+The following people are on leave today: {0},以下人员今天休假：{0}
+The following people aren't in this channel and won't be added to this thread: {0},以下人员不在此频道中，因此不会添加到此话题中：{0}
+The following people aren't in this channel: {0},以下人员不在此频道中：{0}
+The full name of the user,用户的全名
+"The message to send. Use Jinja tags to embed document data, e.g. {{ doc.employee_name }}",要发送的消息。使用 Jinja 标签嵌入文档数据，例如{{ doc.employee_name }}
+The model should be compatible with the OpenAI Assistants API. We recommend using models in the GPT-4 family for best results.,该模型应与 OpenAI Assistants API 兼容。我们建议使用 GPT-4 系列中的模型以获得最佳结果。
+The new Raven web app only supports Raven Cloud. Switch to Raven Cloud and add your credentials to keep push notifications working.,新的 Raven Web 应用程序仅支持 Raven Cloud。切换到 Raven Cloud 并添加您的凭据以保持推送通知正常运行。
+The number of seconds until the request expires.,请求到期之前的秒数。
+The processor has been created and is now available to use.,处理器已经创建并且现在可以使用。
+The reasoning effort will be used to determine the depth of the reasoning process. This is only applicable for OpenAI's o-series models.,推理工作将用于确定推理过程的深度。这仅适用于 OpenAI 的 o 系列模型。
+The reminder's channel does not match its message.,提醒的频道与其消息不匹配。
+The reminder's message does not belong to any channel.,该提醒消息不属于任何频道。
+The site is in read-only mode right now. Please wait while the site is being updated.,该网站目前处于只读模式。网站正在更新中，请稍候。
+The system will not generate link previews for these links if they appear in messages.,如果这些链接出现在消息中，系统将不会生成它们的链接预览。
+The thread and all its replies will be permanently deleted for everyone. This can't be undone.,该话题及其所有回复都将被永久删除。这无法撤消。
+The user you are trying to message is not a Raven User.,您尝试向其发送消息的用户不是 Raven 用户。
+The webhook will be triggered if this expression is true.,如果此表达式为 true，则将触发 Webhook。
+The webhook will trigger if the channel type equals the value selected here.,如果频道类型等于此处选择的值，则将触发 Webhook。
+There are no unread threads to show. Clear the filter to see all threads.,没有可显示的未读主题。清除过滤器以查看所有话题。
+There are only {0} options in {1}.,{1} 中只有 {0} 个选项。
+There is no one else in this workspace to add.,此工作区中没有其他人可以添加。
+There was an error,出现错误
+There was an error while evaluating the condition. Please fix your template.,评估条件时出现错误。请修复您的模板。
+"These work in the channel list, direct messages, threads and notifications.",这些功能适用于频道列表、私信、话题和通知。
+This Bot will be used to send the message.,该机器人将用于发送消息。
+This action cannot be undone. This will permanently delete the emoji and it will no longer be available in reactions or messages.,此操作无法撤消。这将永久删除表情符号，并且它将不再在表情回应或消息中可用。
+This action is permanent and cannot be undone.,此操作是永久性的且无法撤消。
+This channel is archived. You can't send new messages.,该频道已存档。您无法发送新消息。
+This channel is no longer available,该频道不再可用
+This channel type cannot be transferred,该频道类型无法转移
+This direct message may have been removed or you don’t have access.,此私信可能已被删除或者您无权访问。
+This field is already added,该字段已添加
+This helps the bot to make less mistakes.,这有助于机器人减少错误。
+This is how people will know what this channel is about.,这样人们就会知道这个频道的内容。
+This is used to describe what this function does to the AI Agent.,这用于描述该函数对 AI Agent 的作用。
+This is used to describe what this variable is used for. A better description will help the AI Bot perform better.,这用于描述该变量的用途。更好的描述将有助于人工智能机器人更好地执行。
+This message has already been sent and cannot be edited.,此消息已发送，无法编辑。
+This message has already been sent.,此消息已发送。
+"This message may have been deleted, or you may not have access to it.",此消息可能已被删除，或者您可能无权访问它。
+This message starts a thread,此消息启动一个话题
+This message will be sent to {0} immediately.,此消息将立即发送至 {0}。
+This method is only meant for developer mode,此方法仅适用于开发者模式
+"This name is reserved, please choose another",该名称已被保留，请选择其他名称
+This needs to be unique and cannot contain spaces.,这必须是唯一的并且不能包含空格。
+This one leads to a better Raven - help us climb by reporting the error on,这会带来更好的 Raven - 通过报告错误来帮助我们攀爬
+This poll is already closed,此投票已经结束
+This poll is anonymous. You do not have permission to access the votes.,这项投票是匿名的。您无权访问投票。
+This poll is closed and no longer accepting votes,此投票已结束，不再接受投票
+This poll is closed and you can no longer retract your vote,此投票已结束，您无法再撤回投票
+This poll is closed.,本次投票已结束。
+This poll only allows one selection.,本次投票仅允许一项选择。
+This poll will end on a future date.,该投票将在未来的某个日期结束。
+This poll will end today at {0}.,该投票将于今天{0}结束。
+This poll will end tomorrow at {0}.,该投票将于明天{0}结束。
+"This processor will be used to process any documents, images, or PDFs uploaded to the thread and send its results to the agent for better context.",该处理器将用于处理上传到话题的任何文档、图像或 PDF，并将其结果发送给智能体以获得更好的上下文。
+This reminder has already been delivered.,此提醒已送达。
+This scheduled message will be permanently deleted.,此预定消息将被永久删除。
+This site sends push notifications through Frappe Cloud.,该网站通过 Frappe Cloud 发送推送通知。
+This thread is archived. You can't send new messages.,该话题已存档。您无法发送新消息。
+This user already exists in Frappe. Add them to Raven?,该用户已存在于 Frappe 中。将它们添加到Raven 中？
+This user is already on Raven.,该用户已在 Raven 上。
+This will be removed for everyone in the conversation. This can't be undone.,这将为对话中的每个人删除。这无法撤消。
+This will permanently delete {0}.,这将永久删除 {0}。
+This will permanently remove the processor from your Google Cloud project. Any agents currently using this document processor will no longer be able to use it.,这将从您的 Google Cloud 项目中永久删除处理器。当前使用此文档处理器的任何智能体将无法再使用它。
+Thread,话题
+Thread Bot,话题机器人
+Thread deleted,话题已删除
+Thread settings,话题设置
+Threads,话题
+Thumbnail Height,缩略图高度
+Thumbnail Width,缩略图宽度
+Ticket created successfully.,工单创建成功。
+Time format updated,时间格式已更新
+Time is required.,需要时间。
+"Times are in the site timezone, {0}.",时间采用网站时区 {0}。
+Times are in {0}. An end before the start means an overnight shift.,时间为{0}。开始前结束意味着通宵轮班。
+Title is required,标题为必填项
+Title of the message action dialog.,消息操作对话框的标题。
+Toggle bold on the selection.,将所选内容切换为粗体。
+Toggle highlight on the selection.,切换突出显示的选择。
+Toggle inline code on the selection.,在选择上切换内联代码。
+Toggle italic on the selection.,在选择上切换斜体。
+Toggle strikethrough on the selection.,在所选内容上切换删除线。
+Toggle underline on the selection.,切换所选内容的下划线。
+Toggled when you double-tap a message,双击消息时切换
+Tomorrow at {0},明天{0}
+Top P,顶P
+Total Votes,总票数
+Trigger Event,触发事件
+Trigger Event is required,需要触发事件
+Trigger Events,触发事件
+Trigger Webhook on Condition,根据条件触发 Webhook
+Trigger is required,需要触发
+Trigger this webhook based on a condition,根据条件触发此 webhook
+Try a different search or adjust your filters.,尝试不同的搜索或调整您的过滤器。
+Try a different search or filter.,尝试不同的搜索或过滤器。
+Try a different search term.,尝试不同的搜索词。
+Try again,再试一次
+Try something like:,尝试类似的方法：
+Turn on AI features across Raven.,打开 Raven 的 AI 功能。
+Turn the current block into a bullet list.,将当前块变成项目符号列表。
+Turn the current block into a code block.,将当前块变成代码块。
+Turn the current block into a numbered list.,将当前块变成编号列表。
+Turn the current block into a quote.,将当前块转换为引用。
+Turning this on will remove any public channels where you have not joined from the sidebar.,启用此功能将从侧边栏删除您尚未加入的所有公共频道。
+Type a message...,输入消息...
+Type is required,类型为必填项
+Type of items in the array,数组中项目的类型
+Type to search,输入搜索
+URL cannot be more than 300 characters.,URL 不能超过 300 个字符。
+Unarchive,取消存档
+Unarchive channel,取消存档频道
+Unarchiving,取消存档
+Understanding Channels,了解频道
+Unmute Channel,频道取消静音
+Unread channels across all your workspaces,所有工作区中的未读频道
+Unread only,仅限未读
+Unreads First,未读数优先
+Unsave,取消保存
+Upcoming,即将到来
+Update Document,更新文档
+Update Multiple Documents,更新多个文档
+Update the channel name and description,更新频道名称和描述
+"Update your name, photo and profile details",更新您的姓名、照片和个人资料详细信息
+Upgrade to a better experience,升级以获得更好的体验
+Upload a file,上传文件
+Upload a file to use as a data source for AI Agents.,上传文件以用作 AI 智能体的数据源。
+Upload a photo,上传照片
+Upload logo,上传徽标
+Upload photo,上传照片
+Upload your own or download from,上传您自己的或从以下位置下载
+Uploaded,已上传
+Uploaded By,上传者
+Uploading...,正在上传...
+Use Google Document/Vision AI to parse documents,使用Google Document/Vision AI解析文档
+Use OpenAI models for AI features.,使用 OpenAI 模型来实现 AI 功能。
+Use Website Favicon,使用网站图标
+"Use a self-hosted, OpenAI-compatible model.",使用自托管、OpenAI 兼容模型。
+"Use agents to send reminders, run AI assistants, and more.",使用智能体发送提醒、运行 AI 助手等。
+"Use five parts: minute, hour, day of month, month, day of week.",使用五个部分：分钟、小时、月份、月份、星期几。
+"Use the no-code builder to create functions that allow AI bots to perform actions within the system when requested, like creating documents, or fetching reports to analyze.",使用无代码构建器创建功能，允许人工智能机器人根据请求在系统内执行操作，例如创建文档或获取报告进行分析。
+Use these to add custom actions - like creating an issue/task from a message.,使用它们添加自定义操作 - 例如从消息创建问题/任务。
+Use your most-used emojis as quick reactions,使用最常用的表情符号作为快速表情回应
+Used to group messages on the frontend together,用于将前端的消息分组在一起
+Useful for extracting information from documents before sending it to agents,用于在将文档发送给智能体之前从文档中提取信息
+User Added,用户已添加
+User Deleted,用户已删除
+User Status,用户状态
+User actions,用户操作
+User added to Raven,用户已添加到 Raven
+User changed,用户已更改
+User has a role profile set. Please set the role to Raven User manually.,用户具有角色配置文件集。请手动将角色设置为Raven User。
+User is already a member of the workspace,用户已经是工作区的成员
+User is mandatory,用户为必填项
+User is not a member of this channel,用户不是该频道的成员
+User {0} does not exist in Raven.,Raven 中不存在用户 {0}。
+Users added to Raven will show up here.,添加到 Raven 的用户将显示在此处。
+VAPID Public Key,VAPID 公钥
+Validation,验证
+Value is required,值为必填项
+Variable Type,变量类型
+"Variable name must be unique, and cannot have spaces.",变量名必须唯一，且不能有空格。
+Variables,变量
+Variables you can use — click to copy.,您可以使用的变量 - 单击以复制。
+Video,视频
+View OpenAI documentation about Code Interpreter,查看有关代码解释器的 OpenAI 文档
+View OpenAI documentation about File Search,查看有关文件搜索的 OpenAI 文档
+View Pinned Messages,查看固定消息
+View Raven Settings,查看 Raven 设置
+View Server Scripts,查看服务器脚本
+View message,查看消息
+View poll details,查看投票详情
+View profile,查看个人资料
+View reactions,查看表情回应
+View thread,查看主题
+View who has read this message.,查看谁读过此消息。
+View who reacted to this message.,查看谁对此消息做出了表情回应。
+View your active document processors or select a processor type and create a new processor.,查看活动文档处理器或选择处理器类型并创建新处理器。
+Viewing images,查看图像
+Vimeo,维梅奥
+Vimeo video player,Vimeo 视频播放器
+Vote Selection,投票选择
+Voters can select more than one option,选民可以选择多个选项
+Votes,投票数
+Web,网络
+Webhook Data keys should be unique,Webhook 数据键应该是唯一的
+Webhook Headers keys should be unique,Webhook 标头键应该是唯一的
+Webhook deleted,Webhook已删除
+Webhook name already exists,Webhook 名称已存在
+Webhook secret is required,需要 Webhook 机密
+Webhook secret should not exceed 140 characters,Webhook 机密不应超过 140 个字符
+Webhook will trigger only if the message is sent by this user.,仅当消息由该用户发送时，Webhook 才会触发。
+Webhook will trigger only if the message is sent on this channel.,仅当消息在此频道上发送时，Webhook 才会触发。
+Webhooks allow you to receive HTTP requests whenever a specific event occurs - like when a message is sent or a channel is created.,Webhooks 允许您在发生特定事件时接收 HTTP 请求 - 例如发送消息或创建频道时。
+What Enter does can be changed in Preferences.,Enter 的作用可以在首选项中更改。
+What is this channel about?,这个频道是关于什么的？
+What is this workspace for?,这个工作区是做什么用的？
+"What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.",使用什么采样温度，介于 0 和 2 之间。较高的值（如 0.8）将使输出更加随机，而较低的值（如 0.2）将使其更加集中和确定性。
+What shows up in your Notifications tab,“通知”选项卡中显示的内容
+What would you like to ask?,您想问什么？
+What's your status?,你的状况如何？
+When,当
+"When images or PDFs are uploaded to the agent, Raven will automatically call Google Cloud APIs to parse the document and send it's results to the agent.",当图像或 PDF 上传到智能体时，Raven 将自动调用 Google Cloud API 来解析文档并将结果发送到智能体。
+"When images or PDFs are uploaded to the agent, Raven will automatically call Google Cloud APIs to process the document and send its results to the agent for better context.",当图像或 PDF 上传到智能体时，Raven 将自动调用 Google Cloud API 来处理文档并将其结果发送到智能体以获得更好的上下文。
+"When off, others won't see when you've read messages - and you won't be able to view read receipts on messages either.",关闭后，其他人将看不到您何时阅读消息 - 并且您也无法查看消息的已读回执。
+"When you delete a channel, all messages from this channel will be removed immediately.",当您删除频道时，该频道中的所有消息将立即删除。
+"When you leave this channel, you’ll no longer be able to see any of its messages. To rejoin, you’ll need to be invited.",当您离开此频道后，您将无法再看到其中的任何消息。要重新加入，您需要获得邀请。
+"When you leave this channel, you’ll no longer be able to send anymore messages, you will have to rejoin the channel to continue participation.",当您离开该频道后，您将无法再发送消息，您必须重新加入该频道才能继续参与。
+Where do you want to send this?,您想把这个发送到哪里？
+Which agent should send this?,哪个智能体应该发送此信息？
+Who can find and join this channel,谁可以找到并加入此频道
+Who has read this message,谁读过此消息
+Who reacted to this message,谁对此消息作出表情回应
+Wikipedia,维基百科
+"With the message box empty, open your last message for editing.",在消息框为空的情况下，打开最后一条消息进行编辑。
+Workflow updated,工作流程已更新
+Working Hours End,工作时间结束
+Working Hours Start,工作时间开始
+Working hours,工作时间
+Working hours end,工作时间结束
+Working hours start,工作时间开始
+Workspace ID,工作区ID
+Workspace Logo,工作区标志
+Workspace Members,工作区成员
+Workspace Name,工作区名称
+Workspace Type,工作区类型
+Workspace created,工作区已创建
+Workspace deleted,工作区已删除
+Workspace is required,需要工作区
+Workspace options,工作区选项
+Workspace renamed,工作区已重命名
+Workspaces allow you to organize your channels and teams.,工作区允许您组织您的频道和团队。
+Workspaces you can access will show up here.,您可以访问的工作区将显示在此处。
+Wrap text in double bars to hide it until clicked.,将文本包裹在双杠中以将其隐藏，直到单击为止。
+Writes,写
+Writing a message,写消息
+"Yes, I understand, permanently delete this channel",是的，我明白，永久删除该频道
+You,你
+You appear to be offline. Raven will load as soon as you're back online.,您似乎处于离线状态。当您重新上线后，Raven 就会立即加载。
+You are already a member of this channel,您已经是该频道的成员
+You are an assistant running on an ERP. The current user's name is {{ first_name }} and the current company is {{ company }}.,您是一名运行 ERP 的助手。当前用户的名称是 {{ first_name }}，当前公司是 {{ company }}。
+You are an assistant running on an ERP. You can answer questions about the company.,您是一名运行 ERP 的助手。您可以回答有关公司的问题。
+You are not a member of this channel,您还不是该频道的成员
+You are not a member of this workspace.,您不是该工作区的成员。
+You are not allowed to change the admin.,您无权更改管理员。
+You are not allowed to remove members.,您不得删除成员。
+"You are not an admin of this channel, so you cannot remove its members.",您不是该频道的管理员，因此您无法删除其成员。
+"You are not an admin of this workspace, so you cannot manage it's members.",您不是此工作区的管理员，因此您无法管理其成员。
+You are not an admin of this workspace.,您不是该工作区的管理员。
+You can also use functions like,您还可以使用类似的功能
+You can also use standard Jinja variables available in the system.,您还可以使用系统中可用的标准 Jinja 变量。
+You can archive this channel instead to preserve your messages,您可以存档此频道以保留您的消息
+You can create a scheduled message & a bot will send it to you at the specified time.,您可以创建预定消息，机器人将在指定时间将其发送给您。
+You can limit the values that the bot can fill in this field by adding options.,您可以通过添加选项来限制机器人可以在此字段中填写的值。
+You can now invite members to {0},您现在可以邀请成员加入{0}
+You can only send your own scheduled messages.,您只能发送自己安排的消息。
+You can only vote for yourself.,您只能为自己投票。
+You can rejoin this channel at any time,您可以随时重新加入此频道
+You can send a direct message to a user by calling the,您可以通过拨打电话向用户发送私信
+You can send a message with a link to any document in the system by setting the,您可以通过设置发送带有系统中任何文档链接的消息
+You can send markdown formatted text to a channel by setting the,您可以通过设置将 Markdown 格式的文本发送到频道
+"You can specify a default value for this variable. If the AI does not fill this field, then the default value will be used.",您可以为此变量指定默认值。如果 AI 未填写此字段，则将使用默认值。
+You can upload files here and use them across multiple agents.,您可以在此处上传文件并在多个智能体中使用它们。
+You can use Jinja to resolve a recipient — e.g.,您可以使用 Jinja 来解析收件人 - 例如
+You can use Jinja variables here to customize the instruction to the bot at run time if dynamic instructions are enabled.,如果启用了动态指令，您可以在此处使用 Jinja 变量在运行时自定义机器人的指令。
+You cannot access Raven.,您无法访问 Raven。
+You cannot change the name of a direct message channel,您无法更改私信频道的名称
+"You cannot delete the last admin of the workspace. Please assign another user as the admin, or delete the workspace instead.",您无法删除工作区的最后一个管理员。请指定其他用户作为管理员，或者删除工作区。
+You cannot include Jinja tags without enabling dynamic instructions.,如果不启用动态指令，则无法包含 Jinja 标签。
+You cannot schedule a message in a channel you are not a member of.,您无法在您不是其成员的频道中安排消息。
+You do not have a <b>Raven User</b> role. Please contact your administrator to add your user profile as a <b>Raven User</b>.,您没有 <b>Raven 用户</b> 角色。请联系您的管理员，将您的用户个人资料添加为 <b>Raven 用户</b>。
+You do not have access to Raven.,您无权访问 Raven。
+You do not have access to this channel.,您无权访问该频道。
+You do not have access to this reminder.,您无权访问此提醒。
+You do not have permission to access this channel,您没有权限访问该频道
+You do not have permission to access this message,您没有权限访问此消息
+You do not have permission to access this poll,您无权访问此投票
+You do not have permission to hide link previews on this message.,您无权隐藏此邮件的链接预览。
+You do not have permission to react to this message,您无权对此消息做出表情回应
+You do not have permission to read this thread.,您没有阅读此主题的权限。
+"You do not have the ""Raven User"" role. Please contact your system administrator.",您没有“Raven 用户”角色。请联系您的系统管理员。
+You don't have permission to access this message,您无权访问此消息
+You don't have permission to archive/unarchive this channel,您无权存档/取消存档此频道
+You don't have permission to assign admins to this channel. Please ask another admin to do this.,您无权为此频道分配管理员。请让另一位管理员执行此操作。
+You don't have permission to modify this channel,您无权修改此频道
+You don't have permission to save this message,您无权保存此消息
+You don't have permission to view this channel,您没有权限观看该频道
+You don't have permission to view this message,您无权查看此消息
+You have already voted in this poll.,您已在此投票中投票。
+"You have hidden your read receipts, so you can't view read receipts either.",您已隐藏已读回执，因此您也无法查看已读回执。
+You have joined {0}.,您已加入{0}。
+You have left the channel,您已离开频道
+You have left {0}.,您已离开{0}。
+You have not voted for any option in this poll.,您尚未为本次投票中的任何选项投票。
+You have ventured too far beyond the wall.,你已经冒险超出了墙的范围。
+You left the thread,你离开了话题
+You may want to try adjusting your filters.,您可能想尝试调整您的过滤器。
+You must be an admin of both workspaces,您必须是两个工作区的管理员
+You need Raven Admin permissions to manage document processors.,您需要 Raven 管理员权限才能管理文档处理器。
+You need the Raven Admin role to change these settings.,您需要 Raven 管理员角色才能更改这些设置。
+You need the System Manager role to change document previews.,您需要系统管理员角色才能更改文档预览。
+You need to be a Raven User to send DMs.,您需要成为 Raven 用户才能发送 DM。
+You need to provide a default value for required parameters that are not asked by the AI.,您需要为 AI 未询问的必需参数提供默认值。
+You need to specify a workspace for this channel,您需要为此频道指定一个工作区
+You will be able to search for this emoji by these keywords.(Optional),您将可以通过这些关键字搜索该表情符号。（可选）
+"You will still be able to find the channel’s contents via search. And you can always unarchive the channel in the future, if you want.",您仍然可以通过搜索找到该频道的内容。如果您愿意，您将来随时可以取消存档该频道。
+You won't be reminded about this message. This can't be undone.,系统不会提醒您此消息。这无法撤消。
+You'll need an invite to rejoin this channel,您需要获得邀请才能重新加入此频道
+You're all caught up,暂无未读消息
+You're not a member of this channel.,您不是该频道的成员。
+You're not a member of this thread.,您不是该话题的成员。
+You: {0},你：{0}
+YouTube Music,YouTube 音乐
+YouTube playlist player,YouTube 播放列表播放器
+YouTube video player,YouTube 视频播放器
+Your API Key,您的 API 密钥
+Your Profile,您的个人资料
+Your account details couldn't be loaded. Please try again in a moment.,无法加载您的帐户详细信息。请稍后重试。
+"Your browser provides these. Raven keeps every channel and page in the history, so they work as you would expect.",您的浏览器提供这些。 Raven 会将每个频道和页面保留在历史记录中，因此它们可以按照您的预期工作。
+Zoom meeting,Zoom 会议
+a open channel:,开放频道：
+a private channel:,私人频道：
+a public channel:,公共频道：
+and add your site to get an API Key and API Secret.,然后添加站点，以获取 API Key 和 API Secret。
+and then add them here.,然后将它们添加到此处。
+boolean,布尔值
+characters remaining,剩余字符数
+comments,评论
+"e.g. Hello, this is a reminder to pay your dues.",例如您好，这是一个提醒您缴纳会费的信息。
+e.g. My Workspace,例如我的工作区
+e.g. Out of office,例如不在办公室
+e.g. Sales Invoice - Daily Reminder,例如销售发票 - 每日提醒
+"e.g. marketing, design-team, project-alpha",例如营销、设计团队、阿尔法项目
+"e.g. party, celebrate, dance",例如聚会、庆祝、跳舞
+e.g. party_parrot,例如派对鹦鹉
+edited,已编辑
+eu,eu
+float,浮动
+function builder,函数构建器
+high,高
+image_preview,图像预览
+in a direct message,在私信中
+in thread,在话题中
+integer,整数
+low,低
+medium,中等
+method and setting the user_id parameter. This method also accepts markdown and document link parameters.,方法并设置 user_id 参数。此方法还接受 markdown 和文档链接参数。
+number,数量
+parameter to True.,参数为 True。
+parameters.,参数。
+points,点
+see Frappe's Jinja documentation,请参阅 Frappe 的 Jinja 文档
+string,字符串
+thread,话题
+to open,打开
+to search,搜索
+us,us
+{0} (You),{0}（你）
+{0} Options,{0}选项
+{0} Sources,{0}来源
+{0} Types,{0} 类型
+{0} added to channel,{0}已添加到频道
+{0} added {1} and,{0}添加了{1}并且
+{0} added {1} and {2}.,{0}添加了{1}和{2}。
+{0} added {1}.,{0}添加了{1}。
+{0} and {1} are typing,{0}和{1}正在输入
+{0} and {1} more,{0} 和另外 {1} 个
+{0} and {1} others,{0} 和另外 {1} 个
+{0} are on leave today and aren't in this channel.,{0} 今天休假，不在该频道中。
+{0} are on leave today.,{0} 今天休假。
+{0} aren't in this channel and won't be added to this thread.,{0} 不在该频道中，也不会添加到该话题中。
+{0} aren't in this channel.,{0} 不在该频道中。
+{0} attachments,{0} 个附件
+{0} channels,{0} 个频道
+{0} created this channel.,{0} 创建了该频道。
+{0} created this thread.,{0} 创建了该话题。
+{0} created {1}.,{0}创建了{1}。
+{0} has been deleted from your Google Cloud project.,{0} 已从您的 Google Cloud 项目中删除。
+{0} is no longer an admin.,{0} 不再是管理员。
+{0} is now an admin.,{0} 现已成为管理员。
+{0} is on leave today and isn't in this channel.,{0} 今天休假，不在该频道中。
+{0} is on leave today.,{0} 今天休假。
+{0} is too large. The maximum file size allowed is {1}.,{0} 太大。允许的最大文件大小为{1}。
+{0} is typing,{0} 正在输入
+{0} isn't in this channel and won't be added to this thread.,{0} 不在该频道中，也不会添加到该话题中。
+{0} isn't in this channel and won't be notified.,{0} 不在该频道中，因此不会收到通知。
+{0} joined.,{0} 加入。
+{0} left.,{0} 已离开。
+{0} links blocked,{0} 个链接已被阻止
+{0} members added,添加了 {0} 个成员
+{0} members selected,已选择 {0} 位成员
+"{0} messages scheduled, next on {1}.",已安排 {0} 条消息，下一条将于 {1} 发送。
+{0} messages scheduled.,已安排 {0} 条消息。
+{0} others,其他 {0} 个
+{0} reacted with {1},{0}对{1}做出了表情回应
+{0} removed from selection,{0}已从选择中删除
+{0} removed {1}.,{0}删除了{1}。
+{0} replies,{0} 条回复
+{0} scheduled messages failed to send.,{0} 条预定消息发送失败。
+{0} sites,{0} 个网站
+{0} votes,{0} 票
+"{0}, {1} and 1 other are typing",{0}、{1}和另外 1 人正在输入
+"{0}, {1} and {2}",{0}、{1} 和 {2}
+"{0}, {1} and {2} others",{0}、{1} 和另外 {2} 个
+"{0}, {1} and {2} others are typing",{0}、{1} 和另外 {2} 个人正在输入
+"{0}, {1} reactions",{0}、{1} 表情回应
+⏰ Reminder,⏰ 提醒
+"<p><strong>Condition Examples:</strong></p>
+<pre>doc.status==""Open""<br>doc.due_date==nowdate()<br>doc.total &gt; 40000
+</pre>","<p><strong>条件示例：</strong></p>
+<pre>doc.status==""Open""<br>doc.due_date==nowdate()<br>doc.total &gt; 40000
+</pre>"
+Could not delete message,无法删除消息
+Could not edit message,无法编辑消息
+Could not join,无法加入
+Could not join channel,无法加入频道
+Could not leave channel,无法退出频道
+Could not update the reminder,无法更新提醒
+Could not update time format,无法更新时间格式
+Couldn't load notifications,无法加载通知
+Create Document Processors,创建文档处理器
+Create Multiple Documents,创建多个文档
+DM,私信
+FCM Token,FCM 令牌
+FCM token not found,未找到 FCM 令牌
+Failed to remove member,移除成员失败
+Failed to update member,更新成员失败
+Failed to update sidebar,更新侧边栏失败
+Fetch Attempts,获取尝试次数
+Fetch Error,获取失败
+It's outside working hours - hold the send to message without pinging anyone.,当前不在工作时间。长按发送可发送消息且不提醒任何人。
+It's outside working hours - send silently to let people rest (⌘⇧↵).,当前不在工作时间。可静默发送，让大家休息（⌘⇧↵）。
+It's outside working hours - your messages will be sent silently.,当前不在工作时间，您的消息将静默发送。
