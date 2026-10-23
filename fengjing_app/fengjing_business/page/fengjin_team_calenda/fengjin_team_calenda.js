@@ -23,24 +23,6 @@ const FENGJING_CALENDAR_CHINA_SPECIAL_REGIONS = {
 	HKG: { key: "CN-HK", name: "香港特别行政区", name_en: "Hong Kong" },
 	MAC: { key: "CN-MO", name: "澳门特别行政区", name_en: "Macau" },
 };
-const FENGJING_US_HOLIDAY_NAMES = Object.freeze({
-	"New Year's Day": "元旦",
-	"Martin Luther King, Jr. Day": "马丁·路德·金纪念日",
-	"Martin Luther King Jr. Day": "马丁·路德·金纪念日",
-	"Presidents Day": "总统日",
-	"Presidents' Day": "总统日",
-	"Washington's Birthday": "总统日",
-	"Memorial Day": "阵亡将士纪念日",
-	"Juneteenth National Independence Day": "六月节",
-	"Independence Day": "独立日",
-	"Labour Day": "劳动节",
-	"Labor Day": "劳动节",
-	"Columbus Day": "哥伦布日",
-	"Veterans Day": "退伍军人节",
-	"Thanksgiving Day": "感恩节",
-	"Christmas Day": "圣诞节",
-});
-
 function fengjingCountryFlag(code, countryName) {
 	const iso = String(code || "").toLowerCase();
 	if (!/^[a-z]{2}$/.test(iso)) return null;
@@ -1322,7 +1304,7 @@ class FengjingTeamCalendarPage {
 			toolbarSectionClass: ({ name }) => name === "center" ? "fjtc-toolbar-center" : "",
 			dayCellTopInnerClass: (info) => {
 				if (info.view.type !== "dayGridMonth") return "";
-				return `fjtc-day-label${[0, 6].includes(info.date.getDay()) ? " fjtc-weekend-day" : ""}`;
+				return `fjtc-day-label${[0, 6].includes(info.date.getDay()) ? " fjtc-weekend-day" : ""}${info.isOther ? " fjtc-other-month" : ""}`;
 			},
 			datesSet: (info) => {
 				this.formatCalendarMonthTitle(info);
@@ -1338,6 +1320,7 @@ class FengjingTeamCalendarPage {
 			eventResize: (info) => this.persistCalendarMove(info),
 			eventDidMount: (info) => {
 				const props = info.event.extendedProps;
+				info.el.classList.add("fjtc-calendar-event");
 				info.el.title = props.repeat_this_event
 					? `${info.event.title} · 重复日程需在完整表单中修改`
 					: info.event.title;
@@ -1685,9 +1668,7 @@ class FengjingTeamCalendarPage {
 				const badge = document.createElement("span");
 				badge.className = `fjtc-holiday-badge${holiday.day_type === "补班工作日" ? " is-makeup" : ""}`;
 				const country = holiday.country_code === "CN" ? "中国" : holiday.country_name || holiday.country_code;
-				const holidayName = holiday.country_code === "US"
-					? FENGJING_US_HOLIDAY_NAMES[holiday.holiday_name] || holiday.holiday_name
-					: holiday.holiday_name;
+				const holidayName = holiday.holiday_name_zh || holiday.holiday_name;
 				const holidayLabel = holiday.day_type === "补班工作日"
 					? `${holidayName}补班` : holidayName;
 				const flag = fengjingCountryFlag(holiday.country_code, country);

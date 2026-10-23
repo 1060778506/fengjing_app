@@ -930,6 +930,14 @@ body.fjtc-map-reordering * {
 	color: #dc2626 !important;
 }
 
+.fjtc-page .fjtc-day-label.fjtc-other-month {
+	opacity: 0.58;
+}
+
+.fjtc-page [data-date]:has(.fjtc-day-label.fjtc-other-month) .fjtc-calendar-event {
+	opacity: 0.58;
+}
+
 .fjtc-page .fjtc-day-label:has(.fjtc-holiday-badges),
 .fjtc-page .fjtc-day-label:has(.fjtc-day-weather) {
 	display: flex;

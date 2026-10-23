@@ -18,6 +18,8 @@ SETTINGS_DOCTYPE = "Fengjin Team Calendar Settings"
 CITY_TIMEZONE_FILE = (Path(__file__).resolve().parents[3] / "public" / "data" / "Vector_map"
 	/ "城市位置ne_10m_populated_places" / "ne_10m_populated_places.geojson")
 CALENDAR_DEFAULTS_FILE = Path(__file__).with_name("calendar_defaults.json")
+HOLIDAY_TRANSLATIONS_FILE = (Path(__file__).resolve().parents[3] / "data" / "calendar"
+	/ "holiday_names_zh.json")
 EVENT_FIELDS = {
 	"subject",
 	"starts_on",
@@ -178,8 +180,15 @@ def get_calendar_holidays(start, end):
 		order_by="holiday_date asc, country_code asc, holiday_name asc",
 		limit_page_length=1000,
 	)
+	with HOLIDAY_TRANSLATIONS_FILE.open(encoding="utf-8") as source:
+		translations = json.load(source)
 	return {"countries": countries, "holidays": [
-		{**row, "holiday_date": str(row.holiday_date)} for row in rows
+		{
+			**row,
+			"holiday_date": str(row.holiday_date),
+			"holiday_name_zh": translations.get(row.country_code, {}).get(
+				row.holiday_name, row.holiday_name),
+		} for row in rows
 	], "sync_pending": pending}
 
 
