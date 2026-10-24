@@ -80,14 +80,17 @@ def _update_countries(configurations, **values):
 		_update(COUNTRY_DOCTYPE, configuration.name, **values)
 
 
-def _enabled_group(master_name):
+def _enabled_group(master_name, selected_store=None):
 	master = _master(master_name)
 	if not cint(master.enabled):
 		frappe.throw(_("亚马逊余额总配置尚未启用。"))
 	credential_store = get_store(master.credential_store)
+	filters = {"master_configuration": master.name, "enabled": 1}
+	if selected_store:
+		filters["amazon_store"] = selected_store
 	names = frappe.get_all(
 		COUNTRY_DOCTYPE,
-		filters={"master_configuration": master.name, "enabled": 1},
+		filters=filters,
 		pluck="name",
 		order_by="name asc",
 	)
@@ -495,6 +498,21 @@ def execute_balance_sync(master_name, mode="current", days=0):
 			lock.release()
 		except Exception:
 			pass
+
+
+def execute_balance_snapshot_sync(master_name, amazon_store):
+	"""Fetch only the selected marketplace without changing routine sync checkpoints."""
+	if not amazon_store:
+		raise ValueError("快照余额抓取缺少亚马逊店铺。")
+	lock = _task_lock(master_name)
+	if not lock.acquire(blocking=False):
+		return {"status": "busy", "message": "该余额总配置已有任务正在运行"}
+	try:
+		master, configurations, stores, credential_store = _enabled_group(master_name, amazon_store)
+		result = _sync_date(master, configurations, stores, credential_store, getdate(now_datetime()), "current")
+		return {"status": "success", "summary": result}
+	finally:
+		lock.release()
 
 
 @frappe.whitelist()

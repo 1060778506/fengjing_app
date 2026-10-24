@@ -13,21 +13,29 @@
   "completed_at",
   "scope_column",
   "snapshot_scope",
+  "range_mode",
+  "range_start",
+  "range_end",
   "amazon_store",
   "marketplace_id",
   "country",
   "currency_code",
   "source_section",
+  "balance_status",
   "balance_fetched_at",
+  "transactions_status",
   "transactions_fetched_at",
+  "orders_status",
   "orders_fetched_at",
   "source_column",
   "balance_row_count",
+  "financial_transaction_count",
   "deferred_transaction_count",
   "order_count",
   "unmatched_order_count",
   "payload_section",
   "balance_json",
+  "financial_transactions_json",
   "deferred_transactions_json",
   "orders_json",
   "metadata_section",
@@ -82,6 +90,26 @@
    "read_only": 1
   },
   {
+   "fieldname": "range_mode",
+   "fieldtype": "Select",
+   "label": "时间范围模式",
+   "options": "90d\n180d\nmonths",
+   "read_only": 1
+  },
+  {
+   "fieldname": "range_start",
+   "fieldtype": "Datetime",
+   "label": "范围开始（含）",
+   "read_only": 1
+  },
+  {
+   "description": "时间范围的排他结束点；当天或当月尚未结束时取可请求的最近时间。",
+   "fieldname": "range_end",
+   "fieldtype": "Datetime",
+   "label": "范围结束（不含）",
+   "read_only": 1
+  },
+  {
    "fieldname": "amazon_store",
    "fieldtype": "Link",
    "label": "亚马逊店铺",
@@ -116,15 +144,36 @@
    "label": "数据来源"
   },
   {
+   "fieldname": "balance_status",
+   "fieldtype": "Select",
+   "label": "余额任务状态",
+   "options": "等待中\n运行中\n已完成\n失败",
+   "read_only": 1
+  },
+  {
    "fieldname": "balance_fetched_at",
    "fieldtype": "Datetime",
    "label": "余额抓取时间",
    "read_only": 1
   },
   {
+   "fieldname": "transactions_status",
+   "fieldtype": "Select",
+   "label": "财务交易任务状态",
+   "options": "等待中\n运行中\n已完成\n失败",
+   "read_only": 1
+  },
+  {
    "fieldname": "transactions_fetched_at",
    "fieldtype": "Datetime",
-   "label": "递延交易抓取时间",
+   "label": "财务交易抓取时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "orders_status",
+   "fieldtype": "Select",
+   "label": "订单任务状态",
+   "options": "等待中\n运行中\n已完成\n失败",
    "read_only": 1
   },
   {
@@ -144,6 +193,12 @@
    "read_only": 1
   },
   {
+   "fieldname": "financial_transaction_count",
+   "fieldtype": "Int",
+   "label": "财务明细行数",
+   "read_only": 1
+  },
+  {
    "fieldname": "deferred_transaction_count",
    "fieldtype": "Int",
    "label": "递延交易笔数",
@@ -152,7 +207,7 @@
   {
    "fieldname": "order_count",
    "fieldtype": "Int",
-   "label": "关联订单数",
+   "label": "订单记录数",
    "read_only": 1
   },
   {
@@ -175,7 +230,15 @@
    "read_only": 1
   },
   {
-   "description": "按交易 ID 去重后的递延交易展示字段及金额；不复制原始 JSON。",
+   "description": "第二版快照中按所选时间范围保存完整财务交易明细的展示字段。",
+   "fieldname": "financial_transactions_json",
+   "fieldtype": "Code",
+   "label": "财务明细 JSON",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "description": "第一版快照保存的递延交易；第二版快照从财务明细 JSON 中筛选递延交易。",
    "fieldname": "deferred_transactions_json",
    "fieldtype": "Code",
    "label": "递延交易 JSON",
@@ -183,10 +246,10 @@
    "read_only": 1
   },
   {
-   "description": "快照时关联订单的展示字段；不复制原始 JSON。",
+   "description": "第一版为递延交易关联订单；第二版为所选时间范围内的完整订单明细。",
    "fieldname": "orders_json",
    "fieldtype": "Code",
-   "label": "关联订单 JSON",
+   "label": "订单 JSON",
    "options": "JSON",
    "read_only": 1
   },
@@ -227,6 +290,7 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "delete": 1,
    "email": 1,
    "export": 1,
    "print": 1,

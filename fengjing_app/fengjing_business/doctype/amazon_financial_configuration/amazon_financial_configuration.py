@@ -4,6 +4,7 @@
 """Amazon Finances API synchronization driven by Amazon Financial Configuration."""
 
 import json
+import time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -29,6 +30,7 @@ RECHECK_DAYS = (7, 14, 30, 90, 180)
 SYNC_TYPE_LABELS = {
 	"history": "历史交易",
 	"incremental": "15分钟增量",
+	"snapshot_range": "快照指定范围",
 	"recheck_7": "7天核对",
 	"recheck_14": "14天核对",
 	"recheck_30": "30天核对",
@@ -263,9 +265,16 @@ def _first_recheck(now):
 	return candidate if candidate > now else candidate + timedelta(days=1)
 
 
-def execute_financial_sync(configuration_name, sync_type):
+def execute_financial_sync(configuration_name, sync_type, start_datetime=None, end_datetime=None):
 	if sync_type not in SYNC_TYPE_LABELS:
 		raise ValueError(f"Unsupported Amazon financial sync type: {sync_type}")
+	if sync_type == "snapshot_range":
+		if not start_datetime or not end_datetime:
+			raise ValueError("Snapshot range requires start and end datetime")
+		start_utc = _to_utc(start_datetime)
+		end_utc = _to_utc(end_datetime)
+		if end_utc <= start_utc:
+			raise ValueError("Snapshot financial range is empty or not yet available")
 	lock = _task_lock(configuration_name)
 	if not lock.acquire(blocking=False):
 		return {"status": "busy", "message": "This Amazon financial configuration is already running"}
@@ -289,6 +298,30 @@ def execute_financial_sync(configuration_name, sync_type):
 		)
 		config = _get_configuration(configuration_name)
 		store = get_store(config.amazon_store)
+		if sync_type == "snapshot_range":
+			cursor = start_utc
+			while cursor < end_utc:
+				window_end = min(cursor + timedelta(days=MAX_HISTORY_SEGMENT_DAYS), end_utc)
+				window_start = cursor - timedelta(seconds=1) if cursor > start_utc else cursor
+				if window_end == end_utc:
+					# postedBefore must be more than two minutes before the request.
+					wait_seconds = (end_utc + timedelta(minutes=2, seconds=3) - datetime.now(timezone.utc)).total_seconds()
+					if wait_seconds > 0:
+						time.sleep(wait_seconds)
+				window = _query_window(config, store, sync_type, window_start, window_end)
+				for key in ("created", "updated", "unchanged", "transactions", "pages"):
+					summary[key] += window[key]
+				summary["windows"] += 1
+				cursor = window_end
+			_update_configuration(
+				configuration_name,
+				current_task_status="Success",
+				current_execution_type="",
+				current_task_completed_at=now_datetime(),
+				last_run_result=_summary_text("Success", summary),
+				last_error="",
+			)
+			return {"status": "success", "summary": summary}
 
 		if sync_type == "history":
 			while True:

@@ -83,7 +83,7 @@
   {"fieldname":"country","fieldtype":"Link","label":"国家","options":"Country","read_only":1,"search_index":1},
   {"fieldname":"marketplace_id","fieldtype":"Data","in_list_view":1,"label":"Marketplace ID","read_only":1,"reqd":1,"search_index":1},
   {"fieldname":"api_region","fieldtype":"Select","label":"API 区域","options":"\n北美\n欧洲\n远东","read_only":1},
-  {"fieldname":"sync_type","fieldtype":"Select","label":"同步类型","options":"\n历史交易\n15分钟增量\n7天核对\n14天核对\n30天核对\n90天核对\n180天核对","read_only":1},
+  {"fieldname":"sync_type","fieldtype":"Select","label":"同步类型","options":"\n历史交易\n15分钟增量\n快照指定范围\n7天核对\n14天核对\n30天核对\n90天核对\n180天核对","read_only":1},
   {"fieldname":"transaction_section","fieldtype":"Section Break","label":"交易类型与来源"},
   {"description":"保留Amazon返回的交易类型原值，不限制未来新类型。","fieldname":"transaction_type","fieldtype":"Data","in_list_view":1,"label":"交易类型","read_only":1,"search_index":1},
   {"fieldname":"transaction_status","fieldtype":"Data","label":"交易状态","read_only":1,"search_index":1},
