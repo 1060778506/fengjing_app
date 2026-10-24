@@ -18,7 +18,7 @@
    "hidden": 0,
    "is_query_report": 0,
   "label": "亚马逊数据",
-  "link_count": 21,
+  "link_count": 23,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -236,7 +236,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "亚马逊实际购买商品日报",
+  "label": "亚马逊实际购买商品日报",
    "link_count": 0,
    "link_to": "Amazon Advertising Purchased Product Daily",
    "link_type": "DocType",
@@ -246,8 +246,18 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "亚马逊递延对账快照",
+   "link_count": 0,
+   "link_to": "Amazon Deferred Reconciliation Snapshot",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "亚马逊分析",
-   "link_count": 7,
+   "link_count": 8,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -315,7 +325,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Amazon入库货件中心",
+  "label": "Amazon入库货件中心",
    "link_count": 0,
    "link_to": "amazon-inbound",
    "link_type": "Page",
@@ -325,8 +335,18 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "亚马逊递延交易对账",
+   "link_count": 0,
+   "link_to": "amazon-deferred-reconciliation",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
   "label": "亚马逊配置",
-  "link_count": 18,
+  "link_count": 20,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"

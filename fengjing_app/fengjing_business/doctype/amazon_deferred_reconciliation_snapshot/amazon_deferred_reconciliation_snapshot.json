@@ -1,0 +1,244 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-10-24 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "scope_section",
+  "snapshot_label",
+  "snapshot_status",
+  "requested_at",
+  "completed_at",
+  "scope_column",
+  "snapshot_scope",
+  "amazon_store",
+  "marketplace_id",
+  "country",
+  "currency_code",
+  "source_section",
+  "balance_fetched_at",
+  "transactions_fetched_at",
+  "orders_fetched_at",
+  "source_column",
+  "balance_row_count",
+  "deferred_transaction_count",
+  "order_count",
+  "unmatched_order_count",
+  "payload_section",
+  "balance_json",
+  "deferred_transactions_json",
+  "orders_json",
+  "metadata_section",
+  "snapshot_schema_version",
+  "snapshot_hash",
+  "last_error"
+ ],
+ "fields": [
+  {
+   "fieldname": "scope_section",
+   "fieldtype": "Section Break",
+   "label": "快照范围与时间"
+  },
+  {
+   "fieldname": "snapshot_label",
+   "fieldtype": "Data",
+   "label": "快照名称",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "snapshot_status",
+   "fieldtype": "Select",
+   "label": "快照状态",
+   "options": "等待中\n抓取中\n已完成\n不完整\n失败",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "requested_at",
+   "fieldtype": "Datetime",
+   "label": "发起时间",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "completed_at",
+   "fieldtype": "Datetime",
+   "label": "完成时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "scope_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "snapshot_scope",
+   "fieldtype": "Select",
+   "label": "快照范围",
+   "options": "全部站点\n单个站点",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amazon_store",
+   "fieldtype": "Link",
+   "label": "亚马逊店铺",
+   "options": "Amazon Store Configuration",
+   "in_standard_filter": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "marketplace_id",
+   "fieldtype": "Data",
+   "label": "Marketplace ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "label": "国家",
+   "options": "Country",
+   "read_only": 1
+  },
+  {
+   "description": "只在快照限定为单一币种时填写；多币种金额在余额 JSON 中分别保存，不跨币种合计。",
+   "fieldname": "currency_code",
+   "fieldtype": "Link",
+   "label": "币种",
+   "options": "Currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_section",
+   "fieldtype": "Section Break",
+   "label": "数据来源"
+  },
+  {
+   "fieldname": "balance_fetched_at",
+   "fieldtype": "Datetime",
+   "label": "余额抓取时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "transactions_fetched_at",
+   "fieldtype": "Datetime",
+   "label": "递延交易抓取时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "orders_fetched_at",
+   "fieldtype": "Datetime",
+   "label": "订单抓取时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "balance_row_count",
+   "fieldtype": "Int",
+   "label": "余额账户数",
+   "read_only": 1
+  },
+  {
+   "fieldname": "deferred_transaction_count",
+   "fieldtype": "Int",
+   "label": "递延交易笔数",
+   "read_only": 1
+  },
+  {
+   "fieldname": "order_count",
+   "fieldtype": "Int",
+   "label": "关联订单数",
+   "read_only": 1
+  },
+  {
+   "fieldname": "unmatched_order_count",
+   "fieldtype": "Int",
+   "label": "未匹配订单数",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payload_section",
+   "fieldtype": "Section Break",
+   "label": "快照数据"
+  },
+  {
+   "description": "余额账户的精简展示字段；按站点、账户类型和币种保留，不复制亚马逊原始响应。",
+   "fieldname": "balance_json",
+   "fieldtype": "Code",
+   "label": "余额 JSON",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "description": "按交易 ID 去重后的递延交易展示字段及金额；不复制原始 JSON。",
+   "fieldname": "deferred_transactions_json",
+   "fieldtype": "Code",
+   "label": "递延交易 JSON",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "description": "快照时关联订单的展示字段；不复制原始 JSON。",
+   "fieldname": "orders_json",
+   "fieldtype": "Code",
+   "label": "关联订单 JSON",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "metadata_section",
+   "fieldtype": "Section Break",
+   "label": "完整性与异常"
+  },
+  {
+   "description": "后续快照结构调整时用于区分 JSON 数据格式。",
+   "fieldname": "snapshot_schema_version",
+   "fieldtype": "Int",
+   "label": "快照结构版本",
+   "default": "1",
+   "read_only": 1
+  },
+  {
+   "description": "三份精简 JSON 的内容哈希，供后续完整性校验使用。",
+   "fieldname": "snapshot_hash",
+   "fieldtype": "Data",
+   "label": "快照校验哈希",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Long Text",
+   "label": "抓取异常",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-24 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon Deferred Reconciliation Snapshot",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager"
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "requested_at",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 0
+}
