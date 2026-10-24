@@ -487,6 +487,21 @@ class AmazonDeferredReconciliationPage {
 		return order ? this.money(order.order_total, order.currency_code || row.currency_code) : "—";
 	}
 
+	linkedTransactionsCell(row, transactionIndex) {
+		const key = this.orderRelationKey(row);
+		const matches = key ? transactionIndex.get(key) || [] : [];
+		const byId = new Map();
+		for (const transaction of matches) {
+			const id = String(transaction.transaction_id || "").trim();
+			if (!id || byId.has(id) && byId.get(id).sku === row.sku) continue;
+			byId.set(id, transaction);
+		}
+		if (!byId.size) return `<span class="adr-unlinked">${__("未关联")}</span>`;
+		return `<div class="adr-linked-orders">${[...byId].map(([id, transaction]) => transaction.name
+			? `<a href="/app/amazon-financial-transaction/${encodeURIComponent(transaction.name)}" title="${this.esc(id)}">${this.esc(id)}</a>`
+			: `<span>${this.esc(id)}</span>`).join("")}</div>`;
+	}
+
 	financialTaxCell(row) {
 		const fields = ["product_sales_tax", "shipping_credits_tax", "promotional_rebates_tax"];
 		if (fields.every((field) => row[field] === null || row[field] === undefined || row[field] === "")) return "—";
@@ -509,7 +524,7 @@ class AmazonDeferredReconciliationPage {
 		this.$.find(".adr-detail-count").text(`${rows.length} ${__("条记录")}`);
 		const columns = {
 			transactions: [["posted_date", __("记账时间")], ["amazon_order_id", __("订单号")], ["transaction_id", __("交易 ID")], ["store", __("店铺")], ["transaction_type", __("类型")], ["transaction_status", __("状态")], ["sku", "SKU"], ["asin", "ASIN"], ["release_date", __("预计释放")], ["product_sales", __("商品销售额（财务）")], ["financial_tax", __("税金（财务）")], ["total_amount", __("交易金额（财务）")], ["linked_orders", __("已关联所有订单")], ["linked_order_amount", __("订单总额（订单）")]],
-			orders: [["amazon_order_id", __("订单号")], ["store", __("店铺")], ["purchase_date", __("购买时间")], ["order_status", __("订单状态")], ["sku", "SKU"], ["asin", "ASIN"], ["quantity_ordered", __("数量")], ["order_total", __("订单总额（订单）")]],
+			orders: [["amazon_order_id", __("订单号")], ["linked_transactions", __("关联财务交易 ID")], ["store", __("店铺")], ["purchase_date", __("购买时间")], ["order_status", __("订单状态")], ["sku", "SKU"], ["asin", "ASIN"], ["quantity_ordered", __("数量")], ["order_total", __("订单总额（订单）")]],
 			balances: [["amazon_store", __("店铺")], ["marketplace_id", __("站点")], ["account_type", __("账户类型")], ["total_balance", __("总余额")], ["available_balance", __("可用")], ["reserved_balance", __("预留")], ["deferred_balance", __("递延")]],
 		}[this.activeTab];
 		const moneyFields = new Set(["product_sales", "total_amount", "order_total", "total_balance", "available_balance", "reserved_balance", "deferred_balance"]);
@@ -520,8 +535,15 @@ class AmazonDeferredReconciliationPage {
 			if (!orderIndex.has(key)) orderIndex.set(key, []);
 			orderIndex.get(key).push(order);
 		});
+		const transactionIndex = new Map();
+		if (this.activeTab === "orders") filtered.transactions.forEach((transaction) => {
+			const key = this.orderRelationKey(transaction);
+			if (!key) return;
+			if (!transactionIndex.has(key)) transactionIndex.set(key, []);
+			transactionIndex.get(key).push(transaction);
+		});
 		const amountNote = this.activeTab === "balances" ? "" : `<p class="adr-amount-note">${__("订单总额（订单）来自亚马逊 OrderTotal，可能包含商品金额、运费和税费，并受优惠影响；商品销售额、税金和交易金额来自财务明细。税金汇总商品税、运费税和促销税，不扣减平台代扣税。")}</p>`;
-		this.$.find(".adr-detail-content").html(`${amountNote}<div class="adr-table-wrap"><table><thead><tr>${columns.map(([, label]) => `<th>${label}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${columns.map(([key]) => `<td>${key === "linked_orders" ? this.linkedOrdersCell(row, orderIndex) : key === "linked_order_amount" ? this.linkedOrderAmountCell(row, orderIndex) : key === "financial_tax" ? this.financialTaxCell(row) : moneyFields.has(key) ? row[key] === null || row[key] === undefined || row[key] === "" ? "—" : this.money(row[key], row.currency_code) : this.esc(this.translateField(key, row[key]))}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${columns.length}" class="adr-empty">${this.selected ? __("当前快照没有这类明细") : __("暂无快照，请先抓取并生成快照")}</td></tr>`}</tbody></table></div>`);
+		this.$.find(".adr-detail-content").html(`${amountNote}<div class="adr-table-wrap"><table><thead><tr>${columns.map(([, label]) => `<th>${label}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${columns.map(([key]) => `<td>${key === "linked_orders" ? this.linkedOrdersCell(row, orderIndex) : key === "linked_order_amount" ? this.linkedOrderAmountCell(row, orderIndex) : key === "linked_transactions" ? this.linkedTransactionsCell(row, transactionIndex) : key === "financial_tax" ? this.financialTaxCell(row) : moneyFields.has(key) ? row[key] === null || row[key] === undefined || row[key] === "" ? "—" : this.money(row[key], row.currency_code) : this.esc(this.translateField(key, row[key]))}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${columns.length}" class="adr-empty">${this.selected ? __("当前快照没有这类明细") : __("暂无快照，请先抓取并生成快照")}</td></tr>`}</tbody></table></div>`);
 	}
 
 	rows(raw) {
