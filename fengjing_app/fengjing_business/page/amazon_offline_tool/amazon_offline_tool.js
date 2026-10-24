@@ -8,6 +8,14 @@ frappe.pages["amazon-offline-tool"].on_page_load = function (wrapper) {
     new AmazonOfflineTranslator(page, wrapper);
 };
 
+const AMAZON_CSV_MONTHS = {
+    jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3,
+    apr: 4, april: 4, may: 5, jun: 6, june: 6,
+    jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9, september: 9,
+    oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
+};
+const AMAZON_CSV_MONTH_PATTERN = /\b(?:January|February|September|December|November|October|August|March|April|June|July|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b\.?/gi;
+
 class AmazonOfflineTranslator {
     constructor(page, wrapper) {
         this.page = page;
@@ -27,7 +35,7 @@ class AmazonOfflineTranslator {
         this.delimiter = ",";
         this.render();
         this.bind_events();
-        this.load_configuration();
+        this.configuration_promise = this.load_configuration();
     }
 
     render() {
@@ -38,7 +46,7 @@ class AmazonOfflineTranslator {
                     <div>
                         <div class="aot-eyebrow">AMAZON DATA WORKBENCH</div>
                         <h1>CSV 离线翻译中心</h1>
-                        <p>自动识别亚马逊报表，按离线词典翻译表头与固定内容，并下载新的 CSV。</p>
+                        <p>自动识别亚马逊报表，翻译表头、固定内容和日期中的英文月份，并下载新的 CSV。</p>
                     </div>
                     <div class="aot-privacy">
                         <span class="aot-privacy-icon">✓</span>
@@ -209,8 +217,9 @@ class AmazonOfflineTranslator {
         }
         this.file = file;
         this.is_translated = false;
-        this.set_status("正在浏览器中读取 CSV…", "working", 35);
         try {
+            await this.configuration_promise;
+            this.set_status("正在浏览器中读取 CSV…", "working", 35);
             const buffer = await file.arrayBuffer();
             let text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
             if (text.startsWith("\uFEFF")) text = text.slice(1);
@@ -226,7 +235,7 @@ class AmazonOfflineTranslator {
             this.update_file_ui();
             this.render_preview(this.rows);
             this.analyse_matches();
-            this.set_status("文件读取完成，可以开始翻译。", "ready", 100);
+            this.translate();
         } catch (error) {
             this.clear(false);
             this.set_status(error.message || "CSV 读取失败。", "error", 100);
@@ -389,7 +398,8 @@ class AmazonOfflineTranslator {
             if (row_index === this.header_index) return row.map((cell) => header_rules.get(String(cell)) || header_rules.get(String(cell).trim()) || cell);
             const translated_row = row.map((cell, column) => {
                 const field = source_headers[column] || "";
-                return content_rules.get(`${field}\u0000${cell}`) || cell;
+                const translated_cell = content_rules.get(`${field}\u0000${cell}`) || cell;
+                return this.translate_date_cell(translated_cell, field);
             });
             if (sku_column >= 0 && description_column >= 0) {
                 const mapping = this.find_item_mapping(row[sku_column], row, source_headers);
@@ -405,21 +415,22 @@ class AmazonOfflineTranslator {
         this.is_translated = true;
         this.$root.find(".aot-download").prop("disabled", false);
         this.$root.find(".aot-view-switch button[data-view='translated']").trigger("click");
-        const translated_cells = this.count_translated_cells(header_rules, content_rules, preamble_rules, source_headers)
-            + enriched_descriptions;
+        const translated_cells = this.count_translated_cells();
         this.$root.find("[data-metric='result']").text(`${translated_cells} 处已翻译`);
         this.set_status(`翻译完成，共替换 ${translated_cells} 处内容。文件仍只存在于当前浏览器中。`, "ready", 100);
         frappe.show_alert({ message: `翻译完成：${translated_cells} 处`, indicator: "green" });
     }
 
-    count_translated_cells(header_rules, content_rules, preamble_rules, source_headers) {
-        let count = this.rows.slice(0, this.header_index)
-            .reduce((total, row) => total + row.filter((cell) => preamble_rules.has(String(cell))).length, 0);
-        count += source_headers.filter((cell) => header_rules.has(String(cell))).length;
-        this.rows.slice(this.header_index + 1).forEach((row) => row.forEach((cell, column) => {
-            if (content_rules.has(`${source_headers[column] || ""}\u0000${cell}`)) count += 1;
-        }));
-        return count;
+    translate_date_cell(value, field) {
+        // 只处理日期时间列，避免将商品名称或说明中的英文月份误译。
+        if (!/(?:^|[^a-z])(?:date|time|datetime|timestamp)(?:$|[^a-z])|日期|时间/i.test(field)) return value;
+        return String(value).replace(AMAZON_CSV_MONTH_PATTERN, (month) =>
+            `${AMAZON_CSV_MONTHS[month.toLowerCase().replace(/\.$/, "")]}月`);
+    }
+
+    count_translated_cells() {
+        return this.rows.reduce((total, row, row_index) =>
+            total + row.filter((cell, column) => cell !== this.translated_rows[row_index][column]).length, 0);
     }
 
     find_item_mapping(sku, row = [], headers = []) {
