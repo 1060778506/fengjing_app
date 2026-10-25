@@ -34,5 +34,17 @@
   "recognition_priority": 120,
   "report_type_code": "amazon_all_orders_report",
   "report_type_name": "亚马逊全部订单报告"
+ },
+ {
+  "description": "亚马逊结算明细报告（Settlement Flat File），支持以制表符分隔的 TXT/TSV，翻译后下载为 CSV；保留金额、订单编号和 UTC 时间原值。",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Report Type",
+  "enabled": 1,
+  "modified": "2026-10-25 00:00:00",
+  "name": "amazon-settlement-flat-file",
+  "recognition_fields": "settlement-id\nsettlement-start-date\nsettlement-end-date\ndeposit-date\ntransaction-type\namount-type\namount-description\nposted-date-time",
+  "recognition_priority": 130,
+  "report_type_code": "amazon_settlement_flat_file",
+  "report_type_name": "亚马逊结算明细报告"
  }
 ]
