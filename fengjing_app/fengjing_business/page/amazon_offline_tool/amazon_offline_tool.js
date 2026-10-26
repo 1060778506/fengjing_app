@@ -387,6 +387,8 @@ class AmazonOfflineTranslator {
         // 付款报表使用 sku / description；库存分类账使用 MSKU / Title；全部订单报告使用 product-name。
         const sku_column = first_column(["sku", "MSKU"]);
         const description_column = first_column(["description", "Title", "product-name"]);
+        const settlement_time_column = this.report_type.report_type_code === "amazon_settlement_flat_file"
+            ? source_headers.indexOf("posted-date-time") : -1;
         let enriched_descriptions = 0;
         const preamble_rules = new Map(this.applicable_rules("字段内容")
             .filter((row) => row.file_field_name === "__preamble__")
@@ -411,13 +413,31 @@ class AmazonOfflineTranslator {
             }
             return translated_row;
         });
+        let converted_times = 0;
+        if (settlement_time_column >= 0) {
+            this.translated_rows[this.header_index].splice(
+                settlement_time_column + 1, 0, "记账时间（美国太平洋）"
+            );
+            this.translated_rows.slice(this.header_index + 1).forEach((row, index) => {
+                const converted = this.to_pacific_time(
+                    this.rows[this.header_index + 1 + index][settlement_time_column]
+                );
+                row.splice(settlement_time_column + 1, 0, converted);
+                if (converted) converted_times += 1;
+            });
+        }
         this.enriched_description_count = enriched_descriptions;
         this.is_translated = true;
         this.$root.find(".aot-download").prop("disabled", false);
         this.$root.find(".aot-view-switch button[data-view='translated']").trigger("click");
         const translated_cells = this.count_translated_cells();
-        this.$root.find("[data-metric='result']").text(`${translated_cells} 处已翻译`);
-        this.set_status(`翻译完成，共替换 ${translated_cells} 处内容。文件仍只存在于当前浏览器中。`, "ready", 100);
+        this.$root.find("[data-metric='result']").text(
+            converted_times ? `${translated_cells} 处已翻译，${converted_times} 行已换算时间` : `${translated_cells} 处已翻译`
+        );
+        this.set_status(
+            `翻译完成，共替换 ${translated_cells} 处内容${converted_times ? `，换算 ${converted_times} 行太平洋时间` : ""}。文件仍只存在于当前浏览器中。`,
+            "ready", 100
+        );
         frappe.show_alert({ message: `翻译完成：${translated_cells} 处`, indicator: "green" });
     }
 
@@ -428,9 +448,32 @@ class AmazonOfflineTranslator {
             `${AMAZON_CSV_MONTHS[month.toLowerCase().replace(/\.$/, "")]}月`);
     }
 
+    to_pacific_time(value) {
+        const source = String(value || "").trim();
+        if (!source) return "";
+        const match = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2}) UTC$/.exec(source);
+        if (!match) return "";
+        const [, year, month, day, hour, minute, second] = match.map(Number);
+        const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+        if (date.getUTCFullYear() !== year || date.getUTCMonth() + 1 !== month ||
+            date.getUTCDate() !== day || date.getUTCHours() !== hour ||
+            date.getUTCMinutes() !== minute || date.getUTCSeconds() !== second) return "";
+        const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+            timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+            timeZoneName: "short",
+        }).formatToParts(date).map((part) => [part.type, part.value]));
+        return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second} ${parts.timeZoneName}`;
+    }
+
     count_translated_cells() {
-        return this.rows.reduce((total, row, row_index) =>
-            total + row.filter((cell, column) => cell !== this.translated_rows[row_index][column]).length, 0);
+        const settlement_time_column = this.report_type?.report_type_code === "amazon_settlement_flat_file"
+            ? this.rows[this.header_index]?.indexOf("posted-date-time") : -1;
+        return this.rows.reduce((total, row, row_index) => total + row.filter((cell, column) => {
+            const offset = row_index >= this.header_index && settlement_time_column >= 0 &&
+                column > settlement_time_column ? 1 : 0;
+            return cell !== this.translated_rows[row_index][column + offset];
+        }).length, 0);
     }
 
     find_item_mapping(sku, row = [], headers = []) {
