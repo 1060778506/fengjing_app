@@ -46,5 +46,17 @@
   "recognition_priority": 130,
   "report_type_code": "amazon_settlement_flat_file",
   "report_type_name": "亚马逊结算明细报告"
+ },
+ {
+  "description": "亚马逊 FBA 库存分类账汇总报告（Inventory Ledger Summary View），按月份、SKU、库存状态和运营中心列示库存变化。",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Report Type",
+  "enabled": 1,
+  "modified": "2026-10-26 18:08:21.764069",
+  "name": "0epacl4ldi",
+  "recognition_fields": "Starting Warehouse Balance\nIn Transit Between Warehouses\nCustomer Shipments\nWarehouse Transfer In/Out\nEnding Warehouse Balance\nUnknown Events\nLocation",
+  "recognition_priority": 115,
+  "report_type_code": "amazon_fba_inventory_ledger_summary",
+  "report_type_name": "亚马逊库存分类账（汇总视图）"
  }
 ]
