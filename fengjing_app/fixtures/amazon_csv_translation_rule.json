@@ -3729,5 +3729,44 @@
   "source_text": "Amazon",
   "target_text": "亚马逊",
   "translation_type": "字段内容"
+ },
+ {
+  "applicable_country": "United States",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Translation Rule",
+  "enabled": 1,
+  "file_field_name": "Reason",
+  "modified": "2026-10-26 18:02:14.370746",
+  "name": "srvu9hna97",
+  "report_type": "amazon-fba-inventory-ledger-detail",
+  "source_text": "G",
+  "target_text": "G（捐赠弃置）",
+  "translation_type": "字段内容"
+ },
+ {
+  "applicable_country": "United States",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Translation Rule",
+  "enabled": 1,
+  "file_field_name": "Reason",
+  "modified": "2026-10-26 18:02:14.420402",
+  "name": "ss0ltom92u",
+  "report_type": "amazon-fba-inventory-ledger-detail",
+  "source_text": "P",
+  "target_text": "P（库存状态变更转入）",
+  "translation_type": "字段内容"
+ },
+ {
+  "applicable_country": "United States",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Translation Rule",
+  "enabled": 1,
+  "file_field_name": "Reason",
+  "modified": "2026-10-26 18:02:14.424835",
+  "name": "ss0cktr789",
+  "report_type": "amazon-fba-inventory-ledger-detail",
+  "source_text": "N",
+  "target_text": "N（发现库存）",
+  "translation_type": "字段内容"
  }
 ]

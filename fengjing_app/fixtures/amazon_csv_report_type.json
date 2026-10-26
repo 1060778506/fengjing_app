@@ -21,7 +21,7 @@
   "recognition_fields": "FNSKU\nASIN\nMSKU\nEvent Type\nFulfillment Center\nReconciled Quantity\nUnreconciled Quantity\nDate and Time",
   "recognition_priority": 110,
   "report_type_code": "amazon_fba_inventory_ledger_detail",
-  "report_type_name": "亚马逊库存分类账"
+  "report_type_name": "亚马逊库存分类账（详细视图）"
  },
  {
   "description": "亚马逊全部订单报告（All Orders Report），支持CSV、TXT和TSV格式，翻译订单、商品、配送、税务及状态字段。",
