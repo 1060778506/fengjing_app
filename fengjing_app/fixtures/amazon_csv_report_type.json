@@ -58,5 +58,17 @@
   "recognition_priority": 115,
   "report_type_code": "amazon_fba_inventory_ledger_summary",
   "report_type_name": "亚马逊库存分类账（汇总视图）"
+ },
+ {
+  "description": "亚马逊 FBA 月度仓储费报告（Monthly Storage Fees Report），按商品和运营中心列示预估仓储费及计算依据。",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Report Type",
+  "enabled": 1,
+  "modified": "2026-10-27 15:30:52.851412",
+  "name": "fu0k9d6uef",
+  "recognition_fields": "product_name\nfulfillment_center\naverage_quantity_on_hand\nmonth_of_charge\nstorage_utilization_ratio\nest_base_msf\nestimated_monthly_storage_fee",
+  "recognition_priority": 140,
+  "report_type_code": "amazon_monthly_storage_fee",
+  "report_type_name": "亚马逊月度仓储费"
  }
 ]

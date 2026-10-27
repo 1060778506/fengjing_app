@@ -43,8 +43,9 @@ def get_translation_configuration():
 
     sku_item_mappings = frappe.get_all(
         "Fengjing - Product Corresponding Platform - Main Table",
-        filters={"启用": 1, "平台sku": ["!=", ""], "站点id": ["!=", ""]},
-        fields=["站点id", "平台sku", "物料id", "物料名称"],
+        filters={"启用": 1, "站点id": ["!=", ""]},
+        or_filters={"平台sku": ["!=", ""], "平台asin": ["!=", ""]},
+        fields=["站点id", "平台sku", "平台asin", "物料id", "物料名称"],
         order_by="站点id asc, 平台sku asc",
         limit_page_length=0,
     )

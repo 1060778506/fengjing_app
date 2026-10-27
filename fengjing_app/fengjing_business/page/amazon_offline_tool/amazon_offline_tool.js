@@ -386,7 +386,8 @@ class AmazonOfflineTranslator {
             .find((index) => index >= 0) ?? -1;
         // 付款报表使用 sku / description；库存分类账使用 MSKU / Title；全部订单报告使用 product-name。
         const sku_column = first_column(["sku", "MSKU"]);
-        const description_column = first_column(["description", "Title", "product-name"]);
+        const asin_column = first_column(["asin", "ASIN"]);
+        const description_column = first_column(["description", "Title", "product-name", "product_name"]);
         const settlement_time_column = this.report_type.report_type_code === "amazon_settlement_flat_file"
             ? source_headers.indexOf("posted-date-time") : -1;
         let enriched_descriptions = 0;
@@ -403,8 +404,8 @@ class AmazonOfflineTranslator {
                 const translated_cell = content_rules.get(`${field}\u0000${cell}`) || cell;
                 return this.translate_date_cell(translated_cell, field);
             });
-            if (sku_column >= 0 && description_column >= 0) {
-                const mapping = this.find_item_mapping(row[sku_column], row, source_headers);
+            if ((sku_column >= 0 || asin_column >= 0) && description_column >= 0) {
+                const mapping = this.find_item_mapping(sku_column >= 0 ? row[sku_column] : "", row, source_headers);
                 const amazon_title = String(row[description_column] || "").trim();
                 if (mapping?.物料名称 && amazon_title) {
                     translated_row[description_column] = `${mapping.物料名称}｜${amazon_title}`;
@@ -478,7 +479,6 @@ class AmazonOfflineTranslator {
 
     find_item_mapping(sku, row = [], headers = []) {
         const normalized = String(sku || "").trim().toUpperCase();
-        if (!normalized) return null;
         const country_sites = {
             "United States": ["ATVPDKIKX0DER"],
             "Canada": ["A2EUQ1WTGCTBG2"],
@@ -490,17 +490,24 @@ class AmazonOfflineTranslator {
             return index >= 0 ? String(row[index] || "").trim() : "";
         };
         const channel = value_for("sales-channel").toLowerCase();
-        const ship_country = value_for("ship-country").toUpperCase();
+        const ship_country = (value_for("ship-country") || value_for("country_code")).toUpperCase();
+        const asin = (value_for("asin") || value_for("ASIN")).toUpperCase();
+        if (!normalized && !asin) return null;
         const inferred_country = ({ US: "United States", CA: "Canada", MX: "Mexico", BR: "Brazil" })[ship_country]
             || (channel.includes("amazon.com.mx") ? "Mexico"
                 : channel.includes("amazon.ca") ? "Canada"
                 : channel.includes("amazon.com.br") ? "Brazil"
                 : channel === "amazon.com" ? "United States" : "");
         const allowed_sites = country_sites[inferred_country || this.country] || [];
-        return (this.configuration.sku_item_mappings || []).find((row) =>
-            String(row.平台sku || "").trim().toUpperCase() === normalized &&
-            (!allowed_sites.length || allowed_sites.includes(String(row.站点id || "").trim()))
-        ) || null;
+        const matches = (this.configuration.sku_item_mappings || []).filter((mapping) =>
+            (!allowed_sites.length || allowed_sites.includes(String(mapping.站点id || "").trim())) &&
+            (normalized
+                ? String(mapping.平台sku || "").trim().toUpperCase() === normalized
+                : String(mapping.平台asin || "").trim().toUpperCase() === asin)
+        );
+        // 一个 ASIN 对应多个物料时，保留原文，避免误配中文商品名。
+        if (!normalized && new Set(matches.map((mapping) => mapping.物料id)).size > 1) return null;
+        return matches[0] || null;
     }
 
     download() {
