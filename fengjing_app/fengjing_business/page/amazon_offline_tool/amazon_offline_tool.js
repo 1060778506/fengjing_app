@@ -518,7 +518,7 @@ class AmazonOfflineTranslator {
         const link = document.createElement("a");
         const base = this.file.name.replace(/\.(csv|txt|tsv)$/i, "");
         link.href = URL.createObjectURL(blob);
-        link.download = `${base}-中文翻译.csv`;
+        link.download = `中文翻译-${base}.csv`;
         document.body.appendChild(link);
         link.click();
         link.remove();
