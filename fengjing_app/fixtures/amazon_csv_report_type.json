@@ -70,5 +70,17 @@
   "recognition_priority": 140,
   "report_type_code": "amazon_monthly_storage_fee",
   "report_type_name": "亚马逊月度仓储费"
+ },
+ {
+  "description": "亚马逊 AWD 库存分类账汇总报告（AWD Inventory Ledger Summary），按日期、SKU、采购订单和仓库列示以箱为单位的库存变化。",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Report Type",
+  "enabled": 1,
+  "modified": "2026-10-27 00:00:00",
+  "name": "amazon-awd-inventory-ledger-summary",
+  "recognition_fields": "Package Quantity\nPurchase Order ID\nStarting Warehouse Balance (cartons)\nReceived (cartons)\nDeparted (cartons)\nEnding Warehouse Balance (cartons)\nFacility ID",
+  "recognition_priority": 145,
+  "report_type_code": "amazon_awd_inventory_ledger_summary",
+  "report_type_name": "亚马逊AWD库存分类账（汇总视图）"
  }
 ]
