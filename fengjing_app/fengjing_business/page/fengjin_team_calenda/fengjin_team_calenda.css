@@ -547,6 +547,11 @@ body.fjtc-map-reordering * {
 	min-height: 230px;
 }
 
+.fjtc-page .fc .fjtc-toolbar,
+.fjtc-page .fc .fc-toolbar.fc-header-toolbar {
+	margin-bottom: 4px;
+}
+
 .fjtc-page .fjtc-toolbar > :first-child {
 	justify-self: start;
 	display: grid;
@@ -599,6 +604,14 @@ body.fjtc-map-reordering * {
 	justify-content: center;
 	gap: 12px;
 	max-width: 100%;
+}
+
+.fjtc-page .fjtc-visible-month {
+	margin-top: 16px;
+	color: var(--text-color);
+	font-size: 18px;
+	font-weight: 700;
+	line-height: 1.2;
 }
 
 .fjtc-page .fjtc-windy-preview {

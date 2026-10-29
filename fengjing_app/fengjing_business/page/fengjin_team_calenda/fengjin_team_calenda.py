@@ -8,7 +8,7 @@ from zoneinfo import ZoneInfo
 import frappe
 from frappe import _
 from frappe.desk.doctype.event.event import get_events
-from frappe.utils import add_days, cint, get_datetime, getdate, now_datetime
+from frappe.utils import add_days, add_months, add_years, cint, get_datetime, getdate, now_datetime
 
 from fengjing_app.fengjing_business.doctype.fengjin_calendar_holiday.holiday_sync import _country_map
 
@@ -367,6 +367,7 @@ def _event_payload(event):
 		"editable": can_write,
 		"extendedProps": {
 			"event_name": name,
+			"status": event.get("status") or "Open",
 			"description": event.get("description") or "",
 			"event_type": event.get("event_type") or "Private",
 			"repeat_this_event": is_repeating,
@@ -374,6 +375,58 @@ def _event_payload(event):
 			"can_delete": can_delete,
 		},
 	}
+
+
+def _finished_event_occurrences(start, end):
+	"""Include finished Events without changing Frappe's Open-only calendar API."""
+	start_date, end_date = getdate(start), getdate(end)
+	fields = [
+		"name", "subject", "description", "color", "starts_on", "ends_on", "all_day",
+		"event_type", "status", "repeat_this_event", "repeat_on", "repeat_till",
+		"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+	]
+	rows = frappe.get_list(
+		DOCTYPE,
+		filters={"status": ["in", ["Completed", "Closed"]], "starts_on": ["<=", f"{end_date} 23:59:59"]},
+		fields=fields,
+		limit_page_length=0,
+	)
+	occurrences = []
+	weekdays = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
+	for row in rows:
+		first_day = getdate(row.starts_on)
+		last_day = getdate(row.ends_on or row.starts_on)
+		if not cint(row.repeat_this_event):
+			if first_day <= end_date and last_day >= start_date:
+				occurrences.append(row)
+			continue
+
+		repeat_till = getdate(row.repeat_till or "3000-01-01")
+		if repeat_till < start_date:
+			continue
+		day = max(first_day, start_date)
+		while day <= min(end_date, repeat_till):
+			months = (day.year - first_day.year) * 12 + day.month - first_day.month
+			if row.repeat_on == "Daily":
+				matches = True
+			elif row.repeat_on == "Weekly":
+				matches = bool(cint(row.get(weekdays[day.weekday()])))
+			elif row.repeat_on in ("Monthly", "Quarterly", "Half Yearly"):
+				step = {"Monthly": 1, "Quarterly": 3, "Half Yearly": 6}[row.repeat_on]
+				matches = months >= 0 and months % step == 0 and getdate(add_months(first_day, months)) == day
+			elif row.repeat_on == "Yearly":
+				years = day.year - first_day.year
+				matches = years >= 0 and getdate(add_years(first_day, years)) == day
+			else:
+				matches = False
+			if matches:
+				instance = row.copy()
+				instance.starts_on = datetime.combine(day, row.starts_on.time())
+				if row.ends_on:
+					instance.ends_on = datetime.combine(add_days(day, (row.ends_on - row.starts_on).days), row.ends_on.time())
+				occurrences.append(instance)
+			day = add_days(day, 1)
+	return occurrences
 
 
 def _parse_values(values):
@@ -402,8 +455,9 @@ def _apply_values(doc, values):
 
 @frappe.whitelist()
 def get_calendar_events(start, end):
-	"""Return standard Event records, including Frappe's recurring occurrences."""
+	"""Return visible Event records, including finished and recurring Events."""
 	rows = get_events(start=getdate(start), end=getdate(end))
+	rows.extend(_finished_event_occurrences(start, end))
 	return [_event_payload(row) for row in rows]
 
 

@@ -1351,7 +1351,13 @@ class FengjingTeamCalendarPage {
 			const maps = document.createElement("div");
 			maps.className = "fjtc-map-previews";
 			maps.append(preview);
-			title.replaceChildren(today, maps);
+			const visibleDate = info.view.type === "dayGridMonth"
+				? info.view.currentStart
+				: (this.calendar?.getDate() || info.view.currentStart);
+			const visibleMonth = document.createElement("span");
+			visibleMonth.className = "fjtc-visible-month";
+			visibleMonth.textContent = `${visibleDate.getFullYear()}年${String(visibleDate.getMonth() + 1).padStart(2, "0")}月`;
+			title.replaceChildren(today, maps, visibleMonth);
 			this.updateBeijingDate();
 		}
 	}
