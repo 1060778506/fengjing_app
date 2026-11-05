@@ -1,0 +1,122 @@
+
+
+下载镜像
+​	docker pull fengmaode/16-neizhang:latest
+	没有梯子用阿里云
+	docker pull crpi-0bhfwgabexqd04h9.cn-hangzhou.personal.cr.aliyuncs.com/fengmaode/16-neizhang:latest
+	docker tag crpi-0bhfwgabexqd04h9.cn-hangzhou.personal.cr.aliyuncs.com/fengmaode/16-neizhang:latest fengmaode/16-neizhang:latest
+
+安装app,和安装环境
+cd ~/frappe-bench/apps/fengjing_app && \
+  yarn install --frozen-lockfile && \
+  cd ~/frappe-bench && \
+  bench new-site fjnb \
+    --db-host db \
+    --db-root-password 123 \
+    --admin-password Aa123456789 \
+    --mariadb-user-host-login-scope='%' && \
+  bench --site fjnb install-app \
+    erpnext \
+    hrms \
+    crm \
+    erpnext_china \
+    insights \
+    beam \
+    builder \
+    wiki \
+    print_designer \
+    crispy_print \
+    payments \
+    webshop \
+    erpnext_shipping \
+    whatsapp \
+    fengjing_app && \
+  bench build --app fengjing_app --force && \
+  bench --site fjnb clear-cache
+
+访问
+	http://localhost:8080/
+	Administrator
+	Aa123456789
+	临沂市丰境电子商务有限责任公司
+
+# 已经提交过代码,仅需要一句命令
+cd ~/frappe-bench/apps/fengjing_app && git add . && git commit -m "新的" && git push
+# 在docker外部推送
+cd "/root/Desktop/erpnext-os-py/fengjing_app" && git add -A && git commit -m "2026-10-4-1" && git push -u origin develop --force
+
+ 
+			#测试代码,就是直接在erpnext内部运行py代码
+			bench --site fjnb console
+			# 安装app
+			bench --site fjnb install-app fengjing_app
+			# 卸载app
+			bench --site fjnb uninstall-app erpnext_china
+			# 登录docker内部
+			docker exec -u frappe -it neizhang-backend-1 bash
+			cd ~/frappe-bench/apps/fengjing_app
+
+			# Redis缓存固化，更新   刷新   重启所有服务  仅编译我的app
+			bench --site fjnb execute frappe.model.utils.user_settings.sync_user_settings \
+			&& bench --site fjnb export-fixtures \
+			&& bench --site fjnb migrate \
+			&& bench --site fjnb clear-cache \
+			&& bench restart \
+			&& bench setup requirements --node fengjing_app \
+			&& bench build --app fengjing_app --force
+
+			# 字段导入到自己的app内
+			bench --site fjnb export-fixtures
+
+			#升级包升级组件,必须使用frappe用户！
+			docker exec -u frappe -it neizhang-backend-1 bash
+			cd ~/frappe-bench/apps/fengjing_app
+			whoami
+			yarn upgrade --latest
+
+			#查看有那些要升级组件
+			docker exec -u frappe -it neizhang-backend-1 bash
+			cd ~/frappe-bench/apps/fengjing_app
+			whoami
+			yarn outdated
+
+			#安装组件
+			docker exec -u frappe -it neizhang-backend-1 bash
+			cd /home/frappe/frappe-bench/apps/fengjing_app
+			yarn add @meteocons/svg @meteocons/svg-static @meteocons/lottie
+
+
+			# 查看日志
+			docker logs -f --tail 100 neizhang-backend-1
+
+以下内容是第一次提交所需要的操作 
+# 全局配置，只需要执行一次
+git config --global --add safe.directory '*'
+git config --global --unset http.proxy 2>/dev/null || true
+git config --global --unset https.proxy 2>/dev/null || true
+git config --global user.email "1060778506@qq.com"
+git config --global user.name "fengmaode"
+git config --global core.quotepath false
+
+
+# 上传 fengjing_app 到 develop	在docker外部推送
+# 如果你在 Docker 容器内：
+cd ~/frappe-bench/apps/fengjing_app
+[ -d ".git" ] || git init
+git remote set-url origin https://github.com/1060778506/fengjing_app.git 2>/dev/null || \
+git remote add origin https://github.com/1060778506/fengjing_app.git
+git fetch --depth=1 --no-tags origin develop
+git symbolic-ref HEAD refs/heads/develop
+git reset --mixed FETCH_HEAD
+git status
+
+
+# 如果你在 Docker 外部服务器主机：
+cd "/root/Desktop/erpnext-os-py/fengjing_app"
+[ -d ".git" ] || git init
+git remote set-url origin https://github.com/1060778506/fengjing_app.git 2>/dev/null || \
+git remote add origin https://github.com/1060778506/fengjing_app.git
+git fetch --depth=1 --no-tags origin develop
+git symbolic-ref HEAD refs/heads/develop
+git reset --mixed FETCH_HEAD
+git status

@@ -1,0 +1,313 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-02 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "statement_record_key",
+  "statement_id",
+  "statement_number",
+  "identity_column",
+  "ozon_store",
+  "store",
+  "ozon_id",
+  "sync_type",
+  "period_section",
+  "settlement_period_start",
+  "settlement_period_end",
+  "payment_date",
+  "period_column",
+  "currency_code",
+  "statement_status",
+  "amount_section",
+  "begin_balance_amount",
+  "end_balance_amount",
+  "payment_amount",
+  "net_amount",
+  "amount_column",
+  "delivery_charge",
+  "return_delivery_charge",
+  "services_amount",
+  "other_amount",
+  "audit_section",
+  "fetched_at",
+  "data_version",
+  "data_changed",
+  "last_changed_at",
+  "audit_column",
+  "changed_fields",
+  "sync_status",
+  "last_error",
+  "raw_section",
+  "raw_json_hash",
+  "raw_json",
+  "raw_json_history"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "Statement Identity"
+  },
+  {
+   "fieldname": "statement_record_key",
+   "fieldtype": "Data",
+   "label": "Statement Record Key",
+   "unique": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "statement_id",
+   "fieldtype": "Data",
+   "label": "Statement ID",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "statement_number",
+   "fieldtype": "Data",
+   "label": "Statement Number",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "identity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ozon_store",
+   "fieldtype": "Link",
+   "label": "Ozon Store",
+   "options": "Ozon Store Configuration",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "store",
+   "fieldtype": "Link",
+   "label": "Store",
+   "options": "Cost Center",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "ozon_id",
+   "fieldtype": "Data",
+   "label": "Ozon ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_type",
+   "fieldtype": "Select",
+   "label": "Sync Type",
+   "options": "Latest Statement\nHistorical Statement",
+   "read_only": 1
+  },
+  {
+   "fieldname": "period_section",
+   "fieldtype": "Section Break",
+   "label": "Settlement Period"
+  },
+  {
+   "fieldname": "settlement_period_start",
+   "fieldtype": "Datetime",
+   "label": "Settlement Period Start",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "settlement_period_end",
+   "fieldtype": "Datetime",
+   "label": "Settlement Period End",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "payment_date",
+   "fieldtype": "Datetime",
+   "label": "Payment Date"
+  },
+  {
+   "fieldname": "period_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "currency_code",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "statement_status",
+   "fieldtype": "Data",
+   "label": "Statement Status"
+  },
+  {
+   "fieldname": "amount_section",
+   "fieldtype": "Section Break",
+   "label": "Statement Amounts"
+  },
+  {
+   "fieldname": "begin_balance_amount",
+   "fieldtype": "Currency",
+   "label": "Beginning Balance",
+   "options": "currency_code"
+  },
+  {
+   "fieldname": "end_balance_amount",
+   "fieldtype": "Currency",
+   "label": "Ending Balance",
+   "options": "currency_code"
+  },
+  {
+   "fieldname": "payment_amount",
+   "fieldtype": "Currency",
+   "label": "Payment Amount",
+   "options": "currency_code"
+  },
+  {
+   "fieldname": "net_amount",
+   "fieldtype": "Currency",
+   "label": "Net Amount",
+   "options": "currency_code"
+  },
+  {
+   "fieldname": "amount_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "delivery_charge",
+   "fieldtype": "Currency",
+   "label": "Delivery Charge",
+   "options": "currency_code"
+  },
+  {
+   "fieldname": "return_delivery_charge",
+   "fieldtype": "Currency",
+   "label": "Return Delivery Charge",
+   "options": "currency_code"
+  },
+  {
+   "fieldname": "services_amount",
+   "fieldtype": "Currency",
+   "label": "Services Amount",
+   "options": "currency_code"
+  },
+  {
+   "fieldname": "other_amount",
+   "fieldtype": "Currency",
+   "label": "Other Amount",
+   "options": "currency_code"
+  },
+  {
+   "fieldname": "audit_section",
+   "fieldtype": "Section Break",
+   "label": "Sync Audit"
+  },
+  {
+   "fieldname": "fetched_at",
+   "fieldtype": "Datetime",
+   "label": "Fetched At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_version",
+   "fieldtype": "Int",
+   "label": "Data Version",
+   "read_only": 1
+  },
+  {
+   "fieldname": "data_changed",
+   "fieldtype": "Check",
+   "label": "Data Changed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_changed_at",
+   "fieldtype": "Datetime",
+   "label": "Last Changed At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "audit_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "changed_fields",
+   "fieldtype": "Small Text",
+   "label": "Changed Fields",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sync_status",
+   "fieldtype": "Select",
+   "label": "Sync Status",
+   "options": "Success\nFailed",
+   "default": "Success",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Small Text",
+   "label": "Last Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_section",
+   "fieldtype": "Section Break",
+   "label": "Raw Data"
+  },
+  {
+   "fieldname": "raw_json_hash",
+   "fieldtype": "Data",
+   "label": "Raw JSON Hash",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Code",
+   "label": "Raw JSON",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_json_history",
+   "fieldtype": "Code",
+   "label": "Raw JSON History",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-02 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Ozon Settlement Statement",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "settlement_period_end",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "statement_number"
+}

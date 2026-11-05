@@ -1,0 +1,223 @@
+"""Local Chromium UI regression only; does not access ERPNext/Ozon or write records."""
+from pathlib import Path
+from playwright.sync_api import sync_playwright
+
+
+def run():
+    base = Path(__file__).parent
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True, args=["--no-sandbox"])
+        page = browser.new_page(viewport={"width": 1600, "height": 1000})
+        errors = []
+        page.on("pageerror", lambda e: errors.append(str(e)))
+        page.set_content("<html><body></body></html>")
+        page.add_script_tag(content=(base / "ozon_freight_calcula.js").read_text() + "\nwindow.TestCanvas=OzFreightCanvas;")
+        page.add_style_tag(content=(base / "ozon_freight_calcula.css").read_text())
+        page.evaluate("""() => {
+          window.frappe={msgprint:console.log,show_alert:()=>{}};
+          if(!crypto.randomUUID)crypto.randomUUID=()=> 'test-copy-'+Math.random().toString(16).slice(2);
+          const c=window.canvas=Object.create(TestCanvas.prototype);
+          c.root=document.createElement('div');c.root.className='ozfc';document.body.append(c.root);
+          c.s={nodes:[{id:'ui-test',manual:true,manualSale:100,commissionOverride:10,item:{item_code:'SIM-ui',item_name:'测试物料',length:100,width:100,height:100,weight:200,value:10,value_currency:'CNY',quantity:4},x:0,y:0}],active:'ui-test',focus:'ui-test',expanded:['ui-test'],exclusive:true,view:{x:0,y:0,z:1}};
+          c.c={cny_per_rub:.08,margin_pct:35,routes:[{id:'ui-route',enabled:true,provider:'测试',name:'按包计费',speed:'Standard',fixed:5,rate:10,min_weight:0,max_weight:20,min_value:0,max_value:10000,max_side:100,max_sum:200,divisor:12000,step:.001}]};
+          c.bootData={defaults:structuredClone(c.c)};c.undo=[];c.redo=[];c.shell();c.bind();c.paint();
+        }""")
+        assert page.locator(".fc-packing").count() == 1
+        page.evaluate("""() => {
+          const c=canvas;window.panTest={paint:c.paint,card:document.querySelector('.fc-item'),view:{...c.s.view},paints:0};
+          c.paint=function(){if(!this.panning)panTest.paints++;return panTest.paint.call(this);};
+        }""")
+        page.locator('.fc-fx').focus()
+        stage = page.locator('.fc-stage').bounding_box()
+        x, y = stage['x'] + 350, stage['y'] + 30
+        page.mouse.move(x, y)
+        page.mouse.down()
+        assert page.evaluate('canvas.panning && document.activeElement===canvas.stage'), 'Panning focuses the canvas after a toolbar input'
+        page.mouse.move(x + 20, y + 10, steps=3)
+        page.wait_for_timeout(50)
+        assert page.evaluate("getComputedStyle(document.querySelector('.fc-item>.fc-drag')).visibility==='visible' && getComputedStyle(document.querySelector('.fc-product')).visibility==='hidden'"), 'Lightweight panning keeps card titles and hides the details'
+        page.mouse.up()
+        assert page.evaluate('!canvas.panning && panTest.paints===0 && panTest.card===document.querySelector(".fc-item")'), 'Panning preserves the existing cards without a full repaint'
+        assert page.evaluate("getComputedStyle(document.querySelector('.fc-product')).visibility==='visible'"), 'Card details are restored on release'
+        page.keyboard.press('Control+z')
+        assert page.evaluate('canvas.s.view.x===panTest.view.x && canvas.s.view.y===panTest.view.y'), 'Keyboard undo restores the original view'
+        page.keyboard.press('Control+Shift+z')
+        assert page.evaluate('canvas.s.view.x===panTest.view.x+20 && canvas.s.view.y===panTest.view.y+10'), 'Keyboard redo restores the final view'
+        page.keyboard.press('Control+z')
+        page.wait_for_timeout(180)
+        assert page.evaluate('!canvas.stage.classList.contains("fc-pan-ready")'), 'The temporary pan layer is released'
+        page.evaluate('canvas.paint=panTest.paint;canvas.undo=[];canvas.redo=[];canvas.dirty=false;delete window.panTest')
+        assert page.evaluate("""async () => {
+          const c=canvas,api=c.api,save=c.save,hydrate=c.hydrateHistory;let calls=0,hydrations=0,delay;
+          const interval=window.setInterval;window.setInterval=(fn,ms)=>{delay=ms;return 123;};c.startAutoSave();window.setInterval=interval;c.autoSaveTimer=null;
+          c.autosaveReady=true;c.api=async()=>{calls++;return {name:'local-test',modified:'local-revision'};};c.hydrateHistory=async()=>{hydrations++;};
+          c.dirty=false;if(await c.autoSaveTick()||calls)return false;
+          c.dirty=true;c.saving=true;if(await c.autoSaveTick()||calls)return false;c.saving=false;
+          const input=document.querySelector('[data-f="value"]');input.focus();if(await c.autoSaveTick()||calls)return false;input.blur();
+          const modal=document.createElement('div');modal.className='modal show';document.body.append(modal);if(await c.autoSaveTick()||calls)return false;modal.remove();
+          const quantity=c.s.nodes[0].item.quantity;c.s.nodes[0].item.quantity=0;
+          if(await c.autoSaveTick()||calls)return false;c.s.nodes[0].item.quantity=quantity;
+          const before=document.querySelector('.fc-item'),saved=await c.autoSaveTick();
+          const valid=saved&&delay===60000&&calls===1&&!c.dirty&&hydrations===0&&before===document.querySelector('.fc-item');
+          c.save=async()=>{throw Error('offline')};c.dirty=true;const failed=await c.autoSaveTick();const retained=c.dirty&&!c.autoSaving;
+          c.api=api;c.save=save;c.hydrateHistory=hydrate;c.name=null;c.modified=null;
+          return valid&&!failed&&retained;
+        }"""), 'One-minute autosave guards, quiet saving without paint, failed save retains edits'
+        assert page.locator(".fc-quotes").count() == 1
+        assert page.locator('[data-a="sort-cards"] + [data-a="refresh-info"]').count() == 1
+        assert page.evaluate("""async () => {
+          const c=canvas,original=c.s.nodes,api=c.api,db=frappe.db,snap=c.snap;
+          const normal={id:'refresh-normal',item:{item_code:'erp-test',item_name:'旧名称',quantity:3,value:1,length:10,width:10,height:10,weight:20},meta:{costs:[],prices:[]},x:0,y:0};
+          const manual={id:'refresh-manual',manual:true,item:{item_code:'SIM-test',value:10},x:1,y:1};
+          const edited={...structuredClone(normal),id:'refresh-edited',costEdited:true,commissionOverride:19,saleOverride:99};edited.item.value=8;
+          const only={id:'refresh-ozon',ozonOnly:true,item:{item_code:'ozon-only',quantity:1,value:12},meta:{costs:[],prices:[{store:'test-store',product_id:'42',amount:1,commissions:[]}]},x:2,y:2};
+          c.s.nodes=[normal,manual,edited,only];c.s.active=null;c.s.focus=null;c.s.expanded=[];
+          let docs=0,details=0,catalog=0;
+          frappe.db={get_doc:async()=>{docs++;return {item_code:'erp-test',item_name:'新名称',custom_带包装重量g:343}}};
+          c.api=async(method,args)=>{
+            if(method==='warehouse_channels')return {channels:[],errors:[]};
+            if(method==='warehouse_stocks')return {stocks:[],errors:[]};
+            if(method==='item_details'){details++;if(args.force!==1)throw Error('Not forced');return {costs:[{currency:'CNY',amount:18}],prices:[{store:'test-store',product_id:'1',currency:'CNY',amount:50,commissions:[{schema:'RFBS',percent:20}]}],errors:[]};}
+            catalog++;return {products:[{store:'test-store',product_id:'42',name:'新Ozon名称',image:'/test.png',currency:'CNY',amount:70,commissions:[{schema:'RFBS',percent:21}],ozon_sku_ids:['43']}],more:false};
+          };
+          const result=await c.refreshAllInfo();
+          const ok=result.success===3&&result.skipped===1&&docs===1&&details===1&&catalog===1&&c.s.nodes.length===4&&normal.item.value==='18.00'&&normal.item.weight===343&&normal.item.quantity===3&&edited.item.value===8&&edited.commissionOverride===19&&edited.saleOverride===99&&only.meta.prices[0].amount===70&&!c.infoRefreshing;
+          c.api=async()=>{throw Error('offline')};const failed=await c.refreshAllInfo();
+          const retained=failed.failed===3&&normal.item.value==='18.00'&&only.meta.prices[0].amount===70&&!c.infoRefreshing;
+          c.s.nodes=original;c.s.active=original[0].id;c.s.focus=original[0].id;c.s.expanded=[original[0].id];c.api=api;frappe.db=db;c.snap=snap;c.paint();
+          return ok&&retained;
+        }"""), 'Refresh current cards only, force backend query, reuse per-item lookup, preserve simulations and quantity'
+        page.set_viewport_size({"width": 4000, "height": 1600})
+        margin = page.locator('[data-edit-key="margin_pct"]')
+        margin_toggle = page.locator('[data-node-toggle="ui-test"][data-key="margin"]')
+        for _ in range(3):
+            margin.click()
+            assert margin_toggle.is_checked(), 'Clicking fee input must not toggle checkbox'
+        page.locator('.fc-node-fee').first.locator('small').click()
+        assert margin_toggle.is_checked(), 'Clicking fee unit must not toggle checkbox'
+        assert page.locator('.fc-sale-extra').count() == 2
+        page.evaluate("canvas.copyItem=async value=>{window.lastCopied=value}")
+        prices=page.locator('.fc-sale-card .fc-copy-price')
+        assert prices.count() == 3
+        for i in range(3):
+            expected=prices.nth(i).get_attribute('data-copy-item')
+            prices.nth(i).click()
+            assert page.evaluate('window.lastCopied') == expected
+            assert '¥' not in expected and 'RUB' not in expected
+        assert page.locator('.fc-sale-extra').last.locator('strong').evaluate("el=>getComputedStyle(el).textDecorationLine") == 'none'
+        page.set_viewport_size({"width": 1600, "height": 1000})
+        assert page.locator('.fc-route .fc-suggested-route.ready').count() == 1
+        assert page.locator('.fc-best-validation .fc-suggested-route.ready').count() == 1
+        assert page.evaluate("""() => {
+          const c=canvas,r=c.c.routes[0],old={provider:r.provider,name:r.name},data=c.warehouseData;
+          r.provider='CEL';r.name='Small · Standard';
+          c.warehouseData={channels:[{store:'test',warehouse_id:'1',warehouse_name:'测试后台仓库',method_name:'CEL Standard Small PUDO',mode:'RFBS',dropoff_name:'CEL集货仓'}],errors:[]};c.paint();
+          const ok=document.querySelector('.fc-route-price-area .fc-route-warehouses').textContent.includes('测试后台仓库')&&document.querySelector('.fc-best-price-row .fc-route-warehouses').textContent.includes('CEL集货仓');
+          Object.assign(r,old);c.warehouseData=data;c.paint();return ok;
+        }"""), 'Warehouse names shown beside both channel price and chosen price'
+        assert page.locator('.fc-route summary .fc-suggested-route').count() == 1
+        assert page.locator('.fc-route summary .fc-route-requirements').count() == 0
+        assert page.locator('.fc-route .fc-route-choice + .fc-route-requirements').count() == page.locator('.fc-route').count()
+        route = page.locator('.fc-route').first
+        route.evaluate("el=>el.open=false")
+        assert not route.locator('.fc-route-requirements').is_visible()
+        route.evaluate("el=>el.open=true")
+        assert route.locator('.fc-route-requirements').is_visible()
+        assert '货值要求' in page.locator('.fc-route-requirements').first.inner_text()
+        assert '实重要求' in page.locator('.fc-route-requirements').first.inner_text()
+        assert page.locator('[data-logistics-filter="destination"]').input_value() == '俄罗斯'
+        assert page.locator('[data-logistics-filter="mode"]').input_value() == 'RFBS'
+        page.evaluate("canvas.copyItem=async value=>{window.lastCopied=value}")
+        page.locator('.fc-copy-name').click()
+        assert page.evaluate('window.lastCopied') == '测试物料'
+        assert page.locator('[data-logistics-speed="Standard"]').is_checked()
+        page.locator('[data-logistics-speed="Standard"]').uncheck()
+        page.locator('[data-logistics-speed="Express"]').check()
+        assert page.locator('.fc-route').count() == 0, 'Unclassified routes do not match an explicit speed'
+        page.locator('[data-logistics-speed="Express"]').uncheck()
+        assert page.locator('.fc-route').count() == 1
+        toggle=page.locator('.fc-controls button.fc-exclusive')
+        assert toggle.get_attribute('aria-pressed') == 'true'
+        assert page.locator('input.fc-exclusive').count() == 0
+        toggle.click()
+        assert toggle.get_attribute('aria-pressed') == 'false'
+        assert page.evaluate('canvas.s.exclusive') is False
+        toggle.click()
+        assert toggle.get_attribute('aria-pressed') == 'true'
+        assert page.evaluate('canvas.s.exclusive') is True
+        page.evaluate("canvas.resetFlowPositions(canvas.s.nodes[0]);canvas.paint()")
+        assert page.evaluate("document.querySelector('.fc-cost-card').getBoundingClientRect().right <= document.querySelector('.fc-sale-card').getBoundingClientRect().left"), "Cost and sale cards must not overlap"
+        page.locator("[data-pack-mode]").select_option("equal")
+        page.locator("[data-pack-size]").fill("2")
+        page.locator("[data-pack-size]").dispatch_event("change")
+        assert page.locator(".fc-quotes").count() == 2, "Equal split creates two logistics cards"
+        assert page.evaluate("canvas.combinedFreight(canvas.s.nodes[0]).price") == 18
+        assert page.evaluate("""() => {
+          const c=canvas,n=c.s.nodes[0],zoom=c.s.view.z;
+          const card=document.querySelector('.fc-packing').getBoundingClientRect();
+          const paths=[...document.querySelectorAll('.fc-lines path[stroke="#6b7bf5"]')];
+          return paths.length===2 && paths.every((path,i)=>{
+            const row=document.querySelector('[data-pack-row="'+i+'"]').getBoundingClientRect();
+            const y=Number(path.getAttribute('d').split(' ')[1]);
+            return Math.abs(card.top+(y-c.flowPositions(n).packing.y)*zoom-(row.top+row.height/2))<1;
+          }) && document.querySelectorAll('.fc-lines circle').length===document.querySelectorAll('.fc-lines path').length*2;
+        }"""), "Each package line starts at its own row, every edge has two dots"
+        page.locator("[data-pack-mode]").select_option("custom")
+        page.evaluate("""() => {const el=document.querySelector('[data-f="value"]');el.focus();el.value='1000';el.dispatchEvent(new Event('input',{bubbles:true}));}""")
+        page.wait_for_timeout(250)
+        assert page.locator('.fc-route .fc-suggested-route.blocked').count() == 2, 'Cost edits update recommended-price restrictions'
+        assert page.locator('.fc-best-validation .fc-suggested-route.blocked').count() == 2
+        page.evaluate("""() => {const el=document.querySelector('[data-f="value"]');el.value='10';el.dispatchEvent(new Event('input',{bubbles:true}));el.blur();}""")
+        page.wait_for_timeout(250)
+        assert page.locator('.fc-route .fc-suggested-route.ready').count() == 2
+        assert page.locator('.fc-best-validation .fc-suggested-route.ready').count() == 2
+        quantity=page.locator('[data-pack-node="ui-test"][data-pack-index="0"][data-pack-field="quantity"]')
+        quantity.fill("3")
+        page.wait_for_timeout(250)
+        assert page.locator('[data-pack-node="ui-test"][data-pack-index="0"][data-pack-field="weight"]').input_value() == "600", "Package weight follows quantity while typing"
+        assert quantity.evaluate("el=>el===document.activeElement"), "Quantity input stays focused"
+        quantity.fill("2")
+        page.wait_for_timeout(250)
+        page.locator("[data-pack-add]").click()
+        assert page.locator(".fc-quotes").count() == 3, "Adding a package adds a logistics card"
+        assert page.evaluate("canvas.combinedFreight(canvas.s.nodes[0]) === undefined"), "Mismatched quantities must not produce a price"
+        page.locator("[data-pack-delete]").last.click()
+        page.evaluate("""() => {const el=document.querySelector('[data-f="value"]');el.focus();el.value='123.45';el.setSelectionRange(3,3);el.dispatchEvent(new Event('input',{bubbles:true}));window.savedInput=el;}""")
+        page.wait_for_timeout(250)
+        assert page.evaluate("savedInput===document.activeElement && savedInput.selectionStart===3"), "Input element/caret survives calculation"
+        page.evaluate("document.activeElement.blur()")
+        page.keyboard.press("Control+c")
+        assert page.evaluate("!!canvas.cardClipboard"), "Copy shortcut captures selected material"
+        page.keyboard.press("Control+v")
+        page.wait_for_timeout(100)
+        assert page.evaluate("canvas.s.nodes.length") == 2, ("Paste creates a card", errors)
+        assert page.locator(".fc-item").count() == 2
+        page.evaluate("document.querySelector('[data-f=\"value\"]').focus()")
+        page.keyboard.press('Delete')
+        assert page.evaluate('canvas.s.nodes.length') == 2, 'Delete in input must not remove cards'
+        page.evaluate('document.activeElement.blur()')
+        page.keyboard.press('Delete')
+        assert page.evaluate('canvas.s.nodes.length') == 1, 'Delete removes selected material and child cards'
+        page.evaluate('canvas.history(true)')
+        assert page.evaluate('canvas.s.nodes.length') == 2, 'Undo restores material and child settings'
+        page.evaluate("canvas.s.nodes[1].packing.rows[0].weight=999")
+        assert page.evaluate("canvas.s.nodes[0].packing.rows[0].weight") == 400, "Copied settings are independent"
+        assert not errors, errors
+        page.evaluate("canvas.s.displayMode='table';canvas.paint()")
+        assert page.locator(".fc-table-packages").count() == 2
+        assert page.locator(".fc-packing").count() == 2
+        assert page.locator(".fc-quotes").count() == 4
+        page.evaluate("canvas.s.displayMode='canvas';canvas.paint()")
+        assert not errors, errors
+        print("PASS: Chromium UI: package cards, quantity guard, input caret, Ctrl+C/Ctrl+V deep copy")
+        page.evaluate("canvas.toggleMultiSelect();canvas.selectedNodes=new Set(canvas.s.nodes.map(n=>n.id));canvas.paint();document.activeElement.blur()")
+        page.keyboard.press('Delete')
+        assert page.evaluate('canvas.s.nodes.length') == 0, 'Delete removes all selected materials'
+        page.evaluate('canvas.history(true)')
+        assert page.evaluate('canvas.s.nodes.length') == 2
+        assert not errors, errors
+        browser.close()
+
+
+if __name__ == "__main__":
+    run()

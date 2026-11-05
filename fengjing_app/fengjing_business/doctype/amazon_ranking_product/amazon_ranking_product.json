@@ -1,0 +1,270 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-10-02 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "ranking_configuration",
+  "amazon_store",
+  "marketplace_id",
+  "identity_column",
+  "asin",
+  "sku",
+  "target_key",
+  "product_section",
+  "product_title",
+  "corresponding_item",
+  "product_column",
+  "amazon_image_url",
+  "listing_status",
+  "tracking_section",
+  "enabled",
+  "is_competitor",
+  "source",
+  "tracking_column",
+  "deleted_from_store",
+  "first_discovered_at",
+  "last_discovered_at",
+  "fetch_section",
+  "last_fetch_status",
+  "last_fetch_at",
+  "fetch_column",
+  "next_fetch_at",
+  "last_error",
+  "raw_section",
+  "latest_discovery_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "Target Identity"
+  },
+  {
+   "fieldname": "ranking_configuration",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Ranking Configuration",
+   "options": "Amazon Ranking Configuration",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "ranking_configuration.amazon_store",
+   "fieldname": "amazon_store",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Amazon Store",
+   "options": "Amazon Store Configuration",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fetch_from": "amazon_store.marketplace_id",
+   "fieldname": "marketplace_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Marketplace ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "identity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "asin",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "ASIN",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "sku",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "SKU",
+   "search_index": 1
+  },
+  {
+   "fieldname": "target_key",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Target Key",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "product_section",
+   "fieldtype": "Section Break",
+   "label": "Product Information"
+  },
+  {
+   "fieldname": "product_title",
+   "fieldtype": "Small Text",
+   "label": "Product Title"
+  },
+  {
+   "fieldname": "corresponding_item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Corresponding Item",
+   "options": "Item"
+  },
+  {
+   "fieldname": "product_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "amazon_image_url",
+   "fieldtype": "Small Text",
+   "label": "Amazon Image URL"
+  },
+  {
+   "fieldname": "listing_status",
+   "fieldtype": "Data",
+   "label": "Listing Status"
+  },
+  {
+   "fieldname": "tracking_section",
+   "fieldtype": "Section Break",
+   "label": "Tracking Attributes"
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Enabled"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_competitor",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Is Competitor"
+  },
+  {
+   "default": "Manual Entry",
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Source",
+   "options": "Automatic Discovery\nManual Entry",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tracking_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "deleted_from_store",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Deleted from Store",
+   "read_only": 1
+  },
+  {
+   "fieldname": "first_discovered_at",
+   "fieldtype": "Datetime",
+   "label": "First Discovered At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_discovered_at",
+   "fieldtype": "Datetime",
+   "label": "Last Discovered At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fetch_section",
+   "fieldtype": "Section Break",
+   "label": "Fetch Status"
+  },
+  {
+   "default": "Not Fetched",
+   "fieldname": "last_fetch_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Last Fetch Status",
+   "options": "Not Fetched\nSuccess\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_fetch_at",
+   "fieldtype": "Datetime",
+   "label": "Last Fetch At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fetch_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "next_fetch_at",
+   "fieldtype": "Datetime",
+   "label": "Next Fetch At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Small Text",
+   "label": "Last Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_section",
+   "fieldtype": "Section Break",
+   "label": "Original Data"
+  },
+  {
+   "fieldname": "latest_discovery_json",
+   "fieldtype": "Code",
+   "label": "Latest Discovery JSON",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-02 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon Ranking Product",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "asin,sku,product_title,corresponding_item",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "asin",
+ "track_changes": 1
+}

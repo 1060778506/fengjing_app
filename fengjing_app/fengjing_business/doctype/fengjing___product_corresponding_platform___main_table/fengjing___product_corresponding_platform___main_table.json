@@ -1,0 +1,130 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "creation": "2026-08-31 22:44:48.998294",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "\u542f\u7528",
+  "\u5e97\u94fa",
+  "\u7ad9\u70b9id",
+  "column_break_mapping",
+  "\u5e73\u53f0asin",
+  "\u5e73\u53f0sku",
+  "\u5e73\u53f0spu",
+  "\u7269\u6599id",
+  "\u7269\u6599\u540d\u79f0",
+  "\u5e73\u53f0sku_\u5c5e\u6027",
+  "\u5e73\u53f0\u94fe\u63a5"
+ ],
+ "fields": [
+  {
+   "default": "1",
+   "fieldname": "\u542f\u7528",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "\u542f\u7528"
+  },
+  {
+   "description": "\u5e97\u94fa\u4f7f\u7528ERPNext\u6210\u672c\u4e2d\u5fc3\u8bc6\u522b\u3002",
+   "fieldname": "\u5e97\u94fa",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u5e97\u94fa",
+   "options": "Cost Center",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "description": "Amazon\u586b\u5199Marketplace ID\uff0c\u4f8b\u5982ATVPDKIKX0DER\u3002",
+   "fieldname": "\u7ad9\u70b9id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u7ad9\u70b9ID",
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_mapping",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "ASIN\u548c\u5e73\u53f0SKU\u81f3\u5c11\u586b\u5199\u4e00\u4e2a\u3002",
+   "fieldname": "\u5e73\u53f0asin",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u5e73\u53f0ASIN/\u5546\u54c1ID",
+   "search_index": 1
+  },
+  {
+   "description": "ASIN\u548c\u5e73\u53f0SKU\u81f3\u5c11\u586b\u5199\u4e00\u4e2a\u3002",
+   "fieldname": "\u5e73\u53f0sku",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u5e73\u53f0SKU",
+   "search_index": 1
+  },
+  {
+   "description": "Temu\u5e7f\u544a\u5546\u54c1\u4f7f\u7528SPU ID\u5173\u8054\u7269\u6599\uff1b\u540c\u4e00SPU\u53ef\u4ee5\u5bf9\u5e94\u591a\u4e2aSKU\u7269\u6599\u3002",
+   "fieldname": "\u5e73\u53f0spu",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u5e73\u53f0SPU",
+   "search_index": 1
+  },
+  {
+   "fieldname": "\u7269\u6599id",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u7269\u6599ID",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "\u7269\u6599id.item_name",
+   "fieldname": "\u7269\u6599\u540d\u79f0",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u7269\u6599\u540d\u79f0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "\u5e73\u53f0sku_\u5c5e\u6027",
+   "fieldtype": "Data",
+   "label": "\u5e73\u53f0SKU\u5c5e\u6027"
+  },
+  {
+   "fieldname": "\u5e73\u53f0\u94fe\u63a5",
+   "fieldtype": "Data",
+   "label": "\u5e73\u53f0\u94fe\u63a5",
+   "options": "URL"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-01 22:41:11.537595",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Fengjing - Product Corresponding Platform - Main Table",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

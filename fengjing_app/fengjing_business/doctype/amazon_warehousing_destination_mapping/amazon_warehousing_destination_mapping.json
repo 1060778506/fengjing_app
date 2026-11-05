@@ -1,0 +1,161 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:mapping_name",
+ "creation": "2026-10-10 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_section",
+  "mapping_name",
+  "enabled",
+  "warehousing_program",
+  "basic_column",
+  "erpnext_warehouse",
+  "inbound_transit_warehouse",
+  "matching_section",
+  "amazon_destination_codes",
+  "destination_country_code",
+  "destination_state_or_region",
+  "matching_column",
+  "destination_city",
+  "match_priority",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "basic_section",
+   "fieldtype": "Section Break",
+   "label": "Warehouse Mapping"
+  },
+  {
+   "fieldname": "mapping_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Mapping Name",
+   "reqd": 1,
+   "search_index": 1,
+   "unique": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "warehousing_program",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Warehousing Program",
+   "options": "AWD\nGWD",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "basic_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "erpnext_warehouse",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "ERPNext Warehouse",
+   "options": "Warehouse",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "description": "ERPNext warehouse used while inventory is moving toward this Amazon destination warehouse.",
+   "fieldname": "inbound_transit_warehouse",
+   "fieldtype": "Link",
+   "label": "Inbound Transit Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "matching_section",
+   "fieldtype": "Section Break",
+   "label": "Amazon Destination Matching"
+  },
+  {
+   "description": "One Amazon destination name or code per line. Leave blank until Amazon returns the actual code.",
+   "fieldname": "amazon_destination_codes",
+   "fieldtype": "Small Text",
+   "label": "Amazon Destination Warehouse Codes"
+  },
+  {
+   "description": "Two-letter destination country code returned by Amazon, such as CN or US.",
+   "fieldname": "destination_country_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Destination Country Code",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "destination_state_or_region",
+   "fieldtype": "Data",
+   "label": "Destination State or Region",
+   "search_index": 1
+  },
+  {
+   "fieldname": "matching_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Destination city returned by Amazon. It can be used when the warehouse code is not yet known.",
+   "fieldname": "destination_city",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Destination City",
+   "search_index": 1
+  },
+  {
+   "default": "100",
+   "description": "Lower values take priority when more than one mapping matches.",
+   "fieldname": "match_priority",
+   "fieldtype": "Int",
+   "label": "Match Priority",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-10 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon Warehousing Destination Mapping",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "match_priority",
+ "sort_order": "ASC",
+ "states": [],
+ "title_field": "mapping_name",
+ "track_changes": 1
+}

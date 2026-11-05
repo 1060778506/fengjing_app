@@ -1,0 +1,23 @@
+{
+ "content": null,
+ "creation": "2026-10-03 13:51:54.701833",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-10-03 13:51:54.701833",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "amazon_configuration",
+ "owner": "Administrator",
+ "page_name": "amazon_configuration",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "\u4e9a\u9a6c\u900a\u914d\u7f6e\u4e2d\u5fc3"
+}

@@ -1,0 +1,86 @@
+[
+ {
+  "description": "美国亚马逊 Seller Central 下载的付款交易联合报告（Custom Unified Transaction Report）。",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Report Type",
+  "enabled": 1,
+  "modified": "2026-09-25 14:33:47.383503",
+  "name": "mfibbqrqvk",
+  "recognition_fields": "date/time\nsettlement id\ntype\naccount type\nmarketplace withheld tax\nTransaction Status\nTransaction Release Date",
+  "recognition_priority": 100,
+  "report_type_code": "amazon_custom_unified_transaction",
+  "report_type_name": "付款交易联合报告"
+ },
+ {
+  "description": "亚马逊 FBA 库存分类账明细报告（Inventory Ledger Detail Report），用于翻译每日库存事件、配送中心及库存状态。",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Report Type",
+  "enabled": 1,
+  "modified": "2026-10-09 15:35:21.992622",
+  "name": "amazon-fba-inventory-ledger-detail",
+  "recognition_fields": "FNSKU\nASIN\nMSKU\nEvent Type\nFulfillment Center\nReconciled Quantity\nUnreconciled Quantity\nDate and Time",
+  "recognition_priority": 110,
+  "report_type_code": "amazon_fba_inventory_ledger_detail",
+  "report_type_name": "亚马逊库存分类账（详细视图）"
+ },
+ {
+  "description": "亚马逊全部订单报告（All Orders Report），支持CSV、TXT和TSV格式，翻译订单、商品、配送、税务及状态字段。",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Report Type",
+  "enabled": 1,
+  "modified": "2026-10-11 00:00:00",
+  "name": "amazon-all-orders-report",
+  "recognition_fields": "amazon-order-id\npurchase-date\norder-status\nfulfillment-channel\nproduct-name\norder-item-id",
+  "recognition_priority": 120,
+  "report_type_code": "amazon_all_orders_report",
+  "report_type_name": "亚马逊全部订单报告"
+ },
+ {
+  "description": "亚马逊结算明细报告（Settlement Flat File），支持以制表符分隔的 TXT/TSV，翻译后下载为 CSV；保留金额、订单编号和 UTC 时间原值。",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Report Type",
+  "enabled": 1,
+  "modified": "2026-10-25 00:00:00",
+  "name": "amazon-settlement-flat-file",
+  "recognition_fields": "settlement-id\nsettlement-start-date\nsettlement-end-date\ndeposit-date\ntransaction-type\namount-type\namount-description\nposted-date-time",
+  "recognition_priority": 130,
+  "report_type_code": "amazon_settlement_flat_file",
+  "report_type_name": "亚马逊结算明细报告"
+ },
+ {
+  "description": "亚马逊 FBA 库存分类账汇总报告（Inventory Ledger Summary View），按月份、SKU、库存状态和运营中心列示库存变化。",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Report Type",
+  "enabled": 1,
+  "modified": "2026-10-26 18:08:21.764069",
+  "name": "0epacl4ldi",
+  "recognition_fields": "Starting Warehouse Balance\nIn Transit Between Warehouses\nCustomer Shipments\nWarehouse Transfer In/Out\nEnding Warehouse Balance\nUnknown Events\nLocation",
+  "recognition_priority": 115,
+  "report_type_code": "amazon_fba_inventory_ledger_summary",
+  "report_type_name": "亚马逊库存分类账（汇总视图）"
+ },
+ {
+  "description": "亚马逊 FBA 月度仓储费报告（Monthly Storage Fees Report），按商品和运营中心列示预估仓储费及计算依据。",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Report Type",
+  "enabled": 1,
+  "modified": "2026-10-27 15:30:52.851412",
+  "name": "fu0k9d6uef",
+  "recognition_fields": "product_name\nfulfillment_center\naverage_quantity_on_hand\nmonth_of_charge\nstorage_utilization_ratio\nest_base_msf\nestimated_monthly_storage_fee",
+  "recognition_priority": 140,
+  "report_type_code": "amazon_monthly_storage_fee",
+  "report_type_name": "亚马逊月度仓储费"
+ },
+ {
+  "description": "亚马逊 AWD 库存分类账汇总报告（AWD Inventory Ledger Summary），按日期、SKU、采购订单和仓库列示以箱为单位的库存变化。",
+  "docstatus": 0,
+  "doctype": "Amazon CSV Report Type",
+  "enabled": 1,
+  "modified": "2026-10-27 00:00:00",
+  "name": "amazon-awd-inventory-ledger-summary",
+  "recognition_fields": "Package Quantity\nPurchase Order ID\nStarting Warehouse Balance (cartons)\nReceived (cartons)\nDeparted (cartons)\nEnding Warehouse Balance (cartons)\nFacility ID",
+  "recognition_priority": 145,
+  "report_type_code": "amazon_awd_inventory_ledger_summary",
+  "report_type_name": "亚马逊AWD库存分类账（汇总视图）"
+ }
+]

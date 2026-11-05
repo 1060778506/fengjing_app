@@ -1,0 +1,349 @@
+// 版权所有 (c) 2026, 丰境电商及贡献者
+// 有关许可信息，请参阅 license.txt
+
+// --- 主表逻辑：产品对应平台配置 ---
+frappe.ui.form.on('Fengjing - Product Corresponding Platform - Configuration', {
+    // 页面刷新时的逻辑
+    refresh: function (frm) {
+        // 在控制台打印刷新日志，方便调试
+        console.log("--- 页面已刷新 ---");
+        恢复全部中转站模型选项(frm);
+        setTimeout(() => 刷新全部中转站模型状态(frm), 0);
+    },
+
+    // 点击“恢复物料提示词”按钮时的逻辑
+    // 点击“恢复物料提示词”按钮时的逻辑
+    丰境_恢复物料提示词: function (frm) {
+        frappe.confirm(__('确定要恢复默认的 AI 物料命名提示词吗？'), () => {
+            frm.call({
+                doc: frm.doc,
+                method: "get_standard_prompt",
+                callback: function (r) {
+                    if (r.message) {
+                        console.log(r.message.物料命名模版);
+                        frm.set_value('丰境_ai生成物料提示词', r.message.STANDARD_PROMPT);
+                        frm.set_value('物料命名模版', r.message.物料命名模版);
+
+                        frappe.show_alert({
+                            message: __('已同步后端标准规范'),
+                            indicator: 'green'
+                        });
+                    }
+                }
+            });
+        });
+    },
+
+
+});
+
+// --- 子表逻辑：AI 配置项 (Fengjing - AI Configuration) ---
+
+frappe.ui.form.on('Fengjing - AI Configuration', {
+    // 按钮 1：测试当前行 AI 节点的通讯是否正常
+    丰境_ai测试链接: async function (frm, cdt, cdn) {
+        // 获取当前点击行的数据对象
+        let row = locals[cdt][cdn];
+        // 清理秘钥前后的空格
+        let clean_key = (row.丰境_ai秘钥 || "").trim();
+        // 生成当前时间戳
+        let timestamp = new Date().toLocaleString();
+
+        // 校验秘钥是否填写
+        if (!clean_key) {
+            // 提示用户必须填写秘钥
+            frappe.msgprint(__('请先填写 API 秘钥'));
+            // 终止后续执行
+            return;
+        }
+
+        // 构造专门用于测试的简单提示词
+        let 提示词 = `请按照以下格式回复：[您已经链接到【真实模型名称】/时间：${timestamp}]`;
+
+        try {
+            // 通过 await 调用全局 window 下的分拨中心函数进行通讯测试
+            // 参数 0 表示非物料调用，此时 check.js 会执行复杂的弹窗逻辑
+            let 返回的数据 = await window.ai直连(frm, cdt, cdn, row, clean_key, 提示词);
+
+            // 3. 如果是配置页手动测试 (是否是物料调用 !== 1)，则执行弹窗逻辑
+            // 注意：这里的 ai的回答 和 timestamp 已经可以正常使用了
+            // 1. 先把数据写进字段
+            frappe.model.set_value(cdt, cdn, '丰境_ai通讯是否正常', "是:" + new Date().toLocaleString());
+
+            // 2. 解冻屏幕（因为保存本身会有加载条，不需要叠加冻结）
+            frappe.dom.unfreeze();
+
+            // 3. 执行保存逻辑
+            frm.save().then(() => {
+                // --- 这里是保存成功后的回调 ---
+                // 4. 【核心点】用 setTimeout 错开 Frappe 的保存刷新周期
+                // 这样弹窗就不会被 "Already saving" 或者页面重载给冲掉
+                setTimeout(() => {
+                    frappe.msgprint({
+                        title: `<span style="color: #4361ee; font-weight: 800;">🚀 AI 系统就绪</span>`,
+                        indicator: 'blue',
+                        message: `
+                <div style="font-family: 'Inter', sans-serif; padding: 16px; background: linear-gradient(145deg, #ffffff, #f0f4ff); border-radius: 12px; border: 1px solid #dbe4ff;">
+                    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                        <div style="width: 8px; height: 8px; background-color: #2ecc71; border-radius: 50%; margin-right: 10px;"></div>
+                        <span style="font-size: 13px; font-weight: 600; color: #1e293b;">通讯链路已加密确认</span>
+                    </div>
+                    <div style="background: rgba(255, 255, 255, 0.8); padding: 12px; border-radius: 8px; border: 1px dashed #ced4da;">
+                        <p style="font-size: 11px; color: #64748b; margin-bottom: 6px;">AI 响应原始凭据</p>
+                        <code style="font-size: 12px; color: #334155; word-break: break-all;">${返回的数据}</code>
+                    </div>
+                </div>`,
+                        primary_action: {
+                            label: __('确认并开启 AI 功能'),
+                            action(values) {
+                                // 1. 尝试通过 Frappe 标准 API 关闭（最优雅）
+                                if (frappe.msgprint_dialog) {
+                                    frappe.msgprint_dialog.hide();
+                                }
+
+                                // 2. 强力清理：关闭所有正在显示的 modal 弹窗（最稳妥）
+                                // 这里的 values 参数其实就是当前弹窗对象，我们直接调用它的 hide
+                                if (cur_dialog) cur_dialog.hide();
+
+                                // 3. 针对一些特殊情况，直接移除 DOM 遮罩层（兜底方案）
+                                $('.modal:visible').modal('hide'); // 如果是 Bootstrap 模式
+                                $('.modal-backdrop').remove();     // 移除黑色遮罩
+                                $('body').removeClass('modal-open'); // 恢复身体滚动
+
+                                // 4. 最后的提示
+                                frappe.show_alert({
+                                    message: __('AI 引擎已挂载'),
+                                    indicator: 'blue'
+                                });
+                            }
+                        }
+                    });
+                }, 500); // 延迟 500 毫秒，确保页面已经从 "Saving" 状态恢复过来
+
+            }).catch(save_err => {
+                // 如果保存失败（比如必填项没写），依然可以弹窗提示，但重点在排查报错
+                console.error("保存过程中出错:", save_err);
+                frappe.msgprint(__('AI 通讯正常，但保存单据时被拦截，请检查必填项。'));
+            });
+        } catch (err) {
+            // 如果通讯过程中发生任何错误（Promise reject）
+            console.error("测试连接失败:", err);
+            // 错误处理已在全局函数中通过 msgprint 完成，此处仅记录日志
+        }
+    },
+
+    // 按钮 2：根据不同的 AI 来源跳转到对应的 API 申请页面
+    丰境_去获取ai秘钥: function (frm, cdt, cdn) {
+        // 获取当前行数据
+        let row = locals[cdt][cdn];
+        // 默认设置为 Google Gemini 的申请地址
+        let url = 'https://aistudio.google.com/projects';
+
+        // 根据来源字段的值，动态修改跳转链接
+        if (row.丰境_ai来源 === 'OpenAI') {
+            // 如果是 OpenAI 来源
+            url = 'https://platform.openai.com/api-keys';
+        } else if (row.丰境_ai来源 === 'DeepSeek') {
+            // 如果是 DeepSeek 来源
+            url = 'https://platform.deepseek.com/api_keys';
+        } else if (row.丰境_ai来源 === 'Teamorouter') {
+            url = 'https://teamorouter.cn/?i=3c7710321b';
+        }
+        // 在新窗口打开对应的申请页面
+        window.open(url, '_blank');
+    },
+
+    // 当用户修改“AI 来源”字段时触发的逻辑
+    丰境_ai来源: function (frm, cdt, cdn) {
+        // 检查填充函数是否存在
+        if (typeof 填充ai链接 === "function") {
+            // 调用下方定义的 API 链接自动填充逻辑
+            填充ai链接(frm, cdt, cdn);
+        }
+        设置中转站模型状态(frm, cdt, cdn);
+    },
+
+    // 新增子表行时，默认的 AI 来源不会触发上面的字段变更事件，需主动填充。
+    丰境_ai配置页面_add: function (frm, cdt, cdn) {
+        setTimeout(() => {
+            填充ai链接(frm, cdt, cdn);
+            设置中转站模型状态(frm, cdt, cdn);
+        }, 0);
+    },
+
+    // 打开某一行的完整编辑界面时，立即同步两个控件的启用状态。
+    form_render: function (frm, cdt, cdn) {
+        设置中转站模型状态(frm, cdt, cdn);
+    },
+
+    // 从 TeamoRouter 实时获取当前秘钥可用的模型。
+    获取模型: async function (frm, cdt, cdn) {
+        const row = locals[cdt][cdn];
+        if (row.丰境_ai来源 !== 'Teamorouter') {
+            frappe.msgprint(__('只有 AI 来源为 Teamorouter 时才能获取模型。'));
+            return;
+        }
+
+        if (row.__islocal || frm.is_dirty()) {
+            frappe.msgprint(__('请先保存 AI 配置，再获取模型。'));
+            return;
+        }
+
+        frappe.dom.freeze(__('正在获取 TeamoRouter 模型...'));
+        try {
+            const response = await frappe.call({
+                method: 'fengjing_app.fengjing_business.doctype.fengjing___product_corresponding_platform___configuration.fengjing___product_corresponding_platform___configuration.get_teamorouter_models',
+                args: { row_name: row.name }
+            });
+            if (response.message?.error) {
+                throw new Error(response.message.error);
+            }
+            const models = response.message?.models || [];
+            if (!models.length) {
+                throw new Error(__('接口没有返回可用模型。'));
+            }
+
+            // 每一行独立持久化模型列表；重新打开页面后仍可恢复下拉选项。
+            await frappe.model.set_value(
+                cdt,
+                cdn,
+                '中转站模型列表_json',
+                JSON.stringify(models)
+            );
+            恢复全部中转站模型选项(frm);
+            设置中转站模型状态(frm, cdt, cdn);
+
+            const selected_missing = row.中转站模型 && !models.includes(row.中转站模型);
+            frappe.show_alert({
+                message: selected_missing
+                    ? __('已获取 {0} 个模型；原选择“{1}”暂不在新列表中，系统已保留，请确认后保存。', [models.length, row.中转站模型])
+                    : __('已获取 {0} 个可用模型，请选择“中转站模型”并保存。', [models.length]),
+                indicator: selected_missing ? 'orange' : 'green'
+            });
+        } catch (err) {
+            console.error('获取 TeamoRouter 模型失败:', err);
+            frappe.msgprint({
+                title: __('获取模型失败'),
+                indicator: 'red',
+                message: frappe.utils.escape_html(err.message || String(err))
+            });
+        } finally {
+            frappe.dom.unfreeze();
+        }
+    }
+});
+
+function 获取子表字段控件(frm, cdn, fieldname) {
+    const table = frm.fields_dict['丰境_ai配置页面'];
+    const grid_row = table && table.grid && table.grid.get_row(cdn);
+    if (!grid_row) return null;
+    return (grid_row.grid_form && grid_row.grid_form.fields_dict[fieldname])
+        || (grid_row.on_grid_fields_dict && grid_row.on_grid_fields_dict[fieldname])
+        || null;
+}
+
+function 读取中转站模型列表(row) {
+    const raw = row && row.中转站模型列表_json;
+    if (!raw) return [];
+    try {
+        const parsed = Array.isArray(raw) ? raw : JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return [...new Set(parsed.map(model => String(model || '').trim()).filter(Boolean))];
+    } catch (error) {
+        console.warn('中转站模型列表缓存不是有效 JSON：', row && row.name, error);
+        return [];
+    }
+}
+
+function 当前行中转站模型选项(row) {
+    return [...new Set([
+        row && row.中转站模型,
+        ...读取中转站模型列表(row)
+    ].map(model => String(model || '').trim()).filter(Boolean))];
+}
+
+function 应用中转站模型选项(frm, cdn, models) {
+    const control = 获取子表字段控件(frm, cdn, '中转站模型');
+    if (!control) return;
+    const options = ['', ...models];
+    if (typeof control.set_data === 'function') {
+        control.set_data(options);
+    } else {
+        control.df.options = options.join('\n');
+    }
+    control.refresh();
+}
+
+function 恢复全部中转站模型选项(frm) {
+    const table = frm.fields_dict['丰境_ai配置页面'];
+    if (!table || !table.grid) return;
+
+    // Grid 的字段定义是共享的，先放入所有行的缓存作为未展开行的显示兜底；
+    // 行控件渲染后，再由“设置中转站模型状态”替换成该行自己的列表。
+    const all_models = [...new Set(
+        (frm.doc.丰境_ai配置页面 || []).flatMap(row => 当前行中转站模型选项(row))
+    )];
+    table.grid.update_docfield_property(
+        '中转站模型',
+        'options',
+        ['', ...all_models].join('\n')
+    );
+    // update_docfield_property 会延迟刷新 Grid；刷新完成后再次按行收窄选项。
+    setTimeout(() => 刷新全部中转站模型状态(frm), 200);
+}
+
+function 设置中转站模型状态(frm, cdt, cdn) {
+    const row = locals[cdt] && locals[cdt][cdn];
+    if (!row) return;
+    const enabled = row.丰境_ai来源 === 'Teamorouter';
+    const table = frm.fields_dict[row.parentfield || '丰境_ai配置页面'];
+    const grid_row = table && table.grid && table.grid.get_row(cdn);
+    if (!grid_row) return;
+
+    grid_row.toggle_editable('中转站模型', enabled);
+    grid_row.toggle_editable('获取模型', enabled);
+    if (enabled) {
+        应用中转站模型选项(frm, cdn, 当前行中转站模型选项(row));
+    }
+    ['中转站模型', '获取模型'].forEach((fieldname) => {
+        const control = 获取子表字段控件(frm, cdn, fieldname);
+        if (control && control.$input) {
+            control.$input.prop('disabled', !enabled);
+        }
+    });
+}
+
+function 刷新全部中转站模型状态(frm) {
+    const table = frm.fields_dict['丰境_ai配置页面'];
+    if (!table || !table.grid) return;
+    table.grid.grid_rows.forEach((grid_row) => {
+        设置中转站模型状态(frm, grid_row.doc.doctype, grid_row.doc.name);
+    });
+}
+
+/**
+ * 内部辅助函数：根据 AI 来源自动填充对应的默认 API 接口地址
+ */
+function 填充ai链接(frm, cdt, cdn) {
+    // 获取子表当前行数据
+    let row = locals[cdt][cdn];
+
+    // 定义主流 AI 厂商的官方标准接口链接映射表
+    const api_links = {
+        'Gemini': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+        'OpenAI': 'https://api.openai.com/v1/chat/completions',
+        'DeepSeek': 'https://api.deepseek.com/chat/completions',
+        'Teamorouter': 'https://api.teamorouter.ai/v1'
+    };
+
+    // 匹配当前行选中的 AI 来源
+    if (row.丰境_ai来源 && api_links[row.丰境_ai来源]) {
+        // 将匹配到的链接写入子表的“API 链接”字段中
+        frappe.model.set_value(cdt, cdn, '丰境_api链接', api_links[row.丰境_ai来源]);
+        // 弹出蓝色提示告知用户链接已自动更新
+        frappe.show_alert({
+            message: __('{0} 的 API 链接已自动同步', [row.丰境_ai来源]),
+            indicator: 'blue'
+        });
+    }
+}

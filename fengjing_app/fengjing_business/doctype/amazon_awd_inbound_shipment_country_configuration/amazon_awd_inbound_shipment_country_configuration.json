@@ -1,0 +1,439 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "hash",
+ "creation": "2026-10-10 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_section",
+  "master_configuration",
+  "amazon_store",
+  "enabled",
+  "store_column",
+  "company",
+  "cost_center",
+  "country",
+  "marketplace_section",
+  "seller_id",
+  "marketplace_id",
+  "marketplace_column",
+  "api_region",
+  "warehouse_section",
+  "awd_warehouse",
+  "warehouse_column",
+  "inbound_transit_warehouse",
+  "history_section",
+  "history_status",
+  "history_checkpoint",
+  "history_column",
+  "history_completed",
+  "history_last_error",
+  "incremental_section",
+  "incremental_last_at",
+  "incremental_next_at",
+  "incremental_column",
+  "incremental_checkpoint",
+  "incremental_summary",
+  "recheck_7_section",
+  "recheck_7_last_at",
+  "recheck_7_column",
+  "recheck_7_next_at",
+  "recheck_14_section",
+  "recheck_14_last_at",
+  "recheck_14_column",
+  "recheck_14_next_at",
+  "recheck_30_section",
+  "recheck_30_last_at",
+  "recheck_30_column",
+  "recheck_30_next_at",
+  "recheck_90_section",
+  "recheck_90_last_at",
+  "recheck_90_column",
+  "recheck_90_next_at",
+  "recheck_180_section",
+  "recheck_180_last_at",
+  "recheck_180_column",
+  "recheck_180_next_at",
+  "runtime_section",
+  "current_status",
+  "current_execution_type",
+  "started_at",
+  "completed_at",
+  "runtime_column",
+  "last_success_at",
+  "last_sync_result",
+  "last_error"
+ ],
+ "fields": [
+  {
+   "fieldname": "basic_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Configuration"
+  },
+  {
+   "fieldname": "master_configuration",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "AWD Inbound Shipment Master Configuration",
+   "options": "Amazon AWD Inbound Shipment Master Configuration",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "amazon_store",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Amazon Store",
+   "options": "Amazon Store Configuration",
+   "reqd": 1,
+   "search_index": 1,
+   "unique": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "store_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "amazon_store.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "amazon_store.cost_center",
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "amazon_store.country",
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "label": "Country",
+   "options": "Country",
+   "read_only": 1
+  },
+  {
+   "fieldname": "marketplace_section",
+   "fieldtype": "Section Break",
+   "label": "Amazon Marketplace"
+  },
+  {
+   "fetch_from": "amazon_store.seller_id",
+   "fieldname": "seller_id",
+   "fieldtype": "Data",
+   "label": "Seller ID",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "amazon_store.marketplace_id",
+   "fieldname": "marketplace_id",
+   "fieldtype": "Data",
+   "label": "Marketplace ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "marketplace_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "amazon_store.api_region",
+   "fieldname": "api_region",
+   "fieldtype": "Data",
+   "label": "API Region",
+   "read_only": 1
+  },
+  {
+   "fieldname": "warehouse_section",
+   "fieldtype": "Section Break",
+   "label": "ERPNext Warehouse Mapping"
+  },
+  {
+   "fieldname": "awd_warehouse",
+   "fieldtype": "Link",
+   "label": "AWD Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "warehouse_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "ERPNext warehouse used for goods shipped by the seller but not yet received by AWD.",
+   "fieldname": "inbound_transit_warehouse",
+   "fieldtype": "Link",
+   "label": "Inbound Transit Warehouse",
+   "options": "Warehouse"
+  },
+  {
+   "fieldname": "history_section",
+   "fieldtype": "Section Break",
+   "label": "AWD Inbound Shipment History Result"
+  },
+  {
+   "default": "Not Started",
+   "fieldname": "history_status",
+   "fieldtype": "Select",
+   "label": "History Status",
+   "options": "Not Started\nWaiting\nRunning\nCompleted\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_checkpoint",
+   "fieldtype": "Datetime",
+   "label": "History Checkpoint",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "history_completed",
+   "fieldtype": "Check",
+   "label": "History Completed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_last_error",
+   "fieldtype": "Small Text",
+   "label": "History Last Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "incremental_section",
+   "fieldtype": "Section Break",
+   "label": "Routine AWD Inbound Shipment Result"
+  },
+  {
+   "fieldname": "incremental_last_at",
+   "fieldtype": "Datetime",
+   "label": "Incremental Last Sync At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "incremental_next_at",
+   "fieldtype": "Datetime",
+   "label": "Incremental Next Sync At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "incremental_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "incremental_checkpoint",
+   "fieldtype": "Datetime",
+   "label": "Incremental Checkpoint",
+   "read_only": 1
+  },
+  {
+   "fieldname": "incremental_summary",
+   "fieldtype": "Small Text",
+   "label": "Incremental Summary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_7_section",
+   "fieldtype": "Section Break",
+   "label": "Recent 7 Days Recheck"
+  },
+  {
+   "fieldname": "recheck_7_last_at",
+   "fieldtype": "Datetime",
+   "label": "7 Days Last Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_7_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_7_next_at",
+   "fieldtype": "Datetime",
+   "label": "7 Days Next Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_14_section",
+   "fieldtype": "Section Break",
+   "label": "Recent 14 Days Recheck"
+  },
+  {
+   "fieldname": "recheck_14_last_at",
+   "fieldtype": "Datetime",
+   "label": "14 Days Last Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_14_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_14_next_at",
+   "fieldtype": "Datetime",
+   "label": "14 Days Next Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_30_section",
+   "fieldtype": "Section Break",
+   "label": "Recent 30 Days Recheck"
+  },
+  {
+   "fieldname": "recheck_30_last_at",
+   "fieldtype": "Datetime",
+   "label": "30 Days Last Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_30_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_30_next_at",
+   "fieldtype": "Datetime",
+   "label": "30 Days Next Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_90_section",
+   "fieldtype": "Section Break",
+   "label": "Recent 90 Days Recheck"
+  },
+  {
+   "fieldname": "recheck_90_last_at",
+   "fieldtype": "Datetime",
+   "label": "90 Days Last Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_90_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_90_next_at",
+   "fieldtype": "Datetime",
+   "label": "90 Days Next Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_180_section",
+   "fieldtype": "Section Break",
+   "label": "Recent 180 Days Recheck"
+  },
+  {
+   "fieldname": "recheck_180_last_at",
+   "fieldtype": "Datetime",
+   "label": "180 Days Last Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "recheck_180_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "recheck_180_next_at",
+   "fieldtype": "Datetime",
+   "label": "180 Days Next Recheck",
+   "read_only": 1
+  },
+  {
+   "fieldname": "runtime_section",
+   "fieldtype": "Section Break",
+   "label": "Runtime Status"
+  },
+  {
+   "default": "Not Started",
+   "fieldname": "current_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Current Status",
+   "options": "Not Started\nWaiting\nRunning\nCompleted\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "current_execution_type",
+   "fieldtype": "Data",
+   "label": "Current Execution Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "started_at",
+   "fieldtype": "Datetime",
+   "label": "Started At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "completed_at",
+   "fieldtype": "Datetime",
+   "label": "Completed At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "runtime_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_success_at",
+   "fieldtype": "Datetime",
+   "label": "Last Successful Sync",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_sync_result",
+   "fieldtype": "Small Text",
+   "label": "Last Sync Result",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_error",
+   "fieldtype": "Small Text",
+   "label": "Last Error",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-10-10 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon AWD Inbound Shipment Country Configuration",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "amazon_store",
+ "track_changes": 1
+}

@@ -1,0 +1,19 @@
+{
+  "name": "fengjing_app",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "node fengjing_app/public/scripts/build_excalidraw.cjs && node fengjing_app/public/scripts/build_calendar.cjs"
+  },
+  "dependencies": {
+    "@antv/x6": "^3.1.8",
+    "@excalidraw/excalidraw": "^0.18.1",
+    "bootstrap-icons": "^1.13.2",
+    "d3-force": "^3.0.1",
+    "echarts": "^6.1.0",
+    "fullcalendar": "7.1.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "temporal-polyfill": "^1.0.6",
+    "three": "^0.187.0"
+  }
+}

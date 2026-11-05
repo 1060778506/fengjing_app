@@ -1,0 +1,7 @@
+此目录存放丰境日历页面按需加载的前端构建入口。
+
+fengjing_calendar.entry.js：
+1. 引入 FullCalendar 的月、周、日、列表和交互功能。
+2. 引入中文语言包与经典主题样式。
+3. 由 public/scripts/build_calendar.cjs 以 ES2020 独立编译。
+4. 输出到 public/calendar/fullcalendar，只有丰境日历页面会加载。
