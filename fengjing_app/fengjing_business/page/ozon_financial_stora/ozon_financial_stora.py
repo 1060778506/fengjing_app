@@ -333,7 +333,7 @@ def _split_whd_row(row):
 
 
 def _posting_breakdown(row):
-	"""Build the sale and commission child rows shown by the Ozon finance UI."""
+	"""Show each Ozon sale component below its original order row."""
 	if str(row.get("operation_type") or "") != "POSTING":
 		return []
 	report = row.get("report_amounts") or _report_posting_amounts(row)
@@ -345,6 +345,7 @@ def _posting_breakdown(row):
 	if not isinstance(products, list):
 		return []
 	result = []
+	label_prefix = "WHD_" if row.get("whd_source_name") else ""
 	for product in products:
 		if not isinstance(product, dict):
 			continue
@@ -356,20 +357,26 @@ def _posting_breakdown(row):
 		# 完整记录按 Ozon 应计报表字段展示；旧记录保留原有展示口径。
 		sale_amount = _amount_value(commission.get("sale_price" if report_complete else "sale_amount"))
 		partner_amount = _amount_value(commission.get("coinvestment")) if report_complete else 0.0
+		bonus_amount = _amount_value(commission.get("bonus")) if report_complete else 0.0
 		commission_amount = _amount_value(commission.get("commission"))
 		if sale_amount:
 			result.append({
-				"label": "销售", "detail": "收入", "amount": sale_amount,
+				"label": f"{label_prefix}销售", "detail": "收入", "amount": sale_amount,
 				"currency": row.get("currency_code"), "sku": sku, "quantity": quantity,
 			})
 		if partner_amount:
 			result.append({
-				"label": "合作伙伴计划", "detail": "合作伙伴计划", "amount": partner_amount,
+				"label": f"{label_prefix}合作伙伴计划", "detail": "合作伙伴计划", "amount": partner_amount,
+				"currency": row.get("currency_code"), "sku": sku, "quantity": quantity,
+			})
+		if bonus_amount:
+			result.append({
+				"label": f"{label_prefix}折扣积分", "detail": "折扣积分", "amount": bonus_amount,
 				"currency": row.get("currency_code"), "sku": sku, "quantity": quantity,
 			})
 		if commission_amount:
 			result.append({
-				"label": "Ozon代理佣金", "detail": "销售代理佣金", "amount": commission_amount,
+				"label": f"{label_prefix}Ozon代理佣金", "detail": "销售代理佣金", "amount": commission_amount,
 				"currency": row.get("currency_code"), "sku": sku, "quantity": quantity,
 			})
 	return result
