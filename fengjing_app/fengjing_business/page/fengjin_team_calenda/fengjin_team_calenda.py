@@ -364,6 +364,7 @@ def _event_payload(event):
 		"allDay": bool(cint(event.get("all_day"))),
 		"color": color,
 		"contrastColor": contrast_color,
+		"className": "fjtc-event-completed" if event.get("status") == "Completed" else "",
 		"editable": can_write,
 		"extendedProps": {
 			"event_name": name,

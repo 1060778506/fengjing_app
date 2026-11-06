@@ -524,6 +524,11 @@ body.fjtc-map-reordering * {
 	padding: 1px 3px;
 }
 
+.fjtc-page .fjtc-event-completed,
+.fjtc-page .fjtc-event-completed * {
+	text-decoration-line: line-through;
+}
+
 .fjtc-page .fc .fc-event[style*="rgb(37, 99, 235)"],
 .fjtc-page .fc .fc-event[style*="#2563eb"] {
 	filter: saturate(0.62) brightness(1.12);
