@@ -14,6 +14,36 @@ def _money(value):
 	return flt(value or 0, 2)
 
 
+def _report_posting_amounts(row):
+	"""Read the same sale, partner, bonus and commission amounts as Ozon's accrual report."""
+	fallback = {
+		"sale": _money(row.get("accruals_for_sale")), "partner": 0.0, "bonus": 0.0,
+		"commission": _money(row.get("sale_commission")), "report_basis_complete": False,
+	}
+	try:
+		products = json.loads(row.get("items_json") or "[]")
+	except (TypeError, ValueError, json.JSONDecodeError):
+		return fallback
+	if str(row.get("operation_type") or "") != "POSTING" or not isinstance(products, list) or not products:
+		return fallback
+	parts = {"sale": Decimal("0"), "partner": Decimal("0"), "bonus": Decimal("0"), "commission": Decimal("0")}
+	for product in products:
+		if not isinstance(product, dict):
+			return fallback
+		commission = product.get("commission") or {}
+		if not isinstance(commission, dict) or commission.get("sale_price") is None or commission.get("commission") is None:
+			return fallback
+		for field, source in (("sale", "sale_price"), ("partner", "coinvestment"), ("bonus", "bonus"), ("commission", "commission")):
+			value = commission.get(source) or {}
+			if isinstance(value, dict):
+				value = value.get("amount", value.get("value", 0))
+			try:
+				parts[field] += Decimal(str(value or 0))
+			except (ValueError, TypeError, ArithmeticError):
+				return fallback
+	return {**{key: _money(value) for key, value in parts.items()}, "report_basis_complete": True}
+
+
 def _sales_price_rows(item):
 	"""Prepare invoice-friendly quantity and sale unit prices without changing source records."""
 	quantity = flt(item.get("quantity") or 0)
@@ -43,26 +73,37 @@ def _sales_price_rows(item):
 			break
 
 	_, rate, regular_sale, correction_sale = best
+	partner = Decimal(str(item["partner_amount"])).quantize(Decimal("0.01"))
+	bonus = Decimal(str(item["bonus_amount"])).quantize(Decimal("0.01"))
 	commission = Decimal(str(item["commission_amount"])).quantize(Decimal("0.01"))
 	total = Decimal(str(item["amount"])).quantize(Decimal("0.01"))
+	regular_partner = (partner * (quantity - 1) / quantity).quantize(
+		Decimal("0.01"), rounding=ROUND_HALF_UP
+	)
+	regular_bonus = (bonus * (quantity - 1) / quantity).quantize(
+		Decimal("0.01"), rounding=ROUND_HALF_UP
+	)
 	regular_commission = (commission * (quantity - 1) / quantity).quantize(
 		Decimal("0.01"), rounding=ROUND_HALF_UP
 	)
-	regular_total = regular_sale + regular_commission
+	regular_total = regular_sale + regular_partner + regular_bonus + regular_commission
 	regular = {
 		**item, "quantity": quantity - 1, "unit_price": format(rate, "f"),
-		"sale_amount": float(regular_sale), "commission_amount": float(regular_commission),
+		"sale_amount": float(regular_sale), "partner_amount": float(regular_partner),
+		"bonus_amount": float(regular_bonus), "commission_amount": float(regular_commission),
 		"amount": float(regular_total), "split_role": "常规行",
 	}
 	correction = {
 		**item, "quantity": 1, "unit_price": format(correction_sale, "f"),
-		"sale_amount": float(correction_sale),
+		"sale_amount": float(correction_sale), "partner_amount": float(partner - regular_partner),
+		"bonus_amount": float(bonus - regular_bonus),
 		"commission_amount": float(commission - regular_commission),
 		"amount": float(total - regular_total), "split_role": "调整行",
 	}
 	for row in (regular, correction):
 		row["equation_difference"] = _money(
-			row["sale_amount"] + row["commission_amount"] - row["amount"]
+			row["sale_amount"] + row["partner_amount"] + row["bonus_amount"]
+			+ row["commission_amount"] - row["amount"]
 		)
 		row["equation_valid"] = abs(row["equation_difference"]) < 0.01
 	return [regular, correction]
@@ -419,8 +460,17 @@ def _filtered_type_summary(rows, selected_type):
 		currency = row.get("currency_code") or "未知"
 		accrual_item_type = row.get("accrual_type_label") or _accrual_item_type(row)
 		amount = _money(row.get("net_amount") if row.get("net_amount") is not None else row.get("transaction_amount"))
-		sale_amount = _money(row.get("accruals_for_sale"))
-		commission_amount = _money(row.get("sale_commission"))
+		if selected_type == "商品销售与佣金":
+			report = _report_posting_amounts(row)
+			sale_amount = report["sale"]
+			partner_amount = report["partner"]
+			bonus_amount = report["bonus"]
+			commission_amount = report["commission"]
+		else:
+			report = None
+			sale_amount = _money(row.get("accruals_for_sale"))
+			partner_amount = bonus_amount = 0.0
+			commission_amount = _money(row.get("sale_commission"))
 		manual_item = str(row.get("manual_corresponding_item") or "")
 		if manual_item:
 			manual_item_details[manual_item] = {
@@ -429,11 +479,16 @@ def _filtered_type_summary(rows, selected_type):
 			}
 		bucket = currencies.setdefault(currency, {
 			"total": 0.0, "count": 0, "sale_total": 0.0,
-			"commission_total": 0.0, "items": {},
+			"partner_total": 0.0, "bonus_total": 0.0,
+			"commission_total": 0.0, "report_fallback_count": 0, "items": {},
 		})
 		bucket["total"] += amount
 		bucket["sale_total"] += sale_amount
+		bucket["partner_total"] += partner_amount
+		bucket["bonus_total"] += bonus_amount
 		bucket["commission_total"] += commission_amount
+		if report is not None and not report["report_basis_complete"]:
+			bucket["report_fallback_count"] += 1
 		bucket["count"] += 1
 
 		item = None
@@ -464,13 +519,16 @@ def _filtered_type_summary(rows, selected_type):
 		group_key = (str(item.get("item") or ""), accrual_item_type)
 		item_bucket = bucket["items"].setdefault(group_key, {
 			**item, "accrual_type": accrual_item_type,
-			"amount": 0.0, "sale_amount": 0.0, "commission_amount": 0.0,
+			"amount": 0.0, "sale_amount": 0.0, "partner_amount": 0.0,
+			"bonus_amount": 0.0, "commission_amount": 0.0,
 			"quantity": 0.0, "count": 0, "record_names": [], "account_codes": set(),
 			"cost_centers": set(), "manual_items": set(),
 			"posting_numbers": set(), "booked_names": set(),
 		})
 		item_bucket["amount"] += amount
 		item_bucket["sale_amount"] += sale_amount
+		item_bucket["partner_amount"] += partner_amount
+		item_bucket["bonus_amount"] += bonus_amount
 		item_bucket["commission_amount"] += commission_amount
 		if selected_type == "商品销售与佣金":
 			item_bucket["quantity"] += flt(row.get("quantity") or 0)
@@ -488,6 +546,8 @@ def _filtered_type_summary(rows, selected_type):
 	for currency, bucket in currencies.items():
 		bucket["total"] = _money(bucket["total"])
 		bucket["sale_total"] = _money(bucket["sale_total"])
+		bucket["partner_total"] = _money(bucket["partner_total"])
+		bucket["bonus_total"] = _money(bucket["bonus_total"])
 		bucket["commission_total"] = _money(bucket["commission_total"])
 		items = list(bucket.pop("items").values())
 		if selected_type == "Ozon平台服务费":
@@ -501,6 +561,8 @@ def _filtered_type_summary(rows, selected_type):
 		for item in items:
 			item["amount"] = _money(item["amount"])
 			item["sale_amount"] = _money(item["sale_amount"])
+			item["partner_amount"] = _money(item["partner_amount"])
+			item["bonus_amount"] = _money(item["bonus_amount"])
 			item["commission_amount"] = _money(item["commission_amount"])
 			account_codes = item.pop("account_codes")
 			item["account_code"] = next(iter(account_codes)) if len(account_codes) == 1 else ""
@@ -517,11 +579,17 @@ def _filtered_type_summary(rows, selected_type):
 			item["manual_item_mixed"] = len(manual_items) > 1
 			item["posting_numbers"] = sorted(item["posting_numbers"])
 			item["booked_names"] = sorted(item["booked_names"])
-			item["equation_difference"] = _money(item["sale_amount"] + item["commission_amount"] - item["amount"])
+			item["equation_difference"] = _money(
+				item["sale_amount"] + item["partner_amount"] + item["bonus_amount"]
+				+ item["commission_amount"] - item["amount"]
+			)
 			item["equation_valid"] = abs(item["equation_difference"]) < 0.01
 		if selected_type == "商品销售与佣金":
 			items = [split for item in items for split in _sales_price_rows(item)]
-		bucket["equation_difference"] = _money(bucket["sale_total"] + bucket["commission_total"] - bucket["total"])
+		bucket["equation_difference"] = _money(
+			bucket["sale_total"] + bucket["partner_total"] + bucket["bonus_total"]
+			+ bucket["commission_total"] - bucket["total"]
+		)
 		bucket["equation_valid"] = abs(bucket["equation_difference"]) < 0.01
 		bucket["currency"] = currency
 		bucket["items"] = items
@@ -599,7 +667,6 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 	_enrich_items(rows)
 	for row in rows:
 		row.breakdown = _posting_breakdown(row)
-		row.pop("items_json", None)
 
 	search = str(f.search or "").strip().lower()
 	binding = str(f.binding or "")
@@ -639,6 +706,8 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 	if selected_type:
 		_attach_related_products(rows)
 	filtered_type_summary = _filtered_type_summary(rows, selected_type)
+	for row in rows:
+		row.pop("items_json", None)
 
 	currencies = defaultdict(lambda: {"inflow": 0.0, "outflow": 0.0, "net": 0.0, "sales": 0.0, "fees": 0.0})
 	daily = defaultdict(lambda: defaultdict(lambda: {"inflow": 0.0, "outflow": 0.0, "net": 0.0, "count": 0}))
