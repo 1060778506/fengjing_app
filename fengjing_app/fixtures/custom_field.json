@@ -569,6 +569,16 @@
  },
  {
   "doctype": "Custom Field",
+  "dt": "Sales Taxes and Charges",
+  "fieldname": "custom_拆分说明",
+  "fieldtype": "Button",
+  "insert_after": "description",
+  "label": "拆分说明",
+  "module": "丰境业务APP",
+  "name": "Sales Taxes and Charges-custom_拆分说明"
+ },
+ {
+  "doctype": "Custom Field",
   "dt": "Stock Entry",
   "fieldname": "custom_temu发货批次",
   "fieldtype": "Data",

@@ -45,6 +45,10 @@ cd ~/frappe-bench/apps/fengjing_app && git add . && git commit -m "新的" && gi
 # 在docker外部推送
 cd "/root/Desktop/erpnext-os-py/fengjing_app" && git add -A && git commit -m "2026-10-4-1" && git push -u origin develop --force
 
+# 固化内存
+docker exec -u frappe -it neizhang-backend-1 bash
+cd ~/frappe-bench/apps/fengjing_app
+bench --site fjnb execute frappe.model.utils.user_settings.sync_user_settings
  
 			#测试代码,就是直接在erpnext内部运行py代码
 			bench --site fjnb console
