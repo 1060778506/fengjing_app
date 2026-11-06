@@ -1,4 +1,5 @@
 from collections import defaultdict
+from decimal import Decimal, ROUND_HALF_UP
 import json
 
 import frappe
@@ -11,6 +12,60 @@ MAPPING_DOCTYPE = "Fengjing - Product Corresponding Platform - Main Table"
 
 def _money(value):
 	return flt(value or 0, 2)
+
+
+def _sales_price_rows(item):
+	"""Prepare invoice-friendly quantity and sale unit prices without changing source records."""
+	quantity = flt(item.get("quantity") or 0)
+	if quantity <= 0 or quantity != int(quantity):
+		return [item]
+
+	quantity = int(quantity)
+	sale = Decimal(str(item["sale_amount"])).quantize(Decimal("0.01"))
+	average = sale / quantity
+	if quantity == 1 or average == average.quantize(Decimal("0.01")):
+		item["quantity"] = quantity
+		item["unit_price"] = format(average.quantize(Decimal("0.01")), "f")
+		return [item]
+
+	# Keep the one-unit correction close to the average; use extra rate precision
+	# only when two decimal places would create a visibly large correction.
+	best = None
+	tolerance = min(Decimal("0.01"), abs(average) * Decimal("0.10"))
+	for places in range(2, 7):
+		rate = average.quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP)
+		regular_sale = (rate * (quantity - 1)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+		correction_sale = sale - regular_sale
+		candidate = (abs(correction_sale - rate), rate, regular_sale, correction_sale)
+		if best is None or candidate[0] < best[0]:
+			best = candidate
+		if candidate[0] <= tolerance:
+			break
+
+	_, rate, regular_sale, correction_sale = best
+	commission = Decimal(str(item["commission_amount"])).quantize(Decimal("0.01"))
+	total = Decimal(str(item["amount"])).quantize(Decimal("0.01"))
+	regular_commission = (commission * (quantity - 1) / quantity).quantize(
+		Decimal("0.01"), rounding=ROUND_HALF_UP
+	)
+	regular_total = regular_sale + regular_commission
+	regular = {
+		**item, "quantity": quantity - 1, "unit_price": format(rate, "f"),
+		"sale_amount": float(regular_sale), "commission_amount": float(regular_commission),
+		"amount": float(regular_total), "split_role": "常规行",
+	}
+	correction = {
+		**item, "quantity": 1, "unit_price": format(correction_sale, "f"),
+		"sale_amount": float(correction_sale),
+		"commission_amount": float(commission - regular_commission),
+		"amount": float(total - regular_total), "split_role": "调整行",
+	}
+	for row in (regular, correction):
+		row["equation_difference"] = _money(
+			row["sale_amount"] + row["commission_amount"] - row["amount"]
+		)
+		row["equation_valid"] = abs(row["equation_difference"]) < 0.01
+	return [regular, correction]
 
 
 def _args(filters=None):
@@ -410,13 +465,15 @@ def _filtered_type_summary(rows, selected_type):
 		item_bucket = bucket["items"].setdefault(group_key, {
 			**item, "accrual_type": accrual_item_type,
 			"amount": 0.0, "sale_amount": 0.0, "commission_amount": 0.0,
-			"count": 0, "record_names": [], "account_codes": set(),
+			"quantity": 0.0, "count": 0, "record_names": [], "account_codes": set(),
 			"cost_centers": set(), "manual_items": set(),
 			"posting_numbers": set(), "booked_names": set(),
 		})
 		item_bucket["amount"] += amount
 		item_bucket["sale_amount"] += sale_amount
 		item_bucket["commission_amount"] += commission_amount
+		if selected_type == "商品销售与佣金":
+			item_bucket["quantity"] += flt(row.get("quantity") or 0)
 		item_bucket["count"] += 1
 		item_bucket["record_names"].append(row.get("name"))
 		item_bucket["account_codes"].add(str(row.get("account_code") or ""))
@@ -462,6 +519,8 @@ def _filtered_type_summary(rows, selected_type):
 			item["booked_names"] = sorted(item["booked_names"])
 			item["equation_difference"] = _money(item["sale_amount"] + item["commission_amount"] - item["amount"])
 			item["equation_valid"] = abs(item["equation_difference"]) < 0.01
+		if selected_type == "商品销售与佣金":
+			items = [split for item in items for split in _sales_price_rows(item)]
 		bucket["equation_difference"] = _money(bucket["sale_total"] + bucket["commission_total"] - bucket["total"])
 		bucket["equation_valid"] = abs(bucket["equation_difference"]) < 0.01
 		bucket["currency"] = currency
