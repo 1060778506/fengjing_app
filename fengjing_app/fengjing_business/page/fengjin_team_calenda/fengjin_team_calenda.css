@@ -524,8 +524,8 @@ body.fjtc-map-reordering * {
 	padding: 1px 3px;
 }
 
-.fjtc-page .fjtc-event-completed,
-.fjtc-page .fjtc-event-completed * {
+.fjtc-event-completed,
+.fjtc-event-completed * {
 	text-decoration-line: line-through;
 }
 
