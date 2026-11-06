@@ -211,10 +211,133 @@ def _amount_value(value):
 	return _money(value)
 
 
+def _mixed_logistics_components(row):
+	"""Expose the sale and fee parts hidden inside a mixed Ozon logistics record."""
+	try:
+		products = json.loads(row.get("items_json") or "[]")
+		services = json.loads(row.get("services_json") or "[]")
+	except (TypeError, ValueError, json.JSONDecodeError):
+		return None
+	if not isinstance(products, list) or not products or not isinstance(services, list):
+		return None
+	parts = {key: Decimal("0") for key in ("sale", "bonus", "partner", "commission", "fees")}
+	for product in products:
+		if not isinstance(product, dict) or not isinstance(product.get("commission"), dict):
+			return None
+		commission = product["commission"]
+		if commission.get("sale_price") is None:
+			return None
+		for key, source in (("sale", "sale_price"), ("bonus", "bonus"),
+			("partner", "coinvestment"), ("commission", "commission")):
+			parts[key] += Decimal(str(_amount_value(commission.get(source))))
+	for service in services:
+		if not isinstance(service, dict):
+			return None
+		parts["fees"] += Decimal(str(_amount_value(service.get("accrued") or service.get("normalized_amount"))))
+	return {key: _money(value) for key, value in parts.items()}
+
+
+def _whd_service_type(service):
+	"""Map one WHD fee to the existing Ozon filter, retaining its original fee name."""
+	type_id = str(service.get("type_id") or "")
+	if type_id in {"32", "29"}:
+		return ("物流" if type_id == "32" else "配送至自提点"), "国际配送服务"
+	type_name = str(service.get("type_name") or "").strip()
+	type_description = str(service.get("type_description") or "").strip()
+	probe = {"operation_type_name": type_name, "description": type_description}
+	label = _accrual_item_type(probe)
+	group = _accrual_group_label(probe)
+	if group in {"国际配送服务", "Ozon平台服务费"}:
+		return label, group
+	return None
+
+
+def _split_whd_row(row):
+	"""Create nonduplicating display rows; the original Ozon transaction stays intact."""
+	if _accrual_item_type(row) != "物流 / 配送至自提点":
+		return [row]
+	parts = _mixed_logistics_components(row)
+	if not parts:
+		return [row]
+	amount = _money(row.get("net_amount") if row.get("net_amount") is not None else row.get("transaction_amount"))
+	if abs(_money(sum(parts.values()) - amount)) >= 0.01:
+		return [row]
+	try:
+		services = json.loads(row.get("services_json") or "[]")
+		states = json.loads(row.get("whd_component_state") or "{}")
+	except (TypeError, ValueError, json.JSONDecodeError):
+		return [row]
+	if not isinstance(services, list) or not isinstance(states, dict):
+		return [row]
+	fees = []
+	service_occurrences = defaultdict(int)
+	for service in services:
+		if not isinstance(service, dict):
+			return [row]
+		fee_type = _whd_service_type(service)
+		if not fee_type:
+			return [row]
+		type_id = str(service.get("type_id") or "")
+		if not type_id.isdigit():
+			return [row]
+		component_key = f"{type_id}-{service_occurrences[type_id]}"
+		service_occurrences[type_id] += 1
+		fee_amount = _amount_value(service.get("accrued") or service.get("normalized_amount"))
+		if fee_amount:
+			fees.append((component_key, service, fee_type, fee_amount))
+	if abs(_money(sum(fee[3] for fee in fees) - parts["fees"])) >= 0.01:
+		return [row]
+
+	source_name = str(row.get("name") or "")
+	sale = frappe._dict(dict(row))
+	sale_net = _money(parts["sale"] + parts["bonus"] + parts["partner"] + parts["commission"])
+	sale.update({
+		"operation_type": "POSTING", "operation_type_name": "POSTING",
+		"transaction_category": "销售和退货", "transaction_subcategory": "商品销售与佣金",
+		"transaction_direction": "收入" if sale_net >= 0 else "支出",
+		"transaction_amount": sale_net, "net_amount": sale_net,
+		"accruals_for_sale": _money(parts["sale"] + parts["bonus"] + parts["partner"]),
+		"coinvestment_amount": parts["partner"], "sale_commission": parts["commission"],
+		"delivery_charge": 0, "return_delivery_charge": 0, "services_amount": 0, "other_amount": 0,
+		"whd_source_name": source_name, "whd_component_key": "sale",
+		"whd_label": "WHD_商品销售与佣金", "whd_group": "商品销售与佣金",
+	})
+	result = [sale]
+	for component_key, service, (label, group), fee_amount in fees:
+		state = states.get(component_key) or {}
+		if not isinstance(state, dict):
+			state = {}
+		fee = frappe._dict(dict(row))
+		fee.update({
+			"name": f"{source_name}::whd::{component_key}",
+			"operation_type": str(service.get("type_id") or ""),
+			"operation_type_name": service.get("type_name") or label,
+			"description": service.get("type_description") or label,
+			"transaction_category": "Ozon配送服务" if group == "国际配送服务" else "合作伙伴服务",
+			"transaction_subcategory": service.get("type_name") or label,
+			"transaction_direction": "收入" if fee_amount >= 0 else "支出",
+			"transaction_amount": fee_amount, "net_amount": fee_amount,
+			"accruals_for_sale": 0, "coinvestment_amount": 0, "sale_commission": 0,
+			"delivery_charge": fee_amount if group == "国际配送服务" else 0,
+			"return_delivery_charge": 0,
+			"services_amount": fee_amount if group == "Ozon平台服务费" else 0,
+			"other_amount": 0, "is_product": 0,
+			"is_booked": cint(state.get("is_booked")),
+			"account_code": state.get("account_code") or "",
+			"cost_center": state["cost_center"] if "cost_center" in state else row.get("cost_center"),
+			"whd_source_name": source_name, "whd_component_key": component_key,
+			"whd_label": f"WHD_{label}", "whd_group": group,
+		})
+		result.append(fee)
+	return result
+
+
 def _posting_breakdown(row):
 	"""Build the sale and commission child rows shown by the Ozon finance UI."""
 	if str(row.get("operation_type") or "") != "POSTING":
 		return []
+	report = row.get("report_amounts") or _report_posting_amounts(row)
+	report_complete = report["report_basis_complete"]
 	try:
 		products = json.loads(row.get("items_json") or "[]")
 	except (TypeError, ValueError, json.JSONDecodeError):
@@ -228,11 +351,20 @@ def _posting_breakdown(row):
 		commission = product.get("commission") or {}
 		sku = str(product.get("sku") or row.get("sku") or "")
 		quantity = flt(product.get("quantity") or 0)
-		sale_amount = _amount_value(commission.get("sale_amount"))
+		if not isinstance(commission, dict):
+			continue
+		# 完整记录按 Ozon 应计报表字段展示；旧记录保留原有展示口径。
+		sale_amount = _amount_value(commission.get("sale_price" if report_complete else "sale_amount"))
+		partner_amount = _amount_value(commission.get("coinvestment")) if report_complete else 0.0
 		commission_amount = _amount_value(commission.get("commission"))
 		if sale_amount:
 			result.append({
 				"label": "销售", "detail": "收入", "amount": sale_amount,
+				"currency": row.get("currency_code"), "sku": sku, "quantity": quantity,
+			})
+		if partner_amount:
+			result.append({
+				"label": "合作伙伴计划", "detail": "合作伙伴计划", "amount": partner_amount,
 				"currency": row.get("currency_code"), "sku": sku, "quantity": quantity,
 			})
 		if commission_amount:
@@ -268,6 +400,7 @@ def _accrual_item_type(row):
 		"DefectFineErrors": "商品缺陷罚款",
 		"ReturnFlowLogistic": "退货运费",
 		"Обратная логистика": "退货运费",
+		"Logistic / LastMileCourier": "物流 / 配送至自提点",
 	}
 	by_description = {
 		"Эквайринг": "收单服务费",
@@ -277,6 +410,7 @@ def _accrual_item_type(row):
 		"Услуги по заключению договора на организацию международной перевозки": "国际运输组织合同服务",
 		"Электронная услуга подключения к логистической Платформе Ozon": "Ozon物流平台接入服务",
 		"Обратная логистика": "退货运费",
+		"Логистика / Доставка до места выдачи": "物流 / 配送至自提点",
 	}
 	return by_name.get(key) or by_description.get(description) or description or key or "未分类应计项目"
 
@@ -321,7 +455,16 @@ def _sort_dashboard_rows(rows, sort_field=None, sort_direction=None):
 		).casefold()
 	elif sort_field in number_fields:
 		fieldname = number_fields[sort_field]
-		key = lambda row: flt(row.get(fieldname))
+		if sort_field in {"accruals_for_sale", "coinvestment_amount"}:
+			report_field = "sale" if sort_field == "accruals_for_sale" else "partner"
+			def key(row):
+				if str(row.get("operation_type") or "") == "POSTING":
+					report = _report_posting_amounts(row)
+					if report["report_basis_complete"]:
+						return report[report_field]
+				return flt(row.get(fieldname))
+		else:
+			key = lambda row: flt(row.get(fieldname))
 	else:
 		fieldname = text_fields.get(sort_field, "accrual_type_label")
 		key = lambda row: str(row.get(fieldname) or "").casefold()
@@ -524,7 +667,9 @@ def _filtered_type_summary(rows, selected_type):
 			"quantity": 0.0, "count": 0, "record_names": [], "account_codes": set(),
 			"cost_centers": set(), "manual_items": set(),
 			"bonus_account_codes": set(), "commission_account_codes": set(),
+			"partner_account_codes": set(),
 			"bonus_record_names": set(), "commission_record_names": set(),
+			"partner_record_names": set(),
 			"posting_numbers": set(), "booked_names": set(), "components": {},
 		})
 		item_bucket["amount"] += amount
@@ -539,6 +684,9 @@ def _filtered_type_summary(rows, selected_type):
 			if abs(commission_amount) >= 0.005:
 				item_bucket["commission_account_codes"].add(str(row.get("commission_account_code") or ""))
 				item_bucket["commission_record_names"].add(row.get("name"))
+			if abs(partner_amount) >= 0.005:
+				item_bucket["partner_account_codes"].add(str(row.get("partner_account_code") or ""))
+				item_bucket["partner_record_names"].add(row.get("name"))
 		if selected_type == "商品销售与佣金":
 			item_bucket["quantity"] += flt(row.get("quantity") or 0)
 		item_bucket["count"] += 1
@@ -551,8 +699,10 @@ def _filtered_type_summary(rows, selected_type):
 			reference_id = str(row.get("posting_number") or row.get("operation_id") or row.get("name") or "").strip()
 			component = item_bucket["components"].setdefault((reference_id, effective_cost_center), {
 				"reference_id": reference_id, "cost_center": effective_cost_center,
-				"bonus_amount": 0.0, "commission_amount": 0.0, "record_names": [],
+				"bonus_amount": 0.0, "commission_amount": 0.0,
+				"partner_amount": 0.0, "record_names": [],
 			})
+			component["partner_amount"] += partner_amount
 			component["bonus_amount"] += bonus_amount
 			component["commission_amount"] += commission_amount
 			component["record_names"].append(row.get("name"))
@@ -580,14 +730,15 @@ def _filtered_type_summary(rows, selected_type):
 			items.sort(key=lambda item: (item["accrual_type"], -abs(item["amount"]), item["item"]))
 		for item in items:
 			for component in item.pop("components").values():
-				for kind, label in (("bonus", "折扣积分"), ("commission", "代理佣金")):
+				for kind, label in (("bonus", "折扣积分"), ("commission", "代理佣金"), ("partner", "合作伙伴计划")):
 					component_amount = _money(component[f"{kind}_amount"])
 					if abs(component_amount) < 0.005:
 						continue
+					fee_label = f"WHD_{label}" if item["accrual_type"].startswith("WHD_") else label
 					fee_items.append({
 						"kind": kind, "item": item["item"], "item_name": item["item_name"],
 						"image": item["image"], "amount": component_amount,
-						"type_label": f"{label}_{component['reference_id']}",
+						"type_label": f"{fee_label}_{component['reference_id']}",
 						"cost_center": component["cost_center"],
 						"record_names": component["record_names"],
 					})
@@ -597,9 +748,10 @@ def _filtered_type_summary(rows, selected_type):
 			item["bonus_amount"] = _money(item["bonus_amount"])
 			item["commission_amount"] = _money(item["commission_amount"])
 			account_codes = item.pop("account_codes")
-			item["account_code"] = next(iter(account_codes)) if len(account_codes) == 1 else ""
+			nonempty_account_codes = {code for code in account_codes if code}
+			item["account_code"] = next(iter(nonempty_account_codes)) if len(nonempty_account_codes) == 1 else ""
 			item["account_mixed"] = len(account_codes) > 1
-			for kind in ("bonus", "commission"):
+			for kind in ("bonus", "commission", "partner"):
 				fee_account_codes = item.pop(f"{kind}_account_codes")
 				item[f"{kind}_account_code"] = next(iter(fee_account_codes)) if len(fee_account_codes) == 1 else ""
 				item[f"{kind}_account_mixed"] = len(fee_account_codes) > 1
@@ -695,7 +847,9 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 		"delivery_charge", "return_delivery_charge", "services_amount", "advertising_amount",
 		"penalty_amount", "compensation_amount", "discount_points_amount", "other_amount",
 		"net_amount", "operation_date", "order_date", "payment_date", "settlement_period_start",
-		"settlement_period_end", "fetched_at", "data_version", "data_changed", "sync_status", "items_json", "is_booked", "account_code", "bonus_account_code", "commission_account_code", "cost_center",
+		"settlement_period_end", "fetched_at", "data_version", "data_changed", "sync_status",
+		"items_json", "services_json", "whd_component_state", "is_booked", "account_code",
+		"bonus_account_code", "commission_account_code", "partner_account_code", "cost_center",
 	]
 	rows = frappe.get_all(
 		DOCTYPE, filters=_db_filters(f), fields=fields,
@@ -703,9 +857,6 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 	)
 	limited = len(rows) >= 50000
 	_enrich_items(rows)
-	for row in rows:
-		row.breakdown = _posting_breakdown(row)
-
 	search = str(f.search or "").strip().lower()
 	binding = str(f.binding or "")
 	if search or binding:
@@ -726,13 +877,14 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 				continue
 			filtered.append(row)
 		rows = filtered
+	rows = [component for row in rows for component in _split_whd_row(row)]
 
-	# 每条主交易只能归入一个类型分组；按钮合计必须严格等于“全部”。
+	# WHD 混合交易拆为互不重叠的显示金额；按钮合计必须严格等于“全部”。
 	type_counts = defaultdict(int)
 	type_booked_counts = defaultdict(int)
 	for row in rows:
-		row.accrual_type_label = _accrual_item_type(row)
-		row.accrual_group_label = _accrual_group_label(row)
+		row.accrual_type_label = row.get("whd_label") or _accrual_item_type(row)
+		row.accrual_group_label = row.get("whd_group") or _accrual_group_label(row)
 		type_counts[row.accrual_group_label] += 1
 		type_booked_counts[row.accrual_group_label] += cint(row.get("is_booked"))
 	type_total = len(rows)
@@ -744,9 +896,6 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 	if selected_type:
 		_attach_related_products(rows)
 	filtered_type_summary = _filtered_type_summary(rows, selected_type)
-	for row in rows:
-		row.pop("items_json", None)
-
 	currencies = defaultdict(lambda: {"inflow": 0.0, "outflow": 0.0, "net": 0.0, "sales": 0.0, "fees": 0.0})
 	daily = defaultdict(lambda: defaultdict(lambda: {"inflow": 0.0, "outflow": 0.0, "net": 0.0, "count": 0}))
 	categories = defaultdict(lambda: defaultdict(lambda: {"amount": 0.0, "count": 0}))
@@ -763,10 +912,15 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 	for row in rows:
 		currency = row.currency_code or "未知"
 		amount = _money(row.net_amount if row.net_amount is not None else row.transaction_amount)
+		posting_report = _report_posting_amounts(row) if str(row.get("operation_type") or "") == "POSTING" else None
+		commission_amount = posting_report["commission"] if posting_report else _money(row.sale_commission)
 		currencies[currency]["net"] += amount
 		currencies[currency]["inflow" if amount >= 0 else "outflow"] += abs(amount)
-		currencies[currency]["sales"] += _money(row.accruals_for_sale)
-		currencies[currency]["fees"] += sum(abs(_money(row.get(field))) for field in fee_fields.values())
+		currencies[currency]["sales"] += posting_report["sale"] if posting_report else _money(row.accruals_for_sale)
+		currencies[currency]["fees"] += sum(
+			abs(commission_amount if field == "sale_commission" else _money(row.get(field)))
+			for field in fee_fields.values()
+		)
 		day = str(getdate(row.operation_date)) if row.operation_date else "未知日期"
 		daily[day][currency]["net"] += amount
 		daily[day][currency]["inflow" if amount >= 0 else "outflow"] += abs(amount)
@@ -777,7 +931,7 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 		stores[currency][row.store or "未归属店铺"]["amount"] += amount
 		stores[currency][row.store or "未归属店铺"]["count"] += 1
 		for label, fieldname in fee_fields.items():
-			fees[currency][label] += _money(row.get(fieldname))
+			fees[currency][label] += commission_amount if fieldname == "sale_commission" else _money(row.get(fieldname))
 		if row.is_product:
 			product_rows += 1
 			bound += row.is_bound
@@ -817,6 +971,13 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 	page_rows = rows[start:start + page_size]
 	if not selected_type:
 		_attach_related_products(page_rows)
+	for row in page_rows:
+		if str(row.get("operation_type") or "") == "POSTING":
+			row.report_amounts = _report_posting_amounts(row)
+		row.breakdown = _posting_breakdown(row)
+		row.pop("items_json", None)
+		row.pop("services_json", None)
+		row.pop("whd_component_state", None)
 	options = {
 		"stores": sorted({str(row.store) for row in rows if row.store}),
 		"categories": sorted({str(row.transaction_category) for row in rows if row.transaction_category}),
@@ -874,6 +1035,48 @@ def save_booked_status(changes=None):
 		if not isinstance(change, dict):
 			continue
 		name = str(change.get("name") or "").strip()
+		if "::whd::" in name:
+			source_name, component_key = name.split("::whd::", 1)
+			key_parts = component_key.split("-", 1)
+			if not source_name or len(key_parts) != 2 or not all(part.isdigit() for part in key_parts) or not frappe.db.exists(DOCTYPE, source_name):
+				continue
+			source = frappe.get_doc(DOCTYPE, source_name)
+			if name not in {part.name for part in _split_whd_row(source.as_dict())}:
+				continue
+			try:
+				states = json.loads(source.whd_component_state or "{}")
+			except (TypeError, ValueError, json.JSONDecodeError):
+				states = {}
+			if not isinstance(states, dict):
+				states = {}
+			state = states.get(component_key) or {}
+			if not isinstance(state, dict):
+				state = {}
+			state = dict(state)
+			if "is_booked" in change:
+				state["is_booked"] = 1 if cint(change.get("is_booked")) else 0
+				booked_updated += 1
+			if "account_code" in change:
+				account_code = str(change.get("account_code") or "").strip()
+				if len(account_code) > 140 or (account_code and not frappe.db.exists(
+					"Account", {"account_number": account_code, "is_group": 0, "disabled": 0}
+				)):
+					frappe.throw(f"科目代码不存在或不可用：{account_code}")
+				state["account_code"] = account_code
+				account_updated += 1
+			if "cost_center" in change:
+				cost_center = str(change.get("cost_center") or "").strip()
+				if cost_center and not frappe.db.exists(
+					"Cost Center", {"name": cost_center, "is_group": 0, "disabled": 0}
+				):
+					frappe.throw(f"成本中心不存在或不可用：{cost_center}")
+				state["cost_center"] = cost_center
+				cost_center_updated += 1
+			if any(key in change for key in ("is_booked", "account_code", "cost_center")):
+				states[component_key] = state
+				frappe.db.set_value(DOCTYPE, source_name, "whd_component_state", json.dumps(states, ensure_ascii=False))
+				updated += 1
+			continue
 		if not name or not frappe.db.exists(DOCTYPE, name):
 			continue
 		values = {}
@@ -890,7 +1093,7 @@ def save_booked_status(changes=None):
 				frappe.throw(f"科目代码不存在或不可用：{account_code}")
 			values["account_code"] = account_code
 			account_updated += 1
-		for fee_account_field in ("bonus_account_code", "commission_account_code"):
+		for fee_account_field in ("bonus_account_code", "commission_account_code", "partner_account_code"):
 			if fee_account_field not in change:
 				continue
 			fee_account_code = str(change.get(fee_account_field) or "").strip()

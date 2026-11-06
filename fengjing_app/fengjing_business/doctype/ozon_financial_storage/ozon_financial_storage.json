@@ -69,6 +69,8 @@
   "account_code",
   "bonus_account_code",
   "commission_account_code",
+  "partner_account_code",
+  "whd_component_state",
   "cost_center",
   "operation_date",
   "order_date",
@@ -505,6 +507,22 @@
    "label": "代理佣金科目代码",
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "description": "合作伙伴计划汇总中选择的会计科目代码。",
+   "fieldname": "partner_account_code",
+   "fieldtype": "Data",
+   "label": "合作伙伴计划科目代码",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "description": "WHD 混合财务记录拆分后的配送费用记账状态、科目和成本中心。",
+   "fieldname": "whd_component_state",
+   "fieldtype": "Code",
+   "label": "WHD 拆分记账状态",
+   "options": "JSON",
+   "read_only": 1
   },
   {
    "description": "财务汇总记账时选择的成本中心。",

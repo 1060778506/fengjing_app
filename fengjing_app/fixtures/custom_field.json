@@ -563,7 +563,7 @@
   "fieldname": "custom_拆分说明",
   "fieldtype": "Button",
   "insert_after": "description_section",
-  "label": "拆分说明",
+  "label": "向下拆分",
   "module": "丰境业务APP",
   "name": "Sales Invoice Item-custom_拆分说明"
  },
@@ -573,7 +573,7 @@
   "fieldname": "custom_拆分说明",
   "fieldtype": "Button",
   "insert_after": "description",
-  "label": "拆分说明",
+  "label": "向下拆分",
   "module": "丰境业务APP",
   "name": "Sales Taxes and Charges-custom_拆分说明"
  },
