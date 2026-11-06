@@ -1,7 +1,7 @@
 frappe.pages["amazon-offline-tool"].on_page_load = function (wrapper) {
     const page = frappe.ui.make_app_page({
         parent: wrapper,
-        title: "亚马逊 CSV 离线翻译工具",
+        title: "亚马逊 / Ozon 离线翻译工具",
         single_column: true,
     });
 
@@ -15,6 +15,39 @@ const AMAZON_CSV_MONTHS = {
     oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12,
 };
 const AMAZON_CSV_MONTH_PATTERN = /\b(?:January|February|September|December|November|October|August|March|April|June|July|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sept?|Oct|Nov|Dec)\b\.?/gi;
+const OZON_ACCRUAL_REPORT = {
+    name: "ozon-accruals-local", report_type_name: "Ozon 商店经济状况（应计报告）",
+    report_type_code: "ozon_accruals", recognition_priority: 200,
+    recognition_fields: "ID начисления\nДата начисления\nГруппа услуг\nТип начисления\nСумма итого, руб.",
+};
+const OZON_ACCRUAL_HEADERS = {
+    "ID начисления": "应计ID", "Дата начисления": "应计日期",
+    "Группа услуг": "服务类别", "Тип начисления": "应计类型",
+    "Артикул": "商品货号", "SKU": "SKU", "Название товара": "商品名称",
+    "Количество": "数量", "Цена продавца": "卖家价格",
+    "Дата принятия заказа в обработку или оказания услуги": "接受订单或提供服务日期",
+    "Платформа продажи": "销售平台", "Схема работы": "运营模式",
+    "Вознаграждение Ozon, %": "Ozon佣金率（%）",
+    "Индекс локализации, %": "本地化指数（%）",
+    "Среднее время доставки, часы": "平均配送时间（小时）",
+    "Сумма итого, руб.": "合计金额（卢布）",
+};
+const OZON_ACCRUAL_CONTENT = {
+    "Группа услуг": {
+        "Продажи": "销售", "Вознаграждение Ozon": "Ozon佣金",
+        "Услуги доставки": "配送服务", "Услуги партнёров": "合作伙伴服务",
+    },
+    "Тип начисления": {
+        "Выручка": "商品销售收入", "Программы партнёров": "合作伙伴计划",
+        "Баллы за скидки": "折扣积分", "Вознаграждение за продажу": "销售佣金",
+        "Агентское вознаграждение Ozon": "Ozon代理佣金",
+        "Услуги международной доставки": "国际配送服务",
+        "Услуги по заключению договора на организацию международной перевозки": "国际运输组织合同服务",
+        "Электронная услуга подключения к логистической Платформе Ozon": "Ozon物流平台接入电子服务",
+        "Обратная логистика": "退货物流", "Эквайринг": "收单手续费",
+        "Логистика": "物流", "Доставка до места выдачи": "配送至自提点",
+    },
+};
 
 class AmazonOfflineTranslator {
     constructor(page, wrapper) {
@@ -45,8 +78,8 @@ class AmazonOfflineTranslator {
                 <section class="aot-hero">
                     <div>
                         <div class="aot-eyebrow">AMAZON DATA WORKBENCH</div>
-                        <h1>CSV 离线翻译中心</h1>
-                        <p>自动识别亚马逊报表，翻译表头、固定内容和日期中的英文月份，并下载新的 CSV。</p>
+                        <h1>CSV / XLSX 离线翻译中心</h1>
+                        <p>自动识别亚马逊及 Ozon 报表，翻译表头、固定内容和日期，并下载新的 CSV。</p>
                     </div>
                     <div class="aot-privacy">
                         <span class="aot-privacy-icon">✓</span>
@@ -56,11 +89,11 @@ class AmazonOfflineTranslator {
 
                 <section class="aot-workspace">
                     <div class="aot-upload" data-action="pick-file" tabindex="0">
-                        <input class="aot-file-input" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain,text/tab-separated-values" hidden>
+                        <input class="aot-file-input" type="file" accept=".csv,.txt,.tsv,.xlsx,text/csv,text/plain,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
                         <div class="aot-upload-icon">表格</div>
                         <div class="aot-upload-copy">
-                            <strong class="aot-file-title">拖入 CSV、TXT 或 TSV 文件，或点击选择</strong>
-                            <span class="aot-file-subtitle">支持逗号或制表符分隔；TXT/TSV 翻译后统一导出为 CSV</span>
+                            <strong class="aot-file-title">拖入 CSV、TXT、TSV 或 XLSX 文件，或点击选择</strong>
+                            <span class="aot-file-subtitle">XLSX 在浏览器本地读取；翻译后统一导出为 CSV</span>
                         </div>
                         <button class="btn btn-primary btn-sm" type="button">选择文件</button>
                     </div>
@@ -89,7 +122,7 @@ class AmazonOfflineTranslator {
                         <span class="aot-status-pill is-idle">等待文件</span>
                     </div>
                     <div class="aot-progress"><i></i></div>
-                    <div class="aot-status-message">请选择一个亚马逊 CSV 文件开始处理。</div>
+                    <div class="aot-status-message">请选择亚马逊或 Ozon 报表开始处理。</div>
                 </section>
 
                 <section class="aot-grid">
@@ -175,6 +208,7 @@ class AmazonOfflineTranslator {
                 method: "fengjing_app.fengjing_business.page.amazon_offline_tool.amazon_offline_tool.get_translation_configuration",
             });
             this.configuration = response.message || { report_types: [], rules: [], sku_item_mappings: [] };
+            this.add_local_ozon_rules();
             this.populate_report_options();
             this.set_status(
                 `词典已就绪，共 ${this.configuration.report_types.length} 种报表、${this.configuration.rules.length} 条规则。`,
@@ -185,6 +219,22 @@ class AmazonOfflineTranslator {
             this.set_status("无法读取翻译配置，请检查权限或刷新页面。", "error", 100);
             console.error(error);
         }
+    }
+
+    add_local_ozon_rules() {
+        if (!this.configuration.report_types.some((report) => report.report_type_code === OZON_ACCRUAL_REPORT.report_type_code)) {
+            this.configuration.report_types.push(OZON_ACCRUAL_REPORT);
+        }
+        const report_type = OZON_ACCRUAL_REPORT.name;
+        const header_rules = Object.entries(OZON_ACCRUAL_HEADERS).map(([source_text, target_text]) => ({
+            report_type, translation_type: "表头", applicable_country: "", file_field_name: "", source_text, target_text,
+        }));
+        const content_rules = Object.entries(OZON_ACCRUAL_CONTENT).flatMap(([file_field_name, values]) =>
+            Object.entries(values).map(([source_text, target_text]) => ({
+                report_type, translation_type: "字段内容", applicable_country: "", file_field_name, source_text, target_text,
+            }))
+        );
+        this.configuration.rules.push(...header_rules, ...content_rules);
     }
 
     populate_report_options() {
@@ -211,26 +261,32 @@ class AmazonOfflineTranslator {
 
     async receive_file(file) {
         if (!file) return;
-        if (!/\.(csv|txt|tsv)$/i.test(file.name)) {
-            frappe.msgprint({ title: "文件格式不正确", message: "请选择 .csv、.txt 或 .tsv 文件。", indicator: "orange" });
+        if (!/\.(csv|txt|tsv|xlsx)$/i.test(file.name)) {
+            frappe.msgprint({ title: "文件格式不正确", message: "请选择 .csv、.txt、.tsv 或 .xlsx 文件。", indicator: "orange" });
             return;
         }
         this.file = file;
         this.is_translated = false;
         try {
             await this.configuration_promise;
-            this.set_status("正在浏览器中读取 CSV…", "working", 35);
+            const is_xlsx = /\.xlsx$/i.test(file.name);
+            this.set_status(is_xlsx ? "正在浏览器中读取 XLSX…" : "正在浏览器中读取 CSV…", "working", 35);
             const buffer = await file.arrayBuffer();
-            let text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
-            if (text.startsWith("\uFEFF")) text = text.slice(1);
-            this.delimiter = this.detect_delimiter(text);
-            this.rows = this.parse_delimited(text, this.delimiter);
+            if (is_xlsx) {
+                this.rows = await this.parse_xlsx(buffer);
+                this.delimiter = ",";
+            } else {
+                let text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
+                if (text.startsWith("\uFEFF")) text = text.slice(1);
+                this.delimiter = this.detect_delimiter(text);
+                this.rows = this.parse_delimited(text, this.delimiter);
+            }
             this.translated_rows = [];
             this.preview_page = 1;
             this.preview_mode = "source";
             this.column_widths = {};
             this.header_index = this.find_header_index(this.rows);
-            if (this.header_index < 0) throw new Error("未找到可识别的 CSV 表头");
+            if (this.header_index < 0) throw new Error("未找到可识别的报表表头");
             this.detect_report();
             this.update_file_ui();
             this.render_preview(this.rows);
@@ -238,7 +294,7 @@ class AmazonOfflineTranslator {
             this.translate();
         } catch (error) {
             this.clear(false);
-            this.set_status(error.message || "CSV 读取失败。", "error", 100);
+            this.set_status(error.message || "文件读取失败。", "error", 100);
             frappe.msgprint({ title: "读取失败", message: this.escape_html(error.message || "无法解析该文件"), indicator: "red" });
         }
     }
@@ -273,6 +329,115 @@ class AmazonOfflineTranslator {
         if (value.length || row.length) { row.push(value.replace(/\r$/, "")); rows.push(row); }
         while (rows.length && rows[rows.length - 1].every((cell) => !cell)) rows.pop();
         return rows;
+    }
+
+    async parse_xlsx(buffer) {
+        const archive = this.xlsx_archive(buffer);
+        const decode = new TextDecoder("utf-8");
+        const shared_data = await this.xlsx_entry(archive, "xl/sharedStrings.xml");
+        const shared_strings = shared_data ? this.xlsx_elements(this.xlsx_xml(decode.decode(shared_data)), "si")
+            .map((item) => Array.from(item.getElementsByTagNameNS("*", "t")).map((text) => text.textContent).join("")) : [];
+        const workbook_data = await this.xlsx_entry(archive, "xl/workbook.xml");
+        const workbook = workbook_data ? this.xlsx_xml(decode.decode(workbook_data)) : null;
+        const date_1904 = workbook?.getElementsByTagNameNS("*", "workbookPr")[0]?.getAttribute("date1904") === "1";
+        const sheets = [...archive.keys()].filter((name) => /^xl\/worksheets\/sheet\d+\.xml$/.test(name))
+            .sort((a, b) => Number(a.match(/sheet(\d+)/)[1]) - Number(b.match(/sheet(\d+)/)[1]));
+        if (!sheets.length) throw new Error("XLSX 中没有工作表");
+        for (const sheet of sheets) {
+            const data = await this.xlsx_entry(archive, sheet);
+            const rows = this.xlsx_sheet_rows(this.xlsx_xml(decode.decode(data)), shared_strings);
+            const header_index = this.find_header_index(rows);
+            if (header_index < 0) continue;
+            const headers = rows[header_index];
+            const date_columns = headers.map((header, index) =>
+                ["Дата начисления", "Дата принятия заказа в обработку или оказания услуги"].includes(header) ? index : -1
+            ).filter((index) => index >= 0);
+            for (const row of rows.slice(header_index + 1)) {
+                for (const column of date_columns) row[column] = this.xlsx_date(row[column], date_1904);
+            }
+            return rows;
+        }
+        throw new Error("XLSX 中没有可识别的报表表头");
+    }
+
+    xlsx_archive(buffer) {
+        const bytes = new Uint8Array(buffer), view = new DataView(buffer);
+        let footer = -1;
+        for (let offset = bytes.length - 22; offset >= Math.max(0, bytes.length - 65557); offset -= 1) {
+            if (view.getUint32(offset, true) === 0x06054b50) { footer = offset; break; }
+        }
+        if (footer < 0) throw new Error("XLSX 文件结构无效");
+        const count = view.getUint16(footer + 10, true), entries = new Map();
+        let offset = view.getUint32(footer + 16, true);
+        for (let index = 0; index < count; index += 1) {
+            if (offset + 46 > bytes.length || view.getUint32(offset, true) !== 0x02014b50) {
+                throw new Error("XLSX 目录损坏");
+            }
+            const method = view.getUint16(offset + 10, true);
+            const size = view.getUint32(offset + 20, true);
+            const plain_size = view.getUint32(offset + 24, true);
+            const name_length = view.getUint16(offset + 28, true);
+            const extra_length = view.getUint16(offset + 30, true);
+            const comment_length = view.getUint16(offset + 32, true);
+            const local_offset = view.getUint32(offset + 42, true);
+            const name = new TextDecoder("utf-8").decode(bytes.subarray(offset + 46, offset + 46 + name_length));
+            entries.set(name, { method, size, plain_size, local_offset });
+            offset += 46 + name_length + extra_length + comment_length;
+        }
+        return { bytes, view, entries, keys: () => entries.keys() };
+    }
+
+    async xlsx_entry(archive, name) {
+        const entry = archive.entries.get(name);
+        if (!entry) return null;
+        if (entry.plain_size > 100 * 1024 * 1024) throw new Error("XLSX 工作表过大，无法在浏览器中处理");
+        const { bytes, view } = archive, offset = entry.local_offset;
+        if (offset + 30 > bytes.length || view.getUint32(offset, true) !== 0x04034b50) throw new Error("XLSX 内容损坏");
+        const start = offset + 30 + view.getUint16(offset + 26, true) + view.getUint16(offset + 28, true);
+        if (start + entry.size > bytes.length) throw new Error("XLSX 内容不完整");
+        const compressed = bytes.subarray(start, start + entry.size);
+        if (entry.method === 0) return compressed;
+        if (entry.method !== 8 || typeof DecompressionStream === "undefined") {
+            throw new Error("浏览器不支持此 XLSX 压缩格式，请使用较新的浏览器");
+        }
+        const output = new Uint8Array(await new Response(new Blob([compressed]).stream()
+            .pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+        if (output.length !== entry.plain_size) throw new Error("XLSX 解压结果不完整");
+        return output;
+    }
+
+    xlsx_xml(text) {
+        const xml = new DOMParser().parseFromString(text, "application/xml");
+        if (xml.getElementsByTagName("parsererror").length) throw new Error("XLSX 工作表 XML 无法解析");
+        return xml;
+    }
+
+    xlsx_elements(parent, name) { return Array.from(parent.getElementsByTagNameNS("*", name)); }
+
+    xlsx_sheet_rows(xml, shared_strings) {
+        const output = [];
+        for (const source_row of this.xlsx_elements(xml, "row")) {
+            const row = [];
+            for (const cell of Array.from(source_row.children).filter((element) => element.localName === "c")) {
+                const ref = cell.getAttribute("r"), letters = ref?.match(/^[A-Z]+/i)?.[0];
+                let column = row.length;
+                if (letters) column = [...letters.toUpperCase()].reduce((value, letter) => value * 26 + letter.charCodeAt(0) - 64, 0) - 1;
+                const raw = Array.from(cell.children).find((element) => element.localName === "v")?.textContent || "";
+                const inline = Array.from(cell.getElementsByTagNameNS("*", "t")).map((element) => element.textContent).join("");
+                row[column] = cell.getAttribute("t") === "s" ? (shared_strings[Number(raw)] || "") :
+                    cell.getAttribute("t") === "inlineStr" ? inline : raw;
+            }
+            output.push(Array.from({ length: row.length }, (_, index) => row[index] ?? ""));
+        }
+        return output;
+    }
+
+    xlsx_date(value, date_1904 = false) {
+        if (!/^\d+(?:\.\d+)?$/.test(String(value || ""))) return value;
+        const serial = Number(value);
+        const epoch = date_1904 ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 30);
+        const date = new Date(epoch + Math.round(serial * 86400000));
+        return Number.isFinite(date.getTime()) ? date.toISOString().slice(0, 10) : value;
     }
 
     find_header_index(rows) {
@@ -396,7 +561,12 @@ class AmazonOfflineTranslator {
             .map((row) => [String(row.source_text), String(row.target_text)]));
         this.translated_rows = this.rows.map((row, row_index) => {
             if (row_index < this.header_index) {
-                return row.map((cell) => preamble_rules.get(String(cell)) || cell);
+                return row.map((cell) => {
+                    if (this.report_type.report_type_code === "ozon_accruals" && /^Период:/.test(String(cell))) {
+                        return String(cell).replace(/^Период:/, "期间：");
+                    }
+                    return preamble_rules.get(String(cell)) || cell;
+                });
             }
             if (row_index === this.header_index) return row.map((cell) => header_rules.get(String(cell)) || header_rules.get(String(cell).trim()) || cell);
             const translated_row = row.map((cell, column) => {
@@ -516,7 +686,7 @@ class AmazonOfflineTranslator {
         const content = this.translated_rows.map((row) => row.map((cell) => this.delimited_cell(cell, delimiter)).join(delimiter)).join("\r\n");
         const blob = new Blob(["\uFEFF", content], { type: "text/csv;charset=utf-8" });
         const link = document.createElement("a");
-        const base = this.file.name.replace(/\.(csv|txt|tsv)$/i, "");
+        const base = this.file.name.replace(/\.(csv|txt|tsv|xlsx)$/i, "");
         link.href = URL.createObjectURL(blob);
         link.download = `中文翻译-${base}.csv`;
         document.body.appendChild(link);
@@ -644,8 +814,8 @@ class AmazonOfflineTranslator {
         this.column_widths = {};
         this.delimiter = ",";
         this.$root.find(".aot-file-input").val("");
-        this.$root.find(".aot-file-title").text("拖入 CSV、TXT 或 TSV 文件，或点击选择");
-        this.$root.find(".aot-file-subtitle").text("支持逗号或制表符分隔；TXT/TSV 翻译后统一导出为 CSV");
+        this.$root.find(".aot-file-title").text("拖入 CSV、TXT、TSV 或 XLSX 文件，或点击选择");
+        this.$root.find(".aot-file-subtitle").text("XLSX 在浏览器本地读取；翻译后统一导出为 CSV");
         this.$root.find(".aot-report-select").val("");
         this.update_country_options();
         this.$root.find(".aot-clear, .aot-translate, .aot-download").prop("disabled", true);

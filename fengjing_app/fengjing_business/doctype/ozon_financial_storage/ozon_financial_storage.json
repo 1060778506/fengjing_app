@@ -67,6 +67,8 @@
   "time_section",
   "is_booked",
   "account_code",
+  "bonus_account_code",
+  "commission_account_code",
   "cost_center",
   "operation_date",
   "order_date",
@@ -485,6 +487,22 @@
    "fieldname": "account_code",
    "fieldtype": "Data",
    "label": "记账科目代码",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "description": "折扣积分汇总中选择的会计科目代码。",
+   "fieldname": "bonus_account_code",
+   "fieldtype": "Data",
+   "label": "折扣积分科目代码",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "description": "代理佣金汇总中选择的会计科目代码。",
+   "fieldname": "commission_account_code",
+   "fieldtype": "Data",
+   "label": "代理佣金科目代码",
    "read_only": 1,
    "search_index": 1
   },

@@ -523,7 +523,9 @@ def _filtered_type_summary(rows, selected_type):
 			"bonus_amount": 0.0, "commission_amount": 0.0,
 			"quantity": 0.0, "count": 0, "record_names": [], "account_codes": set(),
 			"cost_centers": set(), "manual_items": set(),
-			"posting_numbers": set(), "booked_names": set(),
+			"bonus_account_codes": set(), "commission_account_codes": set(),
+			"bonus_record_names": set(), "commission_record_names": set(),
+			"posting_numbers": set(), "booked_names": set(), "components": {},
 		})
 		item_bucket["amount"] += amount
 		item_bucket["sale_amount"] += sale_amount
@@ -531,12 +533,29 @@ def _filtered_type_summary(rows, selected_type):
 		item_bucket["bonus_amount"] += bonus_amount
 		item_bucket["commission_amount"] += commission_amount
 		if selected_type == "商品销售与佣金":
+			if abs(bonus_amount) >= 0.005:
+				item_bucket["bonus_account_codes"].add(str(row.get("bonus_account_code") or ""))
+				item_bucket["bonus_record_names"].add(row.get("name"))
+			if abs(commission_amount) >= 0.005:
+				item_bucket["commission_account_codes"].add(str(row.get("commission_account_code") or ""))
+				item_bucket["commission_record_names"].add(row.get("name"))
+		if selected_type == "商品销售与佣金":
 			item_bucket["quantity"] += flt(row.get("quantity") or 0)
 		item_bucket["count"] += 1
 		item_bucket["record_names"].append(row.get("name"))
 		item_bucket["account_codes"].add(str(row.get("account_code") or ""))
 		item_bucket["cost_centers"].add(effective_cost_center)
 		item_bucket["manual_items"].add(manual_item)
+		if selected_type == "商品销售与佣金":
+			# 费用视图按订单 ID 分行，避免把多个订单的金额合在同一个摘要里。
+			reference_id = str(row.get("posting_number") or row.get("operation_id") or row.get("name") or "").strip()
+			component = item_bucket["components"].setdefault((reference_id, effective_cost_center), {
+				"reference_id": reference_id, "cost_center": effective_cost_center,
+				"bonus_amount": 0.0, "commission_amount": 0.0, "record_names": [],
+			})
+			component["bonus_amount"] += bonus_amount
+			component["commission_amount"] += commission_amount
+			component["record_names"].append(row.get("name"))
 		if row.get("posting_number"):
 			item_bucket["posting_numbers"].add(str(row.get("posting_number")))
 		if cint(row.get("is_booked")):
@@ -550,6 +569,7 @@ def _filtered_type_summary(rows, selected_type):
 		bucket["bonus_total"] = _money(bucket["bonus_total"])
 		bucket["commission_total"] = _money(bucket["commission_total"])
 		items = list(bucket.pop("items").values())
+		fee_items = []
 		if selected_type == "Ozon平台服务费":
 			# 有金额且已绑定物料的记录优先；零金额随后；未绑定物料始终放在最后。
 			items.sort(key=lambda item: (
@@ -559,6 +579,18 @@ def _filtered_type_summary(rows, selected_type):
 		else:
 			items.sort(key=lambda item: (item["accrual_type"], -abs(item["amount"]), item["item"]))
 		for item in items:
+			for component in item.pop("components").values():
+				for kind, label in (("bonus", "折扣积分"), ("commission", "代理佣金")):
+					component_amount = _money(component[f"{kind}_amount"])
+					if abs(component_amount) < 0.005:
+						continue
+					fee_items.append({
+						"kind": kind, "item": item["item"], "item_name": item["item_name"],
+						"image": item["image"], "amount": component_amount,
+						"type_label": f"{label}_{component['reference_id']}",
+						"cost_center": component["cost_center"],
+						"record_names": component["record_names"],
+					})
 			item["amount"] = _money(item["amount"])
 			item["sale_amount"] = _money(item["sale_amount"])
 			item["partner_amount"] = _money(item["partner_amount"])
@@ -567,6 +599,11 @@ def _filtered_type_summary(rows, selected_type):
 			account_codes = item.pop("account_codes")
 			item["account_code"] = next(iter(account_codes)) if len(account_codes) == 1 else ""
 			item["account_mixed"] = len(account_codes) > 1
+			for kind in ("bonus", "commission"):
+				fee_account_codes = item.pop(f"{kind}_account_codes")
+				item[f"{kind}_account_code"] = next(iter(fee_account_codes)) if len(fee_account_codes) == 1 else ""
+				item[f"{kind}_account_mixed"] = len(fee_account_codes) > 1
+				item[f"{kind}_record_names"] = sorted(item.pop(f"{kind}_record_names"))
 			cost_centers = item.pop("cost_centers")
 			item["cost_center"] = next(iter(cost_centers)) if len(cost_centers) == 1 else ""
 			item["cost_center_mixed"] = len(cost_centers) > 1
@@ -593,6 +630,7 @@ def _filtered_type_summary(rows, selected_type):
 		bucket["equation_valid"] = abs(bucket["equation_difference"]) < 0.01
 		bucket["currency"] = currency
 		bucket["items"] = items
+		bucket["fee_items"] = sorted(fee_items, key=lambda entry: (entry["kind"], entry["item"], entry["type_label"]))
 		bucket["has_items"] = bool(items)
 		result.append(bucket)
 	result.sort(key=lambda row: row["currency"])
@@ -657,7 +695,7 @@ def get_dashboard_data(filters=None, page=1, page_size=50):
 		"delivery_charge", "return_delivery_charge", "services_amount", "advertising_amount",
 		"penalty_amount", "compensation_amount", "discount_points_amount", "other_amount",
 		"net_amount", "operation_date", "order_date", "payment_date", "settlement_period_start",
-		"settlement_period_end", "fetched_at", "data_version", "data_changed", "sync_status", "items_json", "is_booked", "account_code", "cost_center",
+		"settlement_period_end", "fetched_at", "data_version", "data_changed", "sync_status", "items_json", "is_booked", "account_code", "bonus_account_code", "commission_account_code", "cost_center",
 	]
 	rows = frappe.get_all(
 		DOCTYPE, filters=_db_filters(f), fields=fields,
@@ -851,6 +889,18 @@ def save_booked_status(changes=None):
 			):
 				frappe.throw(f"科目代码不存在或不可用：{account_code}")
 			values["account_code"] = account_code
+			account_updated += 1
+		for fee_account_field in ("bonus_account_code", "commission_account_code"):
+			if fee_account_field not in change:
+				continue
+			fee_account_code = str(change.get(fee_account_field) or "").strip()
+			if len(fee_account_code) > 140:
+				frappe.throw("科目代码长度不能超过140个字符")
+			if fee_account_code and not frappe.db.exists(
+				"Account", {"account_number": fee_account_code, "is_group": 0, "disabled": 0}
+			):
+				frappe.throw(f"科目代码不存在或不可用：{fee_account_code}")
+			values[fee_account_field] = fee_account_code
 			account_updated += 1
 		if "cost_center" in change:
 			cost_center = str(change.get("cost_center") or "").strip()
