@@ -48,6 +48,52 @@ const OZON_ACCRUAL_CONTENT = {
         "Логистика": "物流", "Доставка до места выдачи": "配送至自提点",
     },
 };
+const OZON_POSTINGS_REPORT = {
+    name: "ozon-postings-local", report_type_name: "Ozon OGL / realFBS 订单",
+    report_type_code: "ozon_postings", recognition_priority: 200,
+    recognition_fields: "订单号\n发货号码\n商品名称\n发运集群\n配送集群\n发运的仓库",
+};
+const OZON_POSTINGS_CONTENT = {
+    "商品名称": {
+        "Кованая мотыга-кирка 8,5 см из высокоуглеродистой стали без черенка": "8.5厘米高碳钢锻造锄镐，无柄",
+        "Декоративное кашпо для суккулентов Собака": "多肉植物装饰花盆，狗造型",
+        "Усиленная совковая лопата из марганцевой стали, без черенка Размораживание": "锰钢加强型方铲，无柄，解冻款",
+        "Декоративное кашпо для суккулентов Ретро домик": "多肉植物装饰花盆，复古小屋造型",
+        "Ручной культиватор для посадки чеснока, 3 зубца, без черенка": "手动种蒜耕具，三齿，无柄",
+    },
+    "商品颜色": {
+        "черный": "黑色", "белый": "白色", "серый металлик": "金属灰色",
+        "горчичный": "芥末黄色", "серебристый": "银色",
+    },
+    "促销活动": {
+        "Эластичный бустинг. Без ограничения срока действия": "弹性推广，无期限限制",
+    },
+    "发运集群": { "Китай": "中国" },
+    "配送集群": {
+        "Краснодар": "克拉斯诺达尔", "Ярославль": "雅罗斯拉夫尔",
+        "Ростов": "罗斯托夫", "Екатеринбург": "叶卡捷琳堡",
+        "Москва, МО и Дальние регионы": "莫斯科、莫斯科州及偏远地区",
+    },
+    "配送地区": {
+        "Краснодарский Край": "克拉斯诺达尔边疆区",
+        "Владимирская Область": "弗拉基米尔州",
+        "Ростовская Область": "罗斯托夫州",
+        "Свердловская Область": "斯维尔德洛夫斯克州",
+        "Москва": "莫斯科",
+    },
+    "配送城市": {
+        "Краснодар": "克拉斯诺达尔", "Радужный": "拉杜日内",
+        "Екатеринбург": "叶卡捷琳堡", "Москва": "莫斯科",
+    },
+    "买家细分": { "Premium": "高级会员" },
+    "支付方式": {
+        "Ozon Банк": "Ozon银行", "Снабжение ПВЗ": "自提点供货",
+        "Банковская карта": "银行卡",
+    },
+    "配送地址": { "Россия": "俄罗斯", "Москва, Россия": "莫斯科，俄罗斯" },
+    "物流公司": { "Доставка Ozon": "Ozon配送" },
+    "方式名称": { "Доставка Ozon курьеру, Jiaxing": "交给Ozon快递员，嘉兴" },
+};
 
 class AmazonOfflineTranslator {
     constructor(page, wrapper) {
@@ -66,6 +112,7 @@ class AmazonOfflineTranslator {
         this.preview_mode = "source";
         this.column_widths = {};
         this.delimiter = ",";
+        this.ozon_geo_lookup = {};
         this.render();
         this.bind_events();
         this.configuration_promise = this.load_configuration();
@@ -208,6 +255,7 @@ class AmazonOfflineTranslator {
                 method: "fengjing_app.fengjing_business.page.amazon_offline_tool.amazon_offline_tool.get_translation_configuration",
             });
             this.configuration = response.message || { report_types: [], rules: [], sku_item_mappings: [] };
+            await this.load_ozon_geography();
             this.add_local_ozon_rules();
             this.populate_report_options();
             this.set_status(
@@ -221,9 +269,39 @@ class AmazonOfflineTranslator {
         }
     }
 
+    async load_ozon_geography() {
+        try {
+            const response = await fetch("/assets/fengjing_app/data/ozon/russian_geography_zh.json", { cache: "no-store" });
+            if (!response.ok) throw new Error(`地名词典 HTTP ${response.status}`);
+            const geography = await response.json();
+            const make_lookup = (...sources) => new Map(sources.flatMap((source) =>
+                Object.entries(source || {}).map(([russian, chinese]) => [this.normalize_ozon_place(russian), chinese])
+            ));
+            this.ozon_geo_lookup = {
+                "配送集群": make_lookup(geography.cities, geography.aliases?.clusters),
+                "配送地区": make_lookup(geography.regions, geography.aliases?.regions),
+                "配送城市": make_lookup(geography.cities, geography.aliases?.cities),
+            };
+        } catch (error) {
+            this.ozon_geo_lookup = {};
+            console.warn("Ozon 俄罗斯地名词典未加载", error);
+        }
+    }
+
+    normalize_ozon_place(value) {
+        return String(value || "").normalize("NFC").trim().replace(/\s+/g, " ").toLocaleLowerCase("ru-RU");
+    }
+
+    translate_ozon_place(value, field) {
+        if (this.report_type?.report_type_code !== "ozon_postings") return value;
+        return this.ozon_geo_lookup[field]?.get(this.normalize_ozon_place(value)) || value;
+    }
+
     add_local_ozon_rules() {
-        if (!this.configuration.report_types.some((report) => report.report_type_code === OZON_ACCRUAL_REPORT.report_type_code)) {
-            this.configuration.report_types.push(OZON_ACCRUAL_REPORT);
+        for (const report of [OZON_ACCRUAL_REPORT, OZON_POSTINGS_REPORT]) {
+            if (!this.configuration.report_types.some((row) => row.report_type_code === report.report_type_code)) {
+                this.configuration.report_types.push(report);
+            }
         }
         const report_type = OZON_ACCRUAL_REPORT.name;
         const header_rules = Object.entries(OZON_ACCRUAL_HEADERS).map(([source_text, target_text]) => ({
@@ -235,6 +313,12 @@ class AmazonOfflineTranslator {
             }))
         );
         this.configuration.rules.push(...header_rules, ...content_rules);
+        this.configuration.rules.push(...Object.entries(OZON_POSTINGS_CONTENT).flatMap(([file_field_name, values]) =>
+            Object.entries(values).map(([source_text, target_text]) => ({
+                report_type: OZON_POSTINGS_REPORT.name, translation_type: "字段内容",
+                applicable_country: "", file_field_name, source_text, target_text,
+            }))
+        ));
     }
 
     populate_report_options() {
@@ -301,9 +385,17 @@ class AmazonOfflineTranslator {
 
     detect_delimiter(text) {
         const first_line = String(text || "").split(/\r?\n/, 1)[0] || "";
-        const tabs = (first_line.match(/\t/g) || []).length;
-        const commas = (first_line.match(/,/g) || []).length;
-        return tabs > commas ? "\t" : ",";
+        const counts = { ",": 0, ";": 0, "\t": 0 };
+        let quoted = false;
+        for (let index = 0; index < first_line.length; index += 1) {
+            if (first_line[index] === '"') {
+                if (quoted && first_line[index + 1] === '"') index += 1;
+                else quoted = !quoted;
+            } else if (!quoted && Object.hasOwn(counts, first_line[index])) {
+                counts[first_line[index]] += 1;
+            }
+        }
+        return Object.keys(counts).sort((left, right) => counts[right] - counts[left])[0];
     }
 
     parse_delimited(text, delimiter = ",") {
@@ -515,7 +607,7 @@ class AmazonOfflineTranslator {
                 const value = String(row[column] ?? "").trim();
                 if (!value) return;
                 checked += 1;
-                if (known.has(value)) matched += 1;
+                if (known.has(value) || this.translate_ozon_place(value, field) !== value) matched += 1;
                 else counts.set(value, (counts.get(value) || 0) + 1);
             });
             counts.forEach((count, value) => unmatched.push({ field, value, count }));
@@ -524,7 +616,9 @@ class AmazonOfflineTranslator {
         const rate = checked ? Math.round((matched / checked) * 100) : 100;
         this.$root.find(".aot-match-summary strong").text(`${rate}%`);
         this.$root.find(".aot-match-summary span").text(`${matched}/${checked} 个固定值已匹配`);
-        this.$root.find("[data-metric='rules']").text(`${this.applicable_rules("表头").length + content_rules.length} 条`);
+        const place_rules = this.report_type.report_type_code === "ozon_postings"
+            ? Object.values(this.ozon_geo_lookup).reduce((sum, lookup) => sum + lookup.size, 0) : 0;
+        this.$root.find("[data-metric='rules']").text(`${this.applicable_rules("表头").length + content_rules.length + place_rules} 条`);
         const $list = this.$root.find(".aot-unmatched-list");
         if (!unmatched.length) {
             $list.html('<div class="aot-all-matched">✓ 当前固定字段全部匹配</div>');
@@ -571,7 +665,7 @@ class AmazonOfflineTranslator {
             if (row_index === this.header_index) return row.map((cell) => header_rules.get(String(cell)) || header_rules.get(String(cell).trim()) || cell);
             const translated_row = row.map((cell, column) => {
                 const field = source_headers[column] || "";
-                const translated_cell = content_rules.get(`${field}\u0000${cell}`) || cell;
+                const translated_cell = content_rules.get(`${field}\u0000${cell}`) || this.translate_ozon_place(cell, field);
                 return this.translate_date_cell(translated_cell, field);
             });
             if ((sku_column >= 0 || asin_column >= 0) && description_column >= 0) {
@@ -686,7 +780,7 @@ class AmazonOfflineTranslator {
         const content = this.translated_rows.map((row) => row.map((cell) => this.delimited_cell(cell, delimiter)).join(delimiter)).join("\r\n");
         const blob = new Blob(["\uFEFF", content], { type: "text/csv;charset=utf-8" });
         const link = document.createElement("a");
-        const base = this.file.name.replace(/\.(csv|txt|tsv|xlsx)$/i, "");
+        const base = this.file.name.replace(/\.(csv|txt|tsv|xlsx)$/i, "").replace(/^中文翻译-/, "");
         link.href = URL.createObjectURL(blob);
         link.download = `中文翻译-${base}.csv`;
         document.body.appendChild(link);
