@@ -105,9 +105,7 @@ git config --global core.quotepath false
 # 如果你在 Docker 外部服务器主机：
 set -e
 cd "/root/Desktop/erpnext-os-py/fengjing_app"
-
 repo_git_dir="/root/Desktop/erpnext-os-py/fengjing_app_git/.git"
-
 if [ ! -e .git ]; then
     [ -d "$repo_git_dir" ] || {
         echo "找不到外部 Git 数据目录：$repo_git_dir" >&2
