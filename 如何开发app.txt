@@ -102,22 +102,20 @@ git config --global user.email "1060778506@qq.com"
 git config --global user.name "fengmaode"
 git config --global core.quotepath false
 
-
-# 上传 fengjing_app 到 develop	在docker外部推送
-# 如果你在 Docker 容器内：
-cd ~/frappe-bench/apps/fengjing_app
-[ -d ".git" ] || git init
-git remote set-url origin https://github.com/1060778506/fengjing_app.git 2>/dev/null || \
-git remote add origin https://github.com/1060778506/fengjing_app.git
-git fetch --depth=1 --no-tags origin develop
-git symbolic-ref HEAD refs/heads/develop
-git reset --mixed FETCH_HEAD
-git status
-
-
 # 如果你在 Docker 外部服务器主机：
+set -e
 cd "/root/Desktop/erpnext-os-py/fengjing_app"
-[ -d ".git" ] || git init
+
+repo_git_dir="/root/Desktop/erpnext-os-py/fengjing_app_git/.git"
+
+if [ ! -e .git ]; then
+    [ -d "$repo_git_dir" ] || {
+        echo "找不到外部 Git 数据目录：$repo_git_dir" >&2
+        exit 1
+    }
+    printf 'gitdir: %s\n' "$repo_git_dir" > .git
+fi
+git rev-parse --is-inside-work-tree >/dev/null
 git remote set-url origin https://github.com/1060778506/fengjing_app.git 2>/dev/null || \
 git remote add origin https://github.com/1060778506/fengjing_app.git
 git fetch --depth=1 --no-tags origin develop
