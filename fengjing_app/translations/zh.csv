@@ -6416,6 +6416,7 @@ Next Scheduled Date,计划执行日期
 Planned Qty,工单数量
 Planned Quantity,工单数量
 "Planned Qty: Quantity, for which, Work Order has been raised, but is pending to be manufactured.",工单数量：已生成生产工单，尚待生产的数量。
+"Decide how a group of images should appear in the chat stream. 5 or more images always use the carousel.",决定一组图片在聊天流中的显示方式。5张或更多图片将始终使用轮播功能。
 Schedule Date,计划日期
 Planned End Date,计划结束日期
 Planned Operating Cost,计划工费成本
