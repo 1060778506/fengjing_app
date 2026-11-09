@@ -6439,6 +6439,9 @@ Order,订购
 Subscription Invoice,订阅发票
 Authentication,认证
 Discussion,讨论
+Participating,参与
+AI Agents,AI 代理
+"Create a thread by right-clicking a message and selecting 'Create thread'.",右键点击消息并选择“创建主题”以创建新主题。
 "Make ""name"" searchable in Global Search",让“名称”字段在全局搜索框中可搜索
 Let's prepare the system for first use.,让我们在首次使用前对系统进行初始化。
 Let's avoid repeated words and characters,让我们避免重复的字、词

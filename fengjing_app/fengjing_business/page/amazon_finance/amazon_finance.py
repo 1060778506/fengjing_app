@@ -3,7 +3,7 @@ from decimal import Decimal
 import re
 
 import frappe
-from frappe.utils import cint, flt, getdate
+from frappe.utils import cint, flt, getdate, nowdate
 
 
 DOCTYPE = "Amazon Financial Transaction"
@@ -114,6 +114,54 @@ def _build_db_filters(f):
         if f.get(key):
             filters[key] = f.get(key)
     return filters
+
+
+def _available_months():
+    """Show months from the first transaction this year through the current month."""
+    today = getdate(nowdate())
+    earliest = frappe.db.sql(
+        f"""SELECT MIN(posted_date) FROM `tab{DOCTYPE}`
+            WHERE posted_date BETWEEN %s AND %s""",
+        (f"{today.year}-01-01 00:00:00", f"{today.year}-12-31 23:59:59"),
+    )[0][0]
+    first_month = min(getdate(earliest).month, today.month) if earliest else today.month
+    return [f"{today.year}-{month:02d}" for month in range(first_month, today.month + 1)]
+
+
+def _summarize_detail_rows(rows):
+    """Summarize every filtered detail row, including rows outside the current page."""
+    grouped = {}
+    currencies = {}
+    amount_fields = ("net", "sales", "fees")
+
+    for row in rows:
+        currency = row.currency_code or "未知"
+        key = (currency, row.transaction_type or "未分类", row.description or "")
+        group = grouped.setdefault(key, {"currency": currency, "transaction_type": key[1],
+                                         "description": key[2], "count": 0, **{field: Decimal(0) for field in amount_fields}})
+        total = currencies.setdefault(currency, {"currency": currency, "count": 0,
+                                                  **{field: Decimal(0) for field in amount_fields}})
+        amounts = {
+            "net": Decimal(str(_money(row.net_amount))),
+            "sales": Decimal(str(_money(row.product_sales))),
+            "fees": sum((Decimal(str(_money(row.get(field)))) for field in
+                         ("selling_fees", "fba_fees", "other_transaction_fees")), Decimal(0)),
+        }
+        for result in (group, total):
+            result["count"] += 1
+            for field in amount_fields:
+                result[field] += amounts[field]
+
+    def as_json(result):
+        return {key: float(value) if isinstance(value, Decimal) else value
+                for key, value in result.items()}
+
+    return {
+        "count": len(rows),
+        "currencies": [as_json(currencies[key]) for key in sorted(currencies)],
+        "rows": [as_json(grouped[key]) for key in sorted(
+            grouped, key=lambda key: (key[0], -abs(grouped[key]["net"]), key[1], key[2]))],
+    }
 
 
 @frappe.whitelist()
@@ -259,7 +307,8 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         "types": {c: dict(v) for c, v in type_totals.items()},
         "stores": {c: dict(v) for c, v in store_totals.items()},
         "products": product_list[:500], "settlements": settlement_list[:200],
-        "rows": page_rows, "options": options,
+        "rows": page_rows, "options": options, "available_months": _available_months(),
+        "detail_summary": _summarize_detail_rows(detail_rows),
         "detail_groups": [
             {"key": "", "label": "全部", "count": len(dashboard_rows)},
             *[
