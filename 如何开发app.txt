@@ -43,7 +43,7 @@ cd ~/frappe-bench/apps/fengjing_app && \
 # 已经提交过代码,仅需要一句命令
 cd ~/frappe-bench/apps/fengjing_app && git add . && git commit -m "新的" && git push
 # 在docker外部推送
-cd "/root/Desktop/erpnext-os-py/fengjing_app" && git add -A && git commit -m "2026-10-4-1" && git push -u origin develop --force
+cd "/root/Desktop/erpnext-os-py/fengjing_app" && git add -A && git commit -m "2026-11-11-1" && git push -u origin develop --force
 
 # 固化内存
 docker exec -u frappe -it neizhang-backend-1 bash

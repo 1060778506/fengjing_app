@@ -695,8 +695,20 @@
             },
             "其他应付款": {
                 "account_number": "2241_fj",
-                "is_group": 0,
-                "account_type": "Payable"
+                "is_group": 1,
+                "account_type": "Payable",
+                "其他应付款-CNY": {
+                    "account_number": "224101_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "CNY"
+                },
+                "其他应付款-USD": {
+                    "account_number": "224102_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "USD"
+                }
             },
             "期初四舍五入": {
                 "account_number": "2242_fj",
