@@ -273,6 +273,12 @@ doc_events = {
     }
 }
 
+# ERPNext 的原生冲回只交换标准借贷字段；丰境的外币辅助字段也要同时交换。
+override_whitelisted_methods = {
+    "erpnext.accounts.doctype.journal_entry.journal_entry.make_reverse_journal_entry":
+        "fengjing_app.events.journal_entry.make_reverse_journal_entry_with_foreign_amounts"
+}
+
 # 只有在“整页刷新”或者“重新进入系统”加载初始化数据时，才会调用一次。
 extend_bootinfo = "fengjing_app.install.新系统公司执行的净化科目表"
 # 只全局加载每个 Desk 页面都需要的运行时脚本。

@@ -2,6 +2,27 @@ import frappe
 from frappe.utils import flt
 
 
+@frappe.whitelist()
+def make_reverse_journal_entry_with_foreign_amounts(source_name, target_doc=None):
+    """Keep the custom foreign-currency input on the same side as the reversed GL amount."""
+    from erpnext.accounts.doctype.journal_entry.journal_entry import make_reverse_journal_entry
+
+    reversed_doc = make_reverse_journal_entry(source_name, target_doc)
+    for row in reversed_doc.get("accounts") or []:
+        debit_foreign = flt(row.get("custom_借方外币"))
+        credit_foreign = flt(row.get("custom_贷方外币"))
+        row.custom_借方外币 = credit_foreign
+        row.custom_贷方外币 = debit_foreign
+
+    reversed_doc.custom_借方外币合计 = sum(
+        flt(row.get("custom_借方外币")) for row in reversed_doc.get("accounts") or []
+    )
+    reversed_doc.custom_贷方外币合计 = sum(
+        flt(row.get("custom_贷方外币")) for row in reversed_doc.get("accounts") or []
+    )
+    return reversed_doc
+
+
 # ============================================================
 # 日记账外币辅助金额
 # custom_借方外币 / custom_贷方外币仅作为录入辅助字段；
