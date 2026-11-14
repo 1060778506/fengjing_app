@@ -54,6 +54,11 @@
    "fieldtype": "Attach"
   },
   {
+   "fieldname": "storage_file",
+   "label": "AWD月度仓储费报告",
+   "fieldtype": "Attach"
+  },
+  {
    "fieldname": "summary_section",
    "label": "汇总",
    "fieldtype": "Section Break"
@@ -77,6 +82,14 @@
   {
    "fieldname": "transportation_total",
    "label": "运输费合计",
+   "fieldtype": "Currency",
+   "options": "currency",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "storage_total",
+   "label": "仓储费合计",
    "fieldtype": "Currency",
    "options": "currency",
    "read_only": 1,
@@ -121,10 +134,12 @@
   "files_section",
   "processing_file",
   "transportation_file",
+  "storage_file",
   "summary_section",
   "currency",
   "processing_total",
   "transportation_total",
+  "storage_total",
   "total_amount",
   "row_count",
   "details_section",

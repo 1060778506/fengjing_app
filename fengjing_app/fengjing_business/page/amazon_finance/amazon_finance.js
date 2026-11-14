@@ -65,11 +65,13 @@ class AmazonFinancePage {
         this.$.find('.af-detail-tabs').html((this.data.detail_groups||[]).map(group=>`<button type="button" class="af-detail-tab ${group.key===this.detailGroup?'active':''}" data-detail-group="${this.esc(group.key)}"><span>${this.esc(group.label)}</span><b>${this.num(group.count)}</b></button>`).join(''));
         const releaseCount=(this.data.rows||[]).reduce((count,row)=>count+(row.related_releases||[]).length,0);
         const itemCount=(this.data.rows||[]).reduce((count,row)=>count+(row.item_lines||[]).length,0);
-        this.$.find('.af-table-count').text(`共 ${this.num(p.display_total??p.total)} 条交易明细（${this.num(p.total)} 组）· 当前页展开 ${this.num(itemCount)} 条商品明细、${this.num(releaseCount)} 条释放记录 · 第 ${p.page}/${p.pages} 页`);
+        const awdCount=(this.data.rows||[]).reduce((count,row)=>count+(row.awd_fee_details||[]).length,0);
+        this.$.find('.af-table-count').text(`共 ${this.num(p.display_total??p.total)} 条交易明细（${this.num(p.total)} 组）· 当前页展开 ${this.num(itemCount)} 条商品明细、${this.num(releaseCount)} 条释放记录、${this.num(awdCount)} 条 AWD 费用明细 · 第 ${p.page}/${p.pages} 页`);
         this.$.find('.af-pages').html(`<button class="btn btn-xs" data-page="${p.page-1}" ${p.page<=1?'disabled':''}>上一页</button><button class="btn btn-xs" data-page="${p.page+1}" ${p.page>=p.pages?'disabled':''}>下一页</button>`);
         this.$.find('.af-table-card tbody').html((this.data.rows||[]).flatMap(r=>[
             this.transactionRow(r),
             ...(r.item_lines||[]).map(line=>this.transactionRow(r,false,r.name,line)),
+            ...(r.awd_fee_details||[]).map(detail=>this.awdFeeRow(r,detail)),
             ...(r.related_releases||[]).map(child=>this.transactionRow(child,true,r.name)),
         ]).join('')||'<tr><td colspan="11" class="af-empty">暂无交易</td></tr>')
     }
@@ -80,9 +82,10 @@ class AmazonFinancePage {
             const net=isItem?detail.net_amount:(r.display_net_amount??r.net_amount);
             const product=Boolean(r.is_product);
             const releases=r.related_releases||[];
+            const awdDetails=r.awd_fee_details||[];
             const collapsed=this.collapsedGroups.has(r.name);
-            const toggle=!isRelease&&!isItem&&releases.length?`<button type="button" class="af-release-toggle" data-release-toggle="${this.esc(r.name)}" aria-expanded="${!collapsed}" title="${collapsed?'展开':'收起'}资金释放记录">${collapsed?'▸':'▾'}</button>`:'';
-            const relation=isItem?`<span class="af-item-label">↳ 商品明细 ${this.num(detail.line_no)}/${this.num(detail.line_count)}</span>`:isRelease?`<span class="af-release-label">↳ 资金释放${r.context_only?' · 范围外':''}</span>`:(r.item_lines||[]).length||releases.length?`<span class="af-parent-label">原交易${(r.item_lines||[]).length?` · ${this.num(r.item_lines.length)} 条商品`:''}${releases.length?` · ${this.num(releases.length)} 条释放`:''}</span>`:'';
+            const toggle=!isRelease&&!isItem&&(releases.length||awdDetails.length)?`<button type="button" class="af-release-toggle" data-release-toggle="${this.esc(r.name)}" aria-expanded="${!collapsed}" title="${collapsed?'展开':'收起'}关联明细">${collapsed?'▸':'▾'}</button>`:'';
+            const relation=isItem?`<span class="af-item-label">↳ 商品明细 ${this.num(detail.line_no)}/${this.num(detail.line_count)}</span>`:isRelease?`<span class="af-release-label">↳ 资金释放${r.context_only?' · 范围外':''}</span>`:(r.item_lines||[]).length||releases.length||awdDetails.length?`<span class="af-parent-label">原交易${(r.item_lines||[]).length?` · ${this.num(r.item_lines.length)} 条商品`:''}${awdDetails.length?` · ${this.num(awdDetails.length)} 条 AWD 明细`:''}${releases.length?` · ${this.num(releases.length)} 条释放`:''}</span>`:'';
             const content=product
                 ? `<div class="af-table-product"><img src="${this.image(r.item_image)}"><span><b>${this.esc((isItem&&detail.description)||r.product_name||r.sku||'未命名商品')}</b><small>${this.esc(detail.asin||r.asin||'无ASIN')} · ${this.esc(detail.sku||r.sku||'无SKU')}${isItem?` · 数量 ${this.num(detail.quantity)}`:''}</small></span></div>`
                 : `<div class="af-fee-content"><span class="af-fee-icon">${this.feeIcon(r.description,r.transaction_type)}</span><span><b>${this.esc(this.translate(r.description||r.transaction_type||'店铺级费用'))}</b><small>${this.esc(this.translate(r.transaction_type||'未分类'))} · 不对应具体SKU</small></span></div>`;
@@ -93,6 +96,24 @@ class AmazonFinancePage {
             const groupAttr=isRelease?` data-release-parent="${this.esc(parentName)}"${this.collapsedGroups.has(parentName)?' hidden':''}`:'';
             const taxNote=isItem&&((detail.product_sales_tax||0)||(detail.marketplace_withheld_tax||0))?`<small>销售税 ${this.money(detail.product_sales_tax,r.currency_code)} · 平台代扣税 ${this.money(detail.marketplace_withheld_tax,r.currency_code)}</small>`:'';
             return `<tr class="${rowClass}"${groupAttr}><td>${this.date(r.report_posted_date||r.posted_date)}<small>${this.esc(r.report_timezone||'')}</small></td><td><b>${this.esc(r.store||'—')}</b><small>${this.esc(this.translate(r.country||''))} · ${this.esc(this.translate(r.marketplace_id||''))}</small></td><td><div class="af-transaction-id">${toggle}${relation}<button data-copy="${this.esc(r.transaction_id||'')}">${this.esc(r.transaction_id||'—')}</button></div><small>${this.esc(r.amazon_order_id||'无订单号')}</small></td><td>${content}</td><td>${assignment}</td><td><b>${this.esc(this.translate(r.transaction_type||'未分类'))}</b><small>${this.esc(this.translate(r.transaction_status||''))}</small></td><td>${this.esc(r.currency_code||'—')}</td><td class="num ${net>=0?'positive':'negative'}">${this.money(net,r.currency_code)}${isRelease?'<small>资金流转，不重复计入汇总</small>':isItem?'<small>已计入原交易，不重复汇总</small>':''}${taxNote}</td><td class="num">${isRelease?'—':this.money(detail.product_sales,r.currency_code)}</td><td class="num ${fees<0?'negative':''}">${isRelease?'—':this.money(fees,r.currency_code)}</td><td>${this.esc(r.settlement_id||'—')}</td></tr>`;
+    }
+    awdFeeRow(parent,detail){
+        const hidden=this.collapsedGroups.has(parent.name)?' hidden':'';
+        const storage=detail.source_type==='Storage';
+        const tracking=storage?(parent.amazon_order_id||detail.billing_order_id||detail.asin||'未提供计费编号'):(detail.tracking_id||detail.shipment_id||'未提供货件编号');
+        const sourceId=storage&&detail.billing_order_id&&detail.billing_order_id!==parent.amazon_order_id
+            ?`报表账单编号：${detail.billing_order_id}`:(parent.amazon_order_id||'—');
+        const type=storage?'AWD仓储费':parent.description==='AWDTransportationFee'?'AWD运输费':'AWD处理费';
+        const detailNote=storage?`计费体积 ${this.num(detail.billed_volume)} ${this.esc(detail.volume_unit||'')} · ${this.esc(detail.storage_region||'—')}`:`${this.num(detail.box_count)} 箱`;
+        return `<tr class="af-awd-child" data-release-parent="${this.esc(parent.name)}"${hidden}>
+            <td>${this.esc(storage?detail.period:(detail.report_date||'—'))}<small>${storage?'费用所属月份':'AWD费用报告'}</small></td>
+            <td><b>${this.esc(parent.store||'—')}</b></td>
+            <td><div class="af-transaction-id"><span class="af-awd-label">↳ AWD${storage?'仓储':'货件'}</span><b>${this.esc(tracking)}</b></div><small>${this.esc(sourceId)}</small></td>
+            <td><b>${this.esc(detail.msku||detail.fnsku||detail.asin||'—')}</b><small>${detailNote}${detail.rate!=null?` · 费率 ${this.esc(detail.rate)} ${this.esc(detail.rate_unit||'')}`:''}</small></td>
+            <td><span class="af-no-item">${this.esc(detail.batch)}</span><small>源文件第 ${this.num(detail.source_row)} 行</small></td>
+            <td><b>${type}</b><small>${storage?'仓储费用拆分':'货件费用拆分'}</small></td>
+            <td>USD</td><td class="num">—<small>已包含于父行</small></td><td class="num">—</td>
+            <td class="num negative">${this.money(detail.amount,'USD')}</td><td>—</td></tr>`;
     }
     feeIcon(description,type){const v=String(description||type||'');if(/Storage|Warehouse/i.test(v))return '仓';if(/Transportation|Shipment|Inbound/i.test(v))return '运';if(/Ads|Coupon|Promotion/i.test(v))return '推';if(/Subscription/i.test(v))return '订';if(/Transfer|Disbursement/i.test(v))return '款';if(/Adjustment|Reserve/i.test(v))return '调';return '费'}
     feeGroup(description,type){const v=String(description||type||'');if(/Storage|Warehouse/i.test(v))return '仓储及库存费用';if(/Transportation|Shipment|Inbound/i.test(v))return '物流及入库费用';if(/Ads|Coupon|Promotion/i.test(v))return '广告及推广费用';if(/Subscription/i.test(v))return '店铺订阅费用';if(/Transfer|Disbursement/i.test(v))return '平台资金账户';if(/Adjustment|Reserve/i.test(v))return '平台调整款';return '店铺公共费用'}

@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, time, timedelta, timezone
 from decimal import Decimal
 import json
@@ -38,6 +38,131 @@ DETAIL_GROUPS = (
 
 def _money(value):
     return flt(value or 0, 2)
+
+
+def _awd_storage_order_id(order_id):
+    """The finance API may append -AWD to the report's storage billing ID."""
+    return re.sub(r"-AWD$", "", str(order_id or "").strip(), flags=re.IGNORECASE)
+
+
+def _attach_awd_fee_details(page_rows):
+    """Show imported AWD report lines beneath a matching finance charge."""
+    fee_types = {
+        "AWDProcessingFee": "Processing",
+        "AWDTransportationFee": "Transportation",
+        "STARStorageBilling": "Storage",
+    }
+    finance_rows = [
+        row for row in page_rows
+        if row.description in fee_types and row.amazon_order_id
+        and row.currency_code == "USD"
+    ]
+    if not finance_rows:
+        return
+    batches = frappe.get_list(
+        "Amazon AWD Fee Batch",
+        filters={"status": "当前"},
+        fields=["name", "period"],
+        limit_page_length=0,
+    )
+    if not batches:
+        return
+    batch_names = [batch.name for batch in batches]
+    order_ids = list({row.amazon_order_id for row in finance_rows})
+    storage_order_ids = list({
+        candidate
+        for row in finance_rows if fee_types[row.description] == "Storage"
+        for candidate in (row.amazon_order_id, _awd_storage_order_id(row.amazon_order_id))
+    })
+    report_rows = frappe.get_all(
+        "Amazon AWD Fee Detail",
+        filters={
+            "parent": ["in", batch_names],
+            "parenttype": "Amazon AWD Fee Batch",
+            "source_type": ["in", ["Processing", "Transportation"]],
+            "replenishment_order_id": ["in", order_ids],
+        },
+        fields=[
+            "parent", "source_type", "source_row", "transaction_date",
+            "replenishment_order_id", "billing_order_id", "shipment_id", "tracking_id",
+            "msku", "fnsku", "asin", "box_count", "billed_volume", "volume_unit",
+            "storage_region", "rate", "rate_unit",
+            "charged_amount",
+        ],
+        order_by="parent asc, source_row asc",
+        limit_page_length=0,
+    )
+    if storage_order_ids:
+        report_rows.extend(frappe.get_all(
+            "Amazon AWD Fee Detail",
+            filters={
+                "parent": ["in", batch_names],
+                "parenttype": "Amazon AWD Fee Batch",
+                "source_type": "Storage",
+                "billing_order_id": ["in", storage_order_ids],
+            },
+            fields=[
+                "parent", "source_type", "source_row", "transaction_date",
+                "replenishment_order_id", "billing_order_id", "shipment_id", "tracking_id",
+                "msku", "fnsku", "asin", "box_count", "billed_volume", "volume_unit",
+                "storage_region", "rate", "rate_unit", "charged_amount",
+            ],
+            order_by="parent asc, source_row asc",
+            limit_page_length=0,
+        ))
+    groups = defaultdict(list)
+    for detail in report_rows:
+        order_id = (_awd_storage_order_id(detail.billing_order_id)
+                    if detail.source_type == "Storage" else detail.replenishment_order_id)
+        groups[(detail.parent, order_id, detail.source_type)].append(detail)
+    candidates = defaultdict(list)
+    for key, details in groups.items():
+        candidates[(key[1], key[2])].append((key, details))
+    matched = {}
+    for row in finance_rows:
+        amount = Decimal(str(-(row.net_amount or 0))).quantize(Decimal("0.01"))
+        possible = [
+            (key, details) for key, details in candidates[
+                (_awd_storage_order_id(row.amazon_order_id)
+                 if fee_types[row.description] == "Storage" else row.amazon_order_id,
+                 fee_types[row.description])
+            ]
+            if sum((Decimal(str(detail.charged_amount or 0)) for detail in details), Decimal(0)).quantize(
+                Decimal("0.01")
+            ) == amount
+        ]
+        if len(possible) == 1:
+            matched[row.name] = possible[0]
+    repeated = Counter(key for key, _details in matched.values())
+    periods = {batch.name: batch.period for batch in batches}
+    for row in finance_rows:
+        match = matched.get(row.name)
+        if not match or repeated[match[0]] != 1:
+            continue
+        key, details = match
+        row.awd_fee_details = [
+            {
+                "batch": key[0],
+                "period": periods.get(key[0]),
+                "source_type": detail.source_type,
+                "report_date": str(detail.transaction_date or ""),
+                "source_row": detail.source_row,
+                "shipment_id": detail.shipment_id,
+                "tracking_id": detail.tracking_id,
+                "billing_order_id": detail.billing_order_id,
+                "msku": detail.msku,
+                "fnsku": detail.fnsku,
+                "asin": detail.asin,
+                "box_count": detail.box_count,
+                "billed_volume": detail.billed_volume,
+                "volume_unit": detail.volume_unit,
+                "storage_region": detail.storage_region,
+                "rate": detail.rate,
+                "rate_unit": detail.rate_unit,
+                "amount": -_money(detail.charged_amount),
+            }
+            for detail in details
+        ]
 
 
 def _report_boundary(value, following_day=False):
@@ -516,6 +641,7 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         row.related_releases = release_children.get(row.name, [])
         for child in row.related_releases:
             child.context_only = child.name not in selected_names
+    _attach_awd_fee_details(page_rows)
     # The complete Amazon response is retained in its DocType; do not send it to the browser.
     for row in all_rows:
         row.pop("raw_json", None)

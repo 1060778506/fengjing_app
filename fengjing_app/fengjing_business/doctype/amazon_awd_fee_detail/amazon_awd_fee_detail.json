@@ -9,7 +9,7 @@
    "fieldname": "source_type",
    "label": "来源报告",
    "fieldtype": "Select",
-   "options": "Processing\nTransportation",
+   "options": "Processing\nTransportation\nStorage",
    "reqd": 1,
    "in_list_view": 1
   },
@@ -63,6 +63,11 @@
    "fieldtype": "Data"
   },
   {
+   "fieldname": "billing_order_id",
+   "label": "仓储账单编号",
+   "fieldtype": "Data"
+  },
+  {
    "fieldname": "asin",
    "label": "ASIN",
    "fieldtype": "Data"
@@ -92,6 +97,21 @@
    "fieldname": "destination_code",
    "label": "目的地代码",
    "fieldtype": "Data"
+  },
+  {
+   "fieldname": "storage_region",
+   "label": "仓储区域",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "average_used_capacity",
+   "label": "月平均使用容量",
+   "fieldtype": "Float"
+  },
+  {
+   "fieldname": "billed_volume",
+   "label": "计费体积",
+   "fieldtype": "Float"
   },
   {
    "fieldname": "box_count",
@@ -173,12 +193,16 @@
   "shipment_id",
   "tracking_id",
   "outbound_purchase_order_id",
+  "billing_order_id",
   "asin",
   "fnsku",
   "msku",
   "carrier_type",
   "facility_id",
   "destination_code",
+  "storage_region",
+  "average_used_capacity",
+  "billed_volume",
   "box_count",
   "box_volume",
   "volume_unit",
