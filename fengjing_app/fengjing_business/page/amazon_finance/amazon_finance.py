@@ -1,10 +1,12 @@
 from collections import defaultdict
+from datetime import datetime, time, timedelta, timezone
 from decimal import Decimal
 import json
 import re
+from zoneinfo import ZoneInfo
 
 import frappe
-from frappe.utils import cint, flt, getdate, nowdate
+from frappe.utils import cint, flt, get_datetime, get_system_timezone, getdate
 
 from fengjing_app.fengjing_business.doctype.amazon_financial_transaction.amazon_financial_transaction import (
     _上下文值, _费用分类, _金额,
@@ -13,6 +15,7 @@ from fengjing_app.fengjing_business.doctype.amazon_financial_transaction.amazon_
 
 DOCTYPE = "Amazon Financial Transaction"
 MAPPING_DOCTYPE = "Fengjing - Product Corresponding Platform - Main Table"
+REPORT_TIMEZONE = ZoneInfo("America/Los_Angeles")
 AMOUNT_FIELDS = [
     "total_amount", "item_amount", "product_sales", "product_sales_tax",
     "shipping_credits", "shipping_credits_tax", "promotional_rebates",
@@ -35,6 +38,31 @@ DETAIL_GROUPS = (
 
 def _money(value):
     return flt(value or 0, 2)
+
+
+def _report_boundary(value, following_day=False):
+    """Convert a Pacific calendar date boundary to the stored site timezone."""
+    day = getdate(value) + timedelta(days=1 if following_day else 0)
+    pacific = datetime.combine(day, time.min, REPORT_TIMEZONE)
+    return pacific.astimezone(ZoneInfo(get_system_timezone())).replace(tzinfo=None)
+
+
+def _report_time(stored_value, raw_value=None):
+    """Prefer Amazon's original timestamp for historical and future records."""
+    instant = None
+    if raw_value:
+        try:
+            instant = datetime.fromisoformat(str(raw_value).strip().replace("Z", "+00:00"))
+            if instant.tzinfo is None:
+                instant = instant.replace(tzinfo=timezone.utc)
+        except ValueError:
+            instant = None
+    if instant is None and stored_value:
+        instant = get_datetime(stored_value).replace(tzinfo=ZoneInfo(get_system_timezone()))
+    if instant is None:
+        return None, None
+    local = instant.astimezone(REPORT_TIMEZONE)
+    return local.replace(tzinfo=None), local.tzname()
 
 
 def _transaction_group(row):
@@ -110,11 +138,14 @@ def _resolve_mapping(row, mappings):
 def _build_db_filters(f):
     filters = {}
     if f.date_from and f.date_to:
-        filters["posted_date"] = ["between", [f.date_from, f"{f.date_to} 23:59:59"]]
+        filters["posted_date"] = ["between", [
+            _report_boundary(f.date_from),
+            _report_boundary(f.date_to, following_day=True) - timedelta(microseconds=1),
+        ]]
     elif f.date_from:
-        filters["posted_date"] = [">=", f.date_from]
+        filters["posted_date"] = [">=", _report_boundary(f.date_from)]
     elif f.date_to:
-        filters["posted_date"] = ["<=", f"{f.date_to} 23:59:59"]
+        filters["posted_date"] = ["<=", _report_boundary(f.date_to, following_day=True) - timedelta(microseconds=1)]
     for key in ("store", "marketplace_id", "country", "currency_code", "transaction_type", "transaction_status"):
         if f.get(key):
             filters[key] = f.get(key)
@@ -281,14 +312,16 @@ def _release_relationships(selected_rows, fields):
 
 
 def _available_months():
-    """Show months from the first transaction this year through the current month."""
-    today = getdate(nowdate())
+    """Show months using the same Pacific calendar as the downloaded report."""
+    today = datetime.now(REPORT_TIMEZONE).date()
     earliest = frappe.db.sql(
         f"""SELECT MIN(posted_date) FROM `tab{DOCTYPE}`
             WHERE posted_date BETWEEN %s AND %s""",
-        (f"{today.year}-01-01 00:00:00", f"{today.year}-12-31 23:59:59"),
+        (_report_boundary(f"{today.year}-01-01"),
+         _report_boundary(f"{today.year + 1}-01-01") - timedelta(microseconds=1)),
     )[0][0]
-    first_month = min(getdate(earliest).month, today.month) if earliest else today.month
+    first_report_date = _report_time(earliest)[0] if earliest else None
+    first_month = min(first_report_date.month, today.month) if first_report_date else today.month
     return [f"{today.year}-{month:02d}" for month in range(first_month, today.month + 1)]
 
 
@@ -345,6 +378,15 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
     )
     truncated = len(rows) >= 100000
     all_rows, parent_for_child, release_children = _release_relationships(rows, fields)
+    for row in all_rows:
+        try:
+            source = json.loads(row.get("raw_json") or "{}")
+        except (TypeError, ValueError):
+            source = {}
+        row.report_posted_date, row.report_timezone = _report_time(
+            row.posted_date, source.get("postedDate")
+        )
+        row.report_release_date, _ = _report_time(row.release_date)
     mappings = _mapping_rows()
     item_ids = set()
     for row in all_rows:
@@ -436,7 +478,7 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
                 bound += 1
         else:
             store_fee_count += 1
-        day = str(getdate(row.posted_date)) if row.posted_date else "未知日期"
+        day = str(getdate(row.report_posted_date)) if row.report_posted_date else "未知日期"
         d = daily[day][currency]
         d["net"] += amount
         d["sales"] += _money(row.product_sales)
@@ -455,9 +497,9 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
             p = products.setdefault(pkey, {"store": row.store, "marketplace_id": row.marketplace_id, "asin": row.asin, "sku": row.sku, "product_name": row.product_name, "item": row.corresponding_item, "item_name": row.item_name, "image": row.item_image, "quantity": 0, "amounts": defaultdict(float), "transactions": 0})
             p["quantity"] += cint(row.quantity); p["amounts"][currency] += amount; p["transactions"] += 1
         skey = (row.store or "", row.settlement_id or "未结算", currency)
-        st = settlements.setdefault(skey, {"store": row.store, "settlement_id": row.settlement_id or "未结算", "currency": currency, "amount": 0.0, "count": 0, "last_date": row.posted_date})
+        st = settlements.setdefault(skey, {"store": row.store, "settlement_id": row.settlement_id or "未结算", "currency": currency, "amount": 0.0, "count": 0, "last_date": row.report_posted_date})
         st["amount"] += amount; st["count"] += 1
-        if row.posted_date and (not st["last_date"] or row.posted_date > st["last_date"]): st["last_date"] = row.posted_date
+        if row.report_posted_date and (not st["last_date"] or row.report_posted_date > st["last_date"]): st["last_date"] = row.report_posted_date
 
     product_list = []
     for p in products.values():
