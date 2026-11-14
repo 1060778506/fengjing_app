@@ -1,0 +1,200 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "module": "Fengjing Business",
+ "name": "Amazon AWD Fee Detail",
+ "engine": "InnoDB",
+ "fields": [
+  {
+   "fieldname": "source_type",
+   "label": "来源报告",
+   "fieldtype": "Select",
+   "options": "Processing\nTransportation",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "source_row",
+   "label": "源文件行号",
+   "fieldtype": "Int",
+   "read_only": 1
+  },
+  {
+   "fieldname": "charge_type",
+   "label": "收费类型",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "transaction_date",
+   "label": "交易日期",
+   "fieldtype": "Date",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "fee_type",
+   "label": "费用类型",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "inbound_order_id",
+   "label": "入库订单编号",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "replenishment_order_id",
+   "label": "补货订单编号",
+   "fieldtype": "Data",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "shipment_id",
+   "label": "货件编号",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "tracking_id",
+   "label": "货件追踪编码",
+   "fieldtype": "Data",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "outbound_purchase_order_id",
+   "label": "出库购买订单编号",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "asin",
+   "label": "ASIN",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "fnsku",
+   "label": "FNSKU",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "msku",
+   "label": "MSKU",
+   "fieldtype": "Data",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "carrier_type",
+   "label": "承运人类型",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "facility_id",
+   "label": "库房编号",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "destination_code",
+   "label": "目的地代码",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "box_count",
+   "label": "箱数",
+   "fieldtype": "Float"
+  },
+  {
+   "fieldname": "box_volume",
+   "label": "箱子总体积",
+   "fieldtype": "Float"
+  },
+  {
+   "fieldname": "volume_unit",
+   "label": "体积单位",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "rate",
+   "label": "费率",
+   "fieldtype": "Float"
+  },
+  {
+   "fieldname": "rate_unit",
+   "label": "费率单位",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "rate_type",
+   "label": "费率类型",
+   "fieldtype": "Data"
+  },
+  {
+   "fieldname": "calculated_amount",
+   "label": "计算费用金额",
+   "fieldtype": "Currency",
+   "options": "currency"
+  },
+  {
+   "fieldname": "promotion_amount",
+   "label": "促销金额",
+   "fieldtype": "Currency",
+   "options": "currency"
+  },
+  {
+   "fieldname": "tax_amount",
+   "label": "税额",
+   "fieldtype": "Currency",
+   "options": "currency"
+  },
+  {
+   "fieldname": "charged_amount",
+   "label": "收费金额",
+   "fieldtype": "Currency",
+   "options": "currency",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "currency",
+   "label": "货币",
+   "fieldtype": "Link",
+   "options": "Currency",
+   "default": "USD"
+  },
+  {
+   "fieldname": "raw_json",
+   "label": "原始行数据",
+   "fieldtype": "Long Text",
+   "hidden": 1
+  }
+ ],
+ "field_order": [
+  "source_type",
+  "source_row",
+  "charge_type",
+  "transaction_date",
+  "fee_type",
+  "inbound_order_id",
+  "replenishment_order_id",
+  "shipment_id",
+  "tracking_id",
+  "outbound_purchase_order_id",
+  "asin",
+  "fnsku",
+  "msku",
+  "carrier_type",
+  "facility_id",
+  "destination_code",
+  "box_count",
+  "box_volume",
+  "volume_unit",
+  "rate",
+  "rate_unit",
+  "rate_type",
+  "calculated_amount",
+  "promotion_amount",
+  "tax_amount",
+  "charged_amount",
+  "currency",
+  "raw_json"
+ ],
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "istable": 1,
+ "editable_grid": 1
+}

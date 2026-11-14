@@ -1,0 +1,37 @@
+.awd-fee-shell { max-width: 1250px; margin: 20px auto; display: grid; gap: 20px; }
+.awd-fee-hero, .awd-fee-card { background: var(--card-bg, #fff); border: 1px solid var(--border-color, #dce1e7); border-radius: 14px; padding: 24px; }
+.awd-fee-hero { background: linear-gradient(115deg, #15344a, #216b77); color: #fff; }
+.awd-fee-hero span { font-size: 12px; letter-spacing: .14em; opacity: .8; }
+.awd-fee-hero h2 { margin: 6px 0 8px; color: #fff; }
+.awd-fee-hero p { margin: 0 0 12px; opacity: .9; }
+.awd-fee-hero a { color: #fff; text-decoration: underline; }
+.awd-fee-layout { display: grid; grid-template-columns: 285px minmax(0, 1fr); gap: 20px; align-items: start; }
+.awd-fee-sidebar { position: sticky; top: 20px; }
+.awd-fee-new { width: 100%; margin-bottom: 15px; }
+.awd-fee-batch-list { display: grid; gap: 8px; max-height: 65vh; overflow-y: auto; }
+.awd-fee-batch { border: 1px solid var(--border-color, #dce1e7); background: var(--control-bg, #fff); color: var(--text-color); border-radius: 9px; padding: 10px 12px; text-align: left; display: grid; gap: 3px; width: 100%; }
+.awd-fee-batch:hover, .awd-fee-batch.active { border-color: #158392; background: rgba(21, 131, 146, .08); }
+.awd-fee-batch strong { font-size: 15px; }
+.awd-fee-batch small, .awd-fee-batch span { color: var(--text-muted, #687686); }
+.awd-fee-existing { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 15px; color: var(--text-muted, #687686); font-size: 13px; }
+.awd-fee-summary { display: flex; gap: 12px; flex-wrap: wrap; margin: 18px 0; }
+.awd-fee-summary div { min-width: 130px; border: 1px solid var(--border-color, #dce1e7); border-radius: 9px; padding: 12px 16px; display: grid; gap: 3px; }
+.awd-fee-summary b { font-size: 19px; color: var(--text-color); }
+.awd-fee-summary span { font-size: 12px; color: var(--text-muted, #687686); }
+.awd-fee-file-group { min-width: 0; }
+.awd-fee-file-group > a { display: block; margin: 9px 2px 0; overflow-wrap: anywhere; }
+.awd-fee-shell [hidden] { display: none !important; }
+.awd-fee-card header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.awd-fee-card h3 { margin: 0; font-size: 17px; }
+.awd-fee-card header span, .awd-fee-note { color: var(--text-muted, #687686); font-size: 13px; }
+.awd-fee-period { display: inline-grid; gap: 7px; font-weight: 600; }
+.awd-fee-period input { border: 1px solid var(--border-color, #cbd3dd); border-radius: 7px; padding: 7px 10px; background: var(--control-bg, #fff); color: var(--text-color); }
+.awd-fee-uploads { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 18px 0; }
+.awd-fee-upload { display: grid; align-content: center; gap: 10px; min-height: 120px; border: 2px dashed #9db6bf; border-radius: 10px; padding: 16px; cursor: pointer; }
+.awd-fee-upload b { color: var(--text-color); }
+.awd-fee-upload span { color: var(--text-muted, #687686); overflow-wrap: anywhere; }
+.awd-fee-upload input { display: none; }
+.awd-fee-upload.has-file, .awd-fee-upload.is-dragging { border-color: #158392; background: rgba(21, 131, 146, .07); }
+.awd-fee-note { margin: 12px 0 0; }
+@media (max-width: 950px) { .awd-fee-layout { grid-template-columns: 1fr; } .awd-fee-sidebar { position: static; } .awd-fee-batch-list { display: flex; overflow-x: auto; } .awd-fee-batch { min-width: 190px; } }
+@media (max-width: 750px) { .awd-fee-uploads { grid-template-columns: 1fr; } .awd-fee-card header { align-items: start; flex-direction: column; } }

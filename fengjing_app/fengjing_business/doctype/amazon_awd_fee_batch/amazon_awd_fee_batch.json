@@ -1,0 +1,151 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "module": "Fengjing Business",
+ "name": "Amazon AWD Fee Batch",
+ "engine": "InnoDB",
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "label": "编号规则",
+   "fieldtype": "Select",
+   "options": "AWD-FEE-.YYYY.-.#####",
+   "default": "AWD-FEE-.YYYY.-.#####",
+   "hidden": 1
+  },
+  {
+   "fieldname": "period",
+   "label": "费用月份",
+   "fieldtype": "Data",
+   "reqd": 1,
+   "in_list_view": 1,
+   "search_index": 1,
+   "description": "YYYY-MM；按月度报告的收费月份记录"
+  },
+  {
+   "fieldname": "seller_customer_id",
+   "label": "卖家客户编号",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "status",
+   "label": "状态",
+   "fieldtype": "Select",
+   "options": "草稿\n当前\n历史",
+   "default": "草稿",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "files_section",
+   "label": "原始报告",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "processing_file",
+   "label": "AWD月度处理费报告",
+   "fieldtype": "Attach"
+  },
+  {
+   "fieldname": "transportation_file",
+   "label": "AWD月度运输费报告",
+   "fieldtype": "Attach"
+  },
+  {
+   "fieldname": "summary_section",
+   "label": "汇总",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "currency",
+   "label": "货币",
+   "fieldtype": "Link",
+   "options": "Currency",
+   "default": "USD",
+   "read_only": 1
+  },
+  {
+   "fieldname": "processing_total",
+   "label": "处理费合计",
+   "fieldtype": "Currency",
+   "options": "currency",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "transportation_total",
+   "label": "运输费合计",
+   "fieldtype": "Currency",
+   "options": "currency",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "total_amount",
+   "label": "费用合计",
+   "fieldtype": "Currency",
+   "options": "currency",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "row_count",
+   "label": "明细行数",
+   "fieldtype": "Int",
+   "read_only": 1
+  },
+  {
+   "fieldname": "details_section",
+   "label": "费用明细",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "details",
+   "label": "逐行费用",
+   "fieldtype": "Table",
+   "options": "Amazon AWD Fee Detail"
+  },
+  {
+   "fieldname": "remarks",
+   "label": "备注",
+   "fieldtype": "Small Text"
+  }
+ ],
+ "field_order": [
+  "naming_series",
+  "period",
+  "seller_customer_id",
+  "status",
+  "files_section",
+  "processing_file",
+  "transportation_file",
+  "summary_section",
+  "currency",
+  "processing_total",
+  "transportation_total",
+  "total_amount",
+  "row_count",
+  "details_section",
+  "details",
+  "remarks"
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "report": 1,
+   "print": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "autoname": "naming_series:",
+ "title_field": "period",
+ "grid_page_length": 50
+}
