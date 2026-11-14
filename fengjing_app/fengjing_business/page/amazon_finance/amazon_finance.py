@@ -1,9 +1,14 @@
 from collections import defaultdict
 from decimal import Decimal
+import json
 import re
 
 import frappe
 from frappe.utils import cint, flt, getdate, nowdate
+
+from fengjing_app.fengjing_business.doctype.amazon_financial_transaction.amazon_financial_transaction import (
+    _上下文值, _费用分类, _金额,
+)
 
 
 DOCTYPE = "Amazon Financial Transaction"
@@ -116,6 +121,165 @@ def _build_db_filters(f):
     return filters
 
 
+def _transaction_links(row):
+    """Read Amazon's explicit deferred/release IDs from stored API data."""
+    try:
+        raw = json.loads(row.get("raw_json") or "{}")
+    except (TypeError, ValueError):
+        return {}
+    return {
+        item.get("relatedIdentifierName"): str(item.get("relatedIdentifierValue") or "").strip()
+        for item in (raw.get("relatedIdentifiers") or [])
+        if isinstance(item, dict)
+        and item.get("relatedIdentifierName") in {"DEFERRED_TRANSACTION_ID", "RELEASE_TRANSACTION_ID"}
+    }
+
+
+def _transaction_key(row, transaction_id=None):
+    return (row.store or "", row.marketplace_id or "", transaction_id or row.transaction_id or "")
+
+
+def _matching_item(candidates, row):
+    """Keep multiple SKUs in one Amazon transaction from pairing with the wrong item."""
+    if not candidates:
+        return None
+    sku = row.sku or ""
+    if sku:
+        matches = [candidate for candidate in candidates if (candidate.sku or "") == sku]
+        if len(matches) == 1:
+            return matches[0]
+    item_id = row.amazon_order_item_id or ""
+    if item_id:
+        matches = [candidate for candidate in candidates if (candidate.amazon_order_item_id or "") == item_id]
+        if len(matches) == 1:
+            return matches[0]
+    return candidates[0] if len(candidates) == 1 else None
+
+
+def _raw_item_fee_total(nodes):
+    """Read fee parents without adding their nested adjustments twice."""
+    total = 0.0
+    for node in nodes:
+        kind = str(node.get("breakdownType") or "").lower()
+        children = node.get("breakdowns") or []
+        if "fee" in kind:
+            total += _金额(node.get("breakdownAmount") or {})
+        elif children:
+            total += _raw_item_fee_total(children)
+    return total
+
+
+def _item_display(row):
+    """Reconstruct Amazon's item lines for one stored transaction/SKU row."""
+    if not row.sku:
+        return [], None
+    try:
+        raw = json.loads(row.get("raw_json") or "{}")
+    except (TypeError, ValueError):
+        return [], None
+    source_items = raw.get("items") or []
+    if not isinstance(source_items, list):
+        return [], None
+    sku_items = []
+    skus = set()
+    for item in source_items:
+        if not isinstance(item, dict):
+            continue
+        sku = str(_上下文值(item.get("contexts") or [], "sku") or "").strip()
+        skus.add(sku)
+        if sku == row.sku:
+            sku_items.append(item)
+    # A transaction spanning several SKUs is stored once per SKU; the table
+    # should show this SKU's share rather than repeat the transaction total.
+    display_amount = _money(row.item_amount) if len(skus) > 1 and row.item_amount is not None else None
+    if len(sku_items) < 2:
+        return [], display_amount
+    expected = Decimal(str(row.item_amount or 0))
+    actual = sum((Decimal(str(_金额(item.get("totalAmount") or {}))) for item in sku_items), Decimal(0))
+    if abs(expected - actual) > Decimal("0.01"):
+        return [], display_amount
+    lines = []
+    for index, item in enumerate(sku_items, 1):
+        amounts = _费用分类(item.get("breakdowns") or [])
+        # AmazonFees > FBAPerUnitFulfillmentFee > Base/Promo keeps the fee
+        # category on a parent; the imported aggregate uses leaf values.
+        contexts = item.get("contexts") or []
+        lines.append({
+            "line_no": index,
+            "line_count": len(sku_items),
+            "description": item.get("description") or row.product_name,
+            "asin": _上下文值(contexts, "asin") or row.asin,
+            "sku": row.sku,
+            "quantity": cint(_上下文值(contexts, "quantityShipped")),
+            "net_amount": _money(_金额(item.get("totalAmount") or {})),
+            "display_fees": _money(_raw_item_fee_total(item.get("breakdowns") or [])),
+            **{key: _money(value) for key, value in amounts.items()},
+        })
+    row.display_fees = _money(sum(line["display_fees"] for line in lines))
+    return lines, display_amount
+
+
+def _release_relationships(selected_rows, fields):
+    """Resolve saved and future API transactions without changing their source records.
+
+    A linked release can fall outside the selected month. Fetch its counterpart
+    to show the release under the original transaction's month only.
+    """
+    selected_ids = {row.name for row in selected_rows}
+    links = {row.name: _transaction_links(row) for row in selected_rows}
+    present_ids = {_transaction_key(row) for row in selected_rows if row.transaction_id}
+    missing_ids = {
+        linked_id
+        for row in selected_rows
+        for linked_id in (links[row.name].get("DEFERRED_TRANSACTION_ID"), links[row.name].get("RELEASE_TRANSACTION_ID"))
+        if linked_id and _transaction_key(row, linked_id) not in present_ids
+    }
+    related_rows = []
+    missing_ids = sorted(missing_ids)
+    for offset in range(0, len(missing_ids), 200):
+        related_rows.extend(frappe.get_all(
+            DOCTYPE,
+            filters={"transaction_id": ["in", missing_ids[offset:offset + 200]]},
+            fields=fields,
+            limit_page_length=0,
+        ))
+    all_rows = selected_rows + [row for row in related_rows if row.name not in selected_ids]
+    for row in related_rows:
+        links[row.name] = _transaction_links(row)
+
+    by_transaction = defaultdict(list)
+    by_name = {row.name: row for row in all_rows}
+    for row in all_rows:
+        if row.transaction_id:
+            by_transaction[_transaction_key(row)].append(row)
+
+    parent_for_child = {}
+    for row in all_rows:
+        deferred_id = links[row.name].get("DEFERRED_TRANSACTION_ID")
+        if not deferred_id:
+            continue
+        parent = _matching_item(by_transaction.get(_transaction_key(row, deferred_id)), row)
+        if parent and parent.name != row.name and parent.transaction_type == row.transaction_type:
+            parent_for_child[row.name] = parent
+    # Some historical responses only have the link on the deferred transaction.
+    for row in all_rows:
+        release_id = links[row.name].get("RELEASE_TRANSACTION_ID")
+        if not release_id:
+            continue
+        child = _matching_item(by_transaction.get(_transaction_key(row, release_id)), row)
+        if child and child.name != row.name and child.transaction_type == row.transaction_type:
+            parent_for_child.setdefault(child.name, row)
+
+    children = defaultdict(list)
+    for child_name, parent in parent_for_child.items():
+        child = by_name.get(child_name)
+        if child:
+            children[parent.name].append(child)
+    for group in children.values():
+        group.sort(key=lambda row: str(row.posted_date or ""))
+    return all_rows, parent_for_child, children
+
+
 def _available_months():
     """Show months from the first transaction this year through the current month."""
     today = getdate(nowdate())
@@ -173,16 +337,17 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         "transaction_type", "transaction_status", "description", "settlement_id",
         "financial_event_group_id", "fulfillment_channel", "product_name", "quantity",
         "corresponding_item", "corresponding_item_name", "posted_date", "release_date",
-        "currency_code", "fetched_at", *AMOUNT_FIELDS,
+        "currency_code", "fetched_at", "raw_json", *AMOUNT_FIELDS,
     ]
     rows = frappe.get_all(
         DOCTYPE, filters=_build_db_filters(f), fields=fields,
         order_by="posted_date desc, modified desc", limit_page_length=100000,
     )
     truncated = len(rows) >= 100000
+    all_rows, parent_for_child, release_children = _release_relationships(rows, fields)
     mappings = _mapping_rows()
     item_ids = set()
-    for row in rows:
+    for row in all_rows:
         if not row.corresponding_item:
             mapping = _resolve_mapping(row, mappings)
             if mapping:
@@ -195,7 +360,7 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
     if item_ids:
         for item in frappe.get_all("Item", filters={"name": ["in", list(item_ids)]}, fields=["name", "item_name", "image"]):
             item_info[item.name] = item
-    for row in rows:
+    for row in all_rows:
         info = item_info.get(row.corresponding_item)
         row.item_name = (info.item_name if info else None) or row.corresponding_item_name or ""
         row.item_image = (info.image if info else None) or ""
@@ -230,12 +395,18 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         rows = filtered
 
     dashboard_rows = rows
+    economic_rows = [row for row in dashboard_rows if row.name not in parent_for_child]
     group_counts = defaultdict(int)
-    for row in dashboard_rows:
-        group_counts[row.detail_group] += 1
+    line_counts = {}
+    for row in economic_rows:
+        row.item_lines, row.display_net_amount = _item_display(row)
+        line_counts[row.name] = max(1, len(row.item_lines))
+        group_counts[row.detail_group] += line_counts[row.name]
+    report_row_count = sum(line_counts.values())
 
     detail_group = f.detail_group or ""
-    detail_rows = [row for row in dashboard_rows if not detail_group or row.detail_group == detail_group]
+    selected_detail_rows = [row for row in dashboard_rows if not detail_group or row.detail_group == detail_group]
+    detail_rows = [row for row in selected_detail_rows if row.name not in parent_for_child]
 
     currencies = defaultdict(lambda: {"inflow": 0.0, "outflow": 0.0, "net": 0.0, "sales": 0.0, "fees": 0.0})
     daily = defaultdict(lambda: defaultdict(lambda: {"net": 0.0, "sales": 0.0, "fees": 0.0, "tax": 0.0, "promotion": 0.0, "count": 0}))
@@ -249,7 +420,7 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
     product_count = 0
     store_fee_count = 0
 
-    for row in dashboard_rows:
+    for row in economic_rows:
         currency = row.currency_code or "未知"
         amount = _money(row.net_amount if row.net_amount is not None else row.total_amount)
         key = (row.store, row.marketplace_id, row.transaction_id)
@@ -294,14 +465,24 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
     product_list.sort(key=lambda x: (x["quantity"], sum(abs(v) for v in x["amounts"].values())), reverse=True)
     settlement_list = sorted(settlements.values(), key=lambda x: str(x["last_date"] or ""), reverse=True)
     page, page_size = max(cint(page), 1), min(max(cint(page_size), 10), 500)
+    selected_names = {row.name for row in selected_detail_rows}
+    # Date filters select the original transaction, never a release from another month.
+    display_rows = sorted(detail_rows, key=lambda row: str(row.posted_date or ""), reverse=True)
     start = (page - 1) * page_size
-    page_rows = detail_rows[start:start + page_size]
+    page_rows = display_rows[start:start + page_size]
+    for row in page_rows:
+        row.related_releases = release_children.get(row.name, [])
+        for child in row.related_releases:
+            child.context_only = child.name not in selected_names
+    # The complete Amazon response is retained in its DocType; do not send it to the browser.
+    for row in all_rows:
+        row.pop("raw_json", None)
     options = {
         key: sorted({str(r.get(key)) for r in dashboard_rows if r.get(key)})
         for key in ("store", "marketplace_id", "country", "currency_code", "transaction_type", "transaction_status")
     }
     return {
-        "summary": {"row_count": len(dashboard_rows), "transaction_count": len(unique_transactions), "sku_count": len(products), "product_count": product_count, "store_fee_count": store_fee_count, "bound_count": bound, "unbound_count": product_count - bound, "binding_rate": round(bound * 100 / product_count, 1) if product_count else 0, "currencies": dict(currencies), "truncated": truncated},
+        "summary": {"row_count": len(economic_rows), "report_row_count": report_row_count, "transaction_count": len(unique_transactions), "release_count": sum(len(release_children.get(row.name, [])) for row in economic_rows), "sku_count": len(products), "product_count": product_count, "store_fee_count": store_fee_count, "bound_count": bound, "unbound_count": product_count - bound, "binding_rate": round(bound * 100 / product_count, 1) if product_count else 0, "currencies": dict(currencies), "truncated": truncated},
         "daily": {day: dict(values) for day, values in sorted(daily.items())},
         "fees": {c: dict(v) for c, v in fee_totals.items()},
         "types": {c: dict(v) for c, v in type_totals.items()},
@@ -310,13 +491,13 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         "rows": page_rows, "options": options, "available_months": _available_months(),
         "detail_summary": _summarize_detail_rows(detail_rows),
         "detail_groups": [
-            {"key": "", "label": "全部", "count": len(dashboard_rows)},
+            {"key": "", "label": "全部", "count": report_row_count},
             *[
                 {"key": key, "label": label, "count": group_counts[key]}
                 for key, label in DETAIL_GROUPS
             ],
         ],
-        "pagination": {"page": page, "page_size": page_size, "total": len(detail_rows), "pages": max(1, (len(detail_rows) + page_size - 1) // page_size)},
+        "pagination": {"page": page, "page_size": page_size, "total": len(display_rows), "display_total": sum(line_counts[row.name] for row in display_rows), "raw_total": len(selected_detail_rows), "pages": max(1, (len(display_rows) + page_size - 1) // page_size)},
     }
 
 
