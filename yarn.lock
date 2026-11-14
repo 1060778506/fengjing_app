@@ -21,9 +21,9 @@
     utility-types "^3.10.0"
 
 "@babel/runtime@^7.13.10":
-  version "7.29.10"
-  resolved "https://registry.npmmirror.com/@babel/runtime/-/runtime-7.29.10.tgz#fe9920782f7ee34029165ac6f272984917a1641b"
-  integrity sha512-NpugTzbKgGrNe45Ui32cN8vCFFMxVtP/9rtfwv0nP5FRDAjvYBxJcLVpYA9mr1jxP6cnIT7x9LUzuDTbWYYNRA==
+  version "7.29.14"
+  resolved "https://registry.npmmirror.com/@babel/runtime/-/runtime-7.29.14.tgz#9ad0cc2addbbc8c46adaec9e90b21bb76d42b483"
+  integrity sha512-Y5tqevQaUAZhhj82BpYMNC1ssvLQTVAfwKdm8iy8qwmhvC2/CpcAu8OC+QEtjM7pMk7knx83u1Qj8gzkicyelw==
 
 "@braintree/sanitize-url@6.0.2":
   version "6.0.2"
@@ -161,15 +161,15 @@
   resolved "https://registry.npmmirror.com/@floating-ui/utils/-/utils-0.2.12.tgz#afefe785949f16ac4cdd1e695935a321572dd56a"
   integrity sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==
 
-"@full-ui/headless-calendar@7.1.4":
-  version "7.1.4"
-  resolved "https://registry.npmmirror.com/@full-ui/headless-calendar/-/headless-calendar-7.1.4.tgz#32c31729207ea922c06a1b9934db8f905ce98331"
-  integrity sha512-b0o9zsbJKpeM+e5eh27paqfDseQgMQkOy4jjp+nCLABmUQWn2kJ+vV3QdSNXL/9R7S+SwN6Ky21p1hDYvDdgUg==
+"@full-ui/headless-calendar@7.1.5":
+  version "7.1.5"
+  resolved "https://registry.npmmirror.com/@full-ui/headless-calendar/-/headless-calendar-7.1.5.tgz#b9235bfef607c530c8597ad55758a45b8fbb5f84"
+  integrity sha512-kTSGhUM7NkdJFvv6Pu9WWQrLDUg9L/1l1DSOp/IoOEutH0n2AEu10wWXl37kgXHU1+3WpxDM7h+MXTaO++QH2A==
 
-"@fullcalendar/core@7.1.4":
-  version "7.1.4"
-  resolved "https://registry.npmmirror.com/@fullcalendar/core/-/core-7.1.4.tgz#836342ed0644b456fa0b96cc995472deea4908e5"
-  integrity sha512-Pkjagkqa4U9n2PemmdjrejmgrbiN6UyeP0pd0qKSjnvPDZzMJGPJvQ00sgm67KL0FAyQSnKMy0odSz9yv6s2XA==
+"@fullcalendar/core@7.1.5":
+  version "7.1.5"
+  resolved "https://registry.npmmirror.com/@fullcalendar/core/-/core-7.1.5.tgz#bd99d3f7fa5da64ec44d3c662ad8da7b277bd7f4"
+  integrity sha512-adUp5YFeQmEJ5MAF0Qs3U0cNNvxQQ+dmAXiG5FFzrHULMkdB0ktnyTkcGcfM9ZlDlO4cxrRLXFiBwALJ13+Utg==
 
 "@iconify/types@^2.0.0":
   version "2.0.0"
@@ -857,9 +857,9 @@ cytoscape-fcose@^2.2.0:
     cose-base "^2.2.0"
 
 cytoscape@^3.34.0:
-  version "3.34.4"
-  resolved "https://registry.npmmirror.com/cytoscape/-/cytoscape-3.34.4.tgz#20cbd1b1f8cb2e25699bdf68887564fc3c74b375"
-  integrity sha512-msY99tMY8iWTg+sIPGfSqDcPNOt4xcj+v/K/7qUFaCUxxlqnMkUYLBjRUzn9W5CU/R2hrmtJa5+UtovrEM2ctg==
+  version "3.35.0"
+  resolved "https://registry.npmmirror.com/cytoscape/-/cytoscape-3.35.0.tgz#2049a927b5f2cf9501e23cadeb27e59d831ea750"
+  integrity sha512-sMvBIXiGMnhkCaWz2R06FwF/27MNlS+Tqvi17foO9UhnUg3XGZccKjxsvEqQFAQYMSSZmN5SxYzUYlQ0DOJJ3g==
 
 "d3-array@1 - 2":
   version "2.12.1"
@@ -1179,9 +1179,9 @@ echarts@^6.1.0:
     zrender "6.1.0"
 
 es-toolkit@^1.45.1:
-  version "1.53.1"
-  resolved "https://registry.npmmirror.com/es-toolkit/-/es-toolkit-1.53.1.tgz#740294017da9f4ca052de31544648f3566b8ec5b"
-  integrity sha512-VhMc6IXmexu8iYFfL2aaAww6IvJTdHlqBLruLoEUs33YD4IcP5DdZcLOybMsMmmLsiy1c8PsiLsrM0DdIuuRUA==
+  version "1.53.2"
+  resolved "https://registry.npmmirror.com/es-toolkit/-/es-toolkit-1.53.2.tgz#334b8210b2e63eb19d18aea9830b71b079e11265"
+  integrity sha512-iUqZ+NlwH4jUgRmXZUxFBsV/9762TQEa1O4IXLFBmDEjVHScBytKuseX23I0+v9ShZ5MYxEx6WKNzm6IPnex8g==
 
 es6-promise-pool@2.5.0:
   version "2.5.0"
@@ -1212,13 +1212,13 @@ fsevents@~2.3.2:
   resolved "https://registry.npmmirror.com/fsevents/-/fsevents-2.3.3.tgz#cac6407785d03675a2a5e1a5305c697b347d90d6"
   integrity sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==
 
-fullcalendar@7.1.4:
-  version "7.1.4"
-  resolved "https://registry.npmmirror.com/fullcalendar/-/fullcalendar-7.1.4.tgz#d54f042009cb49c26de4e083df5accd19d6ae0c0"
-  integrity sha512-RLaHmd8rkoIha1QHVana64v/Dq5rGFft5Yo25sp48D5isoCR2et5OZ+VOPdjvW/CSfa12WYlOqAz94yTt4728A==
+fullcalendar@7.1.5:
+  version "7.1.5"
+  resolved "https://registry.npmmirror.com/fullcalendar/-/fullcalendar-7.1.5.tgz#46329b8e9c32b3bd761bde9d7e74d8dc9b5d3eaf"
+  integrity sha512-xWxQ6Mn2GhiwY663/dinfeUTMq7066tJfEdKy5Dxw8UoC1g/Dp3x6bnMapHrX4MaOgxyUsXEdUvMFB6PbZlHpg==
   dependencies:
-    "@full-ui/headless-calendar" "7.1.4"
-    "@fullcalendar/core" "7.1.4"
+    "@full-ui/headless-calendar" "7.1.5"
+    "@fullcalendar/core" "7.1.5"
     preact "^10.29.8"
 
 fuzzy@0.1.3:
@@ -1666,23 +1666,23 @@ stylis@^4.3.6:
   resolved "https://registry.npmmirror.com/stylis/-/stylis-4.4.0.tgz#c5846c9345f4bfc51bd0cbd7ca35a0744f485a5d"
   integrity sha512-5Z9ZpRzfuH6l/UAvCPAPUo3665Nk2wLaZU3x+TLHKVzIz33+sbJqbtrYoC3KD4/uVOr2Zp+L0LySezP9OHV9yA==
 
-temporal-polyfill@^1.0.6:
-  version "1.0.6"
-  resolved "https://registry.npmmirror.com/temporal-polyfill/-/temporal-polyfill-1.0.6.tgz#533ad989010e604c4e8cbc3d0d3da1c7408c8671"
-  integrity sha512-tYyEry1HLGUDbm2356W3iYD0OZdo7rlP7h98Zr/EnjqLZQwTAfcBDUvJnJbfA15v/vQad57hJZScG5O0W2oKEA==
+temporal-polyfill@^1.0.8:
+  version "1.0.8"
+  resolved "https://registry.npmmirror.com/temporal-polyfill/-/temporal-polyfill-1.0.8.tgz#3ca22db5bec2d44b80027a87eda94deed8fd123d"
+  integrity sha512-RCCGa0GddT099XG49ijdD0tDf86L8vfuZun1+JyJiO4Y2NP9PACQsG0OnvNPXwVLisdvhr/zqL2nhKQmXXx08A==
   dependencies:
     temporal-spec "1.0.1"
-    temporal-utils "1.0.3"
+    temporal-utils "1.0.4"
 
 temporal-spec@1.0.1:
   version "1.0.1"
   resolved "https://registry.npmmirror.com/temporal-spec/-/temporal-spec-1.0.1.tgz#5679ce2dd0089865afe80e0a8bd22a9033c16717"
   integrity sha512-wxVoanmDeavXie1vu2JaQ3WIc3JZnWAOYFBsJyATaVsXsycKYUflGsyBmrRSnoCpZJpwPyr38VpgSUlQ8CbFxg==
 
-temporal-utils@1.0.3:
-  version "1.0.3"
-  resolved "https://registry.npmmirror.com/temporal-utils/-/temporal-utils-1.0.3.tgz#dbbe3e14adaa81fcf811d0f7380b30a9c6a2ada0"
-  integrity sha512-9jbTSX3HvkOWvDpNpFzwX/d1mkCrgQgwLmVTOEiuocZGKHsrQJtttGZFmybJ2zYP5zCSZuU5ZyeS8+eOEPABiQ==
+temporal-utils@1.0.4:
+  version "1.0.4"
+  resolved "https://registry.npmmirror.com/temporal-utils/-/temporal-utils-1.0.4.tgz#ad95eddf1f8a260f33766f09af99f11c90a06b0a"
+  integrity sha512-4mAcgbWlaxe+gn23gk8g0iHxCVGVOhKzSCfF5HM3lfvH8BdT+/pBmH/R/E4CrIse+koUgs8ThkPzCLnui6Fi8w==
 
 three@^0.187.0:
   version "0.187.0"
