@@ -20,40 +20,110 @@ class AmazonInventoryLedger {
 		this.detailCache = new Map();
 		this.charts = [];
 		this.loaded = false;
+		this.selectedMonths = new Set([this.currentMonthKey()]);
+		this.monthSelectionStarted = false;
+		this.monthsResolved = false;
 		this.render();
 		this.bind();
 		this.load();
 	}
 
 	render() {
+		const { from, to } = this.monthBounds(this.currentMonthKey());
 		$(this.wrapper).addClass("amazon-ledger-page");
 		this.$ = $(this.page.main).html(`
-			<style>${this.styles()}</style>
+			<style>${this.styles()}${this.monthStyles()}</style>
 			<div class="ail-shell">
 				<section class="ail-hero"><div><span>FBA INVENTORY LEDGER</span><h2>Amazon库存分类账</h2><p>按日期查看期初、入库、出库、退货、调整和期末库存，并可展开核对原始事件。</p></div><nav><a href="/app/amazon-inventory">库存总览</a><a href="/app/amazon_configuration">Amazon配置中心</a></nav></section>
+				<section class="ail-month-picker"><span>月份</span><div class="ail-months"></div></section>
 				<section class="ail-filters">
 					<label>店铺<select data-filter="amazon_store"><option value="">全部店铺</option></select></label><label>国家<select data-filter="country"><option value="">全部国家</option></select></label>
 					<label>配送位置<select data-filter="location_id"><option value="">全部位置</option></select></label><label>库存属性<select data-filter="disposition"><option value="">全部属性</option></select></label>
-					<label>开始日期<input type="date" data-filter="date_from"></label><label>结束日期<input type="date" data-filter="date_to"></label>
+					<label>开始日期<input type="date" data-filter="date_from" value="${from}"></label><label>结束日期<input type="date" data-filter="date_to" value="${to}"></label>
 					<label class="ail-search">SKU / ASIN / 物料<input type="search" data-filter="search" placeholder="输入后查询"></label>
 					<button class="btn btn-primary ail-query">查询</button><button class="btn btn-default ail-reset">重置</button>
 				</section>
 				<section class="ail-kpis"></section>
+				<section class="ail-card ail-table-card"><header><div><span>库存分类账</span><h3>每日汇总</h3></div><div class="ail-table-actions"><div class="ail-page-info"></div><button type="button" class="btn btn-default ail-summary-open">汇总明细</button></div></header><div class="ail-table-wrap"><table><thead><tr><th></th><th>日期</th><th>商品 / SKU</th><th>ERPNext物料</th><th>店铺 / 国家</th><th>位置 / 属性</th><th class="num">期初</th><th class="num">入库</th><th class="num">销售出库</th><th class="num">客户退货</th><th class="num">转入</th><th class="num">转出</th><th class="num">调整</th><th class="num">期末</th></tr></thead><tbody></tbody></table></div><footer><button class="btn btn-default ail-prev">上一页</button><span class="ail-pagination"></span><button class="btn btn-default ail-next">下一页</button></footer></section>
 				<section class="ail-grid"><article class="ail-card ail-wide"><header><div><span>每日变化</span><h3>库存流入、流出与期末结余</h3></div></header><div id="ail-daily" class="ail-chart"></div></article><article class="ail-card"><header><div><span>变动构成</span><h3>分类账数量汇总</h3></div></header><div id="ail-movements" class="ail-chart"></div></article></section>
 				<section class="ail-card ail-events"><header><div><span>事件明细</span><h3>库存事件类型</h3></div><small>来自分类账明细报告</small></header><div class="ail-event-list"></div></section>
-				<section class="ail-card ail-table-card"><header><div><span>库存分类账</span><h3>每日汇总</h3></div><div class="ail-page-info"></div></header><div class="ail-table-wrap"><table><thead><tr><th></th><th>日期</th><th>商品 / SKU</th><th>ERPNext物料</th><th>店铺 / 国家</th><th>位置 / 属性</th><th class="num">期初</th><th class="num">入库</th><th class="num">销售出库</th><th class="num">客户退货</th><th class="num">转入</th><th class="num">转出</th><th class="num">调整</th><th class="num">期末</th></tr></thead><tbody></tbody></table></div><footer><button class="btn btn-default ail-prev">上一页</button><span class="ail-pagination"></span><button class="btn btn-default ail-next">下一页</button></footer></section>
+				<div class="ail-summary-overlay" hidden><div class="ail-summary-backdrop" data-summary-close></div><aside class="ail-summary-drawer" role="dialog" aria-modal="true" aria-label="SKU事件汇总"><header><div><span>EVENT SUMMARY</span><h3>SKU 事件汇总</h3><small class="ail-summary-count"></small></div><button type="button" data-summary-close aria-label="关闭汇总明细">×</button></header><p>按当前筛选范围汇总全部分页的事件明细，同一店铺、SKU 和事件类型合并。</p><div class="ail-summary-body"></div></aside></div>
 			</div>`);
+		this.renderMonthButtons();
 	}
 
 	bind() {
 		this.$.on("click", ".ail-query", () => { this.pageNo = 1; this.load(); });
-		this.$.on("click", ".ail-reset", () => { this.$.find("[data-filter]").val(""); this.pageNo = 1; this.load(); });
+		this.$.on("click", ".ail-reset", () => {
+			this.$.find("[data-filter]").val("");
+			this.selectedMonths = new Set([this.availableMonths().at(-1) || this.currentMonthKey()]);
+			this.monthSelectionStarted = false;
+			this.applyMonthSelection();
+		});
+		this.$.on("click", "[data-month]", (event) => this.selectMonth(event.currentTarget.dataset.month));
+		this.$.on("change", "[data-filter=date_from], [data-filter=date_to]", () => {
+			this.selectedMonths.clear();
+			this.monthSelectionStarted = false;
+			this.renderMonthButtons();
+		});
 		this.$.on("keydown", "[data-filter=search]", (event) => { if (event.key === "Enter") { this.pageNo = 1; this.load(); } });
 		this.$.on("click", ".ail-prev", () => { if (this.pageNo > 1) { this.pageNo--; this.load(); } });
 		this.$.on("click", ".ail-next", () => { if (this.pageNo < (this.data.pagination?.pages || 1)) { this.pageNo++; this.load(); } });
 		this.$.on("click", ".ail-expand", (event) => this.toggleDetails(event.currentTarget.dataset.name));
+		this.$.on("click", ".ail-summary-open", () => this.openSkuSummary());
+		this.$.on("click", "[data-summary-close]", () => this.closeSkuSummary());
+		this.escapeHandler = (event) => { if (event.key === "Escape") this.closeSkuSummary(); };
+		window.addEventListener("keydown", this.escapeHandler);
 		this.resizeHandler = frappe.utils.debounce(() => this.charts.forEach((chart) => chart?.resize()), 120);
 		window.addEventListener("resize", this.resizeHandler);
+	}
+
+	currentMonthKey() {
+		const now = new Date();
+		return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+	}
+
+	monthBounds(month) {
+		const [year, value] = month.split("-").map(Number);
+		const lastDay = new Date(year, value, 0).getDate();
+		return { from: `${year}-${String(value).padStart(2, "0")}-01`, to: `${year}-${String(value).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}` };
+	}
+
+	availableMonths() {
+		const months = this.data?.available_months || [];
+		return months.length ? months : [this.currentMonthKey()];
+	}
+
+	renderMonthButtons() {
+		this.$.find(".ail-months").html(this.availableMonths().map((month) =>
+			`<button type="button" class="ail-month ${this.selectedMonths.has(month) ? "active" : ""}" data-month="${this.esc(month)}">${month.slice(0, 4)}年${Number(month.slice(5))}月</button>`
+		).join(""));
+	}
+
+	selectMonth(month) {
+		const months = this.availableMonths();
+		if (!months.includes(month)) return;
+		if (!this.monthSelectionStarted || !this.selectedMonths.size) {
+			this.selectedMonths = new Set([month]);
+			this.monthSelectionStarted = true;
+		} else if (this.selectedMonths.has(month)) {
+			if (this.selectedMonths.size > 1) this.selectedMonths.delete(month);
+		} else {
+			this.selectedMonths.add(month);
+		}
+		const indexes = months.map((value, index) => this.selectedMonths.has(value) ? index : -1).filter((index) => index >= 0);
+		if (indexes.length) this.selectedMonths = new Set(months.slice(Math.min(...indexes), Math.max(...indexes) + 1));
+		this.applyMonthSelection();
+	}
+
+	applyMonthSelection() {
+		const months = [...this.selectedMonths].sort();
+		if (!months.length) return;
+		this.$.find("[data-filter=date_from]").val(this.monthBounds(months[0]).from);
+		this.$.find("[data-filter=date_to]").val(this.monthBounds(months.at(-1)).to);
+		this.renderMonthButtons();
+		this.pageNo = 1;
+		this.load();
 	}
 
 	filters() {
@@ -63,20 +133,37 @@ class AmazonInventoryLedger {
 	}
 
 	async load() {
-		if (this.loading) return;
+		if (this.loading) { this.reloadPending = true; return; }
 		this.loading = true;
 		this.$.addClass("is-loading");
 		try {
 			const response = await frappe.call({ method: "fengjing_app.fengjing_business.page.amazon_ledger.amazon_ledger.get_ledger_data", args: { filters: this.filters(), page: this.pageNo, page_size: this.pageSize } });
 			this.data = response.message || {};
-			this.openRows.clear(); this.detailCache.clear();
-			this.fillOptions(); this.renderSummary(); this.renderCharts(); this.renderEvents(); this.renderTable();
+			if (!this.monthsResolved) {
+				this.monthsResolved = true;
+				const months = this.data.available_months || [];
+				if (months.length && !months.includes([...this.selectedMonths][0])) {
+					this.selectedMonths = new Set([months.at(-1)]);
+					const bounds = this.monthBounds(months.at(-1));
+					this.$.find("[data-filter=date_from]").val(bounds.from);
+					this.$.find("[data-filter=date_to]").val(bounds.to);
+					this.reloadPending = true;
+					return;
+				}
+			}
+			this.openRows.clear(); this.detailCache = new Map(Object.entries(this.data.page_details || {}));
+			this.renderMonthButtons(); this.fillOptions(); this.renderSummary(); this.renderCharts(); this.renderEvents(); this.renderTable();
+			if (!this.$.find(".ail-summary-overlay").prop("hidden")) this.renderSkuSummary();
 			this.loaded = true;
 			if (this.data.limited) frappe.show_alert({ message: "当前范围数据较多，请缩小日期范围。", indicator: "orange" }, 8);
 		} catch (error) {
 			console.error(error);
 			frappe.msgprint({ title: "Amazon库存分类账加载失败", message: error.message || "请查看错误日志。", indicator: "red" });
-		} finally { this.loading = false; this.$.removeClass("is-loading"); }
+		} finally {
+			this.loading = false;
+			this.$.removeClass("is-loading");
+			if (this.reloadPending) { this.reloadPending = false; this.load(); }
+		}
 	}
 
 	fillOptions() {
@@ -121,6 +208,7 @@ class AmazonInventoryLedger {
 		this.$.find(".ail-page-info").html(`共 <b>${this.num(p.total)}</b> 条 · 第 ${p.page}/${p.pages} 页`); this.$.find(".ail-pagination").text(`第 ${p.page} / ${p.pages} 页`);
 		this.$.find(".ail-prev").prop("disabled", p.page <= 1); this.$.find(".ail-next").prop("disabled", p.page >= p.pages);
 		this.$.find(".ail-table-card tbody").html(rows.map((row) => this.summaryRow(row)).join("") || `<tr><td colspan="14" class="ail-empty">库存分类账尚未产生数据；历史报告完成后会自动显示在这里。</td></tr>`);
+		for (const row of rows) this.toggleDetails(row.name);
 	}
 
 	summaryRow(row) {
@@ -144,13 +232,65 @@ class AmazonInventoryLedger {
 
 	detailTable(data) {
 		const rows = data.rows || [];
-		return `<header><b>对应事件明细</b><span>${this.esc(data.period?.date_from || "")} 至 ${this.esc(data.period?.date_to || "")} · ${this.num(rows.length)} 条${data.limited ? "（仅显示前2000条）" : ""}</span></header><div class="ail-detail-scroll"><table><thead><tr><th>发生时间</th><th>事件类型</th><th>参考编号</th><th>配送中心</th><th>属性 / 原因</th><th class="num">数量</th><th class="num">已核对</th><th class="num">未核对</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${this.date(row.event_at)}</td><td><b>${this.esc(this.translate(row.event_type || "UNKNOWN"))}</b></td><td>${this.esc(row.reference_id || "—")}</td><td>${this.esc(row.fulfillment_center || "—")}</td><td>${this.esc(this.translate(row.disposition || ""))}<small>${this.esc(row.reason || "")}</small></td><td class="num ${row.quantity < 0 ? "negative" : "positive"}">${this.num(row.quantity)}</td><td class="num">${this.num(row.reconciled_quantity)}</td><td class="num ${row.unreconciled_quantity ? "negative" : ""}">${this.num(row.unreconciled_quantity)}</td></tr>`).join("") || `<tr><td colspan="8" class="ail-empty">该汇总记录没有匹配的明细事件</td></tr>`}</tbody></table></div>`;
+		return `<header><b>对应事件明细</b><span>${this.esc(data.period?.date_from || "")} 至 ${this.esc(data.period?.date_to || "")} · ${this.num(rows.length)} 条${data.limited ? "（仅显示前2000条）" : ""}</span></header><div class="ail-detail-scroll"><table><thead><tr><th>发生时间</th><th>事件类型</th><th>参考编号</th><th>配送中心</th><th>属性 / 原因</th><th class="num">数量</th><th class="num">已核对</th><th class="num">未核对</th></tr></thead><tbody>${rows.map((row) => `<tr><td>${this.date(row.event_at)}</td><td><b>${this.esc(this.translate(row.event_type || "UNKNOWN"))}</b></td><td>${this.esc(row.reference_id || "—")}</td><td>${this.esc(row.fulfillment_center || "—")}</td><td>${this.esc(this.translate(row.disposition || ""))}<small>${this.esc(this.translate(row.reason || ""))}</small></td><td class="num ${row.quantity < 0 ? "negative" : "positive"}">${this.num(row.quantity)}</td><td class="num">${this.num(row.reconciled_quantity)}</td><td class="num ${row.unreconciled_quantity ? "negative" : ""}">${this.num(row.unreconciled_quantity)}</td></tr>`).join("") || `<tr><td colspan="8" class="ail-empty">该汇总记录没有匹配的明细事件</td></tr>`}</tbody></table></div>`;
 	}
 
-	translate(value) { return ({ "United States": "美国", Canada: "加拿大", Mexico: "墨西哥", Brazil: "巴西", DAILY: "每日", WEEKLY: "每周", MONTHLY: "每月", SELLABLE: "可售", UNSELLABLE: "不可售", CUSTOMER_SHIPMENT: "客户出库", CUSTOMER_RETURN: "客户退货", RECEIPT: "接收入库", VENDOR_RETURN: "供应商退货", ADJUSTMENT: "库存调整", TRANSFER: "仓库调拨" })[value] || value; }
+	openSkuSummary() {
+		this.renderSkuSummary();
+		this.$.find(".ail-summary-overlay").prop("hidden", false);
+	}
+
+	closeSkuSummary() { this.$.find(".ail-summary-overlay").prop("hidden", true); }
+
+	renderSkuSummary() {
+		const rows = this.data.sku_event_summary || [];
+		const groups = new Map();
+		for (const row of rows) {
+			const key = JSON.stringify([row.amazon_store || "", row.seller_sku || ""]);
+			if (!groups.has(key)) groups.set(key, []);
+			groups.get(key).push(row);
+		}
+		this.$.find(".ail-summary-count").text(`${groups.size} 个店铺 SKU · ${this.num(rows.reduce((sum, row) => sum + Number(row.count || 0), 0))} 条事件${this.data.limited ? " · 当前范围已达数据上限" : ""}`);
+		this.$.find(".ail-summary-body").html([...groups.values()].map((events) => {
+			const first = events[0];
+			const total = (field) => events.reduce((sum, row) => sum + Number(row[field] || 0), 0);
+			const image = first.item_image ? `<img src="${this.esc(first.item_image)}" loading="lazy" alt="">` : `<i>FBA</i>`;
+			const item = first.corresponding_item ? `<a href="/app/item/${encodeURIComponent(first.corresponding_item)}">${this.esc(first.corresponding_item)}</a><small>${this.esc(first.item_name || "")}</small>` : `<span>未绑定物料</span>`;
+			return `<section class="ail-summary-group"><header><div class="ail-summary-product">${image}<span><b>${this.esc(first.product_name || first.seller_sku || "未命名商品")}</b><small>SKU ${this.esc(first.seller_sku || "—")} · ${this.esc(first.amazon_store || "—")}</small></span></div><div class="ail-summary-item">${item}</div></header><div class="ail-summary-table-wrap"><table><thead><tr><th>事件类型</th><th class="num">笔数</th><th class="num">数量</th><th class="num">已核对</th><th class="num">未核对</th></tr></thead><tbody>${events.map((row) => `<tr><td>${this.esc(this.translate(row.event_type))}</td><td class="num">${this.num(row.count)}</td><td class="num">${this.num(row.quantity)}</td><td class="num">${this.num(row.reconciled_quantity)}</td><td class="num">${this.num(row.unreconciled_quantity)}</td></tr>`).join("")}</tbody><tfoot><tr><th>该 SKU 合计</th><th class="num">${this.num(total("count"))}</th><th class="num">${this.num(total("quantity"))}</th><th class="num">${this.num(total("reconciled_quantity"))}</th><th class="num">${this.num(total("unreconciled_quantity"))}</th></tr></tfoot></table></div></section>`;
+		}).join("") || `<div class="ail-empty">当前筛选范围没有事件明细</div>`);
+	}
+
+	translate(value) {
+		return ({
+			"United States": "美国", Canada: "加拿大", Mexico: "墨西哥", Brazil: "巴西",
+			DAILY: "每日", WEEKLY: "每周", MONTHLY: "每月",
+			SELLABLE: "可售", UNSELLABLE: "不可售", CUSTOMER_DAMAGED: "客户损坏",
+			CUSTOMER_SHIPMENT: "客户出库", CUSTOMER_RETURN: "客户退货",
+			RECEIPT: "接收入库", VENDOR_RETURN: "供应商退货",
+			ADJUSTMENT: "库存调整", TRANSFER: "仓库调拨",
+			VendorReturns: "供应商退货", Shipments: "客户出库",
+			WhseTransfers: "仓库调拨", CustomerReturns: "客户退货",
+			Receipts: "接收入库", Adjustments: "库存调整",
+		})[value] || value;
+	}
 	num(value) { return Number(value || 0).toLocaleString("zh-CN", { maximumFractionDigits: 2 }); }
 	date(value) { return value ? String(value).replace("T", " ").replace(/\.\d+$/, "").slice(0, 19) : "—"; }
 	esc(value) { return frappe.utils.escape_html(String(value ?? "")); }
+
+	monthStyles() { return `
+		.ail-month-picker{display:flex;align-items:center;gap:12px;margin:14px 0 0;padding:11px 13px;border:1px solid #dde5f0;border-radius:13px;background:#fff}
+		.ail-month-picker>span{flex:none;color:#51627b;font-size:12px;font-weight:700}
+		.ail-months{display:flex;gap:7px;min-width:0;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
+		.ail-month{flex:none;height:32px;padding:0 12px;border:1px solid #dbe4f0;border-radius:999px;background:#f8fafc;color:#53647d;font-size:12px;cursor:pointer;white-space:nowrap}
+		.ail-month:hover{border-color:#9ebaf0;background:#f1f6ff;color:#245fad}
+		.ail-month.active{border-color:#377cf5;background:#377cf5;color:#fff}
+		.ail-table-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}.ail-summary-open{white-space:nowrap}
+		.ail-summary-overlay[hidden]{display:none!important}.ail-summary-overlay{position:fixed;inset:0;z-index:1100;display:flex;justify-content:flex-end}.ail-summary-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.42)}
+		.ail-summary-drawer{position:relative;display:flex;flex-direction:column;width:min(860px,96vw);height:100%;background:#f7f9fc;box-shadow:-15px 0 40px rgba(15,23,42,.2)}
+		.ail-summary-drawer>header{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 24px 12px;background:#fff;border-bottom:1px solid #e3eaf3}.ail-summary-drawer>header span{color:#147f86;font-size:10px;font-weight:800;letter-spacing:.13em}.ail-summary-drawer>header h3{margin:4px 0;color:#1e293b;font-size:20px}.ail-summary-drawer>header small{color:#64748b}.ail-summary-drawer>header button{border:0;background:transparent;color:#64748b;font-size:28px;line-height:1;cursor:pointer}
+		.ail-summary-drawer>p{margin:0;padding:10px 24px;color:#64748b;background:#fff;font-size:12px}.ail-summary-body{flex:1;overflow:auto;padding:16px 20px 24px}.ail-summary-group{margin-bottom:12px;border:1px solid #dce5ef;border-radius:12px;background:#fff;overflow:hidden}.ail-summary-group>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px}.ail-summary-product{display:flex;align-items:center;gap:10px;min-width:0}.ail-summary-product img,.ail-summary-product i{display:grid;place-items:center;flex:0 0 40px;width:40px;height:40px;border-radius:8px;background:#edf3ff;object-fit:cover;color:#315da8;font-size:10px;font-style:normal}.ail-summary-product span{min-width:0}.ail-summary-product b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:410px}.ail-summary-product small,.ail-summary-item small{display:block;color:#8390a3}.ail-summary-item{flex:none;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}.ail-summary-table-wrap{overflow-x:auto}.ail-summary-table-wrap table{width:100%;border-collapse:collapse}.ail-summary-table-wrap th,.ail-summary-table-wrap td{padding:8px 14px;border-top:1px solid #edf1f6;text-align:left;font-size:12px}.ail-summary-table-wrap thead{background:#f8fafc;color:#64748b}.ail-summary-table-wrap tfoot{background:#f2f7fd;color:#18304f}.ail-summary-table-wrap .num{text-align:right;font-variant-numeric:tabular-nums}
+		@media(max-width:700px){.ail-month-picker{align-items:flex-start;flex-direction:column}.ail-months{width:100%}}
+	`; }
 
 	styles() { return `
 		.amazon-ledger-page .layout-main-section{background:#f5f7fb}.ail-shell{padding:4px 4px 28px;color:#172033}.ail-hero{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:24px 26px;border:1px solid #dce5f2;border-radius:16px;background:linear-gradient(120deg,#17365d,#237a87);color:#fff;box-shadow:0 12px 28px rgba(30,67,122,.16)}.ail-hero span,.ail-card header span{font-size:10px;font-weight:800;letter-spacing:.13em}.ail-hero span{color:#9ff4e8}.ail-hero h2{margin:5px 0 4px;color:#fff;font-size:25px}.ail-hero p{margin:0;color:#dcecf0}.ail-hero nav{display:flex;gap:8px;flex-wrap:wrap}.ail-hero a{padding:8px 12px;border:1px solid rgba(255,255,255,.3);border-radius:9px;color:#fff;background:rgba(255,255,255,.1);text-decoration:none}.ail-filters{display:flex;align-items:flex-end;gap:9px;flex-wrap:wrap;margin:14px 0;padding:13px;border:1px solid #dde5f0;border-radius:13px;background:#fff}.ail-filters label{display:flex;flex-direction:column;gap:4px;color:#617089;font-size:11px}.ail-filters input,.ail-filters select{height:32px;min-width:132px;border:1px solid #ced8e6;border-radius:8px;background:#fff;padding:0 9px;color:#25324a}.ail-filters .ail-search{flex:1;min-width:190px}.ail-filters .ail-search input{width:100%}.ail-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}.ail-kpis article{padding:14px;border:1px solid #dce5ef;border-radius:13px;background:#fff;box-shadow:0 6px 18px rgba(40,60,96,.05)}.ail-kpis span,.ail-kpis b,.ail-kpis small{display:block}.ail-kpis span{color:#68768c;font-size:11px}.ail-kpis b{margin:6px 0 3px;color:#18304f;font-size:23px}.ail-kpis small{color:#909bad;font-size:10px}.ail-kpis .tone-0{border-top:3px solid #7c3aed}.ail-kpis .tone-1{border-top:3px solid #2563eb}.ail-kpis .tone-2{border-top:3px solid #f59e0b}.ail-kpis .tone-3{border-top:3px solid #10b981}.ail-grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-top:14px}.ail-card{border:1px solid #dce4ef;border-radius:15px;background:#fff;box-shadow:0 7px 20px rgba(39,60,96,.06)}.ail-grid .ail-card,.ail-events{padding:17px}.ail-card>header{display:flex;align-items:center;justify-content:space-between;gap:12px}.ail-card header span{color:#147f86}.ail-card header h3{margin:3px 0 0;color:#1e293b;font-size:17px}.ail-card header small{color:#7b8799}.ail-chart{height:310px}.ail-events{margin-top:14px}.ail-event-list{display:grid;grid-template-columns:repeat(2,1fr);gap:7px 20px;margin-top:13px}.ail-event-list>div{display:grid;grid-template-columns:minmax(130px,1fr) 2fr 65px;align-items:center;gap:9px}.ail-event-list span b,.ail-event-list span small{display:block}.ail-event-list span small{color:#8792a4;font-size:10px}.ail-event-list em{height:7px;border-radius:7px;background:#edf1f6;overflow:hidden}.ail-event-list em i{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,#26a69a,#4f70d9)}.ail-event-list strong{text-align:right;color:#31445f}.ail-table-card{margin-top:14px;overflow:hidden}.ail-table-card>header{padding:17px 18px;border-bottom:1px solid #e5ebf3}.ail-page-info{color:#64748b}.ail-table-wrap{max-height:72vh;overflow:auto}.ail-table-wrap>table{width:100%;min-width:1660px;border-collapse:collapse}.ail-table-wrap>table>thead th{position:sticky;z-index:2;top:0;padding:11px 9px;border-bottom:1px solid #dbe3ee;background:#f7f9fc;color:#536176;font-size:11px;white-space:nowrap;text-align:left}.ail-table-wrap>table>tbody>tr>td{padding:9px;border-bottom:1px solid #edf1f6;vertical-align:middle;color:#334155;font-size:12px}.ail-table-wrap>table>tbody>tr:not([data-details]):hover{background:#f8fbff}.ail-table-wrap td small,.ail-table-wrap td b{display:block}.ail-table-wrap td small{margin-top:3px;color:#8490a2}.ail-table-wrap td a{font-weight:700}.ail-table-wrap td em{color:#b45309;font-style:normal}.ail-table-wrap .num{text-align:right;font-variant-numeric:tabular-nums}.ail-table-wrap .strong{font-weight:800}.ail-product{display:flex;align-items:center;gap:9px;min-width:250px}.ail-product img,.ail-product i{display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;border-radius:9px;background:#edf3ff;object-fit:cover;color:#315da8;font-size:10px;font-style:normal;font-weight:800}.ail-product img:hover{position:relative;z-index:5;transform:scale(2.8);box-shadow:0 8px 30px rgba(15,23,42,.25)}.ail-expand{display:grid;place-items:center;width:25px;height:25px;border:1px solid #c9d8ea;border-radius:7px;background:#f2f7fd;color:#2761aa;font-size:21px;line-height:1;transition:.15s}.ail-expand.open{transform:rotate(90deg);background:#2761aa;color:#fff}.ail-detail-box{margin:4px 24px 12px;padding:13px;border:1px solid #cfe0f1;border-radius:12px;background:#f7faff}.ail-detail-box>header{display:flex;justify-content:space-between;margin-bottom:9px}.ail-detail-box>header span{color:#718096}.ail-detail-scroll{max-height:340px;overflow:auto}.ail-detail-scroll table{width:100%;min-width:1020px;border-collapse:collapse;background:#fff}.ail-detail-scroll th,.ail-detail-scroll td{padding:8px;border-bottom:1px solid #e5edf6;font-size:11px;text-align:left}.ail-detail-scroll th{position:sticky;top:0;background:#edf4fb}.ail-detail-scroll .num{text-align:right}.ail-table-card>footer{display:flex;justify-content:center;align-items:center;gap:12px;padding:12px;border-top:1px solid #e6ebf2;background:#fbfcfe}.ail-pagination{color:#64748b}.positive{color:#07855b!important}.negative{color:#d33f49!important}.ail-empty{grid-column:1/-1;height:100px;text-align:center!important;color:#8793a4!important}.amazon-ledger-page.is-loading .ail-shell{opacity:.55;pointer-events:none}@media(max-width:1100px){.ail-kpis{grid-template-columns:repeat(3,1fr)}.ail-grid{grid-template-columns:1fr}}@media(max-width:700px){.ail-hero{align-items:flex-start;flex-direction:column}.ail-kpis{grid-template-columns:repeat(2,1fr)}.ail-event-list{grid-template-columns:1fr}.ail-filters label,.ail-filters input,.ail-filters select{width:100%}.ail-filters label{flex:1 1 45%}}

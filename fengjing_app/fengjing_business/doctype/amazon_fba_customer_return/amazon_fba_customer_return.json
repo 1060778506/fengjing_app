@@ -1,0 +1,235 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-11-14 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "return_key",
+  "amazon_store",
+  "marketplace_id",
+  "cost_center",
+  "identity_column",
+  "order_id",
+  "seller_sku",
+  "asin",
+  "fnsku",
+  "product_name",
+  "return_section",
+  "return_at",
+  "return_date_raw",
+  "quantity",
+  "fulfillment_center_id",
+  "return_column",
+  "detailed_disposition",
+  "reason",
+  "status",
+  "license_plate_number",
+  "customer_comments",
+  "source_section",
+  "report_id",
+  "fetched_at",
+  "raw_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "退货记录"
+  },
+  {
+   "fieldname": "return_key",
+   "fieldtype": "Data",
+   "label": "唯一键",
+   "unique": 1,
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "amazon_store",
+   "fieldtype": "Link",
+   "label": "亚马逊店铺",
+   "options": "Amazon Store Configuration",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "marketplace_id",
+   "fieldtype": "Data",
+   "label": "站点 ID",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "成本中心",
+   "options": "Cost Center",
+   "read_only": 1
+  },
+  {
+   "fieldname": "identity_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "order_id",
+   "fieldtype": "Data",
+   "label": "亚马逊订单号",
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "seller_sku",
+   "fieldtype": "Data",
+   "label": "卖家 SKU",
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "asin",
+   "fieldtype": "Data",
+   "label": "ASIN",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "fnsku",
+   "fieldtype": "Data",
+   "label": "FNSKU",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "product_name",
+   "fieldtype": "Small Text",
+   "label": "商品名称",
+   "read_only": 1
+  },
+  {
+   "fieldname": "return_section",
+   "fieldtype": "Section Break",
+   "label": "退货情况"
+  },
+  {
+   "fieldname": "return_at",
+   "fieldtype": "Datetime",
+   "label": "退货日期",
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "return_date_raw",
+   "fieldtype": "Data",
+   "label": "源报告退货日期",
+   "read_only": 1
+  },
+  {
+   "fieldname": "quantity",
+   "fieldtype": "Int",
+   "label": "退货数量",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "fulfillment_center_id",
+   "fieldtype": "Data",
+   "label": "运营中心",
+   "read_only": 1
+  },
+  {
+   "fieldname": "return_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "detailed_disposition",
+   "fieldtype": "Data",
+   "label": "商品状态",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "reason",
+   "fieldtype": "Data",
+   "label": "退货原因",
+   "read_only": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Data",
+   "label": "处理状态",
+   "read_only": 1
+  },
+  {
+   "fieldname": "license_plate_number",
+   "fieldtype": "Data",
+   "label": "LPN",
+   "read_only": 1
+  },
+  {
+   "fieldname": "customer_comments",
+   "fieldtype": "Small Text",
+   "label": "客户备注",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_section",
+   "fieldtype": "Section Break",
+   "label": "来源"
+  },
+  {
+   "fieldname": "report_id",
+   "fieldtype": "Data",
+   "label": "报告 ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fetched_at",
+   "fieldtype": "Datetime",
+   "label": "抓取时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Code",
+   "label": "源行",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-14 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon FBA Customer Return",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "return_at",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "order_id"
+}

@@ -376,7 +376,7 @@
    "hidden": 0,
    "is_query_report": 0,
   "label": "亚马逊配置",
-  "link_count": 20,
+  "link_count": 21,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -547,6 +547,16 @@
    "label": "亚马逊AWD/GWD入库货件国家配置",
    "link_count": 0,
    "link_to": "Amazon AWD Inbound Shipment Country Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊FBA客户退货配置",
+   "link_count": 0,
+   "link_to": "Amazon FBA Customer Return Configuration",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -936,7 +946,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-11-02 20:40:53.000000",
+ "modified": "2026-11-14 20:37:53.000000",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "丰境业务APP",

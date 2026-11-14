@@ -168,6 +168,64 @@ def _options():
 	}
 
 
+def _available_months():
+	rows = frappe.db.sql(
+		f"""
+		SELECT YEAR(period_date) AS year_number, MONTH(period_date) AS month_number
+		FROM `tab{SUMMARY_DOCTYPE}`
+		WHERE period_date IS NOT NULL
+		GROUP BY YEAR(period_date), MONTH(period_date)
+		UNION
+		SELECT YEAR(event_at) AS year_number, MONTH(event_at) AS month_number
+		FROM `tab{DETAIL_DOCTYPE}`
+		WHERE event_at IS NOT NULL
+		GROUP BY YEAR(event_at), MONTH(event_at)
+		ORDER BY year_number, month_number
+		""",
+		as_dict=True,
+	)
+	return [f"{row.year_number:04d}-{row.month_number:02d}" for row in rows]
+
+
+def _page_details(summary_rows, detail_rows):
+	by_sku = defaultdict(list)
+	for row in detail_rows:
+		by_sku[(row.amazon_store, row.seller_sku)].append(row)
+	result = {}
+	for summary in summary_rows:
+		start = getdate(summary.period_date)
+		end = _period_end(start, summary.time_aggregation)
+		matches = [
+			row for row in by_sku[(summary.amazon_store, summary.seller_sku)]
+			if start <= getdate(row.event_at) <= end
+		]
+		result[summary.name] = {
+			"rows": matches[:2000],
+			"limited": len(matches) > 2000,
+			"period": {"date_from": str(start), "date_to": str(end)},
+		}
+	return result
+
+
+def _sku_event_summary(detail_rows):
+	groups = {}
+	for row in detail_rows:
+		key = (row.amazon_store or "", row.seller_sku or "", row.event_type or "UNKNOWN")
+		if key not in groups:
+			groups[key] = {
+				"amazon_store": key[0], "seller_sku": key[1], "event_type": key[2],
+				"product_name": row.product_name or "", "corresponding_item": row.corresponding_item or "",
+				"item_name": row.item_name or "", "item_image": row.item_image or "",
+				"count": 0, "quantity": 0, "reconciled_quantity": 0, "unreconciled_quantity": 0,
+			}
+		group = groups[key]
+		group["count"] += 1
+		group["quantity"] += cint(row.quantity)
+		group["reconciled_quantity"] += cint(row.reconciled_quantity)
+		group["unreconciled_quantity"] += cint(row.unreconciled_quantity)
+	return sorted(groups.values(), key=lambda row: (row["amazon_store"], row["seller_sku"], row["event_type"]))
+
+
 @frappe.whitelist()
 def get_ledger_data(filters=None, page=1, page_size=50):
 	_require_read()
@@ -191,6 +249,7 @@ def get_ledger_data(filters=None, page=1, page_size=50):
 
 	images = _item_images([*summary_rows, *detail_rows])
 	_decorate(summary_rows, images)
+	_decorate(detail_rows, images)
 	page = max(cint(page), 1)
 	page_size = min(max(cint(page_size), 10), 200)
 	start = (page - 1) * page_size
@@ -219,7 +278,10 @@ def get_ledger_data(filters=None, page=1, page_size=50):
 			for key, value in sorted(event_totals.items(), key=lambda item: abs(item[1]["quantity"]), reverse=True)
 		],
 		"rows": page_rows,
+		"page_details": _page_details(page_rows, detail_rows),
+		"sku_event_summary": _sku_event_summary(detail_rows),
 		"options": _options(),
+		"available_months": _available_months(),
 		"pagination": {
 			"page": page,
 			"page_size": page_size,
