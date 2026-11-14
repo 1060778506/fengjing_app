@@ -16,6 +16,10 @@ from fengjing_app.fengjing_business.doctype.amazon_financial_transaction.amazon_
 DOCTYPE = "Amazon Financial Transaction"
 MAPPING_DOCTYPE = "Fengjing - Product Corresponding Platform - Main Table"
 REPORT_TIMEZONE = ZoneInfo("America/Los_Angeles")
+FILTER_OPTION_FIELDS = (
+    "store", "marketplace_id", "country", "currency_code",
+    "transaction_type", "transaction_status",
+)
 AMOUNT_FIELDS = [
     "total_amount", "item_amount", "product_sales", "product_sales_tax",
     "shipping_credits", "shipping_credits_tax", "promotional_rebates",
@@ -26,8 +30,7 @@ AMOUNT_FIELDS = [
 DETAIL_GROUPS = (
     ("order", "订单"),
     ("refund", "退款"),
-    ("storage", "仓储费"),
-    ("logistics", "入库与物流"),
+    ("logistics", "仓储费 / 入库与物流"),
     ("promotion", "广告与推广"),
     ("service", "订阅与服务"),
     ("funds", "资金划转"),
@@ -201,7 +204,7 @@ def _transaction_group(row):
     if transaction_type in {"Refund", "RefundEvent", "Chargeback", "ChargebackEvent"}:
         return "refund"
     if re.search(r"StorageBilling|StorageFee|LongTermStorage|STARStorage", value, re.I):
-        return "storage"
+        return "logistics"
     if re.search(
         r"Inbound|Transportation|ShipmentInjection|AWDProcessing|RemovalShipment|FBADisposal",
         value,
@@ -271,7 +274,7 @@ def _build_db_filters(f):
         filters["posted_date"] = [">=", _report_boundary(f.date_from)]
     elif f.date_to:
         filters["posted_date"] = ["<=", _report_boundary(f.date_to, following_day=True) - timedelta(microseconds=1)]
-    for key in ("store", "marketplace_id", "country", "currency_code", "transaction_type", "transaction_status"):
+    for key in FILTER_OPTION_FIELDS:
         if f.get(key):
             filters[key] = f.get(key)
     return filters
@@ -497,10 +500,19 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         "corresponding_item", "corresponding_item_name", "posted_date", "release_date",
         "currency_code", "fetched_at", "raw_json", *AMOUNT_FIELDS,
     ]
+    db_filters = _build_db_filters(f)
     rows = frappe.get_all(
-        DOCTYPE, filters=_build_db_filters(f), fields=fields,
+        DOCTYPE, filters=db_filters, fields=fields,
         order_by="posted_date desc, modified desc", limit_page_length=100000,
     )
+    # Keep dropdown choices stable within the selected dates, even after a choice is selected.
+    option_rows = rows
+    if any(f.get(key) for key in FILTER_OPTION_FIELDS):
+        date_filters = {"posted_date": db_filters["posted_date"]} if "posted_date" in db_filters else {}
+        option_rows = frappe.get_all(
+            DOCTYPE, filters=date_filters, fields=list(FILTER_OPTION_FIELDS),
+            limit_page_length=100000,
+        )
     truncated = len(rows) >= 100000
     all_rows, parent_for_child, release_children = _release_relationships(rows, fields)
     for row in all_rows:
@@ -571,7 +583,7 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         group_counts[row.detail_group] += line_counts[row.name]
     report_row_count = sum(line_counts.values())
 
-    detail_group = f.detail_group or ""
+    detail_group = "logistics" if f.detail_group == "storage" else (f.detail_group or "")
     selected_detail_rows = [row for row in dashboard_rows if not detail_group or row.detail_group == detail_group]
     detail_rows = [row for row in selected_detail_rows if row.name not in parent_for_child]
 
@@ -646,9 +658,16 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
     for row in all_rows:
         row.pop("raw_json", None)
     options = {
-        key: sorted({str(r.get(key)) for r in dashboard_rows if r.get(key)})
-        for key in ("store", "marketplace_id", "country", "currency_code", "transaction_type", "transaction_status")
+        key: sorted({str(r.get(key)) for r in option_rows if r.get(key)})
+        for key in FILTER_OPTION_FIELDS
     }
+    detail_groups = []
+    if report_row_count:
+        detail_groups.append({"key": "", "label": "全部", "count": report_row_count})
+    detail_groups.extend(
+        {"key": key, "label": label, "count": group_counts[key]}
+        for key, label in DETAIL_GROUPS if group_counts[key] > 0
+    )
     return {
         "summary": {"row_count": len(economic_rows), "report_row_count": report_row_count, "transaction_count": len(unique_transactions), "release_count": sum(len(release_children.get(row.name, [])) for row in economic_rows), "sku_count": len(products), "product_count": product_count, "store_fee_count": store_fee_count, "bound_count": bound, "unbound_count": product_count - bound, "binding_rate": round(bound * 100 / product_count, 1) if product_count else 0, "currencies": dict(currencies), "truncated": truncated},
         "daily": {day: dict(values) for day, values in sorted(daily.items())},
@@ -658,13 +677,7 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         "products": product_list[:500], "settlements": settlement_list[:200],
         "rows": page_rows, "options": options, "available_months": _available_months(),
         "detail_summary": _summarize_detail_rows(detail_rows),
-        "detail_groups": [
-            {"key": "", "label": "全部", "count": report_row_count},
-            *[
-                {"key": key, "label": label, "count": group_counts[key]}
-                for key, label in DETAIL_GROUPS
-            ],
-        ],
+        "detail_groups": detail_groups,
         "pagination": {"page": page, "page_size": page_size, "total": len(display_rows), "display_total": sum(line_counts[row.name] for row in display_rows), "raw_total": len(selected_detail_rows), "pages": max(1, (len(display_rows) + page_size - 1) // page_size)},
     }
 

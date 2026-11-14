@@ -18,6 +18,8 @@
 
 .af-table-card{position:relative}
 .af-table-actions{flex-wrap:wrap;justify-content:flex-end}
+.af-profit-link{height:32px;padding:0 13px;display:inline-flex;align-items:center;border:1px solid #c8d8ed;border-radius:9px;background:#f3f8ff;color:#275f9f;font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap}
+.af-profit-link:hover{border-color:#8bb2e6;background:#e9f3ff;color:#174d89;text-decoration:none}
 .af-summary-toggle{height:32px;padding:0 13px;border:1px solid #6d5bd0;border-radius:9px;background:#f3f0ff;color:#5843bd;font-size:12px;font-weight:700;cursor:pointer}
 .af-summary-toggle.active{background:#6652cf;color:#fff}
 .af-table-card.af-summary-visible:not(.is-expanded){min-height:min(720px,calc(100vh - 100px))}
