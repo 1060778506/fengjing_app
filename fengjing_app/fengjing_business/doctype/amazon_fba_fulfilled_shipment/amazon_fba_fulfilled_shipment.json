@@ -244,7 +244,7 @@
   {
    "fieldname": "raw_json",
    "fieldtype": "Code",
-   "label": "源行（已移除买家隐私）",
+   "label": "原始报告行（全部字段）",
    "options": "JSON",
    "read_only": 1
   }

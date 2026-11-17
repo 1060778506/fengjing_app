@@ -9,6 +9,7 @@ import hashlib
 import io
 import json
 import re
+from collections import defaultdict
 from datetime import date, datetime, time, timedelta, timezone
 
 import frappe
@@ -361,6 +362,7 @@ def _save_summary_rows(config, store, rows, report_id, batch_id, start, end, pol
 	policy = policy or config
 	stats = {"created": 0, "updated": 0, "unchanged": 0, "rows": 0}
 	for row in rows:
+		_require_matching_source_country(row, store, "summary")
 		sku = _row_value(row, "MSKU", "Seller SKU", "SKU")
 		fnsku = _row_value(row, "FNSKU")
 		asin = _row_value(row, "ASIN").upper()
@@ -435,9 +437,22 @@ def _save_summary_rows(config, store, rows, report_id, batch_id, start, end, pol
 	return stats
 
 
-def _save_detail_rows(config, store, rows, report_id, batch_id, start, end):
-	stats = {"created": 0, "updated": 0, "unchanged": 0, "rows": 0}
+def _detail_occurrence_key(identity, occurrence):
+	"""Keep the old key for the first row; distinguish identical source rows after it."""
+	if occurrence == 1:
+		return hashlib.sha256(identity.encode("utf-8")).hexdigest()
+	return hashlib.sha256(f"{identity}\x1f{occurrence}".encode("utf-8")).hexdigest()
+
+
+def _save_detail_rows(config, store, rows, report_id, batch_id, start, end, event_type_filter=None):
+	stats = {"created": 0, "updated": 0, "unchanged": 0, "rows": 0, "deleted": 0}
+	occurrences = defaultdict(int)
+	seen_keys = set()
+	# The same day is included in multiple history/recheck reports. Sort first so
+	# its occurrence numbers remain stable even if Amazon changes row ordering.
+	rows = sorted(rows, key=lambda row: json.dumps(row, ensure_ascii=False, sort_keys=True))
 	for row in rows:
+		_require_matching_source_country(row, store, "detail")
 		sku = _row_value(row, "MSKU", "Seller SKU", "SKU")
 		fnsku = _row_value(row, "FNSKU")
 		asin = _row_value(row, "ASIN").upper()
@@ -468,6 +483,9 @@ def _save_detail_rows(config, store, rows, report_id, batch_id, start, end):
 				str(quantity),
 			)
 		)
+		occurrences[identity] += 1
+		detail_key = _detail_occurrence_key(identity, occurrences[identity])
+		seen_keys.add(detail_key)
 		values = {
 			"amazon_store": store.name,
 			"cost_center": store.cost_center,
@@ -496,12 +514,36 @@ def _save_detail_rows(config, store, rows, report_id, batch_id, start, end):
 		action = _upsert(
 			DETAIL_DOCTYPE,
 			"detail_key",
-			hashlib.sha256(identity.encode("utf-8")).hexdigest(),
+			detail_key,
 			values,
 			hashlib.sha256(raw_text.encode("utf-8")).hexdigest(),
 		)
 		stats[action] += 1
 		stats["rows"] += 1
+	if len(seen_keys) != stats["rows"]:
+		frappe.throw(_("库存分类账明细行编号发生冲突，已停止保存本次报告。"))
+	# A completed report covers whole calendar days. Remove occurrences that no
+	# longer exist in that report, including stale rows from an earlier recheck.
+	# Keep existing data when Amazon unexpectedly returns an empty report.
+	if seen_keys:
+		filters = {
+			"amazon_store": store.name,
+			"event_at": ["between", [
+				datetime.combine(getdate(start), time.min),
+				datetime.combine(getdate(end), time.max),
+			]],
+		}
+		if event_type_filter:
+			filters["event_type"] = event_type_filter
+		stale = [
+			doc.name for doc in frappe.get_all(
+				DETAIL_DOCTYPE, filters=filters, fields=["name", "detail_key"], limit_page_length=0
+			) if doc.detail_key not in seen_keys
+		]
+		if stale:
+			for offset in range(0, len(stale), 500):
+				frappe.db.delete(DETAIL_DOCTYPE, {"name": ["in", stale[offset:offset + 500]]})
+			stats["deleted"] = len(stale)
 	return stats
 
 
@@ -516,19 +558,33 @@ def _store_country_code(store):
 	)
 
 
+def _source_country_value(row, kind):
+	if kind == "summary":
+		# COUNTRY aggregation reports the warehouse country in Location.
+		return _row_value(row, "Location", "Country", "Country Code", "Marketplace Country")
+	if kind == "detail":
+		return _row_value(row, "Country", "Country Code", "Marketplace Country")
+	raise ValueError(f"Unsupported inventory ledger report kind: {kind}")
+
+
+def _require_matching_source_country(row, store, kind):
+	source_value = _source_country_value(row, kind)
+	source_code = _country_code(source_value)
+	store_code = _store_country_code(store)
+	if not source_code or source_code != store_code:
+		frappe.throw(
+			_("库存分类账原始仓库国家 {0} 与目标店铺 {1} 的国家 {2} 不一致，已阻止保存。")
+			.format(source_value or "未提供", store.name, store_code or "未配置")
+		)
+
+
 def _split_group_rows(rows, stores, kind):
-	"""按报告中的国家列拆分；无法识别的行不会写入错误国家。"""
+	"""Only route rows whose source warehouse country matches a configured store."""
 	by_country = {_store_country_code(store): store for store in stores if _store_country_code(store)}
 	by_store = {store.name: [] for store in stores}
 	unrouted = []
 	for row in rows:
-		aliases = ("Country", "Country Code", "Marketplace Country")
-		if kind == "summary":
-			aliases += ("Location",)
-		country_value = _row_value(row, *aliases)
-		store = by_country.get(_country_code(country_value))
-		if not store and len(stores) == 1:
-			store = stores[0]
+		store = by_country.get(_country_code(_source_country_value(row, kind)))
 		if store:
 			by_store[store.name].append(row)
 		else:
@@ -537,7 +593,7 @@ def _split_group_rows(rows, stores, kind):
 
 
 def _empty_stats():
-	return {"created": 0, "updated": 0, "unchanged": 0, "rows": 0}
+	return {"created": 0, "updated": 0, "unchanged": 0, "rows": 0, "deleted": 0}
 
 
 def _request_group_report(master, targets, kind, start, end, batch_id):
@@ -588,7 +644,8 @@ def _request_group_report(master, targets, kind, start, end, batch_id):
 			)
 		else:
 			results[config.name] = _save_detail_rows(
-				config, store, store_rows, report_id, batch_id, start, end
+				config, store, store_rows, report_id, batch_id, start, end,
+				event_type_filter=str(master.detail_event_type or "").strip(),
 			)
 	if unrouted:
 		results["unrouted_rows"] = len(unrouted)
@@ -634,7 +691,7 @@ def _process_group_kind(master, targets, kind, start, end, batch_id, force_start
 		unrouted_rows += cint(report_results.get("unrouted_rows"))
 		for config, _store in targets:
 			stats = report_results.get(config.name, _empty_stats())
-			for key in ("created", "updated", "unchanged", "rows"):
+			for key in ("created", "updated", "unchanged", "rows", "deleted"):
 				result[config.name][key] += cint(stats.get(key))
 			result[config.name]["reports"] += 1
 		cursor = segment_end + timedelta(days=1)
@@ -862,6 +919,7 @@ def execute_group_ledger_sync(master_name, reset=False, recheck_days=0, routine=
 				kind_result = region_summary.get(kind)
 				if isinstance(kind_result, dict):
 					country_summary[kind] = kind_result.get(config.name, _empty_stats())
+					country_summary[f"{kind}_unrouted_rows"] = cint(kind_result.get("unrouted_rows"))
 			country_summary["expired_deleted"] = _delete_expired_records(master, store)
 			values = {
 				"current_status": "Completed",

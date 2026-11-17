@@ -36,16 +36,6 @@ LATEST_LOOKBACK_DAYS = 7
 REQUEST_LIMIT = 10
 REQUEST_WINDOW_SECONDS = 8 * 60 * 60
 
-# 此报告包含买家个人信息；只保存业务核对所需列，绝不保存原始完整报告行。
-SAFE_COLUMNS = (
-    "amazon-order-id", "merchant-order-id", "shipment-id", "shipment-item-id",
-    "amazon-order-item-id", "sku", "product-name", "quantity-shipped",
-    "purchase-date", "shipment-date", "reporting-date", "fulfillment-center-id",
-    "fulfillment-channel", "sales-channel", "currency", "item-price",
-    "shipping-price", "carrier", "tracking-number",
-)
-
-
 class QuotaDeferred(Exception):
     def __init__(self, retry_at):
         self.retry_at = retry_at
@@ -175,19 +165,24 @@ def _normalise_header(value):
 def _parse_rows(text):
     if not str(text or "").strip():
         return []
-    value = str(text).lstrip("\ufeff")
+    value = str(text)
     delimiter = "\t" if "\t" in value[:4096] else ","
-    reader = csv.DictReader(io.StringIO(value), delimiter=delimiter)
+    reader = csv.DictReader(io.StringIO(value, newline=""), delimiter=delimiter,
+                            restkey="__extra_columns__")
     if not reader.fieldnames:
         return []
     return [
-        {_normalise_header(key): str(item or "").strip() for key, item in row.items() if key}
+        {
+            "source": dict(row),
+            "indexed": {_normalise_header(key): str(item or "").strip()
+                        for key, item in row.items() if key != "__extra_columns__"},
+        }
         for row in reader if row and any(str(item or "").strip() for item in row.values())
     ]
 
 
 def _value(row, key):
-    return row.get(_normalise_header(key), "")
+    return row["indexed"].get(_normalise_header(key), "")
 
 
 def _datetime(value):
@@ -218,19 +213,15 @@ def _save_rows(store, rows, report_id, fetched_at):
     for row in sorted(rows, key=lambda item: (
         _value(item, "shipment-id"), _value(item, "shipment-item-id"),
         _value(item, "amazon-order-id"), _value(item, "sku"),
-        json.dumps(item, sort_keys=True, ensure_ascii=False),
+        json.dumps(item["source"], sort_keys=True, ensure_ascii=False),
     )):
         order_id = _value(row, "amazon-order-id")
         sku = _value(row, "sku")
         shipment_id = _value(row, "shipment-id")
-        if not order_id or not sku or not shipment_id:
-            stats["skipped"] += 1
-            continue
         base = (shipment_id, _value(row, "shipment-item-id"), order_id,
                 _value(row, "amazon-order-item-id"), sku, _value(row, "shipment-date"))
         seen[base] = seen.get(base, 0) + 1
         key = _identity(store, row, seen[base])
-        safe_row = {column: _value(row, column) for column in SAFE_COLUMNS}
         values = {
             "amazon_store": store.name, "marketplace_id": store.marketplace_id,
             "cost_center": store.cost_center, "order_id": order_id,
@@ -252,7 +243,7 @@ def _save_rows(store, rows, report_id, fetched_at):
             "carrier": _value(row, "carrier"),
             "tracking_number": _value(row, "tracking-number"),
             "report_id": report_id, "fetched_at": fetched_at,
-            "raw_json": json.dumps(safe_row, ensure_ascii=False),
+            "raw_json": json.dumps(row["source"], ensure_ascii=False),
         }
         existing = frappe.db.get_value(RECORD_DOCTYPE, {"shipment_key": key}, "name")
         if existing:
@@ -299,9 +290,9 @@ def _fetch_window(store, start, end):
     text, _ = download_amazon_report(store, metadata["reportDocumentId"])
     ensure_database_connection()
     rows = _parse_rows(text)
+    if rows and not {"amazonorderid", "sku", "shipmentid"}.issubset(rows[0]["indexed"]):
+        raise ValueError("FBA fulfilled shipments report is missing expected columns")
     stats = _save_rows(store, rows, report_id, now_datetime())
-    if rows and stats["skipped"] == len(rows):
-        raise ValueError("FBA fulfilled shipments report has rows but lacks order ID, SKU or shipment ID")
     return report_id, stats
 
 
@@ -309,6 +300,40 @@ def _task_lock(name):
     cache = frappe.cache()
     return cache.lock(cache.make_key(f"fengjing:amazon-fba-shipments:{name}"),
                       timeout=TASK_TIMEOUT, blocking_timeout=0)
+
+
+def restore_full_source_rows(configuration_name):
+    """Re-read existing reports to restore columns omitted from previously saved rows."""
+    config = _configuration(configuration_name)
+    store = get_store(config.amazon_store)
+    lock = _task_lock(configuration_name)
+    if not lock.acquire(blocking=False):
+        return {"status": "busy"}
+    result = {"reports": 0, "rows": 0, "errors": []}
+    try:
+        report_ids = [row[0] for row in frappe.db.sql(
+            "SELECT DISTINCT report_id FROM `tabAmazon FBA Fulfilled Shipment` "
+            "WHERE amazon_store = %s AND report_id IS NOT NULL AND report_id != ''",
+            (store.name,),
+        )]
+        for report_id in report_ids:
+            try:
+                metadata = wait_for_amazon_report(store, report_id, timeout_seconds=60)
+                if str(metadata.get("processingStatus") or "").upper() != "DONE":
+                    result["errors"].append(f"{report_id}: report unavailable")
+                    continue
+                text, _ = download_amazon_report(store, metadata["reportDocumentId"])
+                rows = _parse_rows(text)
+                stats = _save_rows(store, rows, report_id, now_datetime())
+                frappe.db.commit()
+                result["reports"] += 1
+                result["rows"] += stats["rows"]
+            except Exception as exc:
+                frappe.db.rollback()
+                result["errors"].append(f"{report_id}: {type(exc).__name__}: {str(exc)[:120]}")
+        return result
+    finally:
+        lock.release()
 
 
 def _next_recheck(now, interval_days):

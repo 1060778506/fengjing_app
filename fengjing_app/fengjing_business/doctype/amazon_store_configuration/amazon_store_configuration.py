@@ -327,7 +327,20 @@ def amazon_api_request(
 			time.sleep(delay)
 			continue
 		last_response = response
-		if response.status_code == 401 and not refreshed_token:
+		# SP-API may report an expired LWA access token as HTTP 403 instead of 401.
+		# Refresh only for that explicit error; other 403 responses are permission failures.
+		access_token_expired = False
+		if response.status_code == 403:
+			try:
+				errors = response.json().get("errors") or []
+				access_token_expired = any(
+					"access token" in str(error.get("details") or error.get("message") or "").lower()
+					and "expired" in str(error.get("details") or error.get("message") or "").lower()
+					for error in errors if isinstance(error, dict)
+				)
+			except (TypeError, ValueError, AttributeError):
+				pass
+		if (response.status_code == 401 or access_token_expired) and not refreshed_token:
 			invalidate_access_token(store)
 			refreshed_token = True
 			force_token_refresh = True
