@@ -465,6 +465,12 @@ def run_scheduled_shipment_sync():
                 config = _configuration(name)
             if config.rate_limit_until and get_datetime(config.rate_limit_until) > now:
                 continue
+            # 先补齐首次 90 天核对，取得近期完整月份；完成后恢复原有调度顺序。
+            if (cint(config.enable_recheck_90) and not config.recheck_90_last_at
+                    and config.recheck_90_next_at
+                    and get_datetime(config.recheck_90_next_at) <= now):
+                _enqueue(name, "recheck_90")
+                continue
             # 近期发货优先；历史回填按每次最多两片逐步补齐。
             if not config.incremental_next_at or get_datetime(config.incremental_next_at) <= now:
                 if cint(config.active_start_hour) <= now.hour < (cint(config.active_end_hour) or 24):
