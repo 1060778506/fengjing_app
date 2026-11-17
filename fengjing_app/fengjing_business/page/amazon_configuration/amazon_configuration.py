@@ -264,6 +264,27 @@ SECTIONS = {
 			{"key": "recheck_180", "label": "核对180天", "style": "ghost", "confirm": True},
 		],
 	},
+	"fba_shipments": {
+		"title": "FBA 已配送货件配置",
+		"description": "按店铺抓取 Amazon-Fulfilled Shipments；勾选后倒推18个月，支持增量与分层核对。",
+		"doctype": "Amazon FBA Fulfilled Shipment Configuration",
+		"primary_field": "amazon_store",
+		"enabled_field": "enabled",
+		"status_field": "current_task_status",
+		"last_field": "incremental_last_at",
+		"next_field": "incremental_next_at",
+		"error_field": "last_error",
+		"progress_field": "history_progress",
+		"actions": [
+			{"key": "latest", "label": "立即同步", "style": "primary"},
+			{"key": "history", "label": "重抓18个月历史", "style": "soft", "confirm": True},
+			{"key": "recheck_7", "label": "核对7天", "style": "ghost", "confirm": True},
+			{"key": "recheck_14", "label": "核对14天", "style": "ghost", "confirm": True},
+			{"key": "recheck_30", "label": "核对30天", "style": "ghost", "confirm": True},
+			{"key": "recheck_90", "label": "核对90天", "style": "ghost", "confirm": True},
+			{"key": "recheck_180", "label": "核对180天", "style": "ghost", "confirm": True},
+		],
+	},
 }
 
 
@@ -285,6 +306,8 @@ ACTION_METHODS = {
 	("awd_inventory", "latest"): "fengjing_app.fengjing_business.doctype.amazon_awd_inventory_configuration.amazon_awd_inventory_configuration.start_inventory_sync",
 	("fba_returns", "latest"): "fengjing_app.fengjing_business.doctype.amazon_fba_customer_return_configuration.amazon_fba_customer_return_configuration.start_incremental_sync",
 	("fba_returns", "history"): "fengjing_app.fengjing_business.doctype.amazon_fba_customer_return_configuration.amazon_fba_customer_return_configuration.start_history_sync",
+	("fba_shipments", "latest"): "fengjing_app.fengjing_business.doctype.amazon_fba_fulfilled_shipment_configuration.amazon_fba_fulfilled_shipment_configuration.start_incremental_sync",
+	("fba_shipments", "history"): "fengjing_app.fengjing_business.doctype.amazon_fba_fulfilled_shipment_configuration.amazon_fba_fulfilled_shipment_configuration.start_history_sync",
 }
 
 
@@ -1011,7 +1034,7 @@ def _action_method(section_key, action_key):
 	method = ACTION_METHODS.get((section_key, action_key))
 	if method:
 		return method, None
-	if section_key in {"orders", "finances", "advertising", "fba_ledger", "fba_returns"} and str(action_key).startswith("recheck_"):
+	if section_key in {"orders", "finances", "advertising", "fba_ledger", "fba_returns", "fba_shipments"} and str(action_key).startswith("recheck_"):
 		days = cint(str(action_key).split("_")[-1])
 		allowed_days = {7, 14, 30, 60, 90} if section_key == "advertising" else {7, 14, 30, 90, 180}
 		if days not in allowed_days:
@@ -1022,6 +1045,7 @@ def _action_method(section_key, action_key):
 			"advertising": "amazon_advertising_site_configuration",
 			"fba_ledger": "amazon_fba_inventory_ledger_configuration",
 			"fba_returns": "amazon_fba_customer_return_configuration",
+			"fba_shipments": "amazon_fba_fulfilled_shipment_configuration",
 		}[section_key]
 		method_name = (
 			"fengjing_app.fengjing_business.doctype."

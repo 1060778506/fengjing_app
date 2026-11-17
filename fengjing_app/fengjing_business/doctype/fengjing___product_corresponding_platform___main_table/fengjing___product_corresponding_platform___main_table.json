@@ -12,6 +12,7 @@
   "column_break_mapping",
   "\u5e73\u53f0asin",
   "\u5e73\u53f0sku",
+  "\u5e73\u53f0fnsku",
   "\u5e73\u53f0spu",
   "\u7269\u6599id",
   "\u7269\u6599\u540d\u79f0",
@@ -49,7 +50,7 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "ASIN\u548c\u5e73\u53f0SKU\u81f3\u5c11\u586b\u5199\u4e00\u4e2a\u3002",
+   "description": "ASIN\u3001\u5e73\u53f0SKU\u6216\u5e73\u53f0FNSKU\u81f3\u5c11\u586b\u5199\u4e00\u4e2a\u3002",
    "fieldname": "\u5e73\u53f0asin",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -57,11 +58,19 @@
    "search_index": 1
   },
   {
-   "description": "ASIN\u548c\u5e73\u53f0SKU\u81f3\u5c11\u586b\u5199\u4e00\u4e2a\u3002",
+   "description": "ASIN\u3001\u5e73\u53f0SKU\u6216\u5e73\u53f0FNSKU\u81f3\u5c11\u586b\u5199\u4e00\u4e2a\u3002",
    "fieldname": "\u5e73\u53f0sku",
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "\u5e73\u53f0SKU",
+   "search_index": 1
+  },
+  {
+   "description": "Amazon FBA \u5e93\u5b58\u6807\u8bc6\uff0c\u4f8b\u5982 X004VJOP7L\uff1b\u4e0e\u5e73\u53f0 SKU \u5206\u5f00\u586b\u5199\u3002",
+   "fieldname": "\u5e73\u53f0fnsku",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "\u5e73\u53f0FNSKU",
    "search_index": 1
   },
   {

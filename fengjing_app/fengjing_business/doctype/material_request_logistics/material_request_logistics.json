@@ -1,41 +1,45 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "creation": "2026-10-18 16:51:14.450722",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "custom_物流公司",
-  "custom_物流单号",
-  "custom_货代"
+  "custom_\u7269\u6d41\u516c\u53f8",
+  "custom_\u7269\u6d41\u5355\u53f7",
+  "custom_\u8d27\u4ee3"
  ],
  "fields": [
   {
-   "fieldname": "custom_物流公司",
+   "fieldname": "custom_\u7269\u6d41\u516c\u53f8",
    "fieldtype": "Autocomplete",
    "in_list_view": 1,
-   "label": "物流公司",
-   "options": "韵达快递\n极兔速递\n安能物流\n百世快递\n中通快运特惠\n顺心捷达电商件"
+   "label": "\u7269\u6d41\u516c\u53f8",
+   "options": "\u97f5\u8fbe\u5feb\u9012\n\u6781\u5154\u901f\u9012\n\u5b89\u80fd\u7269\u6d41\n\u767e\u4e16\u5feb\u9012\n\u4e2d\u901a\u5feb\u8fd0\u7279\u60e0\n\u8de8\u8d8a\u901f\u8fd0\u9694\u5929\u8fbe\n\u987a\u5fc3\u6377\u8fbe\u7535\u5546\u4ef6"
   },
   {
-   "fieldname": "custom_物流单号",
+   "fieldname": "custom_\u7269\u6d41\u5355\u53f7",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "物流单号"
+   "label": "\u7269\u6d41\u5355\u53f7"
   },
   {
-   "fieldname": "custom_货代",
+   "fieldname": "custom_\u8d27\u4ee3",
    "fieldtype": "Autocomplete",
    "in_list_view": 1,
-   "label": "货代",
-   "options": "凯奇\n递四方\n云途物流\n燕文物流\n纵腾谷仓\n其他"
+   "label": "\u8d27\u4ee3",
+   "options": "\u51ef\u5947\n\u9012\u56db\u65b9\n\u4e91\u9014\u7269\u6d41\n\u71d5\u6587\u7269\u6d41\n\u7eb5\u817e\u8c37\u4ed3\nFBA\u5185\u90e8\n\u5176\u4ed6"
   }
  ],
  "grid_page_length": 50,
  "istable": 1,
  "links": [],
+ "modified": "2026-11-16 13:45:38.639911",
+ "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "Material Request Logistics",
+ "owner": "Administrator",
  "permissions": [],
  "row_format": "Dynamic",
  "sort_field": "creation",

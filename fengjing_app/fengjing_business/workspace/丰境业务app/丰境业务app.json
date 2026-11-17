@@ -18,7 +18,7 @@
    "hidden": 0,
    "is_query_report": 0,
   "label": "亚马逊数据",
-  "link_count": 24,
+  "link_count": 26,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -196,6 +196,26 @@
   {
    "hidden": 0,
    "is_query_report": 0,
+   "label": "亚马逊FBA客户退货记录",
+   "link_count": 0,
+   "link_to": "Amazon FBA Customer Return",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊FBA已配送货件记录",
+   "link_count": 0,
+   "link_to": "Amazon FBA Fulfilled Shipment",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
    "label": "亚马逊广告活动、广告组、广告及投放结构",
    "link_count": 0,
    "link_to": "Amazon Advertising Structure",
@@ -267,7 +287,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "亚马逊分析",
-   "link_count": 10,
+   "link_count": 11,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -318,6 +338,16 @@
    "label": "亚马逊财务交易中心",
    "link_count": 0,
    "link_to": "amazon-finance",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊FBA客户退货分析",
+   "link_count": 0,
+   "link_to": "amazon_fba_return_analysis",
    "link_type": "Page",
    "onboard": 0,
    "type": "Link"
@@ -376,7 +406,7 @@
    "hidden": 0,
    "is_query_report": 0,
   "label": "亚马逊配置",
-  "link_count": 21,
+  "link_count": 22,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -557,6 +587,16 @@
    "label": "亚马逊FBA客户退货配置",
    "link_count": 0,
    "link_to": "Amazon FBA Customer Return Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "亚马逊FBA已配送货件配置",
+   "link_count": 0,
+   "link_to": "Amazon FBA Fulfilled Shipment Configuration",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"

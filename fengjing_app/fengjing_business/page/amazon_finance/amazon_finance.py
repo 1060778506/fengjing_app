@@ -1,6 +1,7 @@
 from collections import Counter, defaultdict
 from datetime import datetime, time, timedelta, timezone
 from decimal import Decimal
+import hashlib
 import json
 import re
 from zoneinfo import ZoneInfo
@@ -31,21 +32,52 @@ DETAIL_GROUPS = (
     ("order", "订单"),
     ("refund", "退款"),
     ("logistics", "仓储费 / 入库与物流"),
+    ("removal", "移除货件"),
     ("promotion", "广告与推广"),
     ("service", "订阅与服务"),
     ("funds", "资金划转"),
     ("adjustment", "调整与赔偿"),
     ("other", "其他"),
 )
+LOGISTICS_ACCOUNT = "540103_fj - 海运费用【主营业务成本】 - 丰境"
+STORAGE_ACCOUNT = "560105_fj - 平台仓储费【销售费用】 - 丰境"
+STORAGE_DESCRIPTIONS = {"FBAStorageBilling", "STARStorageBilling"}
+DEFAULT_COST_CENTER = "亚马逊-美国-Neighbor's house-A1VOX5X8GAU17J - 丰境"
 
 
 def _money(value):
     return flt(value or 0, 2)
 
 
+def _saved_item_amounts(value):
+    try:
+        data = json.loads(value or "{}") if isinstance(value, str) else value
+    except (TypeError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    result = {}
+    for item, amount in data.items():
+        try:
+            number = Decimal(str(amount))
+        except (TypeError, ValueError, ArithmeticError):
+            continue
+        if isinstance(item, str) and number.is_finite():
+            result[item] = float(abs(number))
+    return result
+
+
 def _awd_storage_order_id(order_id):
     """The finance API may append -AWD to the report's storage billing ID."""
     return re.sub(r"-AWD$", "", str(order_id or "").strip(), flags=re.IGNORECASE)
+
+
+def _awd_child_key(detail):
+    identity = [detail.get(field) or "" for field in (
+        "source_type", "shipment_id", "tracking_id", "billing_order_id",
+        "msku", "fnsku", "asin", "storage_region",
+    )]
+    return "awd:" + hashlib.sha256(json.dumps(identity, ensure_ascii=False).encode()).hexdigest()[:24]
 
 
 def _attach_awd_fee_details(page_rows):
@@ -145,6 +177,8 @@ def _attach_awd_fee_details(page_rows):
         key, details = match
         row.awd_fee_details = [
             {
+                "manual_key": _awd_child_key(detail),
+                "manual_items": row.manual_child_items.get(_awd_child_key(detail), []),
                 "batch": key[0],
                 "period": periods.get(key[0]),
                 "source_type": detail.source_type,
@@ -201,12 +235,16 @@ def _transaction_group(row):
 
     if transaction_type == "Shipment" and description == "Order Payment":
         return "order"
-    if transaction_type in {"Refund", "RefundEvent", "Chargeback", "ChargebackEvent"}:
-        return "refund"
+    if transaction_type == "RemovalShipment":
+        return "removal"
+    if transaction_type in {"Refund", "RefundEvent"}:
+        return "refund" if row.get("amazon_order_id") else "adjustment"
+    if transaction_type in {"Chargeback", "ChargebackEvent"}:
+        return "adjustment"
     if re.search(r"StorageBilling|StorageFee|LongTermStorage|STARStorage", value, re.I):
         return "logistics"
     if re.search(
-        r"Inbound|Transportation|ShipmentInjection|AWDProcessing|RemovalShipment|FBADisposal",
+        r"Inbound|Transportation|ShipmentInjection|AWDProcessing|FBADisposal",
         value,
         re.I,
     ):
@@ -238,7 +276,7 @@ def _mapping_rows():
     return frappe.get_all(
         MAPPING_DOCTYPE,
         filters={"启用": 1},
-        fields=["name", "店铺", "站点id", "平台asin", "平台sku", "物料id", "物料名称"],
+        fields=["name", "店铺", "站点id", "平台asin", "平台sku", "平台fnsku", "物料id", "物料名称"],
         limit_page_length=0,
     )
 
@@ -251,8 +289,11 @@ def _resolve_mapping(row, mappings):
         if m.店铺 != store or (m.站点id or "") != site:
             continue
         ma, ms = (m.平台asin or "").upper(), (m.平台sku or "").upper()
+        mf = (m.平台fnsku or "").upper()
         score = 0
-        if asin and sku and ma == asin and ms == sku:
+        if sku and mf == sku:
+            score = 5
+        elif asin and sku and ma == asin and ms == sku:
             score = 4
         elif sku and ms == sku:
             score = 3
@@ -453,39 +494,146 @@ def _available_months():
     return [f"{today.year}-{month:02d}" for month in range(first_month, today.month + 1)]
 
 
-def _summarize_detail_rows(rows):
+def _summarize_detail_rows(rows, detail_group="", mappings=None, cost_centers=None):
     """Summarize every filtered detail row, including rows outside the current page."""
     grouped = {}
     currencies = {}
+    row_mismatches = []
     amount_fields = ("net", "sales", "fees")
+    item_sku_candidates = defaultdict(set)
+    if detail_group == "logistics":
+        for mapping in mappings or []:
+            if mapping.get("平台sku") and mapping.get("物料id"):
+                item_sku_candidates[(mapping.get("店铺") or "", mapping.get("站点id") or "",
+                                     mapping.物料id)].add(mapping.平台sku)
+    item_skus = {key: next(iter(values)) for key, values in item_sku_candidates.items()
+                 if len(values) == 1}
 
     for row in rows:
         currency = row.currency_code or "未知"
-        key = (currency, row.transaction_type or "未分类", row.description or "")
-        group = grouped.setdefault(key, {"currency": currency, "transaction_type": key[1],
-                                         "description": key[2], "count": 0, **{field: Decimal(0) for field in amount_fields}})
-        total = currencies.setdefault(currency, {"currency": currency, "count": 0,
-                                                  **{field: Decimal(0) for field in amount_fields}})
+        logistics = detail_group == "logistics"
         amounts = {
             "net": Decimal(str(_money(row.net_amount))),
             "sales": Decimal(str(_money(row.product_sales))),
             "fees": sum((Decimal(str(_money(row.get(field)))) for field in
                          ("selling_fees", "fba_fees", "other_transaction_fees")), Decimal(0)),
         }
-        for result in (group, total):
-            result["count"] += 1
+        total = currencies.setdefault(currency, {"currency": currency, "count": 0,
+                                                  **{field: Decimal(0) for field in amount_fields}})
+        total["count"] += 1
+        for field in amount_fields:
+            total[field] += amounts[field]
+
+        awd_children = (row.get("awd_fee_details") or []) if logistics else []
+        if awd_children:
+            parts = [(
+                child.get("msku") or row.sku or "",
+                {"net": Decimal(str(_money(child["amount"]))),
+                 "sales": Decimal(0), "fees": Decimal(0)},
+                child.get("manual_items") or [],
+                ((child.get("shipment_id") or child.get("tracking_id")
+                  or f"{child.get('batch')}:{child.get('source_row')}")
+                 if child.get("source_type") in ("Processing", "Transportation") else ""),
+                child.get("tracking_id") or child.get("shipment_id") or "",
+            ) for child in awd_children]
+        else:
+            item_children = (row.get("item_lines") or []) if logistics else []
+            attached = ([item for child in item_children for item in child.get("manual_items", [])]
+                        if item_children else row.get("manual_items") or [])
+            inbound_shipment = (row.amazon_order_id or "") if logistics and row.description == "AGSGlobalInboundTransportation" else ""
+            parts = [(row.sku or "", amounts, attached, inbound_shipment, inbound_shipment)]
+
+        allocated_parts = []
+        for source_sku, part_amounts, attached, shipment_key, shipment_label in parts:
+            part_net = part_amounts["net"]
+            if not logistics or not attached:
+                allocated_parts.append((source_sku, "", part_amounts, attached,
+                                        shipment_key, shipment_label))
+                continue
+            sign = Decimal(-1) if part_net < 0 else Decimal(1)
+            allocated = Decimal(0)
+            for item in attached:
+                if item.get("amount") is None:
+                    continue
+                item_amount = Decimal(str(item["amount"]))
+                signed_amount = sign * item_amount
+                allocated += signed_amount
+                item_sku = item_skus.get((row.store or "", row.marketplace_id or "", item["name"])) or source_sku
+                allocated_parts.append((item_sku, item["name"],
+                                        {"net": signed_amount, "sales": Decimal(0), "fees": Decimal(0)},
+                                        [item], shipment_key, shipment_label))
+            residual = part_net - allocated
+            if residual or not allocated_parts:
+                allocated_parts.append((source_sku, "", {"net": residual,
+                                       "sales": part_amounts["sales"], "fees": part_amounts["fees"]},
+                                        [], shipment_key, shipment_label))
+
+        allocated_net = sum((part[2]["net"] for part in allocated_parts), Decimal(0))
+        if allocated_net.quantize(Decimal("0.01")) != amounts["net"].quantize(Decimal("0.01")):
+            row_mismatches.append({
+                "transaction": row.transaction_id or row.name,
+                "source_net": float(amounts["net"]), "summary_net": float(allocated_net),
+            })
+
+        for sku, item_id, part_amounts, attached, shipment_key, shipment_label in allocated_parts:
+            key = ((row.store or "", row.marketplace_id or "") if logistics else ()) + (
+                currency, row.transaction_type or "未分类", row.description or "", sku, item_id,
+                shipment_key)
+            group = grouped.setdefault(key, {
+                "currency": currency, "transaction_type": row.transaction_type or "未分类",
+                "description": row.description or "", "sku": sku, "item_id": item_id, "count": 0,
+                "shipment_id": shipment_key, "shipment_label": shipment_label,
+                "store": row.store or "", "marketplace_id": row.marketplace_id or "",
+                "cost_center": ((row.store if row.store in (cost_centers or []) else DEFAULT_COST_CENTER)
+                                if logistics else ""),
+                "account": (STORAGE_ACCOUNT if row.description in STORAGE_DESCRIPTIONS
+                            else LOGISTICS_ACCOUNT) if logistics else "",
+                "manual_items": [],
+                **{field: Decimal(0) for field in amount_fields},
+            })
+            group["count"] += 1
             for field in amount_fields:
-                result[field] += amounts[field]
+                group[field] += part_amounts[field]
+            known = {item["name"]: item for item in group["manual_items"]}
+            for item in attached:
+                if item["name"] in known:
+                    if item.get("amount") is not None:
+                        previous = known[item["name"]]
+                        previous["amount"] = float(
+                            Decimal(str(previous.get("amount") or 0)) + Decimal(str(item["amount"]))
+                        )
+                else:
+                    copy = dict(item)
+                    group["manual_items"].append(copy)
+                    known[item["name"]] = copy
 
     def as_json(result):
         return {key: float(value) if isinstance(value, Decimal) else value
                 for key, value in result.items()}
 
+    # Compare the original transaction total with the rows users will copy into a journal entry.
+    grouped_nets = defaultdict(lambda: Decimal(0))
+    for group in grouped.values():
+        grouped_nets[group["currency"]] += group["net"]
+    reconciliation = []
+    for currency in sorted(set(currencies) | set(grouped_nets)):
+        source_net = currencies.get(currency, {}).get("net", Decimal(0)).quantize(Decimal("0.01"))
+        summary_net = grouped_nets[currency].quantize(Decimal("0.01"))
+        reconciliation.append({
+            "currency": currency, "source_net": float(source_net),
+            "summary_net": float(summary_net),
+            "difference": float(summary_net - source_net),
+            "matched": source_net == summary_net,
+        })
+
     return {
         "count": len(rows),
         "currencies": [as_json(currencies[key]) for key in sorted(currencies)],
+        "reconciliation": reconciliation,
+        "row_mismatch_count": len(row_mismatches),
+        "row_mismatches": row_mismatches[:10],
         "rows": [as_json(grouped[key]) for key in sorted(
-            grouped, key=lambda key: (key[0], -abs(grouped[key]["net"]), key[1], key[2]))],
+            grouped, key=lambda key: (key[0], -abs(grouped[key]["net"]), *key[1:]))],
     }
 
 
@@ -497,7 +645,9 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         "amazon_order_item_id", "sku", "asin", "store", "country", "marketplace_id",
         "transaction_type", "transaction_status", "description", "settlement_id",
         "financial_event_group_id", "fulfillment_channel", "product_name", "quantity",
-        "corresponding_item", "corresponding_item_name", "posted_date", "release_date",
+        "corresponding_item", "corresponding_item_name", "manual_item_ids_json",
+        "manual_item_amounts_json", "manual_child_items_json",
+        "manual_child_item_amounts_json", "posted_date", "release_date",
         "currency_code", "fetched_at", "raw_json", *AMOUNT_FIELDS,
     ]
     db_filters = _build_db_filters(f)
@@ -546,6 +696,54 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         row.is_bound = 1 if row.corresponding_item else 0
         row.is_product = 1 if (row.sku or row.asin or row.amazon_order_item_id) else 0
         row.detail_group = _transaction_group(row)
+    manual_ids = set()
+    for row in all_rows:
+        row.manual_item_ids = []
+        row.manual_child_item_ids = {}
+        row.manual_item_amounts = _saved_item_amounts(row.manual_item_amounts_json)
+        try:
+            child_amounts = json.loads(row.manual_child_item_amounts_json or "{}")
+        except (TypeError, ValueError):
+            child_amounts = {}
+        row.manual_child_item_amounts = {
+            key: _saved_item_amounts(value) for key, value in child_amounts.items()
+            if isinstance(key, str)
+        } if isinstance(child_amounts, dict) else {}
+        if row.detail_group != "logistics":
+            continue
+        try:
+            selected = json.loads(row.manual_item_ids_json or "[]")
+        except (TypeError, ValueError):
+            selected = []
+        if isinstance(selected, list):
+            row.manual_item_ids = list(dict.fromkeys(item for item in selected if isinstance(item, str)))
+            manual_ids.update(row.manual_item_ids)
+        try:
+            selected_children = json.loads(row.manual_child_items_json or "{}")
+        except (TypeError, ValueError):
+            selected_children = {}
+        if isinstance(selected_children, dict):
+            for key, selected in selected_children.items():
+                if isinstance(key, str) and isinstance(selected, list):
+                    row.manual_child_item_ids[key] = list(dict.fromkeys(
+                        item for item in selected if isinstance(item, str)))
+                    manual_ids.update(row.manual_child_item_ids[key])
+    manual_info = {item.name: item for item in frappe.get_all(
+        "Item", filters={"name": ["in", list(manual_ids)]},
+        fields=["name", "item_name", "image"], limit_page_length=0,
+    )} if manual_ids else {}
+    def selected_items(selected, amounts):
+        return [
+            {"name": item, "item_name": manual_info[item].item_name,
+             "image": manual_info[item].image, "amount": amounts.get(item)}
+            for item in selected if item in manual_info
+        ]
+    for row in all_rows:
+        row.manual_items = selected_items(row.manual_item_ids, row.manual_item_amounts)
+        row.manual_child_items = {
+            key: selected_items(selected, row.manual_child_item_amounts.get(key, {}))
+            for key, selected in row.manual_child_item_ids.items()
+        }
 
     search = (f.search or "").strip().lower()
     binding = f.binding or ""
@@ -575,17 +773,35 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
 
     dashboard_rows = rows
     economic_rows = [row for row in dashboard_rows if row.name not in parent_for_child]
+    report_start = str(getdate(f.date_from)) if f.date_from else ""
+    report_end = str(getdate(f.date_to)) if f.date_to else ""
+
+    def refund_in_selected_dates(row):
+        day = str(row.report_posted_date or "")[:10]
+        return bool(day) and (not report_start or day >= report_start) and (not report_end or day <= report_end)
+
     group_counts = defaultdict(int)
     line_counts = {}
     for row in economic_rows:
         row.item_lines, row.display_net_amount = _item_display(row)
+        if row.detail_group == "logistics":
+            for line in row.item_lines:
+                line.manual_key = f"item:{line.line_no}"
+                line.manual_items = row.manual_child_items.get(line.manual_key, [])
         line_counts[row.name] = max(1, len(row.item_lines))
-        group_counts[row.detail_group] += line_counts[row.name]
+        if row.detail_group != "refund" or refund_in_selected_dates(row):
+            group_counts[row.detail_group] += 1 if row.detail_group == "refund" else line_counts[row.name]
     report_row_count = sum(line_counts.values())
 
     detail_group = "logistics" if f.detail_group == "storage" else (f.detail_group or "")
-    selected_detail_rows = [row for row in dashboard_rows if not detail_group or row.detail_group == detail_group]
+    selected_detail_rows = [
+        row for row in dashboard_rows
+        if (not detail_group or row.detail_group == detail_group)
+        and (detail_group != "refund" or refund_in_selected_dates(row))
+    ]
     detail_rows = [row for row in selected_detail_rows if row.name not in parent_for_child]
+    if detail_group == "logistics":
+        _attach_awd_fee_details(detail_rows)
 
     currencies = defaultdict(lambda: {"inflow": 0.0, "outflow": 0.0, "net": 0.0, "sales": 0.0, "fees": 0.0})
     daily = defaultdict(lambda: defaultdict(lambda: {"net": 0.0, "sales": 0.0, "fees": 0.0, "tax": 0.0, "promotion": 0.0, "count": 0}))
@@ -653,7 +869,8 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         row.related_releases = release_children.get(row.name, [])
         for child in row.related_releases:
             child.context_only = child.name not in selected_names
-    _attach_awd_fee_details(page_rows)
+    if detail_group != "logistics":
+        _attach_awd_fee_details(page_rows)
     # The complete Amazon response is retained in its DocType; do not send it to the browser.
     for row in all_rows:
         row.pop("raw_json", None)
@@ -668,6 +885,15 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         {"key": key, "label": label, "count": group_counts[key]}
         for key, label in DETAIL_GROUPS if group_counts[key] > 0
     )
+    cost_center_options = [center.name for center in frappe.get_all(
+        "Cost Center", filters={"is_group": 0}, fields=["name"], order_by="name asc",
+        limit_page_length=0,
+    )] if detail_group == "logistics" else []
+    account_options = [account.name for account in frappe.get_all(
+        "Account", filters={"company": frappe.get_cached_value("Cost Center", DEFAULT_COST_CENTER, "company"),
+                            "is_group": 0, "root_type": "Expense"},
+        fields=["name"], order_by="name asc", limit_page_length=0,
+    )] if detail_group == "logistics" else []
     return {
         "summary": {"row_count": len(economic_rows), "report_row_count": report_row_count, "transaction_count": len(unique_transactions), "release_count": sum(len(release_children.get(row.name, [])) for row in economic_rows), "sku_count": len(products), "product_count": product_count, "store_fee_count": store_fee_count, "bound_count": bound, "unbound_count": product_count - bound, "binding_rate": round(bound * 100 / product_count, 1) if product_count else 0, "currencies": dict(currencies), "truncated": truncated},
         "daily": {day: dict(values) for day, values in sorted(daily.items())},
@@ -676,30 +902,36 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         "stores": {c: dict(v) for c, v in store_totals.items()},
         "products": product_list[:500], "settlements": settlement_list[:200],
         "rows": page_rows, "options": options, "available_months": _available_months(),
-        "detail_summary": _summarize_detail_rows(detail_rows),
+        "detail_summary": _summarize_detail_rows(detail_rows, detail_group, mappings, cost_center_options),
+        "cost_center_options": cost_center_options,
+        "account_options": account_options,
         "detail_groups": detail_groups,
-        "pagination": {"page": page, "page_size": page_size, "total": len(display_rows), "display_total": sum(line_counts[row.name] for row in display_rows), "raw_total": len(selected_detail_rows), "pages": max(1, (len(display_rows) + page_size - 1) // page_size)},
+        "pagination": {"page": page, "page_size": page_size, "total": len(display_rows), "display_total": len(detail_rows) if detail_group == "refund" else sum(line_counts[row.name] for row in detail_rows), "raw_total": len(selected_detail_rows), "pages": max(1, (len(display_rows) + page_size - 1) // page_size)},
     }
 
 
 @frappe.whitelist()
-def bind_finance_item(store, marketplace_id, item, asin=None, sku=None):
+def bind_finance_item(store, marketplace_id, item, asin=None, sku=None, transaction_type=None):
     frappe.only_for("System Manager")
     if not item or not frappe.db.exists("Item", item):
         frappe.throw("请选择有效的ERPNext物料")
     asin, sku = (asin or "").strip().upper(), (sku or "").strip().upper()
+    is_fnsku = transaction_type == "RemovalShipment" and bool(sku)
     if not asin and not sku:
-        frappe.throw("ASIN和SKU至少需要一个")
+        frappe.throw("ASIN、SKU和FNSKU至少需要一个")
     filters = {"店铺": store, "站点id": marketplace_id}
-    if asin: filters["平台asin"] = asin
-    if sku: filters["平台sku"] = sku
+    if asin and not is_fnsku: filters["平台asin"] = asin
+    if sku: filters["平台fnsku" if is_fnsku else "平台sku"] = sku
     name = frappe.db.get_value(MAPPING_DOCTYPE, filters, "name")
     if name:
         doc = frappe.get_doc(MAPPING_DOCTYPE, name)
         doc.物料id = item; doc.启用 = 1; doc.save(ignore_permissions=True)
     else:
-        doc = frappe.get_doc({"doctype": MAPPING_DOCTYPE, "启用": 1, "店铺": store, "站点id": marketplace_id, "平台asin": asin, "平台sku": sku, "物料id": item}).insert(ignore_permissions=True)
+        doc = frappe.get_doc({"doctype": MAPPING_DOCTYPE, "启用": 1, "店铺": store, "站点id": marketplace_id, "平台asin": asin, "平台fnsku": sku if is_fnsku else "", "平台sku": "" if is_fnsku else sku, "物料id": item}).insert(ignore_permissions=True)
     clauses, values = ["store=%s", "marketplace_id=%s"], [store, marketplace_id]
+    if is_fnsku:
+        clauses.append("transaction_type=%s")
+        values.append("RemovalShipment")
     match, match_values = [], []
     if asin: match.append("UPPER(IFNULL(asin,''))=%s"); match_values.append(asin)
     if sku: match.append("UPPER(IFNULL(sku,''))=%s"); match_values.append(sku)
@@ -722,3 +954,111 @@ def refresh_finance_item_bindings():
             updated += 1
     frappe.db.commit()
     return {"updated": updated, "total": len(rows)}
+
+
+@frappe.whitelist()
+def search_logistics_items(query=""):
+    frappe.only_for("System Manager")
+    query = str(query or "").strip()[:100]
+    filters = {"disabled": 0}
+    or_filters = [["Item", "name", "like", f"%{query}%"], ["Item", "item_name", "like", f"%{query}%"]] if query else None
+    return frappe.get_all(
+        "Item", filters=filters, or_filters=or_filters,
+        fields=["name", "item_name", "image"], order_by="item_name asc",
+        limit_page_length=40,
+    )
+
+
+@frappe.whitelist()
+def save_logistics_items(transaction_name, item_ids, item_amounts=None, child_key=None):
+    frappe.only_for("System Manager")
+    if isinstance(item_ids, str):
+        try:
+            item_ids = json.loads(item_ids)
+        except ValueError:
+            frappe.throw("物料选择格式无效")
+    if not isinstance(item_ids, list) or len(item_ids) > 50:
+        frappe.throw("每条交易最多关联 50 个物料")
+    item_ids = list(dict.fromkeys(str(item or "").strip() for item in item_ids))
+    if any(not item for item in item_ids):
+        frappe.throw("物料编号不能为空")
+    if isinstance(item_amounts, str):
+        try:
+            item_amounts = json.loads(item_amounts)
+        except ValueError:
+            frappe.throw("物料金额格式无效")
+    if not isinstance(item_amounts, dict) or set(item_amounts) != set(item_ids):
+        frappe.throw("请为每个已选物料填写金额")
+    amounts = {}
+    for item in item_ids:
+        try:
+            amount = Decimal(str(item_amounts[item]))
+            if not amount.is_finite() or amount < 0 or amount != amount.quantize(Decimal("0.01")):
+                raise ValueError
+        except (TypeError, ValueError, ArithmeticError):
+            frappe.throw("物料金额必须是正数或零，且最多两位小数")
+        amounts[item] = amount
+    row = frappe.get_doc(DOCTYPE, transaction_name)
+    if _transaction_group(row) != "logistics":
+        frappe.throw("只有仓储费 / 入库与物流交易可以选择关联物料")
+    items = frappe.get_all(
+        "Item", filters={"name": ["in", item_ids], "disabled": 0},
+        fields=["name", "item_name", "image"], limit_page_length=0,
+    ) if item_ids else []
+    by_name = {item.name: item for item in items}
+    if len(by_name) != len(item_ids):
+        frappe.throw("选择的物料不存在或已停用")
+    row.manual_child_items = {}
+    _attach_awd_fee_details([row])
+    item_lines, display_net = _item_display(row)
+    targets = {_awd_child_key(detail): Decimal(str(_money(detail["amount"])))
+               for detail in row.get("awd_fee_details") or []}
+    targets.update({f"item:{line.line_no}": Decimal(str(_money(line.net_amount)))
+                    for line in item_lines})
+    if child_key:
+        if child_key not in targets:
+            frappe.throw("费用明细已变化，请刷新页面后重新选择物料")
+        target = targets[child_key]
+    else:
+        if targets:
+            frappe.throw("这笔费用有子级，请在子级分配物料和金额")
+        target = Decimal(str(_money(display_net if display_net is not None else row.net_amount)))
+    target = abs(target)
+    if sum(amounts.values(), Decimal(0)) != target:
+        frappe.throw(f"物料金额合计必须等于本条净额的绝对值 {target:.2f} {row.currency_code or ''}")
+    stored_amounts = {item: float(amounts[item]) for item in item_ids}
+    result = {"manual_item_ids": item_ids, "manual_item_amounts": stored_amounts,
+              "manual_items": [{"name": item, "item_name": by_name[item].item_name,
+                                "image": by_name[item].image, "amount": stored_amounts[item]}
+                               for item in item_ids]}
+    if child_key:
+        try:
+            selections = json.loads(row.manual_child_items_json or "{}")
+        except (TypeError, ValueError):
+            selections = {}
+        if not isinstance(selections, dict):
+            selections = {}
+        if item_ids:
+            selections[child_key] = item_ids
+        else:
+            selections.pop(child_key, None)
+        try:
+            saved_amounts = json.loads(row.manual_child_item_amounts_json or "{}")
+        except (TypeError, ValueError):
+            saved_amounts = {}
+        if not isinstance(saved_amounts, dict):
+            saved_amounts = {}
+        if item_ids:
+            saved_amounts[child_key] = stored_amounts
+        else:
+            saved_amounts.pop(child_key, None)
+        frappe.db.set_value(DOCTYPE, transaction_name, {
+            "manual_child_items_json": json.dumps(selections, ensure_ascii=False),
+            "manual_child_item_amounts_json": json.dumps(saved_amounts, ensure_ascii=False),
+        }, update_modified=False)
+        return {"child_key": child_key, **result}
+    frappe.db.set_value(DOCTYPE, transaction_name, {
+        "manual_item_ids_json": json.dumps(item_ids, ensure_ascii=False),
+        "manual_item_amounts_json": json.dumps(stored_amounts, ensure_ascii=False),
+    }, update_modified=False)
+    return result
