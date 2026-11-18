@@ -1,15 +1,43 @@
-.fjib-app { padding: 16px 8px 32px; min-height: 65vh; }
-.fjib-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin: 0 0 20px; }
-.fjib-header h2 { font-size: 24px; font-weight: 700; margin: 0 0 4px; }
-.fjib-header p { color: #6b7280; margin: 0; }
-.fjib-header-actions { display: flex; gap: 16px; align-items: center; white-space: nowrap; }
-.fjib-header-actions span { color: #6b7280; }
-.fjib-loading { padding: 50px; text-align: center; color: #6b7280; }
-.fjib-card { cursor: pointer; padding: 4px 1px; }
-.fjib-card-title { font-size: 14px; font-weight: 650; line-height: 1.5; overflow-wrap: anywhere; }
-.fjib-card-description { color: #6b7280; font-size: 12px; line-height: 1.5; margin-top: 6px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
-.fjib-card-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; font-size: 11px; }
-.fjib-tag, .fjib-priority, .fjib-date { background: #eef2f7; border-radius: 5px; padding: 2px 6px; color: #475569; }
-.fjib-priority { background: #fef3c7; color: #92400e; }
-.fjib-priority.urgent { background: #fee2e2; color: #b91c1c; }
-@media (max-width: 700px) { .fjib-header { align-items: flex-start; flex-direction: column; } }
+.fjib-app { padding: 4px 4px 16px; color: #17243b; }
+.fjib-loading { min-height: 420px; display: grid; place-items: center; color: #758197; }
+.fjib-board-shell { height: calc(100vh - 150px); min-height: 560px; border: 1px solid #e7ebf1; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 3px 18px rgba(27,44,70,.035); }
+.fjib-board-inner { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.fjib-board-canvas { position: relative; flex: 1; min-height: 0; }
+.fjib-date-input { box-sizing: border-box; width: 100%; height: 34px; padding: 5px 9px; border: 1px solid #dfe4eb; border-radius: 4px; background: #fff; color: #253550; font: inherit; }
+.fjib-date-input:focus { outline: 1px solid #315fbd; border-color: #315fbd; }
+.fjib-board-shell .wx-willow-theme { --wx-kanban-bg: #fff; --wx-kanban-column-bg: #f5f7fa; --wx-kanban-card-bg: #fff; --wx-kanban-border-color: #e3e8ef; --wx-kanban-card-shadow: 0 1px 3px rgba(28,44,70,.055); --wx-kanban-card-shadow-hover: 0 7px 18px rgba(28,44,70,.11); }
+.fjib-board-shell .wx-board { padding: 16px; }
+.fjib-board-shell .wx-content { gap: 14px; }
+.fjib-board-shell .wx-column:not(.wx-collapsed) { min-width: 206px; background: #f5f7fa; border: 1px solid #e9edf3; border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,.7); }
+.fjib-board-shell .wx-column-header { min-height: 56px; padding: 12px 13px; border-top: 3px solid var(--fjib-accent, #64748b); border-bottom: 1px solid #e9edf3; background: #f5f7fa; }
+.fjib-board-shell .wx-column-header .wx-title { display: flex; align-items: center; gap: 8px; color: #24344e; font-size: 14px; font-weight: 700; }
+.fjib-board-shell .wx-column-header .wx-title::before { content: ""; width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--fjib-accent, #64748b); }
+.fjib-board-shell .wx-column-header .wx-count { min-width: 23px; height: 23px; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; background: #e9edf3; color: #52617a; font-size: 11px; font-weight: 700; }
+.fjib-board-shell .wx-column-header .wx-toggle { display: none; }
+.fjib-board-shell .wx-column-header .wx-add { width: 27px; height: 27px; border: 1px solid #dce3ed; border-radius: 7px; color: #566884; background: #fff; font-size: 15px; }
+.fjib-board-shell .wx-column-header .wx-add:hover { color: #315fbd; border-color: #b6c9ef; background: #eef4ff; }
+.fjib-board-shell .wx-column-cards { padding: 11px; gap: 10px; }
+.fjib-board-shell .wx-column-cards:empty::after { content: "暂无想法 · 点击 + 新增"; display: flex; align-items: center; justify-content: center; min-height: 92px; border: 1px dashed #d8e0ea; border-radius: 9px; color: #9aa5b4; font-size: 12px; text-align: center; }
+.fjib-board-shell .wx-card { display: block; padding: 0; border: 1px solid #e4e9f1; border-radius: 9px; background: #fff; box-shadow: var(--wx-kanban-card-shadow); transition: box-shadow .15s ease, border-color .15s ease; }
+.fjib-board-shell .wx-card:hover { border-color: #bfd0e9; box-shadow: var(--wx-kanban-card-shadow-hover); }
+.fjib-card { position: relative; min-height: 82px; padding: 14px; cursor: pointer; }
+.fjib-card-menu { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 25px; height: 25px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #8b98a9; font-size: 16px; font-weight: 700; cursor: pointer; }
+.fjib-card-menu:hover { background: #eef2f8; color: #405979; }
+.fjib-card-top { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
+.fjib-tag, .fjib-priority { display: inline-flex; align-items: center; min-height: 21px; border-radius: 5px; padding: 2px 7px; font-size: 11px; font-weight: 650; line-height: 1.2; }
+.fjib-tag { background: #edf2fa; color: #426289; }
+.fjib-priority { background: #fff0d9; color: #9a6518; }
+.fjib-priority.urgent { background: #ffe4e4; color: #af3535; }
+.fjib-card-title { padding-right: 24px; color: #213149; font-size: 14px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
+.fjib-card-description { margin-top: 7px; color: #6f7d91; font-size: 12px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
+.fjib-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 13px; padding-top: 10px; border-top: 1px solid #f0f2f5; color: #8a96a8; font-size: 11px; }
+.fjib-card-open { color: #8796ab; font-size: 15px; line-height: 1; }
+.fjib-stage-inbox { --fjib-accent: #72839b; }
+.fjib-stage-review { --fjib-accent: #a37bd4; }
+.fjib-stage-ready { --fjib-accent: #d39a49; }
+.fjib-stage-active { --fjib-accent: #528ccc; }
+.fjib-stage-done { --fjib-accent: #56a184; }
+@media (max-width: 760px) {
+	.fjib-board-shell { height: calc(100vh - 145px); min-height: 470px; }
+	.fjib-board-shell .wx-column:not(.wx-collapsed) { min-width: 245px; }
+}
