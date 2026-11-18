@@ -55,6 +55,10 @@ class AmazonFinancePage {
         this.$.on('click','.af-manual-select',e=>this.openManualItems(e.currentTarget.dataset.manualRow,e.currentTarget.dataset.childKey||''));
         this.$.on('click','.af-release-toggle',e=>{const key=e.currentTarget.dataset.releaseToggle;if(this.collapsedGroups.has(key))this.collapsedGroups.delete(key);else this.collapsedGroups.add(key);this.renderTable()});
         this.$.on('click','.af-summary-toggle',()=>this.toggleSummary()).on('click','[data-summary-close]',()=>this.toggleSummary(false));
+        this.$.on('click','[data-order-summary-retry]',()=>{
+            this.orderSummary=null;
+            this.renderSummary();
+        });
         this.$.on('click','[data-summary-copy]',e=>this.copyLogisticsSummaryColumn(e.currentTarget.dataset.summaryCopy));
         this.$.on('change','[data-summary-cost-key]',e=>this.summaryCostCenters.set(e.currentTarget.dataset.summaryCostKey,e.currentTarget.value));
         this.$.on('change','[data-summary-account-key]',e=>{
@@ -111,7 +115,7 @@ class AmazonFinancePage {
         frappe.utils.copy_to_clipboard(values.join(column==='description'?';':'\n'));
         frappe.show_alert({message:`已复制${labels[column]}整列，共 ${rows.length} 行`,indicator:'green'});
     }
-    async load(){if(this.loading){this.reloadPending=true;return}this.loading=true;this.$.addClass('is-loading');try{const r=await frappe.call({method:'fengjing_app.fengjing_business.page.amazon_finance.amazon_finance.get_finance_dashboard_data',args:{filters:this.filters(),page:this.pageNo,page_size:this.pageSize}});this.data=r.message||{};if(this.detailGroup&&!(this.data.detail_groups||[]).some(group=>group.key===this.detailGroup)){this.detailGroup='';this.pageNo=1;this.reloadPending=true;return}this.render()}catch(e){console.error(e);frappe.msgprint({title:'财务页面加载失败',message:e.message||'请检查后台日志',indicator:'red'})}finally{this.loading=false;this.$.removeClass('is-loading');if(this.reloadPending){this.reloadPending=false;this.load()}}}
+    async load(){if(this.loading){this.reloadPending=true;return}this.loading=true;this.$.addClass('is-loading');try{const r=await frappe.call({method:'fengjing_app.fengjing_business.page.amazon_finance.amazon_finance.get_finance_dashboard_data',args:{filters:this.filters(),page:this.pageNo,page_size:this.pageSize}});this.data=r.message||{};this.orderSummary=null;if(this.detailGroup&&!(this.data.detail_groups||[]).some(group=>group.key===this.detailGroup)){this.detailGroup='';this.pageNo=1;this.reloadPending=true;return}this.render()}catch(e){console.error(e);frappe.msgprint({title:'财务页面加载失败',message:e.message||'请检查后台日志',indicator:'red'})}finally{this.loading=false;this.$.removeClass('is-loading');if(this.reloadPending){this.reloadPending=false;this.load()}}}
     render(){this.renderMonthButtons();this.renderCountryButtons();this.fillOptions();this.renderKpis();this.renderCurrencies();this.renderCharts();this.renderProducts();this.renderSettlements();this.renderTable();this.loadReturnCard();if(this.summaryOpen)this.renderSummary()}
     fillOptions(){['store','marketplace_id','currency_code','transaction_type','transaction_status'].forEach(k=>{const e=this.$.find(`[data-filter=${k}]`),v=e.val(),values=[...(this.data.options?.[k]||[])];if(v&&!values.includes(v))values.unshift(v);const o=values.map(x=>`<option value="${this.esc(x)}">${this.esc(this.translate(x))}</option>`).join('');e.html(`<option value="">全部</option>${o}`).val(v||'')})}
     renderKpis(){const s=this.data.summary||{},a=[['本期交易明细',s.report_row_count??s.row_count,`${this.num(s.row_count)} 组原交易，按报告商品行口径`],['关联释放',s.release_count,'随原交易展示，不重复计入金额'],['商品级交易',s.product_count,'带SKU、ASIN或订单商品ID'],['店铺级费用',s.store_fee_count,'仓储、订阅、运输等'],['已绑定物料',s.bound_count,`${s.binding_rate||0}% 商品交易已识别`],['未绑定商品',s.unbound_count,'仅商品交易需要绑定']];this.$.find('.af-kpis').html(a.map((x,i)=>`<article class="af-kpi c${i}"><span>${x[0]}</span><strong>${this.num(x[1])}</strong><small>${x[2]}</small></article>`).join('')+(s.truncated?'<div class="af-warning">数据达到10万行，请缩小日期范围。</div>':''))}
@@ -123,6 +127,9 @@ class AmazonFinancePage {
     renderProducts(){this.$.find('.af-products').html(`<div class="af-scroll-list">${(this.data.products||[]).slice(0,100).map((p,i)=>`<div class="af-product"><span class="af-rank">${i+1}</span><img src="${this.image(p.image)}"><div class="af-product-main"><b>${this.esc(p.item_name||p.product_name||p.sku||'未命名商品')}</b><small><button data-copy="${this.esc(p.asin||'')}">${this.esc(p.asin||'无ASIN')}</button> · <button data-copy="${this.esc(p.sku||'')}">${this.esc(p.sku||'无SKU')}</button></small><small>${this.esc(p.store||'未归属')} · 数量 ${this.num(p.quantity)} · ${p.transactions}条</small></div><div class="af-product-money">${Object.entries(p.amounts||{}).map(([c,v])=>`<b class="${v>=0?'positive':'negative'}">${this.money(v,c)}</b>`).join('')}</div>${p.item?`<a class="af-bound" href="/app/item/${encodeURIComponent(p.item)}">${this.esc(p.item)}</a>`:`<button class="btn btn-xs btn-primary af-bind" ${this.bindData(p)}>绑定物料</button>`}</div>`).join('')||'<div class="af-empty">暂无商品交易</div>'}</div>`)}
     renderSettlements(){this.$.find('.af-settlements').html(`<div class="af-scroll-list">${(this.data.settlements||[]).map(s=>`<div class="af-settlement"><i>结</i><div><b>${this.esc(s.settlement_id)}</b><small>${this.esc(s.store||'未归属')} · ${s.count}条 · ${this.date(s.last_date)}</small></div><strong class="${s.amount>=0?'positive':'negative'}">${this.money(s.amount,s.currency)}</strong></div>`).join('')||'<div class="af-empty">暂无结算批次</div>'}</div>`)}
     renderSummary(){
+        const orderSummary=this.detailGroup==='order';
+        this.$.find('.af-summary-drawer h3').text(orderSummary?'订单汇总明细':'汇总明细');
+        if(orderSummary)return this.renderOrderSummary();
         const summary=this.data?.detail_summary||{},totals=summary.currencies||[],rows=summary.rows||[];
         const logistics=this.detailGroup==='logistics';
         const balance=logistics?this.summaryBalance():null;
@@ -147,6 +154,131 @@ class AmazonFinancePage {
             ? `<div class="af-summary-table-wrap af-summary-logistics">${accountOptions}<table><thead><tr><th>店铺 / 站点</th><th class="af-summary-copy-head" data-summary-copy="cost_center" title="点击复制成本中心整列">成本中心 ⧉</th><th class="af-summary-copy-head" data-summary-copy="item" title="点击复制关联物料整列">关联物料 ⧉</th><th class="af-summary-copy-head" data-summary-copy="account" title="点击复制科目表整列">科目表 ⧉</th><th class="af-summary-copy-head" data-summary-copy="net" title="点击复制净额(借)整列">净额(借) ⧉</th><th class="af-summary-copy-head" data-summary-copy="description" title="点击复制交易内容整列">交易内容 ⧉</th></tr></thead><tbody>${rows.map(x=>`<tr><td><b>${this.esc(x.store||'—')}</b><small>${this.esc(this.translate(x.marketplace_id||''))}</small></td><td>${costCenterCell(x)}</td><td><div class="af-manual-items">${itemHtml(x.manual_items,x.currency)}</div></td><td>${accountCell(x)}</td><td class="num">${this.money(Math.abs(x.net),x.currency)}</td><td title="${this.esc(this.logisticsSummaryDescription(x))}">${this.esc(this.logisticsSummaryDescription(x))}</td></tr>`).join('')||'<tr><td colspan="6" class="af-empty">当前筛选范围没有交易明细</td></tr>'}</tbody></table></div>`
             : `<div class="af-summary-table-wrap"><table><thead><tr><th>交易类型</th><th>交易内容</th><th>币种</th><th>SKU</th><th>笔数</th><th>净额</th><th>销售额</th><th>费用</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${this.esc(this.translate(x.transaction_type))}</td><td title="${this.esc(this.translate(x.description||''))}">${this.esc(this.translate(x.description||'—'))}</td><td>${this.esc(x.currency)}</td><td>${this.esc(x.sku||'—')}</td><td class="num">${this.num(x.count)}</td><td class="num">${this.money(x.net,x.currency)}</td><td class="num">${this.money(x.sales,x.currency)}</td><td class="num">${this.money(x.fees,x.currency)}</td></tr>`).join('')||'<tr><td colspan="8" class="af-empty">当前筛选范围没有交易明细</td></tr>'}</tbody></table></div>`;
         this.$.find('.af-summary-body').html(balanceHtml+totalsHtml+body);
+    }
+    async renderOrderSummary(){
+        const filters=this.filters(), key=JSON.stringify(filters);
+        const body=this.$.find('.af-summary-body');
+        this.$.find('.af-summary-drawer>p').text('财务按当前筛选汇总全部分页。库存按美西日期、SKU 和履约中心核对当天总量。');
+        if(this.orderSummary?.key===key){
+            const current=this.orderSummary;
+            if(current.data)return this.renderOrderReconciliation(current.data);
+            if(current.error){
+                this.$.find('.af-summary-count').text('加载失败');
+                body.html('<div class="af-empty">订单汇总读取失败。<button class="btn btn-default btn-xs" type="button" data-order-summary-retry>重试</button></div>');
+                return;
+            }
+        }
+        this.$.find('.af-summary-count').text('正在读取财务、发货和库存记录…');
+        body.html('<div class="af-empty" role="status">正在核对订单明细…</div>');
+        if(this.orderSummary?.key===key)return;
+        const request=this.orderSummary={key};
+        try{
+            const response=await frappe.call({
+                method:'fengjing_app.fengjing_business.page.amazon_finance.amazon_finance.get_finance_dashboard_data',
+                args:{filters,order_reconciliation:1},
+            });
+            if(!Array.isArray(response.message?.products))throw new Error('订单汇总数据格式错误');
+            request.data=response.message;
+        }catch(error){
+            console.error('订单汇总加载失败',error);
+            request.error=true;
+        }
+        if(this.orderSummary===request&&this.summaryOpen&&this.detailGroup==='order'
+            &&JSON.stringify(this.filters())===key)this.renderOrderSummary();
+    }
+    orderSummaryAmounts(entries,field){
+        return entries.map(entry=>`<span>${this.esc(this.money(entry[field],entry.currency))}</span>`).join('')||'—';
+    }
+    orderSummaryStatus(entries){
+        const state=entries.some(entry=>entry.status==='difference')?'difference'
+            :entries.some(entry=>entry.status==='missing')?'missing':'matched';
+        const label={matched:'数量一致',missing:'待核对',difference:'数量有差异'}[state];
+        return `<span class="af-order-status ${state}">${label}</span>`;
+    }
+    orderSummaryCount(value){
+        return value==null?'<small>无记录</small>':`${this.num(value)} 件`;
+    }
+    orderSummaryCenter(entry){
+        const counts=[
+            ['库存分类账',entry.ledger,null],
+            ['已配送',entry.fulfilled,entry.selected_fulfilled],
+            ['已完成',entry.completed,entry.selected_completed],
+        ];
+        const shipments=lines=>lines.slice().sort((a,b)=>a.time.localeCompare(b.time))
+            .map(line=>`<span>${this.esc(line.time)} · ${this.num(line.quantity)} 件</span>`).join('')||'<small>无记录</small>';
+        const quantity=entry.orders.length>1
+            ?`当天关联 ${this.num(entry.orders.length)} 个订单，库存按仓库合计核对。`
+            :'库存分类账没有订单号，按仓库合计核对。';
+        return `<section class="af-order-center">
+            <header><b>${this.esc(entry.center||'履约中心缺失')}</b>
+                <span>${this.esc(entry.countries.map(country=>this.translate(country)).join(' / '))}</span>${this.orderSummaryStatus([entry])}</header>
+            <div class="af-order-center-counts">${counts.map(([label,value,selected])=>`
+                <div><span>${label} · 当天</span><b>${this.orderSummaryCount(value)}</b>
+                ${selected!=null&&selected!==value?`<small>筛选订单 ${this.num(selected)} 件</small>`:''}</div>`).join('')}</div>
+            <div class="af-order-table"><table><thead><tr><th>当前筛选订单</th><th>已配送 · 美西</th><th>已完成 · 美西</th></tr></thead>
+                <tbody>${entry.orders.map(order=>`<tr><td><button type="button" data-copy="${this.esc(order.id)}" title="复制订单号">${this.esc(order.id)}</button></td>
+                    <td>${shipments(order.fulfilled)}</td><td>${shipments(order.completed)}</td></tr>`).join('')}</tbody></table></div>
+            <small class="af-order-note">${quantity}</small>
+        </section>`;
+    }
+    orderSummaryDay(day,open){
+        const counts=['ledger','fulfilled','completed'].map(key=>day.centers.every(center=>center[key]!=null)
+            ?day.centers.reduce((total,center)=>total+center[key],0):null);
+        return `<details class="af-order-day"${open?' open':''}><summary>
+            <span class="af-order-day-title"><b>${this.esc(day.date)}</b>
+                <small>${this.num(day.centers.length)} 个履约中心${day.outside_finance_period?' · 跨财务期间':''}</small></span>
+            <span class="af-order-day-count"><small>库存出库</small><b>${this.orderSummaryCount(counts[0])}</b></span>
+            <span class="af-order-day-count"><small>已配送</small><b>${this.orderSummaryCount(counts[1])}</b></span>
+            <span class="af-order-day-count"><small>已完成</small><b>${this.orderSummaryCount(counts[2])}</b></span>
+            ${this.orderSummaryStatus(day.centers)}
+        </summary><div class="af-order-centers">${day.centers.map(center=>this.orderSummaryCenter(center)).join('')}</div></details>`;
+    }
+    orderSummaryProduct(product,index){
+        const items=product.items||[],first=items[0];
+        const unlinked=product.orders.filter(order=>!order.days.length).length;
+        const financial=`<details class="af-order-finance"><summary>财务订单明细 · ${this.num(product.orders.length)} 行
+            ${unlinked?`<small>${this.num(unlinked)} 行未找到关联发货</small>`:''}</summary>
+            <div class="af-order-table"><table><thead><tr><th>订单号</th><th>财务日期（美西）</th><th>数量</th><th>销售额</th><th>费用</th><th>净额</th><th>关联发货日</th></tr></thead>
+                <tbody>${product.orders.map(order=>`<tr>
+                    <td>${order.id?`<button type="button" data-copy="${this.esc(order.id)}" title="复制订单号">${this.esc(order.id)}</button>`:'—'}</td>
+                    <td>${this.esc(order.dates.join('、')||'—')}</td><td>${this.num(order.quantity)}</td>
+                    ${['sales','fees','net'].map(field=>`<td>${this.orderSummaryAmounts(order.amounts,field)}</td>`).join('')}
+                    <td>${this.esc(order.days.join('、')||'未找到关联发货')}</td></tr>`).join('')}</tbody></table></div></details>`;
+        return `<details class="af-order-product"${index===0?' open':''}><summary>
+            ${first?.image?`<img src="${this.esc(this.image(first.image))}" alt="">`:''}
+            <span class="af-order-product-name"><b>${this.esc(product.sku||'无 SKU')}</b>
+                <small>${this.esc(first?.label||product.product_name||'')}</small></span>
+            <span class="af-order-product-quantity"><b>${this.num(product.quantity)} 件</b><small>${this.num(product.order_count)} 个订单</small></span>
+            <span class="af-order-product-net"><small>财务净额</small><b>${this.orderSummaryAmounts(product.totals,'net')}</b></span>
+        </summary><div class="af-order-product-body">
+            <div class="af-order-product-meta"><span>${this.esc(product.stores.join(' / '))}</span>
+                ${items.map(item=>`<a href="/app/item/${encodeURIComponent(item.name)}" target="_blank" rel="noopener noreferrer">${this.esc(item.name)}</a>`).join('')}</div>
+            ${financial}
+            ${product.days.map((day,dayIndex)=>this.orderSummaryDay(day,index===0&&dayIndex===0)).join('')
+            ||'<div class="af-empty">当前订单未找到对应发货记录</div>'}
+        </div></details>`;
+    }
+    renderOrderReconciliation(data){
+        const metrics=[['财务订单',data.order_count],['履约中心分组一致',data.matched_count],['数量有差异',data.difference_count],['分组待核对',data.missing_count]];
+        const unlinked=data.products.reduce((count,product)=>count+product.orders.filter(order=>!order.days.length).length,0);
+        const unlinkedLabel=unlinked?` · ${this.num(unlinked)} 条订单商品未关联发货`:'';
+        this.$.find('.af-summary-count').text(`${this.num(data.products.length)} 个 SKU 分组 · ${this.num(data.finance_rows)} 条财务记录 · ${this.num(data.center_count)} 个日期和履约中心分组${unlinkedLabel}`);
+        const totals=`<div class="af-summary-totals">${data.totals.map(entry=>`<article>
+            <header><b>${this.esc(entry.currency)}</b><span>财务交易</span></header>
+            <div>${[['销售额','sales'],['费用','fees'],['净额','net']].map(([label,field])=>`
+                <span>${label}<strong>${this.esc(this.money(entry[field],entry.currency))}</strong></span>`).join('')}</div>
+        </article>`).join('')}</div>`;
+        this.$.find('.af-summary-body').html(`
+            <div class="af-order-metrics">${metrics.map(([label,value])=>`<div><b>${this.num(value)}</b><span>${label}</span></div>`).join('')}</div>
+            ${data.truncated?'<div class="af-summary-balance is-mismatched">财务记录达到查询上限，请缩小日期范围后重新核对。</div>':''}
+            ${totals}
+            <nav class="af-order-sources" aria-label="原始报告">
+                <a href="/app/amazon-ledger" target="_blank" rel="noopener noreferrer">库存分类账 ↗</a>
+                <a href="/app/amazon_fba_shipment_analysis" target="_blank" rel="noopener noreferrer">FBA 已配送货件 ↗</a>
+                <a href="/app/amazon_fba_customer_sales_analysis" target="_blank" rel="noopener noreferrer">FBA 已完成订单销售 ↗</a>
+            </nav>
+            ${data.products.map((product,index)=>this.orderSummaryProduct(product,index)).join('')
+            ||'<div class="af-empty">当前筛选范围没有订单</div>'}`);
     }
     async loadReturnCard(){
         const requestId=this.returnRequestId=(this.returnRequestId||0)+1;

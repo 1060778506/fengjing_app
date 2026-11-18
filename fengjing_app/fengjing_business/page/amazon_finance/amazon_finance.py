@@ -17,6 +17,7 @@ from fengjing_app.fengjing_business.doctype.amazon_financial_transaction.amazon_
 DOCTYPE = "Amazon Financial Transaction"
 FULFILLED_SHIPMENT_DOCTYPE = "Amazon FBA Fulfilled Shipment"
 CUSTOMER_SALE_DOCTYPE = "Amazon FBA Customer Shipment Sale"
+INVENTORY_LEDGER_DETAIL_DOCTYPE = "Amazon FBA Inventory Ledger Detail"
 MAPPING_DOCTYPE = "Fengjing - Product Corresponding Platform - Main Table"
 REPORT_TIMEZONE = ZoneInfo("America/Los_Angeles")
 FILTER_OPTION_FIELDS = (
@@ -713,8 +714,218 @@ def _attach_shipment_dates(page_rows):
         row.completed_dates = sorted(dates_by_report[1].get(row.amazon_order_id, ()))
 
 
+def _read_order_summary_rows(doctype, fields, filters, key, values):
+    values = sorted(values)
+    for offset in range(0, len(values), 500):
+        yield from frappe.get_all(
+            doctype, fields=fields, limit_page_length=0,
+            filters={**filters, key: ["in", values[offset:offset + 500]]},
+        )
+
+
+def _order_summary_shipments(report, filters, key, values, store_scopes):
+    fulfilled = report == "fulfilled"
+    doctype = FULFILLED_SHIPMENT_DOCTYPE if fulfilled else CUSTOMER_SALE_DOCTYPE
+    fields = ["name", "amazon_store", "order_id", "seller_sku", "fulfillment_center_id",
+              "shipment_at", "raw_json"]
+    fields += (["shipment_id", "shipment_item_id", "amazon_order_item_id", "quantity_shipped"]
+               if fulfilled else ["seller_id", "quantity"])
+    # The fulfilled report can return the same shipment for several requests.
+    # Preserve repeated lines within one request when the source has no line ID.
+    copies = defaultdict(lambda: defaultdict(list))
+    for row in _read_order_summary_rows(doctype, fields, filters, key, values):
+        scope = store_scopes.get(row.amazon_store)
+        if not fulfilled and not scope:
+            scope = ("seller", row.seller_id)
+        if not scope or not row.order_id or not row.seller_sku:
+            continue
+        try:
+            raw = json.loads(row.raw_json or "{}")
+        except (TypeError, ValueError):
+            raw = {}
+        source_date = raw.get("shipment-date") if isinstance(raw, dict) else None
+        local, _ = _report_time(row.shipment_at, source_date)
+        if not local:
+            continue
+        sku = row.seller_sku.strip()
+        center = (row.fulfillment_center_id or "").strip().upper()
+        line = {
+            "key": (scope, sku, local.date().isoformat(), center),
+            "order_id": row.order_id,
+            "time": local.strftime("%H:%M:%S"),
+            "quantity": cint(row.quantity_shipped if fulfilled else row.quantity),
+        }
+        if not fulfilled:
+            yield line
+        elif row.shipment_id and row.shipment_item_id:
+            copies[(scope, row.shipment_id, row.shipment_item_id)][row.amazon_store].append(line)
+        else:
+            identity = (scope, row.order_id, sku, center, local, row.shipment_id,
+                        row.amazon_order_item_id, line["quantity"])
+            copies[identity][row.amazon_store].append(line)
+    for by_store in copies.values():
+        representative = max(sorted(by_store), key=lambda store: len(by_store[store]))
+        yield from by_store[representative]
+
+
+def _order_summary_amounts(currency, row):
+    net = row.display_net_amount if row.get("display_net_amount") is not None else row.net_amount
+    fees = row.get("display_fees")
+    if fees is None:
+        fees = sum(_money(row.get(field)) for field in
+                   ("selling_fees", "fba_fees", "other_transaction_fees"))
+    return {"currency": currency, "net": _money(net), "sales": _money(row.product_sales),
+            "fees": _money(fees)}
+
+
+def _order_summary_totals(rows):
+    totals = defaultdict(lambda: {"net": Decimal(0), "sales": Decimal(0), "fees": Decimal(0)})
+    for row in rows:
+        for field in ("net", "sales", "fees"):
+            totals[row["currency"]][field] += Decimal(str(row[field]))
+    return [{"currency": currency, **{field: float(amount) for field, amount in values.items()}}
+            for currency, values in sorted(totals.items())]
+
+
+def _order_reconciliation(rows, filters, truncated):
+    stores = frappe.get_all("Amazon Store Configuration", limit_page_length=0,
+                            fields=["name", "seller_id", "cost_center", "marketplace_id"])
+    store_scopes = {row.name: ("seller", row.seller_id) if row.seller_id else ("store", row.name)
+                    for row in stores}
+    finance_scopes = {(row.cost_center, row.marketplace_id): store_scopes[row.name] for row in stores}
+    products, orders = {}, {}
+    finance_lines = []
+    for row in rows:
+        scope = finance_scopes.get((row.store, row.marketplace_id),
+                                   ("finance", row.store or "", row.marketplace_id or ""))
+        sku = (row.sku or "").strip()
+        product = products.setdefault((scope, sku), {
+            "sku": sku, "product_name": row.product_name, "items": {}, "stores": set(),
+            "orders": [], "days": [], "quantity": 0,
+        })
+        if row.corresponding_item:
+            product["items"][row.corresponding_item] = {
+                "name": row.corresponding_item, "label": row.item_name, "image": row.item_image,
+            }
+        if row.store:
+            product["stores"].add(row.store)
+        order_key = (scope, sku, row.amazon_order_id or row.name)
+        if order_key not in orders:
+            orders[order_key] = {"id": row.amazon_order_id, "dates": set(), "amounts": [],
+                                 "quantity": 0, "days": set(), "transaction_count": 0}
+            product["orders"].append(orders[order_key])
+        order = orders[order_key]
+        if row.report_posted_date:
+            order["dates"].add(row.report_posted_date.date().isoformat())
+        quantity = cint(row.quantity)
+        order["quantity"] += quantity
+        order["transaction_count"] += 1
+        product["quantity"] += quantity
+        amounts = _order_summary_amounts(row.currency_code or "未知", row)
+        order["amounts"].append(amounts)
+        finance_lines.append(amounts)
+
+    selected_orders = {key for key, order in orders.items() if order["id"] and key[1]}
+    active_scopes = {key[0] for key in selected_orders}
+    source_stores = {name for name, scope in store_scopes.items() if scope in active_scopes}
+    sellers = {scope[1] for scope in active_scopes if scope[0] == "seller"}
+    report_filters = {}
+    if source_stores:
+        report_filters["fulfilled"] = {"amazon_store": ["in", sorted(source_stores)]}
+    if sellers:
+        report_filters["completed"] = {"seller_id": ["in", sorted(sellers)]}
+    order_ids = {key[2] for key in selected_orders}
+    centers = {}
+    for report, source_filter in report_filters.items():
+        for line in _order_summary_shipments(
+                report, source_filter, "order_id", order_ids, store_scopes):
+            scope, sku, day, center = line["key"]
+            order_key = (scope, sku, line["order_id"])
+            if order_key not in selected_orders:
+                continue
+            orders[order_key]["days"].add(day)
+            group = centers.setdefault(line["key"], {
+                "center": center, "orders": {}, "selected_fulfilled": 0, "selected_completed": 0,
+                "fulfilled": None, "completed": None, "ledger": None, "countries": set(),
+            })
+            order = group["orders"].setdefault(line["order_id"], {"id": line["order_id"],
+                                                                 "fulfilled": [], "completed": []})
+            order[report].append({"time": line["time"], "quantity": line["quantity"]})
+            group[f"selected_{report}"] += line["quantity"]
+
+    if centers:
+        days = sorted({key[2] for key in centers})
+        skus = {key[1] for key in centers}
+        # Read the full day for each source, even if the financial filter selects one order.
+        shipment_range = ["between", [_report_boundary(days[0]) - timedelta(days=1),
+                                      _report_boundary(days[-1], following_day=True) + timedelta(days=1)]]
+        for report, source_filter in report_filters.items():
+            for line in _order_summary_shipments(
+                    report, {**source_filter, "shipment_at": shipment_range}, "seller_sku", skus, store_scopes):
+                group = centers.get(line["key"])
+                if group is not None:
+                    group[report] = (group[report] or 0) + line["quantity"]
+
+        ledger_filters = {"amazon_store": ["in", sorted(source_stores)], "event_type": "Shipments",
+                          "event_at": ["between", [days[0], f"{days[-1]} 23:59:59.999999"]]}
+        for row in _read_order_summary_rows(
+                INVENTORY_LEDGER_DETAIL_DOCTYPE,
+                ["amazon_store", "seller_sku", "event_at", "fulfillment_center", "country", "quantity"],
+                ledger_filters, "seller_sku", skus):
+            key = (store_scopes[row.amazon_store], (row.seller_sku or "").strip(),
+                   getdate(row.event_at).isoformat(), (row.fulfillment_center or "").strip().upper())
+            group = centers.get(key)
+            if group is not None:
+                group["ledger"] = (group["ledger"] or 0) - cint(row.quantity)
+                if row.country:
+                    group["countries"].add(row.country)
+
+    statuses = Counter()
+    product_days = defaultdict(lambda: defaultdict(list))
+    for (scope, sku, day, center), group in sorted(centers.items()):
+        counts = [group[field] for field in ("ledger", "fulfilled", "completed") if group[field] is not None]
+        if not center:
+            status = "missing"
+        elif len(set(counts)) > 1:
+            status = "difference"
+        elif len(counts) == 3:
+            status = "matched"
+        else:
+            status = "missing"
+        statuses[status] += 1
+        group["status"] = status
+        group["orders"] = [group["orders"][key] for key in sorted(group["orders"])]
+        group["countries"] = sorted(group["countries"])
+        product_days[(scope, sku)][day].append(group)
+
+    for key, product in products.items():
+        product["items"] = list(product["items"].values())
+        product["stores"] = sorted(product["stores"])
+        product["totals"] = _order_summary_totals(
+            amount for order in product["orders"] for amount in order["amounts"])
+        product["order_count"] = sum(bool(order["id"]) for order in product["orders"])
+        for order in product["orders"]:
+            order["amounts"] = _order_summary_totals(order["amounts"])
+            order["dates"] = sorted(order["dates"])
+            order["days"] = sorted(order["days"])
+        product["days"] = [{
+            "date": day, "centers": entries,
+            "outside_finance_period": bool((filters.date_from and day < str(filters.date_from))
+                                           or (filters.date_to and day > str(filters.date_to))),
+        } for day, entries in sorted(product_days[key].items(), reverse=True)]
+
+    return {
+        "products": sorted(products.values(), key=lambda item: (-item["quantity"], item["sku"])),
+        "order_count": len({(key[0], order["id"]) for key, order in orders.items() if order["id"]}),
+        "finance_rows": len(rows), "totals": _order_summary_totals(finance_lines),
+        "center_count": len(centers), "matched_count": statuses["matched"],
+        "difference_count": statuses["difference"], "missing_count": statuses["missing"],
+        "truncated": truncated,
+    }
+
+
 @frappe.whitelist()
-def get_finance_dashboard_data(filters=None, page=1, page_size=300):
+def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconciliation=0):
     f = _filters(filters)
     fields = [
         "name", "transaction_sku_key", "transaction_id", "amazon_order_id",
@@ -876,6 +1087,8 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         and (detail_group != "refund" or refund_in_selected_dates(row))
     ]
     detail_rows = [row for row in selected_detail_rows if row.name not in parent_for_child]
+    if cint(order_reconciliation) and detail_group == "order":
+        return _order_reconciliation(detail_rows, f, truncated)
     if detail_group == "logistics":
         _attach_awd_fee_details(detail_rows)
 
