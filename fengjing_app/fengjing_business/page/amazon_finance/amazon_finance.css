@@ -149,3 +149,4 @@
 .af-manual-none{padding:18px;text-align:center;color:#8491a2}
 .af-shipment-months{display:flex;justify-content:center;flex-wrap:wrap;gap:4px;margin-top:5px}
 .af-shipment-month{display:inline-flex;align-items:center;padding:2px 7px;border-radius:999px;background:#e7f6ee;color:#18744a;font-size:10px;font-weight:700;white-space:nowrap;cursor:help}
+.af-shipment-month.completed{background:#eaf0ff;color:#3159a6}

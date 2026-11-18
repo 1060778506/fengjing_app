@@ -16,6 +16,7 @@ from fengjing_app.fengjing_business.doctype.amazon_financial_transaction.amazon_
 
 DOCTYPE = "Amazon Financial Transaction"
 FULFILLED_SHIPMENT_DOCTYPE = "Amazon FBA Fulfilled Shipment"
+CUSTOMER_SALE_DOCTYPE = "Amazon FBA Customer Shipment Sale"
 MAPPING_DOCTYPE = "Fengjing - Product Corresponding Platform - Main Table"
 REPORT_TIMEZONE = ZoneInfo("America/Los_Angeles")
 FILTER_OPTION_FIELDS = (
@@ -639,20 +640,24 @@ def _summarize_detail_rows(rows, detail_group="", mappings=None, cost_centers=No
 
 
 def _attach_shipment_months(page_rows):
-    """Match finance orders to FBA shipment months shown by the shipment analysis page."""
+    """Attach the two independent FBA report months to finance orders."""
     order_ids = sorted({row.amazon_order_id for row in page_rows if row.amazon_order_id})
     if not order_ids:
         return
-    months_by_order = defaultdict(set)
-    for shipment in frappe.get_all(
-        FULFILLED_SHIPMENT_DOCTYPE,
-        filters={"order_id": ["in", order_ids], "shipment_at": ["is", "set"]},
-        fields=["order_id", "shipment_at"],
-        limit_page_length=0,
-    ):
-        months_by_order[shipment.order_id].add(str(shipment.shipment_at)[:7])
+    months_by_report = []
+    for doctype in (FULFILLED_SHIPMENT_DOCTYPE, CUSTOMER_SALE_DOCTYPE):
+        months_by_order = defaultdict(set)
+        for shipment in frappe.get_all(
+            doctype,
+            filters={"order_id": ["in", order_ids], "shipment_at": ["is", "set"]},
+            fields=["order_id", "shipment_at"],
+            limit_page_length=0,
+        ):
+            months_by_order[shipment.order_id].add(str(shipment.shipment_at)[:7])
+        months_by_report.append(months_by_order)
     for row in page_rows:
-        row.shipment_months = sorted(months_by_order.get(row.amazon_order_id, ()))
+        row.shipment_months = sorted(months_by_report[0].get(row.amazon_order_id, ()))
+        row.completed_months = sorted(months_by_report[1].get(row.amazon_order_id, ()))
 
 
 @frappe.whitelist()
