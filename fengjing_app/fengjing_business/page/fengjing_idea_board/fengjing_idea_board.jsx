@@ -26,19 +26,18 @@ const EDITOR_BAR = { items: [
 	{ comp: "button", id: "save", text: "保存", type: "primary" },
 ] };
 
-function DateField({ value, onChange }) {
-	return <input className="fjib-date-input" type="date" value={value || ""}
-		onChange={(event) => onChange({ value: event.target.value })} />;
+function TimeField({ value }) {
+	return <div className="fjib-time-value">{value || "保存后自动生成"}</div>;
 }
-registerEditorItem("fjib-date", DateField);
+registerEditorItem("fjib-time", TimeField);
 
 const EDITOR_ITEMS = [
 	{ comp: "text", key: "label", label: "想法", required: true },
 	{ comp: "textarea", key: "description", label: "说明" },
-	{ comp: "text", key: "category", label: "分类" },
 	{ comp: "richselect", key: "column", label: "进展", options: COLUMNS.map(({ id, label }) => ({ id, label })) },
 	{ comp: "richselect", key: "priority", label: "优先级", options: ["普通", "重要", "紧急"].map((id) => ({ id, label: id })) },
-	{ comp: "fjib-date", key: "target_date", label: "计划日期（可不填）" },
+	{ comp: "fjib-time", key: "creation", label: "新建时间" },
+	{ comp: "fjib-time", key: "modified", label: "最新修改时间" },
 ];
 
 async function call(method, args = {}) {
@@ -59,10 +58,8 @@ function toDocument(card) {
 	return {
 		title: String(card.label || "").trim(),
 		details: card.description || "",
-		category: card.category || "",
 		status: card.column || "收集箱",
 		priority: card.priority || "普通",
-		target_date: card.target_date || null,
 	};
 }
 
@@ -79,14 +76,18 @@ function confirmDelete(label) {
 function IdeaCard({ card }) {
 	return <div className="fjib-card">
 		<button type="button" className="fjib-card-menu" data-action="menu" aria-label="卡片菜单">···</button>
-		{(card.category || card.priority !== "普通") && <div className="fjib-card-top">
-			{card.category && <span className="fjib-tag">{card.category}</span>}
-			{card.priority !== "普通" && <span className={`fjib-priority ${card.priority === "紧急" ? "urgent" : ""}`}>{card.priority}</span>}
+		{card.priority !== "普通" && <div className="fjib-card-top">
+			<span className={`fjib-priority ${card.priority === "紧急" ? "urgent" : ""}`}>{card.priority}</span>
 		</div>}
 		<div className="fjib-card-title">{card.label || "新想法"}</div>
 		{card.description && <div className="fjib-card-description">{card.description}</div>}
 		<div className="fjib-card-footer">
-			<span className="fjib-date">{isDraft(card.id) ? "尚未保存" : card.target_date ? `计划 ${card.target_date}` : "随时处理"}</span>
+			<div className="fjib-card-dates">
+				{isDraft(card.id) ? <span>保存后记录时间</span> : <>
+					<span>新建 {card.creation || "—"}</span>
+					<span>修改 {card.modified || "—"}</span>
+				</>}
+			</div>
 			<span className="fjib-card-open" aria-hidden="true">↗</span>
 		</div>
 	</div>;
@@ -110,7 +111,7 @@ function Board() {
 			apiRef.current = null;
 			setCards(latest);
 			setBoardKey((value) => value + 1);
-		} catch (error) { showError("读取想法池", error); }
+		} catch (error) { showError("读取经营蓝图", error); }
 	}, []);
 	useEffect(() => { reload(); }, [reload]);
 
@@ -172,9 +173,12 @@ function Board() {
 		if (!target) return;
 		moveQueue.current = moveQueue.current.then(() => call("move_card", {
 			name: id, column: target, before: before || null,
-		})).then(() => {
+		})).then((result) => {
 			statusById.current.set(id, target);
-			setCards(instance.getCards());
+			const latest = instance.getCards();
+			const moved = latest.find((item) => item.id === id);
+			if (moved && result?.modified) moved.modified = result.modified;
+			setCards([...latest]);
 		})
 			.catch(async (error) => { showError("移动想法", error); await reload(); });
 	}, [reload]);
@@ -193,7 +197,7 @@ function Board() {
 			if (allowStoredAdd.current) return true;
 			payload.id = `${DRAFT_PREFIX}${Date.now()}-${++draftNumber.current}`;
 			payload.card = {
-				label: "", description: "", category: "", priority: "普通", target_date: "",
+				label: "", description: "", priority: "普通",
 				column: "收集箱", ...payload.card,
 			};
 			payload.edit = true;

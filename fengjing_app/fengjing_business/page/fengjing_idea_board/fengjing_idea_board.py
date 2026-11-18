@@ -7,14 +7,14 @@ from frappe import _
 DOCTYPE = "Fengjing Business Idea"
 STATUSES = ("收集箱", "待评估", "待做", "进行中", "已完成")
 PRIORITIES = ("普通", "重要", "紧急")
-FIELDS = ("title", "details", "category", "status", "priority", "target_date")
+FIELDS = ("title", "details", "status", "priority")
 
 
 def _check(permission, doc=None):
 	if doc:
 		doc.check_permission(permission)
 	elif not frappe.has_permission(DOCTYPE, permission):
-		frappe.throw(_("没有操作想法池的权限"), frappe.PermissionError)
+		frappe.throw(_("没有操作经营蓝图的权限"), frappe.PermissionError)
 
 
 def _normalize(data):
@@ -26,10 +26,8 @@ def _normalize(data):
 	result = {field: data.get(field) for field in FIELDS}
 	result["title"] = str(result["title"] or "").strip()
 	result["details"] = str(result["details"] or "").strip()
-	result["category"] = str(result["category"] or "").strip()
 	result["status"] = result["status"] or STATUSES[0]
 	result["priority"] = result["priority"] or PRIORITIES[0]
-	result["target_date"] = result["target_date"] or None
 	if not result["title"]:
 		frappe.throw(_("请填写想法标题"))
 	if result["status"] not in STATUSES or result["priority"] not in PRIORITIES:
@@ -42,10 +40,10 @@ def _as_card(doc):
 		"id": doc.name,
 		"label": doc.title,
 		"description": doc.details or "",
-		"category": doc.category or "",
 		"column": doc.status,
 		"priority": doc.priority or "普通",
-		"target_date": str(doc.target_date) if doc.target_date else "",
+		"creation": str(doc.creation)[:16] if doc.creation else "",
+		"modified": str(doc.modified)[:16] if doc.modified else "",
 	}
 
 
@@ -56,7 +54,7 @@ def get_cards():
 		_as_card(doc)
 		for doc in frappe.get_list(
 			DOCTYPE,
-			fields=["name", *FIELDS, "sort_order"],
+			fields=["name", *FIELDS, "sort_order", "creation", "modified"],
 			order_by="sort_order asc, creation asc",
 			limit_page_length=0,
 		)
@@ -124,7 +122,7 @@ def move_card(name, column, before=None):
 	for status, names in groups:
 		for index, item in enumerate(names, 1):
 			frappe.db.set_value(DOCTYPE, item, "sort_order", index * 10, update_modified=False)
-	return {"name": name, "column": column}
+	return {"name": name, "column": column, "modified": str(doc.modified)[:16] if doc.modified else ""}
 
 
 @frappe.whitelist()
