@@ -87,7 +87,7 @@ bench --site fjnb execute frappe.model.utils.user_settings.sync_user_settings
 			#安装组件
 			docker exec -u frappe -it neizhang-backend-1 bash
 			cd /home/frappe/frappe-bench/apps/fengjing_app
-			yarn add @meteocons/svg @meteocons/svg-static @meteocons/lottie
+			yarn add @svar-ui/vue-kanban
 
 
 			# 查看日志
