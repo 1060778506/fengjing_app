@@ -3,8 +3,16 @@
  "autoname": "hash",
  "doctype": "DocType",
  "engine": "InnoDB",
- "field_order": [],
- "fields": [],
+ "field_order": ["title", "details", "category", "status", "priority", "target_date", "sort_order"],
+ "fields": [
+  {"fieldname": "title", "fieldtype": "Data", "label": "想法", "reqd": 1, "in_list_view": 1},
+  {"fieldname": "details", "fieldtype": "Small Text", "label": "说明"},
+  {"fieldname": "category", "fieldtype": "Data", "label": "分类"},
+  {"fieldname": "status", "fieldtype": "Select", "label": "状态", "options": "收集箱\n待评估\n待做\n进行中\n已完成", "default": "收集箱", "reqd": 1, "in_list_view": 1},
+  {"fieldname": "priority", "fieldtype": "Select", "label": "优先级", "options": "普通\n重要\n紧急", "default": "普通"},
+  {"fieldname": "target_date", "fieldtype": "Date", "label": "计划日期"},
+  {"fieldname": "sort_order", "fieldtype": "Int", "label": "排序", "default": 0, "hidden": 1}
+ ],
  "is_submittable": 0,
  "istable": 0,
  "links": [],
