@@ -371,6 +371,39 @@ def _raw_item_fee_total(nodes):
     return total
 
 
+def _raw_item_fee_categories(nodes):
+    """Classify AmazonFees children before their Base leaves lose fee context."""
+    categories = {"selling_fees": 0.0, "fba_fees": 0.0, "other_transaction_fees": 0.0}
+    found = False
+
+    def visit(entries):
+        nonlocal found
+        for node in entries or []:
+            if not isinstance(node, dict):
+                continue
+            kind = str(node.get("breakdownType") or "").lower()
+            children = node.get("breakdowns") or []
+            if kind == "amazonfees" and children:
+                visit(children)
+                continue
+            if kind == "amazonfees" or "fee" in kind or kind in {
+                "commission", "shippingchargeback", "giftwrapchargeback",
+            }:
+                found = True
+                if any(part in kind for part in ("fba", "fulfillment", "storage")):
+                    field = "fba_fees"
+                elif any(part in kind for part in ("commission", "referral", "selling")):
+                    field = "selling_fees"
+                else:
+                    field = "other_transaction_fees"
+                categories[field] += _金额(node.get("breakdownAmount") or {})
+            elif children:
+                visit(children)
+
+    visit(nodes)
+    return {key: _money(value) for key, value in categories.items()} if found else None
+
+
 def _item_display(row):
     """Reconstruct Amazon's item lines for one stored transaction/SKU row."""
     if not row.sku:
@@ -394,6 +427,17 @@ def _item_display(row):
     # A transaction spanning several SKUs is stored once per SKU; the table
     # should show this SKU's share rather than repeat the transaction total.
     display_amount = _money(row.item_amount) if len(skus) > 1 and row.item_amount is not None else None
+    fee_categories = {"selling_fees": 0.0, "fba_fees": 0.0, "other_transaction_fees": 0.0}
+    has_fee_breakdown = False
+    for item in sku_items:
+        parsed = _raw_item_fee_categories(item.get("breakdowns") or [])
+        if parsed is not None:
+            has_fee_breakdown = True
+            for field, amount in parsed.items():
+                fee_categories[field] += amount
+    if has_fee_breakdown:
+        row.display_fee_categories = {field: _money(amount) for field, amount in fee_categories.items()}
+        row.display_fees = _money(sum(row.display_fee_categories.values()))
     if len(sku_items) < 2:
         return [], display_amount
     expected = Decimal(str(row.item_amount or 0))
@@ -416,6 +460,7 @@ def _item_display(row):
             "net_amount": _money(_金额(item.get("totalAmount") or {})),
             "display_fees": _money(_raw_item_fee_total(item.get("breakdowns") or [])),
             **{key: _money(value) for key, value in amounts.items()},
+            **(_raw_item_fee_categories(item.get("breakdowns") or []) or {}),
         })
     row.display_fees = _money(sum(line["display_fees"] for line in lines))
     return lines, display_amount
@@ -517,7 +562,8 @@ def _summarize_detail_rows(rows, detail_group="", mappings=None, cost_centers=No
         amounts = {
             "net": Decimal(str(_money(row.net_amount))),
             "sales": Decimal(str(_money(row.product_sales))),
-            "fees": sum((Decimal(str(_money(row.get(field)))) for field in
+            "fees": Decimal(str(_money(row.display_fees))) if row.get("display_fees") is not None else
+                    sum((Decimal(str(_money(row.get(field)))) for field in
                          ("selling_fees", "fba_fees", "other_transaction_fees")), Decimal(0)),
         }
         total = currencies.setdefault(currency, {"currency": currency, "count": 0,
@@ -639,25 +685,32 @@ def _summarize_detail_rows(rows, detail_group="", mappings=None, cost_centers=No
     }
 
 
-def _attach_shipment_months(page_rows):
-    """Attach the two independent FBA report months to finance orders."""
+def _attach_shipment_dates(page_rows):
+    """Attach Pacific calendar dates from the two independent FBA reports."""
     order_ids = sorted({row.amazon_order_id for row in page_rows if row.amazon_order_id})
     if not order_ids:
         return
-    months_by_report = []
+    dates_by_report = []
     for doctype in (FULFILLED_SHIPMENT_DOCTYPE, CUSTOMER_SALE_DOCTYPE):
-        months_by_order = defaultdict(set)
+        dates_by_order = defaultdict(set)
         for shipment in frappe.get_all(
             doctype,
             filters={"order_id": ["in", order_ids], "shipment_at": ["is", "set"]},
-            fields=["order_id", "shipment_at"],
+            fields=["order_id", "shipment_at", "raw_json"],
             limit_page_length=0,
         ):
-            months_by_order[shipment.order_id].add(str(shipment.shipment_at)[:7])
-        months_by_report.append(months_by_order)
+            try:
+                raw = json.loads(shipment.raw_json or "{}")
+            except (TypeError, ValueError):
+                raw = {}
+            source_timestamp = raw.get("shipment-date") if isinstance(raw, dict) else None
+            pacific_time, _ = _report_time(shipment.shipment_at, source_timestamp)
+            if pacific_time:
+                dates_by_order[shipment.order_id].add(str(pacific_time.date()))
+        dates_by_report.append(dates_by_order)
     for row in page_rows:
-        row.shipment_months = sorted(months_by_report[0].get(row.amazon_order_id, ()))
-        row.completed_months = sorted(months_by_report[1].get(row.amazon_order_id, ()))
+        row.shipment_dates = sorted(dates_by_report[0].get(row.amazon_order_id, ()))
+        row.completed_dates = sorted(dates_by_report[1].get(row.amazon_order_id, ()))
 
 
 @frappe.whitelist()
@@ -847,7 +900,9 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
             currencies[currency]["net"] += amount
             currencies[currency]["inflow" if amount >= 0 else "outflow"] += abs(amount)
             currencies[currency]["sales"] += _money(row.product_sales)
-            currencies[currency]["fees"] += abs(_money(row.selling_fees) + _money(row.fba_fees) + _money(row.other_transaction_fees))
+            fee_amount = (row.display_fees if row.get("display_fees") is not None else
+                          _money(row.selling_fees) + _money(row.fba_fees) + _money(row.other_transaction_fees))
+            currencies[currency]["fees"] += abs(_money(fee_amount))
         if row.is_product:
             product_count += 1
             if row.is_bound:
@@ -858,12 +913,14 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
         d = daily[day][currency]
         d["net"] += amount
         d["sales"] += _money(row.product_sales)
-        d["fees"] += _money(row.selling_fees) + _money(row.fba_fees) + _money(row.other_transaction_fees)
+        d["fees"] += _money(row.display_fees) if row.get("display_fees") is not None else (
+            _money(row.selling_fees) + _money(row.fba_fees) + _money(row.other_transaction_fees))
         d["tax"] += _money(row.product_sales_tax) + _money(row.shipping_credits_tax) + _money(row.marketplace_withheld_tax)
         d["promotion"] += _money(row.promotional_rebates) + _money(row.promotional_rebates_tax)
         d["count"] += 1
         for label, field in (("销售费用", "selling_fees"), ("FBA费用", "fba_fees"), ("其他交易费用", "other_transaction_fees"), ("平台代扣税", "marketplace_withheld_tax"), ("促销折扣", "promotional_rebates"), ("销售税", "product_sales_tax")):
-            fee_totals[currency][label] += _money(row.get(field))
+            fee_totals[currency][label] += _money(
+                (row.get("display_fee_categories") or {}).get(field, row.get(field)))
         t = type_totals[currency][row.transaction_type or "未分类"]
         t["amount"] += amount; t["count"] += 1
         s = store_totals[currency][row.store or "未归属店铺"]
@@ -889,7 +946,7 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
     start = (page - 1) * page_size
     page_rows = display_rows[start:start + page_size]
     if detail_group == "order":
-        _attach_shipment_months(page_rows)
+        _attach_shipment_dates(page_rows)
     for row in page_rows:
         row.related_releases = release_children.get(row.name, [])
         for child in row.related_releases:

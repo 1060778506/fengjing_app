@@ -42,9 +42,9 @@ class AmazonFBACustomerSalesAnalysis {
                     <a href="/app/amazon_fba_shipment_analysis">已配送货件分析 ↗</a>
                 </div>
             </section>
-            <p class="fcs-notice"><strong>数据口径</strong>本页读取 Amazon 已完成订单销售报告。记录按订单所属站点归属，匹配不到的列为“待分配”。这里的商品单价、配送金额和礼品包装金额是报告字段，不代表实际结算净额；库存是否扣减仍需核对库存分类账。</p>
+            <p class="fcs-notice"><strong>数据口径</strong>本页读取 Amazon 已完成订单销售报告，发货时间和月份均按美国太平洋时间展示。记录按订单所属站点归属，匹配不到的列为“待分配”。这里的商品单价、配送金额和礼品包装金额是报告字段，不代表实际结算净额；库存是否扣减仍需核对库存分类账。</p>
             <section class="fcs-filters">
-                <div class="fcs-month-heading"><strong>发货月份</strong><div class="fcs-months"></div></div>
+                <div class="fcs-month-heading"><strong>发货月份（美国太平洋）</strong><div class="fcs-months"></div></div>
                 <label>订单所属店铺<select data-store><option value="">全部店铺</option></select></label>
                 <label>查找订单 / SKU / ASIN<input type="search" data-search placeholder="输入订单号、SKU、FNSKU 或履约中心"></label>
             </section>
@@ -53,7 +53,7 @@ class AmazonFBACustomerSalesAnalysis {
             <section class="fcs-card fcs-products"><header><div><span>PRODUCT VIEW</span><h2>发货商品分布</h2></div><small>当前筛选范围，按数量排序</small></header><div class="fcs-product-list"></div></section>
             <section class="fcs-card fcs-records"><header><div><span>SALES REPORT ROWS</span><h2>已完成订单销售明细</h2></div><small class="fcs-count"></small></header>
                 <div class="fcs-table-wrap"><table><thead><tr>
-                    <th>发货时间</th><th>订单所属店铺</th><th>亚马逊订单号</th><th>商品 / SKU / 物料</th>
+                    <th>发货时间（美国太平洋）</th><th>订单所属店铺</th><th>亚马逊订单号</th><th>商品 / SKU / 物料</th>
                     <th>数量</th><th>商品单价</th><th>配送金额</th><th>礼品包装</th><th>履约中心 / 目的地</th><th>原始记录</th>
                 </tr></thead><tbody></tbody></table></div><footer class="fcs-pages"></footer>
             </section>
@@ -158,7 +158,7 @@ class AmazonFBACustomerSalesAnalysis {
             const recordUrl = `/app/amazon-fba-customer-shipment-sale/${encodeURIComponent(row.name)}`;
             const destination = [row.ship_city, row.ship_state].filter(Boolean).join(" · ");
             return `<tr>
-                <td class="fcs-time">${this.esc(this.date(row.shipment_at))}</td>
+                <td class="fcs-time">${this.esc(this.date(row.report_shipment_at))}<small>${this.esc(row.report_timezone || "")}</small></td>
                 <td><strong>${this.esc(row.amazon_store || "待分配")}</strong>
                     <small>${this.esc(row.marketplace_id || "站点未匹配")}</small></td>
                 <td><strong>${this.esc(row.order_id || "未提供订单号")}</strong></td>
