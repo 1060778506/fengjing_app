@@ -147,3 +147,5 @@
 .af-manual-option b,.af-manual-option small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .af-manual-option small{color:#8190a2;font-size:10px}
 .af-manual-none{padding:18px;text-align:center;color:#8491a2}
+.af-shipment-months{display:flex;justify-content:center;flex-wrap:wrap;gap:4px;margin-top:5px}
+.af-shipment-month{display:inline-flex;align-items:center;padding:2px 7px;border-radius:999px;background:#e7f6ee;color:#18744a;font-size:10px;font-weight:700;white-space:nowrap;cursor:help}

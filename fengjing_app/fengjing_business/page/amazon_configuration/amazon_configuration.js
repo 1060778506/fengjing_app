@@ -449,7 +449,7 @@ class AmazonConfigurationCenter {
 		if (actionKey === "full") return "schedule";
 		if (String(actionKey).startsWith("recheck_")) return actionKey;
 		if (actionKey === "latest") {
-			if (["orders", "finances", "fba_returns", "fba_shipments"].includes(sectionKey)) return "incremental";
+			if (["orders", "finances", "fba_returns", "fba_shipments", "fba_shipment_sales"].includes(sectionKey)) return "incremental";
 			if (sectionKey === "ranking" && this.platform === "ozon") return "automatic";
 			return "schedule";
 		}
@@ -860,7 +860,7 @@ class AmazonConfigurationCenter {
 
 	icon(name) {
 		const icons = {
-			stores: "shop-window", ranking: "bar-chart-line", orders: "box-seam", finances: "wallet2", advertising: "megaphone", balances: "cash-stack", fba_inventory: "boxes", fba_ledger: "journal-text", fba_inbound: "truck", awd_inventory: "building", awd_inbound: "truck-front", fba_returns: "arrow-return-left", fba_shipments: "box-arrow-up-right",
+			stores: "shop-window", ranking: "bar-chart-line", orders: "box-seam", finances: "wallet2", advertising: "megaphone", balances: "cash-stack", fba_inventory: "boxes", fba_ledger: "journal-text", fba_inbound: "truck", awd_inventory: "building", awd_inbound: "truck-front", fba_returns: "arrow-return-left", fba_shipments: "box-arrow-up-right", fba_shipment_sales: "receipt-cutoff",
 			prices: "tags", settlements: "receipt",
 			refresh: "arrow-clockwise", expand: "arrows-fullscreen", plus: "plus-lg", search: "search", chevron: "chevron-right",
 			info: "info-circle", warning: "exclamation-triangle", trash: "trash3", save: "check2-circle", check: "check-lg", settings: "gear",

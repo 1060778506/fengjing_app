@@ -87,6 +87,15 @@ def run_amazon_fba_fulfilled_shipments():
     return run_scheduled_shipment_sync()
 
 
+def run_amazon_fba_customer_shipment_sales():
+    """FBA 已完成订单销售报告调度入口。"""
+    from fengjing_app.fengjing_business.doctype.amazon_fba_customer_shipment_sale_configuration.amazon_fba_customer_shipment_sale_configuration import (
+        run_scheduled_shipment_sync,
+    )
+
+    return run_scheduled_shipment_sync()
+
+
 def run_amazon_fba_inbound_shipments():
     """Amazon FBA 入库货件调度入口。"""
     from fengjing_app.fengjing_business.doctype.amazon_fba_inbound_shipment_country_configuration.amazon_fba_inbound_shipment_country_configuration import (
@@ -329,6 +338,7 @@ scheduler_events = {
         "fengjing_app.hooks.run_amazon_fba_inventory_ledger",
         "fengjing_app.hooks.run_amazon_fba_customer_returns",
         "fengjing_app.hooks.run_amazon_fba_fulfilled_shipments",
+        "fengjing_app.hooks.run_amazon_fba_customer_shipment_sales",
         "fengjing_app.hooks.run_amazon_fba_inbound_shipments",
         "fengjing_app.hooks.run_amazon_awd_inventory",
         "fengjing_app.hooks.run_amazon_awd_inbound_shipments",

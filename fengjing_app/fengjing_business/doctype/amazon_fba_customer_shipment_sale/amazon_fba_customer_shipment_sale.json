@@ -1,0 +1,277 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "hash",
+ "creation": "2026-11-18 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "identity_section",
+  "sale_key",
+  "seller_id",
+  "request_store",
+  "amazon_store",
+  "attribution_status",
+  "marketplace_id",
+  "cost_center",
+  "identity_column",
+  "order_id",
+  "shipment_at",
+  "fulfillment_center_id",
+  "item_section",
+  "seller_sku",
+  "fnsku",
+  "asin",
+  "quantity",
+  "amount_column",
+  "currency",
+  "item_price_per_unit",
+  "shipping_price",
+  "gift_wrap_price",
+  "destination_section",
+  "ship_city",
+  "ship_state",
+  "ship_postal_code",
+  "source_section",
+  "report_id",
+  "report_ids_json",
+  "fetched_at",
+  "raw_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_section",
+   "fieldtype": "Section Break",
+   "label": "销售记录"
+  },
+  {
+   "fieldname": "sale_key",
+   "fieldtype": "Data",
+   "label": "唯一键",
+   "unique": 1,
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "seller_id",
+   "fieldtype": "Data",
+   "label": "卖家 ID",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "request_store",
+   "fieldtype": "Link",
+   "label": "报告请求店铺",
+   "options": "Amazon Store Configuration",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amazon_store",
+   "fieldtype": "Link",
+   "label": "亚马逊店铺",
+   "options": "Amazon Store Configuration",
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "attribution_status",
+   "fieldtype": "Select",
+   "label": "站点归属",
+   "options": "待分配\n已匹配",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "marketplace_id",
+   "fieldtype": "Data",
+   "label": "站点 ID",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "成本中心",
+   "options": "Cost Center",
+   "read_only": 1
+  },
+  {
+   "fieldname": "identity_column",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "order_id",
+   "fieldtype": "Data",
+   "label": "亚马逊订单号",
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "shipment_at",
+   "fieldtype": "Datetime",
+   "label": "发货时间",
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "fulfillment_center_id",
+   "fieldtype": "Data",
+   "label": "配送中心",
+   "read_only": 1
+  },
+  {
+   "fieldname": "item_section",
+   "fieldtype": "Section Break",
+   "label": "商品与数量"
+  },
+  {
+   "fieldname": "seller_sku",
+   "fieldtype": "Data",
+   "label": "卖家 SKU",
+   "read_only": 1,
+   "in_list_view": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "fnsku",
+   "fieldtype": "Data",
+   "label": "FNSKU",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "asin",
+   "fieldtype": "Data",
+   "label": "ASIN",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "quantity",
+   "fieldtype": "Int",
+   "label": "发货数量",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "amount_column",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Data",
+   "label": "币种",
+   "read_only": 1
+  },
+  {
+   "fieldname": "item_price_per_unit",
+   "fieldtype": "Float",
+   "label": "商品单价",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "shipping_price",
+   "fieldtype": "Float",
+   "label": "配送金额",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gift_wrap_price",
+   "fieldtype": "Float",
+   "label": "礼品包装金额",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "destination_section",
+   "fieldtype": "Section Break",
+   "label": "配送目的地"
+  },
+  {
+   "fieldname": "ship_city",
+   "fieldtype": "Data",
+   "label": "城市",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ship_state",
+   "fieldtype": "Data",
+   "label": "州/省",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ship_postal_code",
+   "fieldtype": "Data",
+   "label": "邮编",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_section",
+   "fieldtype": "Section Break",
+   "label": "来源"
+  },
+  {
+   "fieldname": "report_id",
+   "fieldtype": "Data",
+   "label": "报告 ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "report_ids_json",
+   "fieldtype": "Code",
+   "label": "来源报告 ID 列表",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fetched_at",
+   "fieldtype": "Datetime",
+   "label": "抓取时间",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_json",
+   "fieldtype": "Code",
+   "label": "原始报告行（全部字段）",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-11-18 13:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "Amazon FBA Customer Shipment Sale",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "sort_field": "shipment_at",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "title_field": "order_id"
+}

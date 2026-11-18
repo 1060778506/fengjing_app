@@ -15,6 +15,7 @@ from fengjing_app.fengjing_business.doctype.amazon_financial_transaction.amazon_
 
 
 DOCTYPE = "Amazon Financial Transaction"
+FULFILLED_SHIPMENT_DOCTYPE = "Amazon FBA Fulfilled Shipment"
 MAPPING_DOCTYPE = "Fengjing - Product Corresponding Platform - Main Table"
 REPORT_TIMEZONE = ZoneInfo("America/Los_Angeles")
 FILTER_OPTION_FIELDS = (
@@ -637,6 +638,23 @@ def _summarize_detail_rows(rows, detail_group="", mappings=None, cost_centers=No
     }
 
 
+def _attach_shipment_months(page_rows):
+    """Match finance orders to FBA shipment months shown by the shipment analysis page."""
+    order_ids = sorted({row.amazon_order_id for row in page_rows if row.amazon_order_id})
+    if not order_ids:
+        return
+    months_by_order = defaultdict(set)
+    for shipment in frappe.get_all(
+        FULFILLED_SHIPMENT_DOCTYPE,
+        filters={"order_id": ["in", order_ids], "shipment_at": ["is", "set"]},
+        fields=["order_id", "shipment_at"],
+        limit_page_length=0,
+    ):
+        months_by_order[shipment.order_id].add(str(shipment.shipment_at)[:7])
+    for row in page_rows:
+        row.shipment_months = sorted(months_by_order.get(row.amazon_order_id, ()))
+
+
 @frappe.whitelist()
 def get_finance_dashboard_data(filters=None, page=1, page_size=300):
     f = _filters(filters)
@@ -865,6 +883,8 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300):
     display_rows = sorted(detail_rows, key=lambda row: str(row.posted_date or ""), reverse=True)
     start = (page - 1) * page_size
     page_rows = display_rows[start:start + page_size]
+    if detail_group == "order":
+        _attach_shipment_months(page_rows)
     for row in page_rows:
         row.related_releases = release_children.get(row.name, [])
         for child in row.related_releases:
