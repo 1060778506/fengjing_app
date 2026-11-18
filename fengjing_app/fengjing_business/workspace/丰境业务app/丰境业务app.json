@@ -892,7 +892,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "主配置",
-   "link_count": 4,
+   "link_count": 5,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -933,6 +933,16 @@
    "label": "丰境日历",
    "link_count": 0,
    "link_to": "fengjin_team_calenda",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "丰境想法池",
+   "link_count": 0,
+   "link_to": "fengjing_idea_board",
    "link_type": "Page",
    "onboard": 0,
    "type": "Link"
