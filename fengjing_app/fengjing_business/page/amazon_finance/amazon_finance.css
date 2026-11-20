@@ -11,6 +11,8 @@
 @media(max-width:700px){.af-table-card>header{align-items:flex-start}.af-table-actions{align-items:flex-end;flex-direction:column-reverse}.af-table-card.is-expanded{inset:5px}.af-detail-tabs{padding-left:10px;padding-right:10px}}
 
 .af-ranges{align-items:center;gap:10px}
+.af-pending-ranges[hidden]{display:none}
+.af-shipment-ranges{padding:0 17px 4px;margin-bottom:0}
 .af-ranges>span{flex:none;color:#718097;font-size:11px;font-weight:700}
 .af-month-range{display:flex;flex-wrap:wrap;gap:7px}
 .af-month-range .af-month{height:32px;padding:0 12px;border:1px solid #d8e1ee;border-radius:9px;background:#fff;color:#53647e;cursor:pointer}

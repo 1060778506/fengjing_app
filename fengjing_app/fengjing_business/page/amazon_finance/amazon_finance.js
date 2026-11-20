@@ -23,18 +23,25 @@ class AmazonFinancePage {
         this.page=page; this.pageNo=1; this.pageSize=300; this.returnPage=1; this.detailGroup=''; this.charts=[]; this.loading=false; this.summaryOpen=false; this.collapsedGroups=new Set();
         this.selectedMonths=new Set([this.currentMonthKey()]); this.monthSelectionStarted=false; this.selectedCountry=''; this.summaryCostCenters=new Map(); this.summaryAccounts=new Map();
         this.transactionPeriod='released';
+        this.pendingMonth='';
+        this.shipmentMonth='';
         this.returnDateBasis='inventory';
-        this.renderShell(); this.renderMonthButtons(); this.renderCountryButtons(); this.bindEvents();
+        this.renderShell(); this.renderMonthButtons(); this.renderCountryButtons(); this.renderShipmentMonthButtons(); this.bindEvents();
     }
     renderShell() {
         const {from,to}=this.monthBounds(this.currentMonthKey());
         $(this.page.main).html(`<div class="af-root">
           <section class="af-hero"><div><span>AMAZON FINANCE INTELLIGENCE</span><h1>财务交易中心</h1><p>销售、退款、税费、平台费用与结算批次，穿透至店铺、SKU和ERPNext物料。</p></div><div><button class="btn af-refresh-bind">重新匹配物料</button><button class="btn btn-primary af-refresh">刷新数据</button></div></section>
-          <section class="af-filter-panel"><div class="af-ranges"><span>释放月份</span><div class="af-month-range"></div></div><div class="af-country-ranges"><span>国家</span><div class="af-country-range"></div></div><div class="af-filters">
+          <section class="af-filter-panel">
+            <div class="af-ranges"><span>释放月份</span><div class="af-month-range af-release-month-range"></div></div>
+            <div class="af-ranges af-pending-ranges" hidden><span>原交易月份</span><div class="af-month-range af-pending-month-range" role="group" aria-label="未释放交易的原交易月份"></div></div>
+            <div class="af-country-ranges"><span>国家</span><div class="af-country-range"></div></div><div class="af-filters">
             ${this.input('date_from','开始日期（美西）','date',from)}${this.input('date_to','结束日期（美西）','date',to)}${this.select('store','店铺')}${this.select('marketplace_id','站点')}${this.select('currency_code','币种')}${this.select('transaction_type','交易类型')}${this.select('transaction_status','状态')}
             <label>交易归属<select data-filter="scope"><option value="">全部</option><option value="product">商品级交易</option><option value="store">店铺级费用</option></select></label><label>物料绑定<select data-filter="binding"><option value="">全部</option><option value="bound">已绑定</option><option value="unbound">未绑定</option></select></label><label class="af-search-label">搜索<input data-filter="search" placeholder="订单号 / SKU / ASIN / 费用内容 / 物料 / 结算ID"></label></div></section>
           <div class="af-loading"><i></i>正在分析财务交易…</div><main class="af-content"><section class="af-kpis"></section>
-          <section class="af-card af-table-card"><header><div><h2>完整交易明细</h2><span class="af-table-count"></span></div><div class="af-table-actions"><a class="af-profit-link" href="https://sellercentral.amazon.com/manage/profit-analytics?" target="_blank" rel="noopener noreferrer">费用分配</a><a class="af-profit-link" href="https://sellercentral.amazon.com/manage/shipments" target="_blank" rel="noopener noreferrer">管理货件</a><a class="af-profit-link" href="https://sellercentral.amazon.com/awd/reports/fee?reportType=AwdOutboundTransportationFee" target="_blank" rel="noopener noreferrer">AWD费用</a><a class="af-profit-link af-return-links" href="https://sellercentral.amazon.com/reportcentral/CUSTOMER_RETURNS/0" target="_blank" rel="noopener noreferrer">退货管理</a><button class="af-summary-toggle" type="button">汇总明细</button><div class="af-pages"></div><button class="af-table-expand" type="button" title="放大交易明细" aria-label="放大交易明细"><svg class="af-expand-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><svg class="af-compress-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button></div></header><div class="af-detail-tabs"></div><div class="af-table-wrap"><table><thead></thead><tbody></tbody></table></div><div class="af-summary-overlay" hidden><div class="af-summary-backdrop" data-summary-close></div><aside class="af-summary-drawer" role="dialog" aria-label="汇总明细"><header><div><h3>汇总明细</h3><span class="af-summary-count"></span></div><button type="button" data-summary-close aria-label="关闭汇总明细">×</button></header><p>按交易类型、交易内容和币种汇总当前筛选范围，包含所有分页。</p><div class="af-summary-body"></div></aside></div></section>
+          <section class="af-card af-table-card"><header><div><h2>完整交易明细</h2><span class="af-table-count"></span></div><div class="af-table-actions"><a class="af-profit-link" href="https://sellercentral.amazon.com/manage/profit-analytics?" target="_blank" rel="noopener noreferrer">费用分配</a><a class="af-profit-link" href="https://sellercentral.amazon.com/manage/shipments" target="_blank" rel="noopener noreferrer">管理货件</a><a class="af-profit-link" href="https://sellercentral.amazon.com/awd/reports/fee?reportType=AwdOutboundTransportationFee" target="_blank" rel="noopener noreferrer">AWD费用</a><a class="af-profit-link af-return-links" href="https://sellercentral.amazon.com/reportcentral/CUSTOMER_RETURNS/0" target="_blank" rel="noopener noreferrer">退货管理</a><button class="af-summary-toggle" type="button">汇总明细</button><div class="af-pages"></div><button class="af-table-expand" type="button" title="放大交易明细" aria-label="放大交易明细"><svg class="af-expand-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><svg class="af-compress-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button></div></header><div class="af-ranges af-shipment-ranges">
+            <span>FBA 发货月份</span><div class="af-month-range af-shipment-month-range" role="group" aria-label="FBA 发货月份"></div>
+          </div><div class="af-detail-tabs"></div><div class="af-table-wrap"><table><thead></thead><tbody></tbody></table></div><div class="af-summary-overlay" hidden><div class="af-summary-backdrop" data-summary-close></div><aside class="af-summary-drawer" role="dialog" aria-label="汇总明细"><header><div><h3>汇总明细</h3><span class="af-summary-count"></span></div><button type="button" data-summary-close aria-label="关闭汇总明细">×</button></header><p>按交易类型、交易内容和币种汇总当前筛选范围，包含所有分页。</p><div class="af-summary-body"></div></aside></div></section>
           <section class="af-card af-returns-card">
             <header><div><h2>FBA 客户退货</h2><span class="af-return-count"></span></div>
               <div class="af-return-actions"><div class="af-return-date-basis" role="group" aria-label="退货记录归属日期">
@@ -62,7 +69,23 @@ class AmazonFinancePage {
             const active=!pending&&this.selectedMonths.has(month);
             return `<button type="button" data-month="${this.esc(month)}" class="af-month ${active?'active':''}" aria-pressed="${active}">${Number(month.slice(5))}月</button>`;
         }).join('');
-        this.$.find('.af-month-range').html(`${months}<button type="button" data-pending-period class="af-month ${pending?'active':''}" aria-pressed="${pending}">未释放</button>`);
+        this.$.find('.af-release-month-range').html(`${months}<button type="button" data-pending-period class="af-month ${pending?'active':''}" aria-pressed="${pending}">未释放</button>`);
+        this.$.find('.af-pending-ranges').prop('hidden',!pending);
+        if(pending){
+            const currentYear=this.currentMonthKey().slice(0,4);
+            const monthButton=(month,label)=>{
+                const active=this.pendingMonth===month;
+                return `<button type="button" data-pending-month="${this.esc(month)}" class="af-month ${active?'active':''}" aria-pressed="${active}">${label}</button>`;
+            };
+            const months=(this.data?.pending_months||[]).map(month=>{
+                const [year,number]=month.split('-');
+                const label=`${year===currentYear?'':`${year}年`}${Number(number)}月`;
+                return monthButton(month,label);
+            });
+            this.$.find('.af-pending-month-range').html(
+                monthButton('','全部月份')+months.join('')
+            );
+        }
         this.$.find('[data-filter=date_from], [data-filter=date_to], [data-filter=transaction_status]').prop('disabled',pending);
     }
     renderCountryButtons(){
@@ -79,16 +102,37 @@ class AmazonFinancePage {
     selectPendingPeriod(){
         if(this.transactionPeriod==='pending')return;
         this.transactionPeriod='pending';
+        this.pendingMonth='';
         this.$.find('[data-filter=transaction_status]').val('');
         this.pageNo=1;
         this.renderMonthButtons();
         this.load();
+    }
+    selectPendingMonth(month){
+        if(this.transactionPeriod!=='pending'||this.pendingMonth===month)return;
+        this.pendingMonth=month;
+        this.pageNo=1;
+        this.renderMonthButtons();
+        this.load();
+    }
+    renderShipmentMonthButtons(){
+        const currentYear=this.currentMonthKey().slice(0,4);
+        const button=(month,label)=>{
+            const active=this.shipmentMonth===month;
+            return `<button type="button" data-shipment-month="${this.esc(month)}" class="af-month ${active?'active':''}" aria-pressed="${active}">${this.esc(label)}</button>`;
+        };
+        const months=(this.data?.shipment_months||[]).map(month=>{
+            const [year,number]=month.split('-');
+            return button(month,`${year===currentYear?'':`${year}年`}${Number(number)}月`);
+        });
+        this.$.find('.af-shipment-month-range').html(button('','全部月份')+months.join(''));
     }
     bindEvents(){
         this.$.on('click','.af-refresh',()=>this.load()).on('click','.af-refresh-bind',()=>this.refreshBindings());
         this.$.on('click','.af-return-links',()=>window.open('https://sellercentral.amazon.com/fba-return','_blank','noopener,noreferrer'));
         this.$.on('click','[data-month]',e=>this.selectMonth(e.currentTarget.dataset.month));
         this.$.on('click','[data-pending-period]',()=>this.selectPendingPeriod());
+        this.$.on('click','[data-pending-month]',e=>this.selectPendingMonth(e.currentTarget.dataset.pendingMonth));
         this.$.on('click','[data-country]',e=>{const country=e.currentTarget.dataset.country||'';if(country===this.selectedCountry)return;this.selectedCountry=country;this.pageNo=1;this.returnPage=1;this.renderCountryButtons();this.load()});
         let timer;this.$.on('change','[data-filter]:not([data-filter=search])',e=>{if(['date_from','date_to'].includes(e.currentTarget.dataset.filter)){this.selectedMonths.clear();this.monthSelectionStarted=false;this.renderMonthButtons()}this.pageNo=1;this.returnPage=1;this.load()}).on('input','[data-filter=search]',()=>{clearTimeout(timer);timer=setTimeout(()=>{this.pageNo=1;this.returnPage=1;this.load()},400)});
         this.$.on('click','[data-page]',e=>{this.pageNo=+e.currentTarget.dataset.page;this.load()}).on('click','.af-bind',e=>this.bindItem($(e.currentTarget).data())).on('click','[data-copy]',e=>{frappe.utils.copy_to_clipboard(String($(e.currentTarget).data('copy')||''));frappe.show_alert({message:'已复制',indicator:'green'})});
@@ -100,7 +144,22 @@ class AmazonFinancePage {
             this.returnPage=1;
             this.loadReturnCard();
         });
-        this.$.on('click','[data-detail-group]',e=>{const group=e.currentTarget.dataset.detailGroup||'';if(group===this.detailGroup)return;this.detailGroup=group;if(!group)this.toggleSummary(false);this.pageNo=1;this.load()});
+        this.$.on('click','[data-detail-group]',e=>{
+            const group=e.currentTarget.dataset.detailGroup||'';
+            if(group===this.detailGroup)return;
+            this.detailGroup=group;
+            if(!group)this.toggleSummary(false);
+            this.pageNo=1;
+            this.load();
+        });
+        this.$.on('click','[data-shipment-month]',e=>{
+            const month=e.currentTarget.dataset.shipmentMonth;
+            if(this.shipmentMonth===month)return;
+            this.shipmentMonth=month;
+            this.pageNo=1;
+            this.renderShipmentMonthButtons();
+            this.load();
+        });
         this.$.on('click','.af-manual-select',e=>this.openManualItems(e.currentTarget.dataset.manualRow,e.currentTarget.dataset.childKey||''));
         this.$.on('click','.af-release-toggle',e=>{const key=e.currentTarget.dataset.releaseToggle;if(this.collapsedGroups.has(key))this.collapsedGroups.delete(key);else this.collapsedGroups.add(key);this.renderTable()});
         this.$.on('click','.af-summary-toggle',()=>this.toggleSummary()).on('click','[data-summary-close]',()=>this.toggleSummary(false));
@@ -134,7 +193,15 @@ class AmazonFinancePage {
         $(document).off('keydown.amazon-finance-table').on('keydown.amazon-finance-table',e=>{if(e.key==='Escape'){if(this.summaryOpen)this.toggleSummary(false);else this.toggleTableExpand(false)}});
         $(window).on('resize.amazon-finance',()=>this.charts.forEach(c=>c?.resize()));
     }
-    filters(){const r={period:this.transactionPeriod};this.$.find('[data-filter]').each((_,e)=>{if(e.value&&!e.disabled)r[e.dataset.filter]=e.value});if(this.selectedCountry)r.country=this.selectedCountry;if(this.detailGroup)r.detail_group=this.detailGroup;return r}
+    filters(){
+        const r={period:this.transactionPeriod};
+        this.$.find('[data-filter]').each((_,e)=>{if(e.value&&!e.disabled)r[e.dataset.filter]=e.value});
+        if(this.selectedCountry)r.country=this.selectedCountry;
+        if(this.detailGroup)r.detail_group=this.detailGroup;
+        if(this.transactionPeriod==='pending'&&this.pendingMonth)r.pending_month=this.pendingMonth;
+        if(this.shipmentMonth)r.shipment_month=this.shipmentMonth;
+        return r;
+    }
     toggleTableExpand(force){const card=this.$.find('.af-table-card'),expand=typeof force==='boolean'?force:!card.hasClass('is-expanded');card.toggleClass('is-expanded',expand);$('body').toggleClass('af-table-expanded',expand);card.find('.af-table-expand').attr({'title':expand?'还原交易明细':'放大交易明细','aria-label':expand?'还原交易明细':'放大交易明细'})}
     toggleSummary(force){const open=typeof force==='boolean'?force:!this.summaryOpen;if(open&&!this.detailGroup)return;this.summaryOpen=open;const card=this.$.find('.af-table-card');card.toggleClass('af-summary-visible',this.summaryOpen);card.find('.af-summary-overlay').prop('hidden',!this.summaryOpen);card.find('.af-summary-toggle').toggleClass('active',this.summaryOpen);if(this.summaryOpen)this.renderSummary()}
     summaryCostCenterKey(row){return JSON.stringify([row.store,row.marketplace_id,row.currency,row.transaction_type,row.description,row.sku,row.item_id,row.shipment_id||''])}
@@ -240,7 +307,54 @@ class AmazonFinancePage {
             <div class="af-summary-table-wrap"><table><thead><tr>${heads}</tr></thead><tbody>${body}</tbody></table></div>
         </section>`:'<div class="af-empty">当前范围内没有资金划转</div>');
     }
-    async load(){if(this.loading){this.reloadPending=true;return}this.loading=true;this.$.addClass('is-loading');try{const r=await frappe.call({method:'fengjing_app.fengjing_business.page.amazon_finance.amazon_finance.get_finance_dashboard_data',args:{filters:this.filters(),page:this.pageNo,page_size:this.pageSize}});if(this.reloadPending)return;this.data=r.message||{};this.orderSummary=null;if(this.detailGroup&&!(this.data.detail_groups||[]).some(group=>group.key===this.detailGroup)){this.detailGroup='';this.pageNo=1;this.reloadPending=true;return}this.render()}catch(e){console.error(e);frappe.msgprint({title:'财务页面加载失败',message:e.message||'请检查后台日志',indicator:'red'})}finally{this.loading=false;this.$.removeClass('is-loading');if(this.reloadPending){this.reloadPending=false;this.load()}}}
+    async load(){
+        if(this.loading){
+            this.reloadPending=true;
+            return;
+        }
+        this.loading=true;
+        this.$.addClass('is-loading');
+        try{
+            const r=await frappe.call({
+                method:'fengjing_app.fengjing_business.page.amazon_finance.amazon_finance.get_finance_dashboard_data',
+                args:{filters:this.filters(),page:this.pageNo,page_size:this.pageSize},
+            });
+            if(this.reloadPending)return;
+            this.data=r.message||{};
+            this.orderSummary=null;
+            if(this.transactionPeriod==='pending'&&this.pendingMonth
+                &&!(this.data.pending_months||[]).includes(this.pendingMonth)){
+                this.pendingMonth='';
+                this.pageNo=1;
+                this.reloadPending=true;
+                return;
+            }
+            if(this.shipmentMonth
+                &&!(this.data.shipment_months||[]).includes(this.shipmentMonth)){
+                this.shipmentMonth='';
+                this.pageNo=1;
+                this.reloadPending=true;
+                return;
+            }
+            if(this.detailGroup&&!(this.data.detail_groups||[]).some(group=>group.key===this.detailGroup)){
+                this.detailGroup='';
+                this.pageNo=1;
+                this.reloadPending=true;
+                return;
+            }
+            this.render();
+        }catch(e){
+            console.error(e);
+            frappe.msgprint({title:'财务页面加载失败',message:e.message||'请检查后台日志',indicator:'red'});
+        }finally{
+            this.loading=false;
+            this.$.removeClass('is-loading');
+            if(this.reloadPending){
+                this.reloadPending=false;
+                this.load();
+            }
+        }
+    }
     render(){
         const pending=this.transactionPeriod==='pending';
         this.$.find('.af-trend-basis').text(pending?'按美西原交易日期与币种':'按美西释放或入账日期与币种');
@@ -644,11 +758,12 @@ class AmazonFinancePage {
         this.$.find('.af-return-pages').html(`<span>第 ${pagination.page||1} / ${pagination.pages||1} 页</span><button type="button" data-return-page="${(pagination.page||1)-1}" ${(pagination.page||1)<=1?'disabled':''}>上一页</button><button type="button" data-return-page="${(pagination.page||1)+1}" ${(pagination.page||1)>=(pagination.pages||1)?'disabled':''}>下一页</button>`);
     }
     renderTable(){
+        this.renderShipmentMonthButtons();
         const p=this.data.pagination||{};
         const pending=this.transactionPeriod==='pending';
         const refundOnly=this.detailGroup==='refund';
         const orderOnly=this.detailGroup==='order';
-        this.$.find('.af-summary-toggle').prop('disabled',!this.detailGroup).attr('title',orderOnly?'查看当前范围内的已释放订单汇总':this.detailGroup?'汇总当前分类':'请先选择一个交易分类');
+        this.$.find('.af-summary-toggle').prop('disabled',!this.detailGroup).attr('title',orderOnly&&!pending?'查看当前范围内的已释放订单汇总':this.detailGroup?'汇总当前分类':'请先选择一个交易分类');
         const columns=['店铺 / 站点','交易 / 订单','交易内容'];
         if(this.detailGroup==='logistics')columns.push('关联物料');
         const amounts=this.detailGroup==='removal'?['清算回收额','清算处理费','清算佣金','净额']:['净额','费用'];
@@ -662,8 +777,11 @@ class AmazonFinancePage {
         const awdCount=refundOnly?0:(this.data.rows||[]).reduce((count,row)=>count+(row.awd_fee_details||[]).length,0);
         const pageLabel=`第 ${p.page}/${p.pages} 页`;
         const orderTotals=this.data.order_list_totals||{};
+        const pendingCount=orderOnly
+            ?`${this.num(orderTotals.orders)} 笔待释放订单 · ${this.num(orderTotals.units)} 件商品`
+            :`${this.num(p.total)} 组待释放交易`;
         const count=pending
-            ?`共 ${this.num(p.total)} 组未释放交易 · ${pageLabel}`
+            ?`共 ${pendingCount} · ${pageLabel}`
             :orderOnly
             ?`共 ${this.num(orderTotals.orders)} 笔已释放订单 · ${this.num(orderTotals.units)} 件商品 · ${this.num(p.display_total??p.total)} 条商品明细 · ${pageLabel}`
             :refundOnly?`共 ${this.num(p.total)} 条已释放退款 · ${pageLabel}`
@@ -720,12 +838,12 @@ class AmazonFinancePage {
                     :[];
             const feeDetails=feesByType.filter(([,amount])=>Math.abs(Number(amount||0))>=0.005)
                 .map(([label,amount])=>`<small>${this.esc(label)} ${this.money(amount,r.currency_code)}</small>`).join('');
-            const orderParent=this.detailGroup==='order'&&!isItem&&!isRelease;
+            const parentRow=!isItem&&!isRelease;
             const transactionDate=this.date(r.original_transaction_date);
-            const crossPeriodTag=orderParent&&r.finance_outside_period
+            const crossPeriodTag=parentRow&&r.detail_group==='order'&&r.finance_outside_period
                 ?`<span class="af-shipment-month finance" title="原交易日期 ${this.esc(transactionDate)}">${this.esc(transactionDate.slice(0,7))} 原交易</span>`
                 :'';
-            const shipmentTags=orderParent
+            const shipmentTags=parentRow
                 ?[
                     ...(r.shipment_dates||[]).filter(date=>/^\d{4}-\d{2}-\d{2}$/.test(date)).map(date=>`<span class="af-shipment-month" title="数据来自亚马逊FBA已配送货件分析 · 美国太平洋时间 ${this.esc(date)}">${Number(date.slice(5,7))}月${Number(date.slice(8,10))}日已配送</span>`),
                     ...(r.completed_dates||[]).filter(date=>/^\d{4}-\d{2}-\d{2}$/.test(date)).map(date=>`<span class="af-shipment-month completed" title="数据来自亚马逊FBA已完成订单销售分析 · 美国太平洋时间 ${this.esc(date)}">${Number(date.slice(5,7))}月${Number(date.slice(8,10))}日已完成</span>`),

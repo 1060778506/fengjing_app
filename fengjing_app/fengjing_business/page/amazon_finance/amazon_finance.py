@@ -340,6 +340,17 @@ def _resolve_mapping(row, mappings):
     return max(candidates, key=lambda x: x[0])[1] if candidates else None
 
 
+def _selected_pending_month(f):
+    if f.period != "pending" or not f.pending_month:
+        return None
+    month = str(f.pending_month)
+    if not re.fullmatch(r"[0-9]{4}-(0[1-9]|1[0-2])", month) or month.startswith("0000-"):
+        frappe.throw("请选择有效的原交易月份")
+    if month > datetime.now(REPORT_TIMEZONE).strftime("%Y-%m"):
+        frappe.throw("请选择当前月份或之前的月份")
+    return month
+
+
 def _build_db_filters(f):
     if f.period == "pending":
         return {"transaction_status": ["in", ["DEFERRED", "PENDING"]]}
@@ -942,32 +953,25 @@ def _summarize_detail_rows(rows, detail_group="", mappings=None, cost_centers=No
     }
 
 
-def _attach_order_dates(page_rows):
-    """Attach both FBA report dates to the visible order rows."""
-    order_ids = sorted({row.amazon_order_id for row in page_rows if row.amazon_order_id})
-    if not order_ids:
-        return
-    dates_by_report = []
-    for doctype in (FULFILLED_SHIPMENT_DOCTYPE, CUSTOMER_SALE_DOCTYPE):
-        dates_by_order = defaultdict(set)
-        for shipment in frappe.get_all(
-            doctype,
-            filters={"order_id": ["in", order_ids], "shipment_at": ["is", "set"]},
-            fields=["order_id", "shipment_at", "raw_json"],
-            limit_page_length=0,
-        ):
-            try:
-                raw = json.loads(shipment.raw_json or "{}")
-            except (TypeError, ValueError):
-                raw = {}
-            source_timestamp = raw.get("shipment-date") if isinstance(raw, dict) else None
-            pacific_time, _ = _report_time(shipment.shipment_at, source_timestamp)
-            if pacific_time:
-                dates_by_order[shipment.order_id].add(str(pacific_time.date()))
-        dates_by_report.append(dates_by_order)
-    for row in page_rows:
-        row.shipment_dates = sorted(dates_by_report[0].get(row.amazon_order_id, ()))
-        row.completed_dates = sorted(dates_by_report[1].get(row.amazon_order_id, ()))
+def _attach_order_report_dates(rows, doctype, date_field):
+    """Use the Amazon order number and deduplicate dates across report copies."""
+    order_ids = {row.amazon_order_id for row in rows if row.amazon_order_id}
+    dates_by_order = defaultdict(set)
+    for shipment in _read_order_summary_rows(
+        doctype, ["order_id", "shipment_at", "raw_json"],
+        {"shipment_at": ["is", "set"]}, "order_id", order_ids,
+    ):
+        try:
+            raw = json.loads(shipment.raw_json or "{}")
+        except (TypeError, ValueError):
+            raw = {}
+        source_timestamp = raw.get("shipment-date") if isinstance(raw, dict) else None
+        pacific_time, _ = _report_time(shipment.shipment_at, source_timestamp)
+        if pacific_time:
+            dates_by_order[shipment.order_id].add(pacific_time.date().isoformat())
+
+    for row in rows:
+        row[date_field] = sorted(dates_by_order.get(row.amazon_order_id, ()))
 
 
 def _read_order_summary_rows(doctype, fields, filters, key, values):
@@ -1399,6 +1403,7 @@ def _order_reconciliation(rows, filters, truncated, order_count):
 def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconciliation=0):
     f = _filters(filters)
     pending = f.period == "pending"
+    pending_month = _selected_pending_month(f)
     detail_group = "logistics" if f.detail_group == "storage" else (f.detail_group or "")
     fields = [
         "name", "transaction_sku_key", "transaction_id", "amazon_order_id",
@@ -1528,9 +1533,30 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
         day = str(timestamp or "")[:10]
         return bool(day) and (not report_start or day >= report_start) and (not report_end or day <= report_end)
 
-    option_rows = [row for row in _finance_period_rows(rows, parent_for_child, release_children, pending)
-                   if pending or in_selected_dates(row.report_posted_date)]
+    period_rows = _finance_period_rows(rows, parent_for_child, release_children, pending)
+    pending_months = []
+    if pending:
+        # Derive month buttons before applying the selected month or other filters.
+        pending_months = sorted({row.report_posted_date.strftime("%Y-%m") for row in period_rows
+                                 if row.report_posted_date})
+        option_rows = [row for row in period_rows if not pending_month
+                       or str(row.report_posted_date or "")[:7] == pending_month]
+    else:
+        option_rows = [row for row in period_rows if in_selected_dates(row.report_posted_date)]
     economic_rows = [row for row in option_rows if matches_row(row, parent_for_child.get(row.name))]
+    _attach_order_report_dates(economic_rows, FULFILLED_SHIPMENT_DOCTYPE, "shipment_dates")
+    shipment_months = sorted({
+        day[:7]
+        for row in economic_rows if not detail_group or row.detail_group == detail_group
+        for day in row.shipment_dates
+    })
+    groups_before_shipment_filter = set()
+    if f.shipment_month:
+        groups_before_shipment_filter = {row.detail_group for row in economic_rows}
+        economic_rows = [
+            row for row in economic_rows
+            if any(day[:7] == f.shipment_month for day in row.shipment_dates)
+        ]
     order_rows = [row for row in economic_rows if row.detail_group == "order"]
     order_count = len({
         (row.store, row.marketplace_id, row.amazon_order_id)
@@ -1626,7 +1652,7 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
     start = (page - 1) * page_size
     page_rows = display_rows[start:start + page_size]
     if detail_group == "order":
-        _attach_order_dates(page_rows)
+        _attach_order_report_dates(page_rows, CUSTOMER_SALE_DOCTYPE, "completed_dates")
     if detail_group == "removal" and pending:
         for row in page_rows:
             _attach_liquidation_breakdown(row)
@@ -1643,12 +1669,15 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
     }
     detail_groups = []
     retained_groups = () if pending else ("order", "refund")
-    if report_row_count or detail_group in retained_groups:
+    if detail_group and (pending_month or f.shipment_month):
+        retained_groups = (*retained_groups, detail_group)
+    if report_row_count or groups_before_shipment_filter or detail_group in retained_groups:
         detail_groups.append({"key": "", "label": "全部", "count": report_row_count})
     detail_groups.extend(
         {"key": key, "label": label, "count": group_counts[key]}
         for key, label in DETAIL_GROUPS
-        if group_counts[key] > 0 or (key in retained_groups and detail_group == key)
+        if group_counts[key] > 0 or key in groups_before_shipment_filter
+        or (key in retained_groups and detail_group == key)
     )
     cost_center_options = [center.name for center in frappe.get_all(
         "Cost Center", filters={"is_group": 0}, fields=["name"], order_by="name asc",
@@ -1668,6 +1697,8 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
         "stores": {c: dict(v) for c, v in store_totals.items()},
         "products": product_list[:500], "settlements": settlement_list[:200],
         "rows": page_rows, "options": options, "available_months": _available_months(),
+        "pending_months": pending_months,
+        "shipment_months": shipment_months,
         "detail_summary": _summarize_detail_rows(detail_rows, detail_group, mappings, cost_center_options),
         "journal_summary": journal_summary,
         "funds_summary": funds_summary,
