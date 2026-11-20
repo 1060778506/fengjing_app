@@ -714,6 +714,18 @@
                     "is_group": 0,
                     "account_type": "Payable",
                     "account_currency": "USD"
+                },
+                "信用卡应付款-CNY": {
+                    "account_number": "224103_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "CNY"
+                },
+                "信用卡应付款-USD": {
+                    "account_number": "224104_fj",
+                    "is_group": 0,
+                    "account_type": "Payable",
+                    "account_currency": "USD"
                 }
             },
             "期初四舍五入": {
