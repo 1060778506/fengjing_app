@@ -1021,6 +1021,11 @@
                     "account_number": "560304_fj",
                     "is_group": 0,
                     "account_type": "Expense Account"
+                },
+                "银行手续费【财务费用】": {
+                    "account_number": "560305_fj",
+                    "is_group": 0,
+                    "account_type": "Expense Account"
                 }
             },
             "库存调整损益": {
