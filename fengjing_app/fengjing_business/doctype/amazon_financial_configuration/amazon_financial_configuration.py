@@ -6,6 +6,7 @@
 import json
 import time
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal, InvalidOperation
 from zoneinfo import ZoneInfo
 
 import frappe
@@ -21,6 +22,8 @@ from fengjing_app.fengjing_business.doctype.amazon_store_configuration.amazon_st
 
 
 DOCTYPE = "Amazon Financial Configuration"
+TRANSACTION_DOCTYPE = "Amazon Financial Transaction"
+DISBURSEMENT_FIELD = "disbursement_group_json"
 TASK_TIMEOUT = 6 * 60 * 60
 SAFE_DELAY_MINUTES = 3
 OVERLAP_MINUTES = 10
@@ -128,6 +131,111 @@ def _plan_history(config, current_utc=None):
 	}
 
 
+def _disbursement_amount(amount):
+	if isinstance(amount, dict) and amount.get("CurrencyCode"):
+		try:
+			value = Decimal(str(amount.get("CurrencyAmount")))
+		except (InvalidOperation, ValueError):
+			return None
+		if value.is_finite():
+			return (amount["CurrencyCode"], value)
+	return None
+
+
+def read_disbursement_group(row, stored_json):
+	try:
+		stored = json.loads(stored_json or "{}")
+	except (TypeError, ValueError):
+		return None
+	if not isinstance(stored, dict) or stored.get("posting_group_id") != row.financial_event_group_id:
+		return None
+	group = stored.get("payout")
+	if not isinstance(group, dict):
+		return None
+	expected = _disbursement_amount({"CurrencyCode": row.currency_code, "CurrencyAmount": row.net_amount})
+	if not expected or _disbursement_amount(group.get("OriginalTotal")) != expected:
+		return None
+	return group
+
+
+def _match_disbursement_group(row, groups):
+	current = groups.get(row.financial_event_group_id)
+	if not current:
+		return None
+	original_amount = (row.currency_code, Decimal(str(row.net_amount)))
+	started_at = _to_utc(current.get("FinancialEventGroupStart"))
+	posted_at = _to_utc(row.posted_date)
+	previous = []
+	direct = None
+	for group in groups.values():
+		if str(group.get("FundTransferStatus") or "").lower() != "succeeded" or not group.get("FundTransferDate"):
+			continue
+		if _disbursement_amount(group.get("OriginalTotal")) != original_amount:
+			continue
+		if group is current:
+			direct = group
+		elif started_at and _to_utc(group.get("FinancialEventGroupEnd")) == started_at:
+			if _to_utc(group["FundTransferDate"]) <= posted_at:
+				previous.append(group)
+	if direct and (not previous or _to_utc(direct["FundTransferDate"]) <= posted_at):
+		return direct
+	# The transaction API can record a payout in the group after the one that funded it.
+	return previous[0] if len(previous) == 1 else None
+
+
+def _query_disbursement_groups(store, start_utc, end_utc):
+	params = {"MaxResultsPerPage": 100, "FinancialEventGroupStartedAfter": _amazon_datetime(start_utc),
+			  "FinancialEventGroupStartedBefore": _amazon_datetime(end_utc)}
+	groups, seen_tokens = {}, set()
+	while True:
+		response = amazon_api_request(store, "finances", "GET", "/finances/v0/financialEventGroups",
+									  params=params, timeout=30, max_retries=1)
+		if response is None or response.status_code != 200:
+			status = response.status_code if response is not None else "no response"
+			raise RuntimeError(f"Finances payment groups API failed (HTTP {status})")
+		payload = (response.json() or {}).get("payload") or {}
+		for group in payload.get("FinancialEventGroupList") or []:
+			if group.get("FinancialEventGroupId"):
+				groups[group["FinancialEventGroupId"]] = group
+		next_token = payload.get("NextToken")
+		if not next_token:
+			return groups
+		if next_token in seen_tokens:
+			raise RuntimeError("Finances payment groups API returned a repeated NextToken")
+		seen_tokens.add(next_token)
+		params = {"NextToken": next_token}
+
+
+def sync_disbursement_details(store, start_utc=None, end_utc=None):
+	if not frappe.db.has_column(TRANSACTION_DOCTYPE, DISBURSEMENT_FIELD):
+		return {"checked": 0, "matched": 0}
+	latest = datetime.now(timezone.utc) - timedelta(minutes=SAFE_DELAY_MINUTES)
+	end_utc = min(end_utc, latest) if end_utc else latest
+	rows = frappe.get_all(TRANSACTION_DOCTYPE, filters={
+		"store": store.cost_center, "marketplace_id": store.marketplace_id,
+		"description": "Disbursement", "transaction_type": "Transfer", "net_amount": [">", 0],
+		"posted_date": ["between", [_to_system(start_utc), _to_system(end_utc)]] if start_utc else ["<=", _to_system(end_utc)],
+	}, fields=["name", "financial_event_group_id", "currency_code", "net_amount", "posted_date", DISBURSEMENT_FIELD],
+		order_by="posted_date asc", limit_page_length=0)
+	pending = [row for row in rows if row.financial_event_group_id and not read_disbursement_group(row, row.get(DISBURSEMENT_FIELD))]
+	result = {"checked": len(pending), "matched": 0}
+	while pending:
+		first_posted_at = _to_utc(pending[0].posted_date)
+		window_end = min(first_posted_at + timedelta(days=110), end_utc)
+		window = [row for row in pending if _to_utc(row.posted_date) <= window_end]
+		pending = pending[len(window):]
+		groups = _query_disbursement_groups(store, first_posted_at - timedelta(days=60),
+											min(window_end + timedelta(days=1), latest))
+		for row in window:
+			group = _match_disbursement_group(row, groups)
+			if group:
+				value = json.dumps({"posting_group_id": row.financial_event_group_id, "payout": group}, ensure_ascii=False)
+				frappe.db.set_value(TRANSACTION_DOCTYPE, row.name, DISBURSEMENT_FIELD, value, update_modified=False)
+				result["matched"] += 1
+		frappe.db.commit()
+	return result
+
+
 def _query_window(config, store, sync_type, start_utc, end_utc):
 	from fengjing_app.fengjing_business.doctype.amazon_financial_transaction.amazon_financial_transaction import (
 		保存亚马逊财务交易,
@@ -183,6 +291,18 @@ def _query_window(config, store, sync_type, start_utc, end_utc):
 		if next_token in seen_tokens:
 			raise RuntimeError("Finances API returned a repeated nextToken")
 		seen_tokens.add(next_token)
+	try:
+		cache = frappe.cache()
+		key = f"fengjing:amazon-disbursement-refresh:{store.name}"
+		if sync_type != "incremental" or not cache.get_value(key):
+			lookup_start = end_utc - timedelta(days=90) if sync_type == "incremental" else start_utc
+			result = sync_disbursement_details(store, lookup_start, end_utc)
+			if sync_type == "incremental" and result["checked"]:
+				cache.set_value(key, True, expires_in_sec=6 * 3600)
+			summary["disbursements"] = result
+	except Exception:
+		frappe.db.rollback()
+		frappe.logger("amazon_finances", allow_site=True).exception("Amazon payout details sync failed: store=%s", store.name)
 	return summary
 
 

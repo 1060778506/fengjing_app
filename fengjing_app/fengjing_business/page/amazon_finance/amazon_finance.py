@@ -1,6 +1,6 @@
 from collections import Counter, defaultdict
 from datetime import datetime, time, timedelta, timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 import hashlib
 import json
 import re
@@ -9,6 +9,9 @@ from zoneinfo import ZoneInfo
 import frappe
 from frappe.utils import cint, flt, get_datetime, get_system_timezone, getdate
 
+from fengjing_app.fengjing_business.doctype.amazon_financial_configuration.amazon_financial_configuration import (
+    DISBURSEMENT_FIELD, _disbursement_amount, read_disbursement_group,
+)
 from fengjing_app.fengjing_business.doctype.amazon_financial_transaction.amazon_financial_transaction import (
     _上下文值, _费用分类, _金额,
 )
@@ -20,6 +23,7 @@ CUSTOMER_SALE_DOCTYPE = "Amazon FBA Customer Shipment Sale"
 INVENTORY_LEDGER_DETAIL_DOCTYPE = "Amazon FBA Inventory Ledger Detail"
 MAPPING_DOCTYPE = "Fengjing - Product Corresponding Platform - Main Table"
 REPORT_TIMEZONE = ZoneInfo("America/Los_Angeles")
+DISBURSEMENT_TIMEZONE = ZoneInfo("Asia/Shanghai")
 FILTER_OPTION_FIELDS = (
     "store", "marketplace_id", "country", "currency_code",
     "transaction_type", "transaction_status",
@@ -30,6 +34,33 @@ AMOUNT_FIELDS = [
     "promotional_rebates_tax", "marketplace_withheld_tax", "selling_fees",
     "fba_fees", "other_transaction_fees", "other_amount", "net_amount",
 ]
+ORDER_FEE_LABELS = {
+    "Commission": "佣金",
+    "FBAPerUnitFulfillmentFee": "FBA 履约费",
+    "ShippingChargeback": "运费扣回",
+    "GiftwrapChargeback": "礼品包装费扣回",
+    "selling_fees": "销售费（未拆分）",
+    "fba_fees": "履约费（未拆分）",
+    "other_transaction_fees": "其他费用（未拆分）",
+    "AmazonFees": "平台费（未拆分）",
+}
+ORDER_TOTAL_FIELDS = ("net", "sales", "shipping")
+REFUND_FEE_LABELS = {
+    **ORDER_FEE_LABELS,
+    "Commission": "退回销售佣金",
+    "RefundCommission": "退款管理费",
+    "shipping_credits": "退款运费调整",
+    "promotional_rebates": "退款促销调整",
+    "tax_adjustment": "退款税额调整",
+    "other_adjustment": "其他退款调整",
+}
+REFUND_FEE_ACCOUNTS = {
+    "Commission": "560104_fj",
+    "RefundCommission": "560104_fj",
+    "FBAPerUnitFulfillmentFee": "540104_fj",
+    "ShippingChargeback": "5001_fj",
+    "shipping_credits": "5001_fj",
+}
 
 DETAIL_GROUPS = (
     ("order", "订单"),
@@ -46,6 +77,8 @@ LOGISTICS_ACCOUNT = "540103_fj - 海运费用【主营业务成本】 - 丰境"
 STORAGE_ACCOUNT = "560105_fj - 平台仓储费【销售费用】 - 丰境"
 STORAGE_DESCRIPTIONS = {"FBAStorageBilling", "STARStorageBilling"}
 DEFAULT_COST_CENTER = "亚马逊-美国-Neighbor's house-A1VOX5X8GAU17J - 丰境"
+JOURNAL_DETAIL_GROUPS = {"removal", "service", "adjustment"}
+JOURNAL_ACCOUNT_NUMBERS = {"101204_fj", "5051_fj", "5301_fj", "560104_fj", "560108_fj"}
 
 
 def _money(value):
@@ -212,7 +245,7 @@ def _report_boundary(value, following_day=False):
     return pacific.astimezone(ZoneInfo(get_system_timezone())).replace(tzinfo=None)
 
 
-def _report_time(stored_value, raw_value=None):
+def _report_time(stored_value, raw_value=None, time_zone=REPORT_TIMEZONE):
     """Prefer Amazon's original timestamp for historical and future records."""
     instant = None
     if raw_value:
@@ -226,7 +259,7 @@ def _report_time(stored_value, raw_value=None):
         instant = get_datetime(stored_value).replace(tzinfo=ZoneInfo(get_system_timezone()))
     if instant is None:
         return None, None
-    local = instant.astimezone(REPORT_TIMEZONE)
+    local = instant.astimezone(time_zone)
     return local.replace(tzinfo=None), local.tzname()
 
 
@@ -308,6 +341,8 @@ def _resolve_mapping(row, mappings):
 
 
 def _build_db_filters(f):
+    if f.period == "pending":
+        return {"transaction_status": ["in", ["DEFERRED", "PENDING"]]}
     filters = {}
     if f.date_from and f.date_to:
         filters["posted_date"] = ["between", [
@@ -318,9 +353,6 @@ def _build_db_filters(f):
         filters["posted_date"] = [">=", _report_boundary(f.date_from)]
     elif f.date_to:
         filters["posted_date"] = ["<=", _report_boundary(f.date_to, following_day=True) - timedelta(microseconds=1)]
-    for key in FILTER_OPTION_FIELDS:
-        if f.get(key):
-            filters[key] = f.get(key)
     return filters
 
 
@@ -330,9 +362,13 @@ def _transaction_links(row):
         raw = json.loads(row.get("raw_json") or "{}")
     except (TypeError, ValueError):
         return {}
+    return _release_identifiers(raw.get("relatedIdentifiers")) if isinstance(raw, dict) else {}
+
+
+def _release_identifiers(identifiers):
     return {
         item.get("relatedIdentifierName"): str(item.get("relatedIdentifierValue") or "").strip()
-        for item in (raw.get("relatedIdentifiers") or [])
+        for item in identifiers or []
         if isinstance(item, dict)
         and item.get("relatedIdentifierName") in {"DEFERRED_TRANSACTION_ID", "RELEASE_TRANSACTION_ID"}
     }
@@ -388,7 +424,7 @@ def _raw_item_fee_categories(nodes):
                 visit(children)
                 continue
             if kind == "amazonfees" or "fee" in kind or kind in {
-                "commission", "shippingchargeback", "giftwrapchargeback",
+                "commission", "refundcommission", "shippingchargeback", "giftwrapchargeback",
             }:
                 found = True
                 if any(part in kind for part in ("fba", "fulfillment", "storage")):
@@ -403,6 +439,166 @@ def _raw_item_fee_categories(nodes):
 
     visit(nodes)
     return {key: _money(value) for key, value in categories.items()} if found else None
+
+
+def _liquidation_breakdown(nodes):
+    fields = {
+        "RecommerceLiquidation": "gross_recovery",
+        "LiquidationProcessingFee": "processing_fee",
+        "LiquidationReferralFee": "referral_fee",
+    }
+    amounts = defaultdict(float)
+
+    def visit(entries):
+        if isinstance(entries, dict):
+            entries = [entries]
+        if not isinstance(entries, list):
+            return
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            field = fields.get(entry.get("breakdownType"))
+            amount = entry.get("breakdownAmount")
+            if field and isinstance(amount, dict) and ("currencyAmount" in amount or "amount" in amount):
+                amounts[field] += _金额(amount)
+            else:
+                visit(entry.get("breakdowns"))
+
+    visit(nodes)
+    return {field: _money(amount) for field, amount in amounts.items()}
+
+
+def _attach_liquidation_breakdown(row):
+    try:
+        source = json.loads(row.get("raw_json") or "{}")
+    except (TypeError, ValueError):
+        return
+    if not isinstance(source, dict):
+        return
+    items = [item for item in (source.get("items") or []) if isinstance(item, dict)]
+    sku_items = [item for item in items if str(_上下文值(item.get("contexts") or [], "sku") or "").strip() == row.sku]
+    item_amounts = [_liquidation_breakdown(item.get("breakdowns")) for item in sku_items]
+    common_fields = set.intersection(*(set(parts) for parts in item_amounts)) if item_amounts else set()
+    row.liquidation = {field: _money(sum(parts[field] for parts in item_amounts)) for field in common_fields}
+    # Amazon can report fee components only at transaction level. Use those totals
+    # when this row represents the entire transaction.
+    if not row.sku or len(items) <= 1 or len(sku_items) == len(items):
+        row.liquidation.update(_liquidation_breakdown(source.get("breakdowns")))
+    for line, parts in zip(row.item_lines, item_amounts):
+        line.liquidation = parts
+
+
+def _journal_counterparts(row, net):
+    if row.detail_group == "removal" and row.description == "RecommerceAfterMarketplaceShipmentItem":
+        liquidation = row.get("liquidation") or {}
+        if {"gross_recovery", "processing_fee", "referral_fee"} <= liquidation.keys():
+            gross, processing, commission = (Decimal(str(liquidation[key])) for key in (
+                "gross_recovery", "processing_fee", "referral_fee",
+            ))
+            if gross + processing + commission == net:
+                return [("清算回收收入", "5051_fj", -gross), ("清算处理费", "560108_fj", -processing),
+                        ("清算佣金", "560108_fj", -commission)]
+        return [("清算净回收", "5051_fj", -net)]
+    if row.detail_group == "service":
+        label = "店铺订阅费" if row.description == "Subscription" else row.description or "平台服务费"
+        return [(label, "560104_fj", -net)]
+    if row.transaction_type == "FBAInventoryReimbursement":
+        label = "FBA仓库损坏赔偿" if row.description == "WAREHOUSE_DAMAGE" else row.description or "FBA库存赔偿"
+        return [(label, "5301_fj", -net)]
+    return [(row.description or row.transaction_type or "平台调整", "", -net)]
+
+
+def _platform_journal_summary(rows, mappings):
+    stores = sorted({row.store for row in rows if row.store})
+    companies = {row.name: row.company for row in frappe.get_all(
+        "Cost Center", filters={"name": ["in", stores], "is_group": 0}, fields=["name", "company"],
+        limit_page_length=0,
+    )} if stores else {}
+    accounts = {(row.company, row.account_number): row for row in frappe.get_all(
+        "Account", filters={"company": ["in", sorted(set(companies.values()))], "is_group": 0, "disabled": 0,
+                            "account_number": ["in", sorted(JOURNAL_ACCOUNT_NUMBERS)]},
+        fields=["name", "account_number", "account_currency", "company"], limit_page_length=0,
+    )} if companies else {}
+    currencies = {row.name: row.default_currency for row in frappe.get_all(
+        "Company", filters={"name": ["in", sorted(set(companies.values()))]},
+        fields=["name", "default_currency"], limit_page_length=0,
+    )} if companies else {}
+    groups = {}
+    for row in rows:
+        company, currency = companies.get(row.store, ""), row.currency_code or "未知"
+        net = Decimal(str(_money(row.net_amount)))
+        if row.detail_group == "removal":
+            _attach_liquidation_breakdown(row)
+        counterparts = _journal_counterparts(row, net)
+        if not net and not any(amount for _, _, amount in counterparts):
+            continue
+        group = groups.setdefault((company, currency), {"company": company, "currency": currency,
+                                  "platform_net": Decimal(0), "rows": []})
+        group["platform_net"] += net
+        bank_number = "101204_fj" if row.country == "United States" and currency == "USD" else ""
+        bank_label = counterparts[0][0] + "_平台余额"
+        mapping = _resolve_mapping(row, mappings)
+        item = (mapping.物料id if mapping else None) or row.corresponding_item or ""
+        date = str(row.report_posted_date or "")[:10]
+        reference = row.amazon_order_id or row.settlement_id or row.release_transaction_id or row.transaction_id
+        for label, account_number, amount, platform in [
+            (bank_label, bank_number, net, True),
+            *((label, number, amount, False) for label, number, amount in counterparts),
+        ]:
+            if not amount:
+                continue
+            account = accounts.get((company, account_number))
+            use_foreign_input = not platform and currency != currencies.get(company)
+            # The foreign helper columns accept amounts for company-currency accounts only.
+            if account and account.account_currency != (currency if platform else currencies.get(company)):
+                account = None
+            debit, credit = float(max(amount, 0)), float(max(-amount, 0))
+            description = "_".join(part for part in (label, date, reference) if part)
+            group["rows"].append({
+                "cost_center": row.store if company else "", "item": "" if platform else item,
+                "account": account.name if account else "", "description": description,
+                "debit": 0 if use_foreign_input else debit, "credit": 0 if use_foreign_input else credit,
+                "foreign_debit": debit if use_foreign_input else 0,
+                "foreign_credit": credit if use_foreign_input else 0,
+            })
+    return [{**group, "platform_net": float(group["platform_net"])} for _, group in sorted(groups.items())]
+
+
+def _funds_summary(rows):
+    names = {row.name for row in rows if row.description == "Disbursement" and row.transaction_type == "Transfer"}
+    stored = {}
+    if names and frappe.db.has_column(DOCTYPE, DISBURSEMENT_FIELD):
+        stored = {entry.name: entry.get(DISBURSEMENT_FIELD) for entry in _read_order_summary_rows(
+            DOCTYPE, ["name", DISBURSEMENT_FIELD], {}, "name", names,
+        )}
+    original_totals = defaultdict(Decimal)
+    totals = defaultdict(Decimal)
+    unmatched = 0
+    summary_rows = []
+    for row in rows:
+        payout = read_disbursement_group(row, stored.get(row.name)) if row.name in names else None
+        converted = _disbursement_amount(payout.get("ConvertedTotal")) if payout else None
+        sent_at, _ = _report_time(None, payout.get("FundTransferDate"), DISBURSEMENT_TIMEZONE) if payout else (None, None)
+        row.disbursement = {
+            "date": sent_at.date().isoformat() if sent_at else "",
+            "currency": converted[0] if converted else "",
+            "amount": float(converted[1]) if converted else None,
+        }
+        if converted:
+            totals[converted[0]] += converted[1]
+        if row.name in names:
+            original_totals[row.currency_code or "未知"] += Decimal(str(_money(row.net_amount)))
+            if not sent_at or not converted:
+                unmatched += 1
+        summary_rows.append({
+            "store": row.store, "description": row.description or row.transaction_type,
+            "amount": row.net_amount, "currency": row.currency_code, "settlement_id": row.settlement_id,
+            "disbursement_date": row.disbursement["date"], "disbursement_currency": row.disbursement["currency"],
+            "disbursement_amount": row.disbursement["amount"],
+        })
+    return {"rows": summary_rows, "unmatched": unmatched,
+            "original_totals": [{"currency": currency, "amount": float(amount)} for currency, amount in sorted(original_totals.items())],
+            "totals": [{"currency": currency, "amount": float(amount)} for currency, amount in sorted(totals.items())]}
 
 
 def _item_display(row):
@@ -528,6 +724,65 @@ def _release_relationships(selected_rows, fields):
     return all_rows, parent_for_child, children
 
 
+def _reverse_release_rows(rows, fields, pending):
+    """Find counterpart records whose backlink may be outside the selected period."""
+    key = "DEFERRED_TRANSACTION_ID" if pending else "RELEASE_TRANSACTION_ID"
+    targets = {_transaction_key(row) for row in rows if row.transaction_id and (
+        pending or (str(row.transaction_status or "").upper() == "RELEASED"
+                    and not _transaction_links(row).get("DEFERRED_TRANSACTION_ID"))
+    )}
+    if not targets:
+        return []
+    present = {row.name for row in rows}
+    references = frappe.db.sql(
+        """SELECT name, store, marketplace_id,
+                  JSON_EXTRACT(raw_json, '$.relatedIdentifiers') AS identifiers
+             FROM `tabAmazon Financial Transaction`
+            WHERE raw_json LIKE %s AND JSON_VALID(raw_json)""",
+        (f'%"{key}"%',), as_dict=True,
+    )
+    matches = []
+    for reference in references:
+        if reference.name not in present:
+            linked_id = _release_identifiers(json.loads(reference.identifiers or "[]")).get(key)
+            if linked_id and _transaction_key(reference, linked_id) in targets:
+                matches.append(reference.name)
+    return list(_read_order_summary_rows(DOCTYPE, fields, {}, "name", matches))
+
+
+def _finance_period_rows(rows, parents, children, pending):
+    """A release carries the settled amounts. A deferred transaction carries its open balance."""
+    selected = []
+    for source in rows:
+        status = str(source.transaction_status or "").upper()
+        links = _transaction_links(source)
+        if pending:
+            released = any(str(child.transaction_status or "").upper() == "RELEASED" for child in children.get(source.name, ()))
+            if not released and not links.get("RELEASE_TRANSACTION_ID"):
+                source.report_maturity_date, _ = _report_time(source.release_date)
+                selected.append(source)
+            continue
+        if status in {"PENDING", "DEFERRED", "DEFERRED_RELEASED"}:
+            continue
+        original = parents.get(source.name)
+        if original or links.get("DEFERRED_TRANSACTION_ID"):
+            row = frappe._dict(source, transaction_status="DEFERRED_RELEASED")
+            row.release_transaction_id = source.transaction_id
+            if original:
+                row.transaction_id = original.transaction_id
+                row.original_transaction_date = original.report_posted_date
+                row.related_releases = [source]
+                if (row.detail_group == "logistics" and not (row.manual_items or row.manual_child_items)
+                        and (row.currency_code, row.net_amount) == (original.currency_code, original.net_amount)):
+                    for name in ("manual_items", "manual_item_ids", "manual_item_amounts", "manual_child_items",
+                                 "manual_child_item_ids", "manual_child_item_amounts"):
+                        row[name] = original.get(name)
+            selected.append(row)
+        else:
+            selected.append(source)
+    return selected
+
+
 def _available_months():
     """Show months using the same Pacific calendar as the downloaded report."""
     today = datetime.now(REPORT_TIMEZONE).date()
@@ -560,8 +815,9 @@ def _summarize_detail_rows(rows, detail_group="", mappings=None, cost_centers=No
     for row in rows:
         currency = row.currency_code or "未知"
         logistics = detail_group == "logistics"
+        net = row.get("display_net_amount") if detail_group == "refund" else None
         amounts = {
-            "net": Decimal(str(_money(row.net_amount))),
+            "net": Decimal(str(_money(row.net_amount if net is None else net))),
             "sales": Decimal(str(_money(row.product_sales))),
             "fees": Decimal(str(_money(row.display_fees))) if row.get("display_fees") is not None else
                     sum((Decimal(str(_money(row.get(field)))) for field in
@@ -686,8 +942,8 @@ def _summarize_detail_rows(rows, detail_group="", mappings=None, cost_centers=No
     }
 
 
-def _attach_shipment_dates(page_rows):
-    """Attach Pacific calendar dates from the two independent FBA reports."""
+def _attach_order_dates(page_rows):
+    """Attach both FBA report dates to the visible order rows."""
     order_ids = sorted({row.amazon_order_id for row in page_rows if row.amazon_order_id})
     if not order_ids:
         return
@@ -768,26 +1024,216 @@ def _order_summary_shipments(report, filters, key, values, store_scopes):
         yield from by_store[representative]
 
 
+def _named_order_fees(nodes, inside_amazon_fees=False):
+    """Read net amounts per fee type without counting Base, Tax and Promo twice."""
+    fees = defaultdict(Decimal)
+    if isinstance(nodes, dict):
+        nodes = [nodes]
+    for node in nodes or ():
+        if not isinstance(node, dict):
+            continue
+        name = str(node.get("breakdownType") or "").strip()
+        kind = re.sub(r"[^a-z0-9]", "", name.lower())
+        children = node.get("breakdowns") or []
+        amount = node.get("breakdownAmount")
+        if kind == "amazonfees" and children:
+            split = _named_order_fees(children, inside_amazon_fees=True)
+            if isinstance(amount, dict) and amount:
+                remainder = Decimal(str(_金额(amount))) - sum(split.values())
+                if remainder:
+                    split["AmazonFees"] += remainder
+        elif kind == "amazonfees" or (name and inside_amazon_fees) or "fee" in kind or kind in {
+                "commission", "refundcommission", "shippingchargeback", "giftwrapchargeback"}:
+            value = Decimal(str(_金额(amount))) if amount else sum(
+                (Decimal(str(_金额(leaf.get("breakdownAmount"))))
+                 for leaf in _fee_leaf_nodes(children)), Decimal(0))
+            split = {name: value}
+        else:
+            split = _named_order_fees(children, inside_amazon_fees)
+        for fee, value in split.items():
+            fees[fee] += value
+    return fees
+
+
+def _fee_leaf_nodes(nodes):
+    if isinstance(nodes, dict):
+        nodes = [nodes]
+    for node in nodes or ():
+        if not isinstance(node, dict):
+            continue
+        if node.get("breakdowns"):
+            yield from _fee_leaf_nodes(node["breakdowns"])
+        else:
+            yield node
+
+
 def _order_summary_amounts(currency, row):
     net = row.display_net_amount if row.get("display_net_amount") is not None else row.net_amount
-    fees = row.get("display_fees")
-    if fees is None:
-        fees = sum(_money(row.get(field)) for field in
-                   ("selling_fees", "fba_fees", "other_transaction_fees"))
+    try:
+        raw = json.loads(row.get("raw_json") or "{}")
+    except (TypeError, ValueError):
+        raw = {}
+    raw = raw if isinstance(raw, dict) else {}
+    items = [item for item in raw.get("items") or [] if isinstance(item, dict)]
+    sku_items = [
+        item for item in items if str(_上下文值(item.get("contexts") or [], "sku") or "").strip()
+        == (row.sku or "")
+    ]
+    fees = defaultdict(Decimal)
+    for item in sku_items:
+        for name, value in _named_order_fees(item.get("breakdowns")).items():
+            fees[name] += value
+    # A transaction-wide amount can only be used if it belongs to this SKU.
+    if not fees and len(sku_items) == len(items):
+        fees.update(_named_order_fees(raw.get("breakdowns")))
+    if not fees:
+        categories = row.get("display_fee_categories") or row
+        fees = {field: categories.get(field) for field in
+                ("selling_fees", "fba_fees", "other_transaction_fees")}
     return {"currency": currency, "net": _money(net), "sales": _money(row.product_sales),
-            "fees": _money(fees)}
+            "shipping": _money(row.shipping_credits), "quantity": cint(row.quantity),
+            "fees": {name: _money(amount) for name, amount in fees.items() if _money(amount)}}
 
 
 def _order_summary_totals(rows):
-    totals = defaultdict(lambda: {"net": Decimal(0), "sales": Decimal(0), "fees": Decimal(0)})
+    totals = defaultdict(lambda: {**dict.fromkeys(ORDER_TOTAL_FIELDS, Decimal(0)),
+                                  "quantity": 0, "fees": defaultdict(Decimal)})
     for row in rows:
-        for field in ("net", "sales", "fees"):
-            totals[row["currency"]][field] += Decimal(str(row[field]))
-    return [{"currency": currency, **{field: float(amount) for field, amount in values.items()}}
+        total = totals[row["currency"]]
+        total["quantity"] += row["quantity"]
+        for field in ORDER_TOTAL_FIELDS:
+            total[field] += Decimal(str(row[field]))
+        for fee, amount in row["fees"].items():
+            total["fees"][fee] += Decimal(str(amount))
+    return [{"currency": currency, "quantity": values["quantity"],
+             **{field: float(values[field]) for field in ORDER_TOTAL_FIELDS},
+             "fees": {fee: float(amount) for fee, amount in values["fees"].items()}}
             for currency, values in sorted(totals.items())]
 
 
-def _order_reconciliation(rows, filters, truncated):
+def _order_sku_price_lines(amounts):
+    """Split into at most two cent prices whose extended amounts match the recorded sale."""
+    quantity = amounts["quantity"]
+    if quantity <= 0:
+        return [{**amounts, "unit_price": None}]
+    sales = Decimal(str(amounts["sales"]))
+    cent = Decimal("0.01")
+    lower_price, higher_quantity = divmod(int(sales / cent), quantity)
+    if not higher_quantity:
+        return [{**amounts, "unit_price": float(lower_price * cent)}]
+
+    first, second = sorted(
+        [(quantity - higher_quantity, lower_price), (higher_quantity, lower_price + 1)],
+        key=lambda part: -part[0],
+    )
+    first_quantity, first_price = first
+    second_quantity, second_price = second
+
+    def first_share(amount):
+        return (Decimal(str(amount)) * first_quantity / quantity).quantize(cent, rounding=ROUND_HALF_UP)
+
+    fees = {key: Decimal(str(value)) for key, value in amounts["fees"].items()}
+    first_fees = {key: first_share(value) for key, value in fees.items()}
+    second_fees = {key: value - first_fees[key] for key, value in fees.items()}
+    shipping = Decimal(str(amounts["shipping"]))
+    first_shipping = first_share(shipping)
+    net = Decimal(str(amounts["net"]))
+    other = net - sales - shipping - sum(fees.values())
+    first_sale = first_quantity * first_price * cent
+    first_net = first_sale + first_shipping + sum(first_fees.values()) + first_share(other)
+    return [
+        {"currency": amounts["currency"], "quantity": qty, "unit_price": float(price * cent),
+         "sales": float(qty * price * cent), "shipping": float(shipping_share), "net": float(net_share),
+         "fees": {key: float(value) for key, value in fee_shares.items()}, "adjustment": adjustment}
+        for qty, price, shipping_share, net_share, fee_shares, adjustment in (
+            (first_quantity, first_price, first_shipping, first_net, first_fees, False),
+            (second_quantity, second_price, shipping - first_shipping, net - first_net, second_fees, True),
+        )
+    ]
+
+
+def _refund_summary(rows):
+    sales_rows, fee_rows = {}, {}
+    totals = defaultdict(lambda: {"sales": Decimal(0), "fees": Decimal(0), "net": Decimal(0)})
+    centers = {row.store for row in rows if row.store}
+    companies = {row.name: row.company for row in frappe.get_all(
+        "Cost Center", filters={"name": ["in", sorted(centers)]},
+        fields=["name", "company"], limit_page_length=0,
+    )} if centers else {}
+    accounts = {(row.company, row.account_number): row.name for row in frappe.get_all(
+        "Account", filters={"company": ["in", sorted(set(companies.values()))],
+                            "account_number": ["in", sorted(set(REFUND_FEE_ACCOUNTS.values()))],
+                            "is_group": 0, "disabled": 0},
+        fields=["name", "account_number", "company"], limit_page_length=0,
+    )} if companies else {}
+
+    for row in rows:
+        currency = row.currency_code or "未知"
+        amounts = {
+            field: Decimal(str(_money(row.get(field))))
+            for field in ("product_sales", "shipping_credits", "promotional_rebates", "product_sales_tax",
+                          "shipping_credits_tax", "promotional_rebates_tax", "marketplace_withheld_tax")
+        }
+        sales = amounts["product_sales"]
+        net = Decimal(str(_money(row.net_amount if row.display_net_amount is None else row.display_net_amount)))
+        base = {
+            "cost_center": row.store or "", "sku": row.sku or "", "item_id": row.corresponding_item or "",
+            "item_name": row.item_name, "item_image": row.item_image, "product_name": row.product_name,
+            "currency": currency,
+        }
+        key = (base["cost_center"], base["sku"], base["item_id"], currency)
+        quantity = abs(cint(row.quantity))
+        if quantity or sales:
+            direction = 1 if sales > 0 else -1
+            # Group equal rates after splitting each source line, so different
+            # rates for the same SKU survive aggregation.
+            price_lines = _order_sku_price_lines({
+                "quantity": quantity, "sales": float(abs(sales)), "net": float(abs(sales)),
+                "currency": currency, "fees": {}, "shipping": 0,
+            })
+            for line in price_lines:
+                price = line["unit_price"]
+                sale = sales_rows.setdefault((*key, direction, price), {
+                    **base, "unit_price": price, "quantity": 0 if quantity else None, "amount": Decimal(0),
+                })
+                if quantity:
+                    sale["quantity"] += direction * line["quantity"]
+                sale["amount"] += direction * Decimal(str(line["sales"]))
+
+        components = {code: Decimal(str(value)) for code, value in row.refund_fee_details.items()}
+        components.update(shipping_credits=amounts["shipping_credits"], promotional_rebates=amounts["promotional_rebates"])
+        components["tax_adjustment"] = sum(amounts[field] for field in (
+            "product_sales_tax", "shipping_credits_tax", "promotional_rebates_tax", "marketplace_withheld_tax",
+        ))
+        components["other_adjustment"] = net - sales - sum(components.values())
+        for code, value in components.items():
+            if not value:
+                continue
+            fee = fee_rows.setdefault((*key, code), {
+                **base, "fee_type": REFUND_FEE_LABELS.get(code, code),
+                "account": accounts.get((companies.get(row.store), REFUND_FEE_ACCOUNTS.get(code)), ""),
+                "amount": Decimal(0),
+            })
+            fee["amount"] += value
+
+        totals[currency]["sales"] += sales
+        totals[currency]["fees"] += net - sales
+        totals[currency]["net"] += net
+
+    return {
+        "count": len(rows),
+        "sales_rows": [{**row, "amount": float(row["amount"])} for row in sorted(
+            sales_rows.values(), key=lambda row: (
+                row["cost_center"], row["sku"], row["item_id"], row["currency"], row["unit_price"] or 0,
+            ),
+        )],
+        "fee_rows": [{**row, "amount": float(row["amount"])} for _, row in sorted(fee_rows.items()) if row["amount"]],
+        "totals": [{"currency": currency, **{key: float(value) for key, value in total.items()}}
+                   for currency, total in sorted(totals.items())],
+    }
+
+
+def _order_reconciliation(rows, filters, truncated, order_count):
     stores = frappe.get_all("Amazon Store Configuration", limit_page_length=0,
                             fields=["name", "seller_id", "cost_center", "marketplace_id"])
     store_scopes = {row.name: ("seller", row.seller_id) if row.seller_id else ("store", row.name)
@@ -795,6 +1241,7 @@ def _order_reconciliation(rows, filters, truncated):
     finance_scopes = {(row.cost_center, row.marketplace_id): store_scopes[row.name] for row in stores}
     products, orders = {}, {}
     finance_lines = []
+    sku_summary = {}
     for row in rows:
         scope = finance_scopes.get((row.store, row.marketplace_id),
                                    ("finance", row.store or "", row.marketplace_id or ""))
@@ -803,10 +1250,10 @@ def _order_reconciliation(rows, filters, truncated):
             "sku": sku, "product_name": row.product_name, "items": {}, "stores": set(),
             "orders": [], "days": [], "quantity": 0,
         })
-        if row.corresponding_item:
-            product["items"][row.corresponding_item] = {
-                "name": row.corresponding_item, "label": row.item_name, "image": row.item_image,
-            }
+        item_id = row.corresponding_item or ""
+        item = {"name": item_id, "label": row.item_name, "image": row.item_image}
+        if item_id:
+            product["items"][item_id] = item
         if row.store:
             product["stores"].add(row.store)
         order_key = (scope, sku, row.amazon_order_id or row.name)
@@ -824,6 +1271,16 @@ def _order_reconciliation(rows, filters, truncated):
         amounts = _order_summary_amounts(row.currency_code or "未知", row)
         order["amounts"].append(amounts)
         finance_lines.append(amounts)
+
+        summary = sku_summary.setdefault(sku, {
+            "sku": sku, "quantity": 0, "product_name": "", "items": {}, "item_amounts": defaultdict(list),
+        })
+        summary["quantity"] += quantity
+        summary["product_name"] = summary["product_name"] or row.product_name
+        if item_id:
+            summary["items"][item_id] = item
+        group_key = (row.store or "", item_id, amounts["currency"])
+        summary["item_amounts"][group_key].append(amounts)
 
     selected_orders = {key for key, order in orders.items() if order["id"] and key[1]}
     active_scopes = {key[0] for key in selected_orders}
@@ -914,10 +1371,24 @@ def _order_reconciliation(rows, filters, truncated):
                                            or (filters.date_to and day > str(filters.date_to))),
         } for day, entries in sorted(product_days[key].items(), reverse=True)]
 
+    for summary in sku_summary.values():
+        summary["items"] = list(summary["items"].values())
+        summary["price_lines"] = []
+        for (cost_center, item_id, _currency), amounts in sorted(summary.pop("item_amounts").items()):
+            total, = _order_summary_totals(amounts)
+            summary["price_lines"].extend(
+                {**line, "item_id": item_id, "cost_center": cost_center}
+                for line in _order_sku_price_lines(total)
+            )
+    fee_names = {fee for line in finance_lines for fee in line["fees"]}
+    fee_columns = [fee for fee in ORDER_FEE_LABELS if fee in fee_names]
+    fee_columns.extend(sorted(fee_names.difference(ORDER_FEE_LABELS)))
     return {
         "products": sorted(products.values(), key=lambda item: (-item["quantity"], item["sku"])),
-        "order_count": len({(key[0], order["id"]) for key, order in orders.items() if order["id"]}),
+        "sku_summary": sorted(sku_summary.values(), key=lambda item: (-item["quantity"], item["sku"])),
+        "order_count": order_count,
         "finance_rows": len(rows), "totals": _order_summary_totals(finance_lines),
+        "fee_columns": [{"key": fee, "label": ORDER_FEE_LABELS.get(fee, fee)} for fee in fee_columns],
         "center_count": len(centers), "matched_count": statuses["matched"],
         "difference_count": statuses["difference"], "missing_count": statuses["missing"],
         "truncated": truncated,
@@ -927,6 +1398,8 @@ def _order_reconciliation(rows, filters, truncated):
 @frappe.whitelist()
 def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconciliation=0):
     f = _filters(filters)
+    pending = f.period == "pending"
+    detail_group = "logistics" if f.detail_group == "storage" else (f.detail_group or "")
     fields = [
         "name", "transaction_sku_key", "transaction_id", "amazon_order_id",
         "amazon_order_item_id", "sku", "asin", "store", "country", "marketplace_id",
@@ -942,25 +1415,16 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
         DOCTYPE, filters=db_filters, fields=fields,
         order_by="posted_date desc, modified desc", limit_page_length=100000,
     )
-    # Keep dropdown choices stable within the selected dates, even after a choice is selected.
-    option_rows = rows
-    if any(f.get(key) for key in FILTER_OPTION_FIELDS):
-        date_filters = {"posted_date": db_filters["posted_date"]} if "posted_date" in db_filters else {}
-        option_rows = frappe.get_all(
-            DOCTYPE, filters=date_filters, fields=list(FILTER_OPTION_FIELDS),
-            limit_page_length=100000,
-        )
     truncated = len(rows) >= 100000
-    all_rows, parent_for_child, release_children = _release_relationships(rows, fields)
+    reverse_links = _reverse_release_rows(rows, fields, pending)
+    all_rows, parent_for_child, release_children = _release_relationships(rows + reverse_links, fields)
     for row in all_rows:
         try:
             source = json.loads(row.get("raw_json") or "{}")
         except (TypeError, ValueError):
             source = {}
-        row.report_posted_date, row.report_timezone = _report_time(
-            row.posted_date, source.get("postedDate")
-        )
-        row.report_release_date, _ = _report_time(row.release_date)
+        posted_at = source.get("postedDate") if isinstance(source, dict) else None
+        row.report_posted_date, row.report_timezone = _report_time(row.posted_date, posted_at)
     mappings = _mapping_rows()
     item_ids = set()
     for row in all_rows:
@@ -1036,59 +1500,64 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
     binding = f.binding or ""
     scope = f.scope or ""
     item_filter = f.corresponding_item or ""
-    if search or binding or scope or item_filter:
-        filtered = []
-        for row in rows:
-            haystack = " ".join(str(row.get(k) or "") for k in (
-                "transaction_id", "amazon_order_id", "sku", "asin", "product_name",
-                "corresponding_item", "item_name", "description", "settlement_id",
-            )).lower()
-            if search and search not in haystack:
-                continue
-            if binding == "bound" and not row.is_bound:
-                continue
-            if binding == "unbound" and (row.is_bound or not row.is_product):
-                continue
-            if scope == "product" and not row.is_product:
-                continue
-            if scope == "store" and row.is_product:
-                continue
-            if item_filter and row.corresponding_item != item_filter:
-                continue
-            filtered.append(row)
-        rows = filtered
+    def matches_row(row, original=None):
+        if any(f.get(key) and str(row.get(key) or "") != str(f[key]) for key in FILTER_OPTION_FIELDS):
+            return False
+        if search:
+            haystack = " ".join(
+                str(record.get(key) or "") for record in (row, original) if record
+                for key in ("transaction_id", "amazon_order_id", "sku", "asin", "product_name",
+                            "corresponding_item", "item_name", "description", "settlement_id")
+            ).lower()
+            if search not in haystack:
+                return False
+        if binding == "bound" and not row.is_bound:
+            return False
+        if binding == "unbound" and (row.is_bound or not row.is_product):
+            return False
+        if scope == "product" and not row.is_product:
+            return False
+        if scope == "store" and row.is_product:
+            return False
+        return not item_filter or row.corresponding_item == item_filter
 
-    dashboard_rows = rows
-    economic_rows = [row for row in dashboard_rows if row.name not in parent_for_child]
-    report_start = str(getdate(f.date_from)) if f.date_from else ""
-    report_end = str(getdate(f.date_to)) if f.date_to else ""
+    report_start = str(getdate(f.date_from)) if f.date_from and not pending else ""
+    report_end = str(getdate(f.date_to)) if f.date_to and not pending else ""
 
-    def refund_in_selected_dates(row):
-        day = str(row.report_posted_date or "")[:10]
+    def in_selected_dates(timestamp):
+        day = str(timestamp or "")[:10]
         return bool(day) and (not report_start or day >= report_start) and (not report_end or day <= report_end)
 
+    option_rows = [row for row in _finance_period_rows(rows, parent_for_child, release_children, pending)
+                   if pending or in_selected_dates(row.report_posted_date)]
+    economic_rows = [row for row in option_rows if matches_row(row, parent_for_child.get(row.name))]
+    order_rows = [row for row in economic_rows if row.detail_group == "order"]
+    order_count = len({
+        (row.store, row.marketplace_id, row.amazon_order_id)
+        for row in order_rows if row.amazon_order_id
+    })
+
     group_counts = defaultdict(int)
-    line_counts = {}
+    report_row_count = 0
     for row in economic_rows:
+        row.finance_outside_period = bool(row.original_transaction_date and not in_selected_dates(row.original_transaction_date))
         row.item_lines, row.display_net_amount = _item_display(row)
+        if detail_group == row.detail_group == "refund":
+            row.refund_fee_details = _order_summary_amounts(row.currency_code, row)["fees"]
+            row.display_fees = _money(sum(row.refund_fee_details.values()))
         if row.detail_group == "logistics":
             for line in row.item_lines:
                 line.manual_key = f"item:{line.line_no}"
                 line.manual_items = row.manual_child_items.get(line.manual_key, [])
-        line_counts[row.name] = max(1, len(row.item_lines))
-        if row.detail_group != "refund" or refund_in_selected_dates(row):
-            group_counts[row.detail_group] += 1 if row.detail_group == "refund" else line_counts[row.name]
-    report_row_count = sum(line_counts.values())
+        line_count = max(1, len(row.item_lines))
+        report_row_count += line_count
+        group_counts[row.detail_group] += line_count
+    group_counts["order"] = order_count
+    group_counts["refund"] = sum(row.detail_group == "refund" for row in economic_rows)
+    if detail_group == "order" and cint(order_reconciliation) and not pending:
+        return _order_reconciliation(order_rows, f, truncated, order_count)
 
-    detail_group = "logistics" if f.detail_group == "storage" else (f.detail_group or "")
-    selected_detail_rows = [
-        row for row in dashboard_rows
-        if (not detail_group or row.detail_group == detail_group)
-        and (detail_group != "refund" or refund_in_selected_dates(row))
-    ]
-    detail_rows = [row for row in selected_detail_rows if row.name not in parent_for_child]
-    if cint(order_reconciliation) and detail_group == "order":
-        return _order_reconciliation(detail_rows, f, truncated)
+    detail_rows = [row for row in economic_rows if not detail_group or row.detail_group == detail_group]
     if detail_group == "logistics":
         _attach_awd_fee_details(detail_rows)
 
@@ -1107,7 +1576,7 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
     for row in economic_rows:
         currency = row.currency_code or "未知"
         amount = _money(row.net_amount if row.net_amount is not None else row.total_amount)
-        key = (row.store, row.marketplace_id, row.transaction_id)
+        key = _transaction_key(row, row.release_transaction_id) if row.transaction_id or row.release_transaction_id else (row.store, row.marketplace_id, row.name)
         if key not in unique_transactions:
             unique_transactions.add(key)
             currencies[currency]["net"] += amount
@@ -1153,32 +1622,33 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
     product_list.sort(key=lambda x: (x["quantity"], sum(abs(v) for v in x["amounts"].values())), reverse=True)
     settlement_list = sorted(settlements.values(), key=lambda x: str(x["last_date"] or ""), reverse=True)
     page, page_size = max(cint(page), 1), min(max(cint(page_size), 10), 500)
-    selected_names = {row.name for row in selected_detail_rows}
-    # Date filters select the original transaction, never a release from another month.
-    display_rows = sorted(detail_rows, key=lambda row: str(row.posted_date or ""), reverse=True)
+    display_rows = sorted(detail_rows, key=lambda row: (str(row.report_posted_date or ""), row.name), reverse=True)
     start = (page - 1) * page_size
     page_rows = display_rows[start:start + page_size]
     if detail_group == "order":
-        _attach_shipment_dates(page_rows)
-    for row in page_rows:
-        row.related_releases = release_children.get(row.name, [])
-        for child in row.related_releases:
-            child.context_only = child.name not in selected_names
+        _attach_order_dates(page_rows)
+    if detail_group == "removal" and pending:
+        for row in page_rows:
+            _attach_liquidation_breakdown(row)
     if detail_group != "logistics":
         _attach_awd_fee_details(page_rows)
+    journal_summary = _platform_journal_summary(detail_rows, mappings) if detail_group in JOURNAL_DETAIL_GROUPS and not pending else []
+    funds_summary = _funds_summary(display_rows) if detail_group == "funds" else None
     # The complete Amazon response is retained in its DocType; do not send it to the browser.
-    for row in all_rows:
+    for row in [*all_rows, *page_rows]:
         row.pop("raw_json", None)
     options = {
         key: sorted({str(r.get(key)) for r in option_rows if r.get(key)})
         for key in FILTER_OPTION_FIELDS
     }
     detail_groups = []
-    if report_row_count:
+    retained_groups = () if pending else ("order", "refund")
+    if report_row_count or detail_group in retained_groups:
         detail_groups.append({"key": "", "label": "全部", "count": report_row_count})
     detail_groups.extend(
         {"key": key, "label": label, "count": group_counts[key]}
-        for key, label in DETAIL_GROUPS if group_counts[key] > 0
+        for key, label in DETAIL_GROUPS
+        if group_counts[key] > 0 or (key in retained_groups and detail_group == key)
     )
     cost_center_options = [center.name for center in frappe.get_all(
         "Cost Center", filters={"is_group": 0}, fields=["name"], order_by="name asc",
@@ -1190,7 +1660,8 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
         fields=["name"], order_by="name asc", limit_page_length=0,
     )] if detail_group == "logistics" else []
     return {
-        "summary": {"row_count": len(economic_rows), "report_row_count": report_row_count, "transaction_count": len(unique_transactions), "release_count": sum(len(release_children.get(row.name, [])) for row in economic_rows), "sku_count": len(products), "product_count": product_count, "store_fee_count": store_fee_count, "bound_count": bound, "unbound_count": product_count - bound, "binding_rate": round(bound * 100 / product_count, 1) if product_count else 0, "currencies": dict(currencies), "truncated": truncated},
+        "period": "pending" if pending else "released",
+        "summary": {"row_count": len(economic_rows), "report_row_count": report_row_count, "transaction_count": len(unique_transactions), "release_count": sum(len(row.get("related_releases") or []) for row in economic_rows), "sku_count": len(products), "product_count": product_count, "store_fee_count": store_fee_count, "bound_count": bound, "unbound_count": product_count - bound, "binding_rate": round(bound * 100 / product_count, 1) if product_count else 0, "currencies": dict(currencies), "truncated": truncated},
         "daily": {day: dict(values) for day, values in sorted(daily.items())},
         "fees": {c: dict(v) for c, v in fee_totals.items()},
         "types": {c: dict(v) for c, v in type_totals.items()},
@@ -1198,10 +1669,17 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
         "products": product_list[:500], "settlements": settlement_list[:200],
         "rows": page_rows, "options": options, "available_months": _available_months(),
         "detail_summary": _summarize_detail_rows(detail_rows, detail_group, mappings, cost_center_options),
+        "journal_summary": journal_summary,
+        "funds_summary": funds_summary,
+        "refund_summary": _refund_summary(detail_rows) if detail_group == "refund" and not pending else None,
         "cost_center_options": cost_center_options,
         "account_options": account_options,
         "detail_groups": detail_groups,
-        "pagination": {"page": page, "page_size": page_size, "total": len(display_rows), "display_total": len(detail_rows) if detail_group == "refund" else sum(line_counts[row.name] for row in detail_rows), "raw_total": len(selected_detail_rows), "pages": max(1, (len(display_rows) + page_size - 1) // page_size)},
+        "order_list_totals": {
+            "orders": group_counts["order"],
+            "units": sum(cint(row.quantity) for row in order_rows),
+        } if detail_group == "order" else None,
+        "pagination": {"page": page, "page_size": page_size, "total": len(display_rows), "display_total": len(display_rows) if detail_group == "refund" else sum(max(1, len(row.item_lines)) for row in display_rows), "raw_total": len(detail_rows), "pages": max(1, (len(display_rows) + page_size - 1) // page_size)},
     }
 
 

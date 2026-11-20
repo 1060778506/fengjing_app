@@ -1,3 +1,6 @@
+const AMAZON_ORDER_CHART_PALETTE = ["#5b8cff", "#18c7c8", "#8b6cff", "#ffb547", "#29c785", "#ff6685", "#37a5ff"];
+const AMAZON_ORDER_CHART_TOOLTIP = { backgroundColor: "rgba(15,23,42,.94)", borderWidth: 0, textStyle: { color: "#fff" } };
+
 frappe.pages["amazon-order-display"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({ parent: wrapper, title: "Amazon 订单概况中心", single_column: true });
 	frappe.require(["assets/fengjing_app/js/图表-echarts.js","assets/fengjing_app/js/Amazon_Order_Map/amazon-order-map.js"], () => new AmazonOrderDashboard(page, wrapper));
@@ -7,10 +10,18 @@ class AmazonOrderDashboard {
 	constructor(page, wrapper) {
 		this.page = page; this.wrapper = wrapper; this.rows = []; this.orders = []; this.filtered = [];
 		this.pageNo = 1; this.pageSize = 25; this.sortKey = "purchase_date"; this.sortDirection = "desc"; this.hourZone = "us"; this.charts = []; this.analysisKey = "";
+		this.showZeroSalesDays = false;
 		wrapper.__amazon_order_dashboard = this; this.render(); this.bind(); this.setDates(30); this.load();
 	}
 	render() {
 		$(this.wrapper).find(".layout-main-section").html(`<style>${this.styles()}</style><style>
+		.aod-card header #aod-zero-sales-days { margin-left: 8px; white-space: nowrap; }
+		.aod-card header #aod-zero-sales-days:hover { border-color: #82a7ff; }
+		.aod-card header #aod-zero-sales-days[aria-pressed="true"] {
+			border-color: #82a7ff;
+			color: #265cc8;
+			background: #edf4ff;
+		}
 		.fom-country-flag{display:inline-flex;width:32px;height:22px;overflow:hidden;border-radius:5px;box-shadow:0 2px 7px rgba(25,45,85,.18)}.fom-country-flag svg{display:block;width:100%;height:100%}.fom-country-code{display:grid;place-items:center;width:32px;height:22px;border-radius:5px;background:#edf3ff;color:#365fae;font-size:10px;font-weight:800}
 		.aod-money-panel{height:330px;overflow:auto;padding:12px 16px 18px;background:linear-gradient(145deg,#fff,#f6f9ff)}.aod-money-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:13px 2px;border-bottom:1px solid #edf2f8}.aod-money-row:last-child{border-bottom:0}.aod-money-country{display:flex;align-items:center;gap:10px;min-width:0}.aod-money-country>i{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:#fff;box-shadow:0 5px 14px rgba(50,82,150,.13);font-size:24px;font-style:normal}.aod-money-country b,.aod-money-country small,.aod-money-values b,.aod-money-values small{display:block}.aod-money-country small,.aod-money-values small{margin-top:3px;color:#8793a8;font-size:10px}.aod-money-values{min-width:54%;text-align:right}.aod-money-values b{font-size:14px;color:#18396e}.aod-mini-bar{height:5px;margin-top:7px;border-radius:6px;background:#e7edf8;overflow:hidden}.aod-mini-bar i{display:block;height:100%;border-radius:6px;transition:width .7s ease}.aod-dist{height:100%;overflow:auto;padding:18px}.aod-dist-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}.aod-dist-row>i{display:grid;place-items:center;flex:0 0 34px;height:34px;border-radius:10px;background:#eef4ff;color:#3264c8;font-size:17px;font-style:normal;font-weight:800}.aod-dist-row>span{min-width:0;flex:1}.aod-dist-row b,.aod-dist-row small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.aod-dist-row small{color:#8a96aa;font-size:10px}.aod-dist-row em{display:block;height:5px;margin-top:5px;border-radius:8px;background:#e8eef8;overflow:hidden}.aod-dist-row u{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,#4d7df3,#19bec2);text-decoration:none;transition:width .7s ease}.aod-item-map{display:flex;align-items:center;gap:8px;margin-top:9px;padding:7px;border-radius:10px;background:#f3f7ff}.aod-item-map img,.aod-item-placeholder{flex:0 0 58px;width:58px;height:58px;border-radius:11px;object-fit:cover;background:#fff;border:1px solid #dfe8f6}.aod-item-placeholder{display:grid;place-items:center;color:#3d6fd1;font-weight:800}.aod-item-map>span{min-width:0}.aod-item-map a{display:block;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}.aod-item-map em{color:#9a6b00;font-size:10px;font-style:normal}.aod-card.span-12{grid-column:span 12}.aod-asin-rank{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-height:650px;overflow:auto;padding:16px}.aod-asin-row{display:flex;align-items:center;gap:11px;padding:11px;border:1px solid #e7edf7;border-radius:14px;background:#fbfdff}.aod-rank-no{width:25px;color:#4f75c9;text-align:center}.aod-asin-row img,.aod-asin-placeholder{display:grid;place-items:center;flex:0 0 54px;width:54px;height:54px;border-radius:11px;object-fit:cover;background:#eef4ff;color:#3765c4;font-weight:800}.aod-asin-info{min-width:0;flex:1}.aod-asin-info b,.aod-asin-info span,.aod-asin-info small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.aod-asin-info span{font-size:12px}.aod-asin-info small{color:#8b97aa;font-size:10px}.aod-asin-volume{width:120px;text-align:right}.aod-asin-volume b,.aod-asin-volume small{display:block}.aod-asin-volume i{display:block;height:5px;margin-top:6px;border-radius:6px;background:#e8eef8;overflow:hidden}.aod-asin-volume u{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#7b62ec,#4b83f5)}.aod-table-wrap td{padding-top:22px!important;padding-bottom:22px!important}.aod-table-wrap tr{min-height:120px}.aod-map-card{padding-bottom:0;background:#081126}.aod-map-card>header{padding:15px 18px;color:#fff}.aod-map-card>header span{color:#8ea6ce}.aod-order-map{min-height:620px}.fom-toolbar{display:flex;align-items:center;gap:14px;padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08);background:#0c1730;color:#dbe8ff}.fom-modes,.fom-controls{display:flex;align-items:center;gap:7px}.fom-toolbar button,.fom-toolbar select{height:32px;padding:0 10px;border:1px solid #2b3d61;border-radius:8px;background:#121f3c;color:#dbe8ff}.fom-toolbar button.active{border-color:#2fe4d0;background:#123f52;color:#6fffe9}.fom-toolbar label{margin:0;font-size:11px;white-space:nowrap}.fom-toolbar input{accent-color:#28d9c5}.fom-overlay-title{margin-left:4px;padding-left:10px;border-left:1px solid #33466c;color:#69eadb;font-size:10px;font-weight:700;white-space:nowrap}.fom-status{display:flex;align-items:center;gap:7px;margin-left:auto;font-size:10px}.fom-status i{width:7px;height:7px;border-radius:50%;background:#35efac;box-shadow:0 0 0 5px rgba(53,239,172,.12)}.fom-status b{color:#5ee2ff}.fom-stage{position:relative;height:570px;overflow:hidden;background:#000}.fom-offline,.fom-online{position:absolute;inset:0;width:100%;height:100%}.fom-online{display:none}.fom-hud{position:absolute;z-index:4;left:22px;top:20px;pointer-events:none}.fom-hud b,.fom-hud span{display:block}.fom-hud b{color:#53efff;letter-spacing:2px}.fom-hud span{color:#9ab1d8;font-size:10px}.cesium-viewer-bottom{display:none!important}@media(max-width:1000px){.fom-toolbar{align-items:flex-start;flex-wrap:wrap}.fom-controls{width:100%;overflow:auto}.fom-status{margin-left:0}.fom-stage{height:480px}.aod-asin-rank{grid-template-columns:1fr}}
 		</style><style>
@@ -27,7 +38,13 @@ class AmazonOrderDashboard {
 		 </div><div class="aod-actions"><div class="aod-ranges"><button data-days="7">7天</button><button data-days="30" class="active">30天</button><button data-days="90">90天</button><button data-days="365">1年</button><button data-days="0">全部</button></div><button id="aod-reset">重置</button><button id="aod-query" class="primary">查询数据</button><button id="aod-export">导出 CSV</button></div></section>
 		 <section id="aod-kpis" class="aod-kpis"></section>
 		 <section class="aod-grid">
-		  <article class="aod-card span-8"><header><div><h3>订单与销售趋势</h3><span>订单数、商品数与金额联动</span></div></header><div id="aod-trend" class="aod-chart tall"></div></article>
+		  <article class="aod-card span-8">
+		   <header>
+		    <div><h3>订单与销售趋势</h3><span>订单数、商品数与金额联动</span></div>
+		    <button type="button" id="aod-zero-sales-days" aria-pressed="false" aria-controls="aod-trend">显示零销量日期</button>
+		   </header>
+		   <div id="aod-trend" class="aod-chart tall"></div>
+		  </article>
 		  <article class="aod-card span-4"><header><div><h3>订单状态</h3><span>当前筛选范围</span></div></header><div id="aod-status" class="aod-chart tall"></div></article>
 		  <article class="aod-card span-4"><header><div><h3>国家与站点</h3><span>订单地理分布</span></div></header><div id="aod-country" class="aod-distribution-panel"></div></article>
 		  <article class="aod-card span-4 aod-money-card"><header><div><h3>各国订单与当地货币</h3><span id="aod-rate-date">人民币换算</span></div></header><div id="aod-money-panel" class="aod-money-panel"></div></article>
@@ -75,6 +92,11 @@ class AmazonOrderDashboard {
 		const root=$(this.wrapper);
 		root.on("click","[data-days]",e=>{root.find("[data-days]").removeClass("active");$(e.currentTarget).addClass("active");this.setDates(+e.currentTarget.dataset.days);this.load();});
 		root.on("click","#aod-query",()=>this.load()); root.on("keyup","#aod-search-text",e=>{if(e.key==="Enter")this.load();});
+		root.on("click", "#aod-zero-sales-days", ({ currentTarget }) => {
+			this.showZeroSalesDays = !this.showZeroSalesDays;
+			currentTarget.setAttribute("aria-pressed", String(this.showZeroSalesDays));
+			if (this.trendChart) this.renderTrendChart(true);
+		});
 		root.on("focus input","[data-picker]",e=>this.showPicker(e.currentTarget.dataset.picker,e.currentTarget.value));root.on("mousedown",".aod-picker-option",e=>{e.preventDefault();const button=e.currentTarget,field=root.find(`#aod-filter-${button.dataset.kind}`);field.attr("data-value",button.dataset.value||"").val(button.dataset.label||button.dataset.value||"");root.find(".aod-picker-menu").removeClass("show");if(button.dataset.kind==="item_code")this.load();});root.on("click",e=>{if(!$(e.target).closest(".aod-picker").length)root.find(".aod-picker-menu").removeClass("show");});
 		root.on("click","#aod-reset",()=>{root.find("select").val("");root.find("[data-picker]").val("").attr("data-value","");root.find("input[type=text]").val("");this.setDates(30);root.find("[data-days]").removeClass("active").filter('[data-days="30"]').addClass("active");this.load();});
 		root.on("input","#aod-local-search",()=>{this.pageNo=1;this.renderTable();}); root.on("click","#aod-prev",()=>{if(this.pageNo>1){this.pageNo--;this.renderTable();}}); root.on("click","#aod-next",()=>{if(this.pageNo*this.pageSize<this.filtered.length){this.pageNo++;this.renderTable();}});
@@ -83,7 +105,49 @@ class AmazonOrderDashboard {
 		root.on("click","#aod-analysis-close",()=>{root.find("#aod-analysis-drawer").removeClass("show");this.analysisKey="";});
 	}
 	setDates(days){const to=frappe.datetime.get_today(),from=days?frappe.datetime.add_days(to,-days):"2025-04-01";$(this.wrapper).find("#aod-from").val(from).end().find("#aod-to").val(to);}
-	async load(){const root=$(this.wrapper),filters={};["store","marketplace_id","country","order_status","fulfillment_channel","currency_code"].forEach(k=>filters[k]=root.find(`#aod-${k}`).val()||root.find(`#aod-filter-${k}`).val());filters.item_code=root.find("#aod-filter-item_code").attr("data-value")||"";filters.date_from=root.find("#aod-from").val();filters.date_to=root.find("#aod-to").val();filters.search=root.find("#aod-search-text").val();this.currentFilters=filters;root.find(".aod-loading").addClass("show");try{const r=await frappe.call({method:"fengjing_app.fengjing_business.page.amazon_order_display.amazon_order_display.get_dashboard_data",args:{filters}}),m=r.message||{},allRows=m.rows||[];this.rows=filters.item_code?allRows.filter(row=>String(row.item_code||"")===filters.item_code):allRows;this.cnyRates=m.cny_rates||{};this.rateDate=m.rate_date||"";const options=m.options||{};if(!options.products)options.products=this.productOptionsFromRows(allRows);this.fillOptions(options);this.buildOrders();this.draw();setTimeout(()=>this.resize(),120);if(m.limited)frappe.show_alert({message:`符合 ${m.total_matching} 条，当前加载前 20,000 条`,indicator:"orange"});}catch(e){console.error(e);frappe.msgprint({title:"读取失败",message:"无法读取 Amazon 订单数据，请查看错误日志。",indicator:"red"});}finally{root.find(".aod-loading").removeClass("show");}}
+	async load() {
+		const root = $(this.wrapper);
+		const filters = {};
+		for (const key of ["store", "marketplace_id", "country", "order_status", "fulfillment_channel", "currency_code"]) {
+			filters[key] = root.find(`#aod-${key}`).val() || root.find(`#aod-filter-${key}`).val();
+		}
+		filters.item_code = root.find("#aod-filter-item_code").attr("data-value") || "";
+		filters.date_from = root.find("#aod-from").val();
+		filters.date_to = root.find("#aod-to").val();
+		filters.search = root.find("#aod-search-text").val();
+		this.currentFilters = filters;
+		root.find(".aod-loading").addClass("show");
+		try {
+			const response = await frappe.call({
+				method: "fengjing_app.fengjing_business.page.amazon_order_display.amazon_order_display.get_dashboard_data",
+				args: { filters },
+			});
+			const data = response.message || {};
+			const allRows = data.rows || [];
+			this.rows = filters.item_code ? allRows.filter(row => String(row.item_code || "") === filters.item_code) : allRows;
+			this.trendDateRange = data.range;
+			if (data.limited && allRows.length) {
+				// Earlier dates may have orders outside the server's row limit.
+				this.trendDateRange = { ...data.range, date_from: String(allRows.at(-1).purchase_date).slice(0, 10) };
+			}
+			this.cnyRates = data.cny_rates || {};
+			this.rateDate = data.rate_date || "";
+			const options = data.options || {};
+			if (!options.products) options.products = this.productOptionsFromRows(allRows);
+			this.fillOptions(options);
+			this.buildOrders();
+			this.draw();
+			setTimeout(() => this.resize(), 120);
+			if (data.limited) {
+				frappe.show_alert({ message: `符合 ${data.total_matching} 条，当前加载前 20,000 条`, indicator: "orange" });
+			}
+		} catch (error) {
+			console.error(error);
+			frappe.msgprint({ title: "读取失败", message: "无法读取 Amazon 订单数据，请查看错误日志。", indicator: "red" });
+		} finally {
+			root.find(".aod-loading").removeClass("show");
+		}
+	}
 	fillOptions(options){this.optionData=options;const root=$(this.wrapper),map={marketplaces:"marketplace_id",statuses:"order_status",channels:"fulfillment_channel",currencies:"currency_code"},currencyCountries={USD:"美国",CAD:"加拿大",MXN:"墨西哥",BRL:"巴西",GBP:"英国",EUR:"欧元区",JPY:"日本",CNY:"中国"};Object.entries(map).forEach(([source,target])=>{const el=root.find(`#aod-${target}`),old=el.val();el.html('<option value="">全部</option>'+((options[source]||[]).map(v=>{const value=typeof v==="object"?v.value:v,label=target==="currency_code"?`${value} · ${currencyCountries[value]||"其他"}`:target==="order_status"?this.statusText(value):(typeof v==="object"?v.label:v);return `<option value="${this.esc(value)}">${this.esc(label)}</option>`;}).join("")));el.val(old);});}
 	productOptionsFromRows(rows){const map=new Map();(rows||[]).forEach(row=>{const code=String(row.item_code||"").trim();if(code&&!map.has(code))map.set(code,{value:code,label:row.item_name||code,image:row.item_image||""});});return [...map.values()].sort((a,b)=>String(a.label).localeCompare(String(b.label),"zh-CN"));}
 	showPicker(kind,query=""){const source=kind==="store"?"stores":kind==="country"?"countries":"products",needle=String(query||"").trim().toLowerCase(),raw=(this.optionData&&this.optionData[source]||[]),values=raw.filter(v=>{const label=typeof v==="object"?(v.label||v.value):v,value=typeof v==="object"?(v.value||""):v;return !needle||`${label} ${value}`.toLowerCase().includes(needle)}),menu=$(this.wrapper).find(`#aod-filter-${kind}-menu`);$(this.wrapper).find(".aod-picker-menu").not(menu).removeClass("show");menu.html(`<button type="button" class="aod-picker-option" data-kind="${kind}" data-value="" data-label="">全部</button>`+values.map(v=>{const value=typeof v==="object"?(v.value||""):v,label=typeof v==="object"?(v.label||value):v,image=typeof v==="object"?(v.image||""):"";return `<button type="button" class="aod-picker-option" data-kind="${kind}" data-value="${this.esc(value)}" data-label="${this.esc(label)}">${image?`<img src="${this.esc(image)}" style="width:24px;height:24px;object-fit:cover;border-radius:5px;vertical-align:middle;margin-right:6px">`:""}${this.esc(label)}${kind==="item_code"&&value&&label!==value?` <small style="color:#8a96aa">${this.esc(value)}</small>`:""}</button>`;}).join("")).addClass("show");}
@@ -93,13 +157,98 @@ class AmazonOrderDashboard {
 	async renderOrderMap(){const container=$(this.wrapper).find("#aod-order-map")[0];if(!container||!window.FengjingOrderMap)return;if(this.orderMap)this.orderMap.destroy();this.orderMap=new window.FengjingOrderMap(container,this.currentFilters||{});try{await this.orderMap.load();}catch(error){console.error("Amazon order map failed",error);container.innerHTML='<div class="aod-empty" style="color:#b9c9e5">地图加载失败，请检查坐标库和浏览器控制台。</div>';}}
 	renderKpis(){const currencies={};this.orders.forEach(o=>{const c=o.currency_code||"未知";currencies[c]=(currencies[c]||0)+(+o.order_total||0);});const shipped=this.orders.filter(o=>String(o.order_status).toUpperCase().includes("SHIP")).length,cancelled=this.orders.filter(o=>String(o.order_status).toUpperCase().includes("CANCEL")).length,prime=this.orders.filter(o=>+o.is_prime).length,qty=this.rows.reduce((s,r)=>s+(+r.quantity_ordered||0),0),stores=new Set(this.rows.map(r=>r.store).filter(Boolean)).size,countries=new Set(this.rows.map(r=>r.country).filter(Boolean)).size,currencyCount=Object.keys(currencies).length,cnyTotal=Object.entries(currencies).reduce((s,[c,v])=>s+v*(+this.cnyRates[c]||0),0),cards=[["订单数",this.fmt(this.orders.length),`${this.fmt(this.rows.length)} 条SKU明细`],["商品数量",this.fmt(qty),`${new Set(this.rows.map(r=>r.sku).filter(Boolean)).size} 个SKU`],["多币种销售额",`${currencyCount} 种货币`,cnyTotal?`约 CNY ${this.money(cnyTotal)}`:"请查看下方货币大卡片"],["已发货",this.fmt(shipped),this.rate(shipped,this.orders.length)],["已取消",this.fmt(cancelled),this.rate(cancelled,this.orders.length)],["Prime 订单",this.fmt(prime),this.rate(prime,this.orders.length)],["店铺 / 国家",`${stores} / ${countries}`,"当前筛选范围"],["数据健康",this.rows.every(r=>r.sync_status==="成功")?"100%":"需关注",`${this.rows.filter(r=>r.sync_status!=="成功").length} 条异常`]];$(this.wrapper).find("#aod-kpis").html(cards.map((c,i)=>`<article class="aod-kpi c${i}"><span>${c[0]}</span><b>${this.esc(c[1])}</b><small>${this.esc(c[2])}</small></article>`).join(""));}
 	chart(id,option){const el=$(this.wrapper).find(id)[0];if(!el)return;if(option.tooltip)option.tooltip={...option.tooltip,appendToBody:true,confine:false,extraCssText:`z-index:3000;${option.tooltip.extraCssText||''}`};const old=echarts.getInstanceByDom(el);if(old)old.dispose();const chart=echarts.init(el);chart.setOption(option);this.charts.push(chart);return chart;}
-	renderCharts(){this.charts=[];const palette=["#5b8cff","#18c7c8","#8b6cff","#ffb547","#29c785","#ff6685","#37a5ff"],text="#526078",axis="#dce4f1",tooltip={backgroundColor:"rgba(15,23,42,.94)",borderWidth:0,textStyle:{color:"#fff"}};
-		const daily={},currencySet=new Set();this.orders.forEach(o=>{const day=String(o.purchase_date||"").slice(0,10);if(!day)return;const d=daily[day]||(daily[day]={orders:0,qty:0,amounts:{}}),currency=o.currency_code||"未知";d.orders++;d.qty+=o._qty;d.amounts[currency]=(d.amounts[currency]||0)+(+o.order_total||0);currencySet.add(currency);});
-		const days=Object.keys(daily).sort(),countries=[...new Set(this.orders.map(o=>o.country).filter(Boolean))];
-		const holidayPoints=days.map(date=>({date,holiday:this.holidays(date,countries)})).filter(item=>item.holiday);
-		const orderSeries={name:"订单",type:"bar",barMaxWidth:18,data:days.map(d=>daily[d].orders),itemStyle:{color:"#5b8cff",borderRadius:[6,6,0,0]},markPoint:{symbol:"circle",symbolSize:12,symbolOffset:[0,-7],itemStyle:{color:"#ffd34d",borderColor:"#fff",borderWidth:2,shadowBlur:8,shadowColor:"rgba(214,151,0,.45)"},label:{show:false},tooltip:{trigger:"item",formatter:p=>`<b>${this.esc(p.data.date)}</b><br><span style="color:#ffd166">🎉 ${this.esc(p.data.holiday)}</span>`},data:holidayPoints.map(item=>({name:"节日",coord:[item.date,daily[item.date].orders],value:item.holiday,date:item.date,holiday:item.holiday}))}};
-		const amountSeries=[...currencySet].map((currency,i)=>({name:`${currency} 金额`,type:"line",smooth:true,yAxisIndex:1,data:days.map(d=>daily[d].amounts[currency]||0),symbolSize:4,itemStyle:{color:palette[(i+3)%palette.length]}})),series=[orderSeries,{name:"商品数量",type:"line",smooth:true,data:days.map(d=>daily[d].qty),symbolSize:5,itemStyle:{color:"#18c7c8"}},...amountSeries];
-		const trend=this.chart("#aod-trend",{tooltip:{...tooltip,trigger:"axis",formatter:params=>{const date=params[0]&&params[0].axisValue,holiday=this.holidays(date,countries);return `<b>${this.esc(date||"")}</b>${holiday?`<br><span style="color:#ffd166">🎉 ${this.esc(holiday)}</span>`:""}<br>`+params.map(p=>`${p.marker}${this.esc(p.seriesName)}：${this.money(p.value)}`).join("<br>");}},legend:{top:0,textStyle:{color:text}},grid:{left:54,right:60,top:45,bottom:44},xAxis:{type:"category",data:days,axisLine:{lineStyle:{color:axis}},axisLabel:{color:text}},yAxis:[{type:"value",name:"订单 / 数量",splitLine:{lineStyle:{color:"#edf2f8"}}},{type:"value",name:"各币种金额",splitLine:{show:false}}],dataZoom:[{type:"inside"},{type:"slider",height:14,bottom:8}],series});this.bindSoloLegend(trend,series.map(s=>s.name));
+	renderTrendChart(update = false) {
+		const daily = {};
+		const currencies = new Set();
+		const countries = [...new Set(this.orders.map(order => order.country).filter(Boolean))];
+		for (const order of this.orders) {
+			const date = String(order.purchase_date || "").slice(0, 10);
+			if (!date) continue;
+			const totals = daily[date] ??= { orders: 0, qty: 0, amounts: {} };
+			const currency = order.currency_code || "未知";
+			totals.orders++;
+			totals.qty += order._qty;
+			totals.amounts[currency] = (totals.amounts[currency] || 0) + (+order.order_total || 0);
+			currencies.add(currency);
+		}
+
+		let days = Object.keys(daily).filter(date => daily[date].qty !== 0).sort();
+		const { date_from: start, date_to: end } = this.trendDateRange || {};
+		if (this.showZeroSalesDays && start && end) {
+			days = [];
+			const date = new Date(`${start}T00:00:00Z`);
+			const last = new Date(`${end}T00:00:00Z`);
+			while (date <= last) {
+				days.push(date.toISOString().slice(0, 10));
+				date.setUTCDate(date.getUTCDate() + 1);
+			}
+		}
+		const orderCounts = days.map(date => daily[date]?.orders ?? 0);
+		const holidayPoints = days.map(date => ({ date, holiday: this.holidays(date, countries) }))
+			.filter(item => item.holiday)
+			.map(({ date, holiday }) => ({
+				name: "节日", coord: [date, daily[date]?.orders ?? 0], value: holiday, date, holiday,
+			}));
+		const orderSeries = {
+			name: "订单", type: "bar", barMaxWidth: 18, data: orderCounts,
+			itemStyle: { color: "#5b8cff", borderRadius: [6, 6, 0, 0] },
+			markPoint: {
+				symbol: "circle", symbolSize: 12, symbolOffset: [0, -7],
+				itemStyle: { color: "#ffd34d", borderColor: "#fff", borderWidth: 2, shadowBlur: 8, shadowColor: "rgba(214,151,0,.45)" },
+				label: { show: false },
+				tooltip: {
+					trigger: "item",
+					formatter: point => `<b>${this.esc(point.data.date)}</b><br><span style="color:#ffd166">🎉 ${this.esc(point.data.holiday)}</span>`,
+				},
+				data: holidayPoints,
+			},
+		};
+		const quantitySeries = {
+			name: "商品数量", type: "line", smooth: true, symbolSize: 5,
+			data: days.map(date => daily[date]?.qty ?? 0), itemStyle: { color: "#18c7c8" },
+		};
+		const palette = AMAZON_ORDER_CHART_PALETTE;
+		const amountSeries = [...currencies].map((currency, index) => ({
+			name: `${currency} 金额`, type: "line", smooth: true, yAxisIndex: 1, symbolSize: 4,
+			data: days.map(date => daily[date]?.amounts[currency] ?? 0),
+			itemStyle: { color: palette[(index + 3) % palette.length] },
+		}));
+		const series = [orderSeries, quantitySeries, ...amountSeries];
+		if (update) {
+			this.trendChart.setOption({ xAxis: { data: days }, series });
+			return;
+		}
+
+		this.trendChart = this.chart("#aod-trend", {
+			tooltip: {
+				...AMAZON_ORDER_CHART_TOOLTIP,
+				trigger: "axis",
+				formatter: params => {
+					const date = params[0]?.axisValue;
+					const holiday = this.holidays(date, countries);
+					const title = `<b>${this.esc(date || "")}</b>`;
+					const note = holiday ? `<br><span style="color:#ffd166">🎉 ${this.esc(holiday)}</span>` : "";
+					const metrics = params.map(point => `${point.marker}${this.esc(point.seriesName)}：${this.money(point.value)}`);
+					return `${title}${note}<br>${metrics.join("<br>")}`;
+				},
+			},
+			legend: { top: 0, textStyle: { color: "#526078" } },
+			grid: { left: 54, right: 60, top: 45, bottom: 44 },
+			xAxis: { type: "category", data: days, axisLine: { lineStyle: { color: "#dce4f1" } }, axisLabel: { color: "#526078" } },
+			yAxis: [
+				{ type: "value", name: "订单 / 数量", splitLine: { lineStyle: { color: "#edf2f8" } } },
+				{ type: "value", name: "各币种金额", splitLine: { show: false } },
+			],
+			dataZoom: [{ type: "inside" }, { type: "slider", height: 14, bottom: 8 }],
+			series,
+		});
+		this.bindSoloLegend(this.trendChart, series.map(item => item.name));
+	}
+	renderCharts() {
+		this.charts = [];
+		const palette = AMAZON_ORDER_CHART_PALETTE;
+		const tooltip = AMAZON_ORDER_CHART_TOOLTIP;
+		this.renderTrendChart();
 		const translatedStatus={};this.orders.forEach(o=>{const key=this.statusText(o.order_status);translatedStatus[key]=(translatedStatus[key]||0)+1;});this.donut("#aod-status",translatedStatus,palette,tooltip);
 		this.renderMoneyPanel();
 		const sku={},skuProducts={};this.rows.forEach(row=>{const key=row.sku||"无SKU";sku[key]=(sku[key]||0)+(+row.quantity_ordered||0);if(!skuProducts[key])skuProducts[key]={sku:key,asin:row.asin||"",product_name:row.product_name||"",item_code:row.item_code||"",item_name:row.item_name||"",item_image:row.item_image||"",quantity:0};skuProducts[key].quantity+=+row.quantity_ordered||0;});this.bar("#aod-sku",sku,palette[2],tooltip,12,params=>{const point=Array.isArray(params)?params[0]:params;return this.productTooltipHTML(`SKU ${point?.name||""}`,[skuProducts[point?.name]].filter(Boolean),12);});

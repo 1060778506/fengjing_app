@@ -336,18 +336,26 @@ def _datetime_text(value):
 
 def _calendar_end(event):
 	"""FullCalendar expects an exclusive end for all-day events."""
+	end_value = event.get("ends_on")
 	if not cint(event.get("all_day")):
-		return _datetime_text(event.get("ends_on"))
+		return _datetime_text(end_value)
 
-	end_value = event.get("ends_on") or event.get("starts_on")
+	end_value = end_value or event.get("starts_on")
 	return add_days(getdate(end_value), 1).isoformat() if end_value else None
+
+
+def _repeats_yearly(event):
+	return bool(cint(event.get("repeat_this_event")) and event.get("repeat_on") == "Yearly")
 
 
 def _event_payload(event):
 	name = event.get("name")
 	starts_on = _datetime_text(event.get("starts_on"))
 	is_repeating = cint(event.get("repeat_this_event"))
-	can_write = bool(frappe.has_permission(DOCTYPE, "write", doc=name)) and not is_repeating
+	can_write = bool(frappe.has_permission(DOCTYPE, "write", doc=name))
+	can_move = can_write and not is_repeating
+	yearly = _repeats_yearly(event)
+	can_resize = can_move or (can_write and yearly and not event.get("repeat_till"))
 	can_delete = bool(frappe.has_permission(DOCTYPE, "delete", doc=name))
 	color = event.get("color") or "#7da7d4"
 	if not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
@@ -365,36 +373,64 @@ def _event_payload(event):
 		"color": color,
 		"contrastColor": contrast_color,
 		"className": "fjtc-event-completed" if event.get("status") == "Completed" else "",
-		"editable": can_write,
+		"editable": can_move,
+		"startEditable": can_move,
+		"durationEditable": can_resize,
 		"extendedProps": {
 			"event_name": name,
 			"status": event.get("status") or "Open",
 			"description": event.get("description") or "",
 			"event_type": event.get("event_type") or "Private",
 			"repeat_this_event": is_repeating,
-			"can_write": can_write,
+			"repeat_yearly": yearly,
+			"can_write": can_move,
 			"can_delete": can_delete,
 		},
 	}
 
 
-def _finished_event_occurrences(start, end):
-	"""Include finished Events without changing Frappe's Open-only calendar API."""
-	start_date, end_date = getdate(start), getdate(end)
+def _yearly_occurrences(row, start_date, end_date):
+	first = row.starts_on
+	duration = row.ends_on - first if row.ends_on else timedelta()
+	repeat_till = getdate(row.repeat_till) if row.repeat_till else None
+	# Include an occurrence that started before this view but still overlaps it.
+	first_visible_year = (datetime.combine(start_date, datetime.min.time()) - duration).year
+	for year in range(max(first.year, first_visible_year), end_date.year + 1):
+		start = add_years(first, year - first.year)
+		end = start + duration
+		if start.date() > end_date or end.date() < start_date or (repeat_till and end.date() > repeat_till):
+			continue
+		instance = row.copy()
+		instance.starts_on = start
+		instance.ends_on = end if row.ends_on else None
+		yield instance
+
+
+def _extended_event_occurrences(start_date, end_date):
+	"""Include finished Events and expand yearly Events with an inclusive cutoff."""
 	fields = [
 		"name", "subject", "description", "color", "starts_on", "ends_on", "all_day",
-		"event_type", "status", "repeat_this_event", "repeat_on", "repeat_till",
+		"owner", "event_type", "status", "repeat_this_event", "repeat_on", "repeat_till",
 		"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
 	]
 	rows = frappe.get_list(
 		DOCTYPE,
-		filters={"status": ["in", ["Completed", "Closed"]], "starts_on": ["<=", f"{end_date} 23:59:59"]},
+		filters={"status": ["in", ["Open", "Completed", "Closed"]], "starts_on": ["<=", f"{end_date} 23:59:59"]},
+		or_filters=[["status", "in", ["Completed", "Closed"]], ["repeat_on", "=", "Yearly"]],
 		fields=fields,
 		limit_page_length=0,
 	)
 	occurrences = []
+	user = frappe.session.user
+	shared = set(frappe.share.get_shared(DOCTYPE, user=user))
 	weekdays = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
 	for row in rows:
+		if _repeats_yearly(row):
+			if row.status != "Open" or row.event_type == "Public" or row.owner == user or row.name in shared:
+				occurrences.extend(_yearly_occurrences(row, start_date, end_date))
+			continue
+		if row.status == "Open":
+			continue
 		first_day = getdate(row.starts_on)
 		last_day = getdate(row.ends_on or row.starts_on)
 		if not cint(row.repeat_this_event):
@@ -415,16 +451,13 @@ def _finished_event_occurrences(start, end):
 			elif row.repeat_on in ("Monthly", "Quarterly", "Half Yearly"):
 				step = {"Monthly": 1, "Quarterly": 3, "Half Yearly": 6}[row.repeat_on]
 				matches = months >= 0 and months % step == 0 and getdate(add_months(first_day, months)) == day
-			elif row.repeat_on == "Yearly":
-				years = day.year - first_day.year
-				matches = years >= 0 and getdate(add_years(first_day, years)) == day
 			else:
 				matches = False
 			if matches:
 				instance = row.copy()
 				instance.starts_on = datetime.combine(day, row.starts_on.time())
 				if row.ends_on:
-					instance.ends_on = datetime.combine(add_days(day, (row.ends_on - row.starts_on).days), row.ends_on.time())
+					instance.ends_on = instance.starts_on + (row.ends_on - row.starts_on)
 				occurrences.append(instance)
 			day = add_days(day, 1)
 	return occurrences
@@ -436,8 +469,23 @@ def _parse_values(values):
 	return frappe._dict(values or {})
 
 
-def _apply_values(doc, values):
+def _yearly_occurrence_start(doc, occurrence_date):
+	if not occurrence_date:
+		frappe.throw(_("请从日历打开这次年度日程后再操作。"))
+	first = get_datetime(doc.starts_on)
+	day = getdate(occurrence_date)
+	start = add_years(first, day.year - first.year)
+	if day < first.date() or start.date() != day:
+		frappe.throw(_("所选日期不属于此年度日程，请刷新日历后重试。"))
+	return start
+
+
+def _apply_values(doc, values, occurrence_date=None):
 	values = _parse_values(values)
+	last_year = None
+	if _repeats_yearly(doc) and not doc.repeat_till and "repeat_yearly" in values and not cint(values.repeat_yearly):
+		last_year = _yearly_occurrence_start(doc, occurrence_date).year
+
 	for fieldname in EVENT_FIELDS:
 		if fieldname in values:
 			doc.set(fieldname, values.get(fieldname))
@@ -453,12 +501,24 @@ def _apply_values(doc, values):
 	if not doc.status:
 		doc.status = "Open"
 
+	if cint(values.repeat_yearly):
+		doc.repeat_this_event = 1
+		doc.repeat_on = "Yearly"
+		doc.repeat_till = None
+	elif last_year is not None:
+		start = get_datetime(doc.starts_on)
+		if start.year > last_year:
+			frappe.throw(_("开始时间不能晚于要保留的最后一次日程所在年份。"))
+		duration = get_datetime(doc.ends_on) - start if doc.ends_on else timedelta()
+		doc.repeat_till = (add_years(start, last_year - start.year) + duration).date()
+
 
 @frappe.whitelist()
 def get_calendar_events(start, end):
 	"""Return visible Event records, including finished and recurring Events."""
-	rows = get_events(start=getdate(start), end=getdate(end))
-	rows.extend(_finished_event_occurrences(start, end))
+	start_date, end_date = getdate(start), getdate(end)
+	rows = [row for row in get_events(start=start_date, end=end_date) if not _repeats_yearly(row)]
+	rows.extend(_extended_event_occurrences(start_date, end_date))
 	return [_event_payload(row) for row in rows]
 
 
@@ -481,6 +541,8 @@ def get_event(name):
 		"custom_店铺": doc.get("custom_店铺") or "",
 		"custom_物料": doc.get("custom_物料") or "",
 		"repeat_this_event": cint(doc.repeat_this_event),
+		"repeat_on": doc.repeat_on,
+		"repeat_till": doc.repeat_till,
 		"can_write": bool(doc.has_permission("write")),
 		"can_delete": bool(doc.has_permission("delete")),
 	}
@@ -496,10 +558,24 @@ def create_event(values):
 
 
 @frappe.whitelist()
-def update_event(name, values):
-	doc = frappe.get_doc(DOCTYPE, name)
+def update_event(name, values, occurrence_date=None):
+	doc = frappe.get_doc(DOCTYPE, name, for_update=True)
 	doc.check_permission("write")
-	_apply_values(doc, values)
+	_apply_values(doc, values, occurrence_date)
+	doc.save()
+	return {"name": doc.name}
+
+
+@frappe.whitelist()
+def resize_yearly_event(name, occurrence_date, ends_on):
+	doc = frappe.get_doc(DOCTYPE, name, for_update=True)
+	doc.check_permission("write")
+	if not _repeats_yearly(doc) or doc.repeat_till:
+		frappe.throw(_("此日程的年度重复当前未开启，请刷新日历后重试。"))
+	occurrence_start = _yearly_occurrence_start(doc, occurrence_date)
+	if not ends_on or get_datetime(ends_on) < occurrence_start:
+		frappe.throw(_("结束时间不能早于开始时间。"))
+	doc.ends_on = get_datetime(doc.starts_on) + (get_datetime(ends_on) - occurrence_start)
 	doc.save()
 	return {"name": doc.name}
 
@@ -509,7 +585,7 @@ def move_event(name, starts_on, ends_on=None, all_day=0):
 	doc = frappe.get_doc(DOCTYPE, name)
 	doc.check_permission("write")
 	if cint(doc.repeat_this_event):
-		frappe.throw(_("重复日程需要在完整日程表单中修改。"))
+		frappe.throw(_("重复日程不能拖动，请打开日程修改。"))
 	doc.starts_on = starts_on
 	doc.ends_on = ends_on or None
 	doc.all_day = cint(all_day)

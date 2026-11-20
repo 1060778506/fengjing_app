@@ -112,6 +112,25 @@
 .af-order-table th,.af-order-table td{padding:5px 7px;border-bottom:1px solid #edf1f6;text-align:center;vertical-align:middle;white-space:nowrap;font-size:11px}
 .af-order-table th{background:#f7faff;color:#65758c}
 .af-order-table td span{display:block}
+.af-order-sku-summary th:nth-child(2){position:sticky;left:0;z-index:1;text-align:left}
+.af-order-sku-summary tbody th[scope=row]{background:#fff}
+.af-order-sku-summary .af-order-copy-head{display:inline-flex;align-items:center;gap:4px;font-weight:600}
+.af-order-copy-head span{font-size:12px}
+.af-refund-summary-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;color:#243b60}
+.af-refund-summary-heading h4{margin:0;font-size:12px;font-weight:600}
+.af-refund-summary-heading>div{display:flex;flex-wrap:wrap;gap:7px;font-size:11px;font-weight:600}
+.af-order-sku-item{display:flex;align-items:center;gap:8px;width:clamp(145px,23vw,280px);white-space:normal}
+.af-order-sku-item img{flex:none;width:36px;height:36px;border-radius:6px;object-fit:contain;background:#f7faff}
+.af-order-sku-item b{color:#243b60}
+.af-order-sku-adjustment{display:inline-block;margin-left:4px;padding:1px 4px;border-radius:4px;background:#e8f1ff;color:#245fa5;font-size:10px;font-weight:500}
+.af-order-sku-item a,.af-order-sku-item small{display:block;margin-top:2px;font-size:10px;font-weight:400;overflow-wrap:anywhere}
+.af-order-sku-item a{color:#245fa5}
+.af-order-sku-summary td,.af-order-finance tfoot td{font-weight:600;font-variant-numeric:tabular-nums}
+.af-order-sku-summary tbody td:nth-last-child(2){background:#f7faff;color:#243b60}
+.af-order-sku-cost-center,.af-order-sku-note{text-align:left;white-space:normal;overflow-wrap:anywhere;font-weight:400}
+.af-order-sku-cost-center{width:150px}
+.af-order-sku-note{width:205px;max-height:4.5em;overflow:auto}
+.af-order-finance tfoot td{background:#f7faff;color:#243b60}
 .af-order-table button{padding:0;border:0;background:transparent;font:inherit;cursor:pointer}
 .af-order-table button:hover{text-decoration:underline}
 .af-order-note{display:block;margin-top:5px}
@@ -138,10 +157,15 @@
 .af-table-wrap tbody tr.af-refund-parent+tr.af-refund-parent td{border-top:12px solid #f2f6fc}
 
 .af-returns-card{margin-top:13px}
-.af-returns-card>header{gap:12px;padding:17px 18px 6px}
+.af-returns-card[hidden]{display:none}
+.af-returns-card>header{flex-wrap:wrap;gap:12px;padding:17px 18px 6px}
 .af-returns-card>header>div{min-width:0}
 .af-returns-card>header span{display:block;margin-top:3px}
 .af-returns-card>header a{flex:none;color:#2671b0;font-size:11px;font-weight:700}
+.af-return-actions,.af-return-date-basis{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.af-return-actions{gap:12px}
+.af-return-date-basis button{padding:5px 10px;border:1px solid #d6e2ed;border-radius:7px;background:#fff;color:#315f83;font-size:11px;cursor:pointer}
+.af-return-date-basis button[aria-pressed=true]{border-color:#a7c7e2;background:#e9f3fc;color:#205a8e;font-weight:700}
 .af-returns-note{margin:0;padding:2px 18px 13px;color:#708097;font-size:11px;line-height:1.6}
 .af-return-metrics{display:flex;flex-wrap:wrap;gap:9px;margin:0 18px 13px}
 .af-return-metrics>div{min-width:110px;padding:9px 13px;border:1px solid #e3eaf2;border-radius:10px;background:#f8fbfd}
@@ -153,7 +177,10 @@
 .af-returns-table-wrap th,.af-returns-table-wrap td{padding:10px 12px;border-top:1px solid #e9eef4;font-size:11px;text-align:left;vertical-align:middle}
 .af-returns-table-wrap th{position:sticky;top:0;z-index:1;background:#f4f8fb;color:#60758a;font-weight:700;white-space:nowrap}
 .af-returns-table-wrap td small{display:block;margin-top:3px;color:#8896a7;font-size:10px}
+.af-returns-table-wrap td .af-return-inventory-month{color:#315f83;font-weight:700;white-space:nowrap}
 .af-returns-table-wrap td.num{text-align:right;font-weight:700}
+.af-return-quantity-in{color:#19815c}
+.af-return-quantity-out{color:#a63f37}
 .af-returns-table-wrap td>a{color:#2585a0;font-weight:700;white-space:nowrap}
 .af-return-product{display:flex;align-items:center;gap:9px;min-width:220px;max-width:410px}
 .af-return-product img{flex:none;width:36px;height:36px;object-fit:contain;border:1px solid #e4eaf3;border-radius:7px;background:#fff}
@@ -163,6 +190,13 @@
 .af-return-condition.sellable{background:#e3f6ec;color:#19815c}
 .af-return-condition.unsellable{background:#fff0df;color:#9a6116}
 .af-return-condition.unknown{background:#edf1f6;color:#65758b}
+.af-returns-table-wrap .af-return-ledger-row>td{padding:5px 14px 12px 28px;background:#f8fbfd}
+.af-return-ledger{border-left:2px solid #c9dbea;padding-left:10px}
+.af-return-ledger p{margin:5px 0 6px;color:#60758a;font-size:10px}
+.af-return-ledger table{min-width:650px;background:#fff}
+.af-return-ledger th,.af-return-ledger td{padding:6px 8px}
+.af-return-ledger th{position:static}
+.af-return-cross-month{margin-left:5px;padding:2px 4px;border-radius:4px;background:#fff0df;color:#9a6116;font-size:10px;white-space:nowrap}
 .af-return-pages{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:10px 18px;border-top:1px solid #e9eef4;color:#8190a2;font-size:11px}
 .af-return-pages button{padding:5px 10px;border:1px solid #d6e2ed;border-radius:7px;background:#fff;color:#315f83;cursor:pointer}
 .af-return-pages button:disabled{opacity:.45;cursor:default}
@@ -170,6 +204,13 @@
 /* Align every transaction tab's headers with its cells. */
 .af-table-wrap th,.af-table-wrap td{vertical-align:middle;text-align:center}
 .af-table-wrap td.num{text-align:center}
+.af-table-wrap .af-liquidation-amount,.af-table-wrap .af-disbursement-value{white-space:nowrap}
+.af-journal-summary{margin-bottom:14px}
+.af-journal-summary>header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 2px;color:#315f83}
+.af-journal-summary th{padding:0}
+.af-journal-summary td.num{white-space:nowrap}
+.af-journal-copy{display:block;width:100%;padding:8px 10px;border:0;background:transparent;color:#28649b;font:inherit;text-align:inherit;white-space:nowrap;cursor:pointer}
+.af-journal-copy:hover,.af-journal-copy:focus-visible{background:#e7f1ff}
 .af-table-wrap th[hidden]{display:none}
 .af-table-wrap .af-table-product,.af-table-wrap .af-fee-content,.af-table-wrap .af-transaction-id{justify-content:center;margin-left:auto;margin-right:auto}
 .af-table-wrap td small{margin-left:auto;margin-right:auto}
@@ -204,3 +245,4 @@
 .af-shipment-months{display:flex;justify-content:center;flex-wrap:wrap;gap:4px;margin-top:5px}
 .af-shipment-month{display:inline-flex;align-items:center;padding:2px 7px;border-radius:999px;background:#e7f6ee;color:#18744a;font-size:10px;font-weight:700;white-space:nowrap;cursor:help}
 .af-shipment-month.completed{background:#eaf0ff;color:#3159a6}
+.af-shipment-month.finance{background:#fff3dc;color:#875300}

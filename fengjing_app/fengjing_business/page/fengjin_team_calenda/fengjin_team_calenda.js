@@ -1,5 +1,12 @@
 const FENGJING_CALENDAR_METHOD =
 	"fengjing_app.fengjing_business.page.fengjin_team_calenda.fengjin_team_calenda";
+const FENGJING_CALENDAR_COLOR_PRESETS = [
+	{ label: "重要", color: "#ce2c2c" },
+	{ label: "运营", color: "#268c5c" },
+	{ label: "个人", color: "#eab308" },
+	{ label: "财务", color: "#ec4899" },
+	{ label: "进货", color: "#2563eb" },
+];
 const FENGJING_CALENDAR_MAP_FILES = {
 	countries: "/assets/fengjing_app/data/Vector_map/国家边界ne_10m_admin_0_countries_chn/ne_10m_admin_0_countries_chn.geojson",
 	regions: "/assets/fengjing_app/data/Vector_map/省州边界ne_10m_admin_1_states_provinces/countries",
@@ -1315,14 +1322,16 @@ class FengjingTeamCalendarPage {
 			},
 			events: (info, success, failure) => this.loadEvents(info, success, failure),
 			select: (info) => this.openEventDialog(null, this.selectionDefaults(info)),
-			eventClick: (info) => this.openEventDialog(info.event.extendedProps.event_name),
+			eventClick: (info) => this.openEventDialog(
+				info.event.extendedProps.event_name, {}, this.dateOnly(info.event.start)
+			),
 			eventDrop: (info) => this.persistCalendarMove(info),
-			eventResize: (info) => this.persistCalendarMove(info),
+			eventResize: (info) => this.persistCalendarMove(info, true),
 			eventDidMount: (info) => {
 				const props = info.event.extendedProps;
 				info.el.classList.add("fjtc-calendar-event");
 				info.el.title = props.repeat_this_event
-					? `${info.event.title} · 重复日程需在完整表单中修改`
+					? `${info.event.title} · 重复日程`
 					: info.event.title;
 			},
 		});
@@ -1717,7 +1726,7 @@ class FengjingTeamCalendarPage {
 		};
 	}
 
-	async openEventDialog(name = null, defaults = {}) {
+	async openEventDialog(name = null, defaults = {}, occurrenceDate = null) {
 		let event = {
 			subject: "",
 			starts_on: defaults.starts_on || this.dateTime(new Date()),
@@ -1749,6 +1758,22 @@ class FengjingTeamCalendarPage {
 		}
 
 		const readOnly = Boolean(name && !event.can_write);
+		const yearly = Boolean(Number(event.repeat_this_event) && event.repeat_on === "Yearly");
+		const yearlyEnabled = yearly && !event.repeat_till;
+		const otherRepeat = Boolean(Number(event.repeat_this_event) && !yearly);
+		let yearlyDescription = "按开始日期的月日，每年重复。";
+		if (yearlyEnabled && occurrenceDate) {
+			yearlyDescription = `取消勾选并保存后，会保留到 ${occurrenceDate} 这次日程。`;
+		} else if (yearly && event.repeat_till) {
+			yearlyDescription = `年度重复截止于 ${event.repeat_till}，重新勾选可继续重复。`;
+		}
+		let $presetField;
+		const updatePresetSelection = (color) => {
+			const selectedColor = (color || "").toLowerCase();
+			$presetField?.find(".fjtc-color-preset").each(function () {
+				this.setAttribute("aria-pressed", String(this.dataset.color === selectedColor));
+			});
+		};
 		const dialog = new frappe.ui.Dialog({
 			title: name ? "编辑日程" : "新建日程",
 			size: "large",
@@ -1760,11 +1785,41 @@ class FengjingTeamCalendarPage {
 				{ fieldname: "ends_on", fieldtype: "Datetime", label: "结束时间", read_only: readOnly },
 				{ fieldname: "time_column", fieldtype: "Column Break" },
 				{ fieldname: "all_day", fieldtype: "Check", label: "全天日程", read_only: readOnly },
+				{
+					fieldname: "repeat_yearly",
+					fieldtype: "Check",
+					label: "每年今天",
+					description: yearlyDescription,
+					read_only: readOnly || otherRepeat,
+				},
 				{ fieldname: "send_reminder", fieldtype: "Check", label: "当天早上发送邮件提醒", read_only: readOnly },
 				{ fieldname: "event_type", fieldtype: "Select", label: "可见范围", options: ["Private", "Public"], reqd: 1, read_only: readOnly },
 				{ fieldname: "event_category", fieldtype: "Select", label: "日程类型", options: ["Event", "Meeting", "Call", "Sent/Received Email", "Other"], read_only: readOnly },
 				{ fieldname: "status", fieldtype: "Select", label: "状态", options: ["Open", "Completed", "Closed", "Cancelled"], read_only: readOnly },
-				{ fieldname: "color", fieldtype: "Color", label: "显示颜色", read_only: readOnly },
+				{
+					fieldname: "color",
+					fieldtype: "Color",
+					label: "显示颜色",
+					read_only: readOnly,
+					change() {
+						updatePresetSelection(this.get_value());
+					},
+				},
+				{
+					fieldname: "color_presets",
+					fieldtype: "HTML",
+					hidden: readOnly,
+					options: `
+						<div class="fjtc-color-presets" role="group" aria-label="颜色预设">
+							${FENGJING_CALENDAR_COLOR_PRESETS.map(({ label, color }) => `
+								<button type="button" class="btn btn-default btn-sm fjtc-color-preset"
+									data-color="${color}" title="${color}" aria-pressed="false">
+									<span class="fjtc-color-swatch" style="--fjtc-swatch: ${color}" aria-hidden="true"></span>
+									<span>${label}</span>
+								</button>
+							`).join("")}
+						</div>`,
+				},
 				{ fieldname: "description_section", fieldtype: "Section Break" },
 				{ fieldname: "description", fieldtype: "Text Editor", label: "日程说明", read_only: readOnly },
 			],
@@ -1777,9 +1832,14 @@ class FengjingTeamCalendarPage {
 				try {
 					// Frappe omits optional empty fields, so send an explicit blank to clear a saved color.
 					const eventValues = { ...values, color: dialog.get_value("color") || "" };
+					if (otherRepeat) {
+						delete eventValues.repeat_yearly;
+					} else {
+						eventValues.repeat_yearly = Number(Boolean(dialog.get_value("repeat_yearly")));
+					}
 					await frappe.call({
 						method: `${FENGJING_CALENDAR_METHOD}.${name ? "update_event" : "create_event"}`,
-						args: name ? { name, values: eventValues } : { values: eventValues },
+						args: name ? { name, values: eventValues, occurrence_date: occurrenceDate } : { values: eventValues },
 						freeze: true,
 						freeze_message: "正在保存日程…",
 					});
@@ -1799,8 +1859,15 @@ class FengjingTeamCalendarPage {
 				}
 				: null,
 		});
+		$presetField = dialog.get_field("color_presets").$wrapper;
+		if (!readOnly) {
+			$presetField.on("click", ".fjtc-color-preset", ({ currentTarget }) =>
+				dialog.set_value("color", currentTarget.dataset.color)
+			);
+		}
 		dialog.show();
-		await dialog.set_values(event);
+		await dialog.set_values({ ...event, repeat_yearly: Number(yearlyEnabled) });
+		updatePresetSelection(dialog.get_value("color"));
 
 		if (name && event.can_delete) {
 			const $delete = $('<button type="button" class="btn btn-danger btn-sm fjtc-delete-event">删除日程</button>');
@@ -1824,23 +1891,27 @@ class FengjingTeamCalendarPage {
 			});
 		}
 
-		if (event.repeat_this_event) {
+		if (otherRepeat) {
 			dialog.set_message("这是重复日程。修改重复规则请打开完整日程表单。");
 		}
 	}
 
-	async persistCalendarMove(info) {
+	async persistCalendarMove(info, resizing = false) {
 		const event = info.event;
+		const name = event.extendedProps.event_name;
+		const yearlyResize = resizing && event.extendedProps.repeat_yearly;
 		try {
+			const times = this.calendarEventTimes(event);
+			const args = yearlyResize
+				? { name, occurrence_date: this.dateOnly(info.oldEvent.start), ends_on: times.ends_on }
+				: { name, ...times };
 			await frappe.call({
-				method: `${FENGJING_CALENDAR_METHOD}.move_event`,
-				args: {
-					name: event.extendedProps.event_name,
-					...this.calendarEventTimes(event),
-				},
+				method: `${FENGJING_CALENDAR_METHOD}.${yearlyResize ? "resize_yearly_event" : "move_event"}`,
+				args,
 				freeze: true,
 				freeze_message: "正在更新日程时间…",
 			});
+			if (yearlyResize) this.calendar?.refetchEvents();
 			frappe.show_alert({ message: "日程时间已更新", indicator: "green" });
 		} catch (error) {
 			info.revert();

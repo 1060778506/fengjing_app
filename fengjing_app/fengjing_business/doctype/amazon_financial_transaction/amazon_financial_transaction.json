@@ -72,6 +72,7 @@
   "raw_section",
   "raw_json",
   "breakdown_json",
+  "disbursement_group_json",
   "raw_json_history"
  ],
  "fields": [
@@ -140,6 +141,7 @@
   {"fieldname":"raw_section","fieldtype":"Section Break","label":"原始数据与历史版本"},
   {"description":"完整保存Amazon API当前返回的财务交易JSON。同一交易拆成多个SKU记录时，各行保留相同完整JSON作为兜底。","fieldname":"raw_json","fieldtype":"Code","label":"当前原始 JSON","options":"JSON","read_only":1,"reqd":1},
   {"description":"原样保存Amazon返回的breakdowns、费用项和未知动态字段，避免API增加新费用后丢数据。","fieldname":"breakdown_json","fieldtype":"Code","label":"费用拆分 JSON","options":"JSON","read_only":1},
+  {"description":"保存与平台提现对应的 Amazon 结算批次原始记录。","fieldname":"disbursement_group_json","fieldtype":"Code","label":"提现结算批次 JSON","options":"JSON","read_only":1},
   {"description":"只在原始JSON发生变化时追加上一版JSON，不覆盖旧版本。","fieldname":"raw_json_history","fieldtype":"Long Text","label":"历史原始 JSON","read_only":1}
  ],
  "grid_page_length": 50,
