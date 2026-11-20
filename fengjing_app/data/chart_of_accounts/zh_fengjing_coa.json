@@ -179,6 +179,12 @@
                     "account_type": "Bank",
                     "account_currency": "JPY"
                 },
+                "连连支付USD【其他货币资金】": {
+                    "account_number": "101227_fj",
+                    "is_group": 0,
+                    "account_type": "Bank",
+                    "account_currency": "USD"
+                },
                 "其他货币资金【其他货币资金】": {
                     "account_number": "101299_fj",
                     "is_group": 0,
