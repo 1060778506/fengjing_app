@@ -683,6 +683,11 @@
                     "is_group": 0,
                     "account_type": "Tax"
                 },
+                "亚马逊代收代缴销售税清算【应交税费】": {
+                    "account_number": "222105_fj",
+                    "is_group": 0,
+                    "account_type": "Tax"
+                },
                 "其他应交税费【应交税费】": {
                     "account_number": "222199_fj",
                     "is_group": 0,
