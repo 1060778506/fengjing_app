@@ -254,5 +254,18 @@
   "translatable": 0,
   "unique": 0,
   "width": null
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Custom Field",
+  "dt": "Stock Reconciliation Item",
+  "fieldname": "custom_说明",
+  "fieldtype": "Small Text",
+  "in_list_view": 1,
+  "insert_after": "valuation_rate",
+  "label": "说明",
+  "module": "丰境业务APP",
+  "name": "Stock Reconciliation Item-custom_说明",
+  "width": "260"
  }
 ]

@@ -1,5 +1,5 @@
 from collections import Counter, defaultdict
-from datetime import datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal, ROUND_HALF_UP
 import hashlib
 import json
@@ -18,6 +18,7 @@ from fengjing_app.fengjing_business.doctype.amazon_financial_transaction.amazon_
 
 
 DOCTYPE = "Amazon Financial Transaction"
+RELEASE_BACKLINK_CACHE_KEY = "fengjing:amazon-finance:release-backlinks:v1"
 FULFILLED_SHIPMENT_DOCTYPE = "Amazon FBA Fulfilled Shipment"
 CUSTOMER_SALE_DOCTYPE = "Amazon FBA Customer Shipment Sale"
 INVENTORY_LEDGER_DETAIL_DOCTYPE = "Amazon FBA Inventory Ledger Detail"
@@ -41,10 +42,34 @@ ORDER_FEE_LABELS = {
     "GiftwrapChargeback": "礼品包装费扣回",
     "selling_fees": "销售费（未拆分）",
     "fba_fees": "履约费（未拆分）",
-    "other_transaction_fees": "其他费用（未拆分）",
+    "other_transaction_fees": "平台费用（源数据未列名称）",
     "AmazonFees": "平台费（未拆分）",
 }
+ORDER_ADJUSTMENT_LABELS = {
+    "GiftwrapPrincipal": "礼品包装收入",
+    "OurPriceDiscount": "商品折扣",
+    "ShippingDiscount": "配送折扣",
+    "OurPriceTax": "商品销售税",
+    "ShippingTax": "配送税",
+    "GiftwrapTax": "礼品包装税",
+    "MarketplaceFacilitatorTax-Principal": "平台代扣商品税",
+    "MarketplaceFacilitatorTax-Shipping": "平台代扣配送税",
+    "MarketplaceFacilitatorVAT-Principal": "平台代扣商品增值税",
+    "MarketplaceFacilitatorVAT-Shipping": "平台代扣配送增值税",
+    "Tax": "税费净额",
+    "unallocated_net_difference": "净额差额（待核对）",
+}
 ORDER_TOTAL_FIELDS = ("net", "sales", "shipping")
+ORDER_FEE_ACCOUNTS = {
+    "fees:Commission": "560104_fj",
+    "fees:FBAPerUnitFulfillmentFee": "540104_fj",
+    "fees:ShippingChargeback": "5001_fj",
+    "fees:GiftwrapChargeback": "5001_fj",
+    "shipping": "5001_fj",
+    "adjustments:GiftwrapPrincipal": "5001_fj",
+    "adjustments:OurPriceDiscount": "5001_fj",
+    "adjustments:ShippingDiscount": "5001_fj",
+}
 REFUND_FEE_LABELS = {
     **ORDER_FEE_LABELS,
     "Commission": "退回销售佣金",
@@ -79,6 +104,7 @@ STORAGE_DESCRIPTIONS = {"FBAStorageBilling", "STARStorageBilling"}
 DEFAULT_COST_CENTER = "亚马逊-美国-Neighbor's house-A1VOX5X8GAU17J - 丰境"
 JOURNAL_DETAIL_GROUPS = {"removal", "service", "adjustment"}
 JOURNAL_ACCOUNT_NUMBERS = {"101204_fj", "5051_fj", "5301_fj", "560104_fj", "560108_fj"}
+CUTOFF_GROUPS = {"order", "refund", "removal"}
 
 
 def _money(value):
@@ -367,13 +393,17 @@ def _build_db_filters(f):
     return filters
 
 
-def _transaction_links(row):
-    """Read Amazon's explicit deferred/release IDs from stored API data."""
+def _source_payload(row):
     try:
         raw = json.loads(row.get("raw_json") or "{}")
     except (TypeError, ValueError):
         return {}
-    return _release_identifiers(raw.get("relatedIdentifiers")) if isinstance(raw, dict) else {}
+    return raw if isinstance(raw, dict) else {}
+
+
+def _transaction_links(row):
+    """Read Amazon's explicit deferred/release IDs from stored API data."""
+    return _release_identifiers(_source_payload(row).get("relatedIdentifiers"))
 
 
 def _release_identifiers(identifiers):
@@ -546,11 +576,12 @@ def _platform_journal_summary(rows, mappings):
         group = groups.setdefault((company, currency), {"company": company, "currency": currency,
                                   "platform_net": Decimal(0), "rows": []})
         group["platform_net"] += net
-        bank_number = "101204_fj" if row.country == "United States" and currency == "USD" else ""
-        bank_label = counterparts[0][0] + "_平台余额"
+        awaiting_release = row.get("cutoff_status") == "pending"
+        bank_number = "101204_fj" if not awaiting_release and row.country == "United States" and currency == "USD" else ""
+        bank_label = counterparts[0][0] + ("_待释放款" if awaiting_release else "_平台余额")
         mapping = _resolve_mapping(row, mappings)
         item = (mapping.物料id if mapping else None) or row.corresponding_item or ""
-        date = str(row.report_posted_date or "")[:10]
+        date = str((row.cutoff_activity_date if awaiting_release else row.report_posted_date) or "")[:10]
         reference = row.amazon_order_id or row.settlement_id or row.release_transaction_id or row.transaction_id
         for label, account_number, amount, platform in [
             (bank_label, bank_number, net, True),
@@ -735,36 +766,65 @@ def _release_relationships(selected_rows, fields):
     return all_rows, parent_for_child, children
 
 
-def _reverse_release_rows(rows, fields, pending):
+def _release_backlink_index():
+    # Sync can refresh fetched_at without updating modified. Cache only row
+    # names so fees, item assignments and release dates are read from the DB.
+    revision = frappe.db.sql(
+        f"SELECT COUNT(*), MAX(modified), MAX(fetched_at) FROM `tab{DOCTYPE}`"
+    )[0]
+    cached = frappe.cache.get_value(RELEASE_BACKLINK_CACHE_KEY, use_local_cache=False)
+    if cached and cached[0] == revision:
+        return cached[1]
+
+    # Amazon's identifier names are case-sensitive ASCII. Read both directions
+    # in one pass and avoid a collation-aware scan over every raw JSON row.
+    references = frappe.db.sql(
+        f"""SELECT name, store, marketplace_id,
+                  JSON_EXTRACT(raw_json, '$.relatedIdentifiers') AS identifiers
+             FROM `tab{DOCTYPE}`
+            WHERE (LOCATE(%s, BINARY raw_json) > 0 OR LOCATE(%s, BINARY raw_json) > 0)
+              AND JSON_VALID(raw_json)""",
+        ('"DEFERRED_TRANSACTION_ID"', '"RELEASE_TRANSACTION_ID"'), as_dict=True,
+    )
+    backlinks = defaultdict(list)
+    for reference in references:
+        links = _release_identifiers(json.loads(reference.identifiers or "[]"))
+        for identifier, linked_id in links.items():
+            if linked_id:
+                backlinks[(identifier, _transaction_key(reference, linked_id))].append(reference.name)
+    index = dict(backlinks)
+    frappe.cache.set_value(RELEASE_BACKLINK_CACHE_KEY, (revision, index), expires_in_sec=1800)
+    return index
+
+
+def _reverse_release_rows(rows, fields, pending, cutoff=False):
     """Find counterpart records whose backlink may be outside the selected period."""
-    key = "DEFERRED_TRANSACTION_ID" if pending else "RELEASE_TRANSACTION_ID"
-    targets = {_transaction_key(row) for row in rows if row.transaction_id and (
-        pending or (str(row.transaction_status or "").upper() == "RELEASED"
-                    and not _transaction_links(row).get("DEFERRED_TRANSACTION_ID"))
-    )}
+    targets = set()
+    for row in rows:
+        if not row.transaction_id:
+            continue
+        key = _transaction_key(row)
+        if pending or cutoff:
+            targets.add(("DEFERRED_TRANSACTION_ID", key))
+        if not pending and str(row.transaction_status or "").upper() == "RELEASED":
+            if not _transaction_links(row).get("DEFERRED_TRANSACTION_ID"):
+                targets.add(("RELEASE_TRANSACTION_ID", key))
     if not targets:
         return []
+    backlinks = _release_backlink_index()
     present = {row.name for row in rows}
-    references = frappe.db.sql(
-        """SELECT name, store, marketplace_id,
-                  JSON_EXTRACT(raw_json, '$.relatedIdentifiers') AS identifiers
-             FROM `tabAmazon Financial Transaction`
-            WHERE raw_json LIKE %s AND JSON_VALID(raw_json)""",
-        (f'%"{key}"%',), as_dict=True,
-    )
-    matches = []
-    for reference in references:
-        if reference.name not in present:
-            linked_id = _release_identifiers(json.loads(reference.identifiers or "[]")).get(key)
-            if linked_id and _transaction_key(reference, linked_id) in targets:
-                matches.append(reference.name)
+    matches = {
+        name for target in targets for name in backlinks.get(target, ()) if name not in present
+    }
     return list(_read_order_summary_rows(DOCTYPE, fields, {}, "name", matches))
 
 
-def _finance_period_rows(rows, parents, children, pending):
+def _finance_period_rows(rows, parents, children, pending, excluded_groups=()):
     """A release carries the settled amounts. A deferred transaction carries its open balance."""
     selected = []
     for source in rows:
+        if source.detail_group in excluded_groups:
+            continue
         status = str(source.transaction_status or "").upper()
         links = _transaction_links(source)
         if pending:
@@ -792,6 +852,77 @@ def _finance_period_rows(rows, parents, children, pending):
         else:
             selected.append(source)
     return selected
+
+
+def _cutoff_activity_rows(rows, parents, children, groups, start, end, matches_row=None, *, posted=False):
+    by_status = {"released": [], "pending": []}
+    review_count = 0
+    for source in rows:
+        if source.detail_group not in groups or source.name in parents:
+            continue
+        status = str(source.transaction_status or "").upper()
+        links = _transaction_links(source)
+        original_day = source.report_posted_date.date() if source.report_posted_date else None
+        # A release can have a postedDate of its own. If its original record
+        # is missing, that later date cannot determine the original month.
+        if original_day is None or links.get("DEFERRED_TRANSACTION_ID"):
+            if matches_row and original_day and start <= original_day <= end and matches_row(source):
+                review_count += 1
+            continue
+        if not start <= original_day <= end:
+            continue
+
+        releases = [row for row in children.get(source.name, ())
+                    if row.transaction_status == "RELEASED" and row.report_posted_date]
+        if status == "RELEASED" and source.report_posted_date:
+            releases.append(source)
+        settled = max(releases, key=lambda row: row.report_posted_date) if releases else None
+        if matches_row and not matches_row(settled or source, source):
+            continue
+        if matches_row and not settled and (status not in {"DEFERRED", "PENDING"} or links.get("RELEASE_TRANSACTION_ID")):
+            review_count += 1
+            continue
+        released_by_cutoff = bool(settled and settled.report_posted_date.date() <= end)
+        # The posted order is the sale. Its release is a separate amount and
+        # can never replace the original revenue, fees or net receivable.
+        row = frappe._dict(source if posted and source.detail_group == "order" else (settled or source))
+        row.update(
+            name=source.name,
+            transaction_id=source.transaction_id,
+            release_transaction_id=settled.transaction_id if settled else None,
+            original_transaction_date=source.report_posted_date,
+            original_report_timezone=source.report_timezone,
+            cutoff_activity_date=original_day,
+            cutoff_release_date=settled.report_posted_date if settled else None,
+            cutoff_status="released" if released_by_cutoff else "pending",
+            related_releases=[],
+        )
+        if settled and settled.name != source.name:
+            for child in releases:
+                if child.name == source.name:
+                    continue
+                display_child = frappe._dict(child, context_only=child.report_posted_date.date() > end)
+                display_child.pop("raw_json", None)
+                row.related_releases.append(display_child)
+        by_status[row.cutoff_status].append(row)
+    return by_status, review_count
+
+
+def _order_release_details(row, children):
+    releases = [release for release in children.get(row.name, ())
+                if release.transaction_status == "RELEASED" and release.report_posted_date]
+    if not releases and row.transaction_status == "RELEASED" and row.report_posted_date:
+        releases.append(row)
+    details = []
+    for release in releases:
+        _, item_net = _item_display(release)
+        details.append({
+            "amount": item_net if item_net is not None else _money(release.net_amount),
+            "currency": release.currency_code,
+            "time": release.report_posted_date,
+            "timezone": release.report_timezone,
+        })
+    return sorted(details, key=lambda detail: detail["time"])
 
 
 def _available_months():
@@ -1071,6 +1202,27 @@ def _fee_leaf_nodes(nodes):
             yield node
 
 
+def _order_non_fee_amounts(nodes):
+    """Read gross sale and delivery amounts separately from rebates and tax."""
+    amounts = defaultdict(Decimal)
+    if isinstance(nodes, dict):
+        nodes = [nodes]
+    for node in nodes or ():
+        if not isinstance(node, dict):
+            continue
+        name = str(node.get("breakdownType") or "").strip()
+        children = node.get("breakdowns")
+        amount = node.get("breakdownAmount")
+        if not name or name == "AmazonFees":
+            continue
+        if children and (name not in {"ProductCharges", "Shipping"} or not amount):
+            for key, value in _order_non_fee_amounts(children).items():
+                amounts[key] += value
+        elif amount and not _named_order_fees([node]):
+            amounts[name] += Decimal(str(_金额(amount)))
+    return amounts
+
+
 def _order_summary_amounts(currency, row):
     net = row.display_net_amount if row.get("display_net_amount") is not None else row.net_amount
     try:
@@ -1083,35 +1235,56 @@ def _order_summary_amounts(currency, row):
         item for item in items if str(_上下文值(item.get("contexts") or [], "sku") or "").strip()
         == (row.sku or "")
     ]
+    breakdowns = [item["breakdowns"] for item in sku_items if item.get("breakdowns")]
+    transaction_breakdown = raw.get("breakdowns") if len(sku_items) == len(items) else None
     fees = defaultdict(Decimal)
-    for item in sku_items:
-        for name, value in _named_order_fees(item.get("breakdowns")).items():
+    for nodes in breakdowns:
+        for name, value in _named_order_fees(nodes).items():
             fees[name] += value
     # A transaction-wide amount can only be used if it belongs to this SKU.
-    if not fees and len(sku_items) == len(items):
-        fees.update(_named_order_fees(raw.get("breakdowns")))
+    if not fees:
+        fees.update(_named_order_fees(transaction_breakdown))
     if not fees:
         categories = row.get("display_fee_categories") or row
         fees = {field: categories.get(field) for field in
                 ("selling_fees", "fba_fees", "other_transaction_fees")}
-    return {"currency": currency, "net": _money(net), "sales": _money(row.product_sales),
-            "shipping": _money(row.shipping_credits), "quantity": cint(row.quantity),
-            "fees": {name: _money(amount) for name, amount in fees.items() if _money(amount)}}
+    fee_amounts = {name: _money(amount) for name, amount in fees.items() if _money(amount)}
+    sale, shipping = _money(row.product_sales), _money(row.shipping_credits)
+    adjustments = {}
+    if row.detail_group == "order":
+        parts = defaultdict(Decimal)
+        for nodes in breakdowns or [transaction_breakdown]:
+            for name, value in _order_non_fee_amounts(nodes).items():
+                parts[name] += value
+        if parts:
+            product_charges = parts.pop("ProductCharges", None)
+            delivery_charges = parts.pop("Shipping", None)
+            sale = _money(product_charges if product_charges is not None else parts.pop("OurPricePrincipal", sale))
+            shipping = _money(delivery_charges if delivery_charges is not None else parts.pop("ShippingPrincipal", 0))
+        adjustments = {name: _money(value) for name, value in parts.items() if _money(value)}
+        accounted = sum(Decimal(str(value)) for value in (sale, shipping, *fee_amounts.values(), *adjustments.values()))
+        difference = _money(Decimal(str(_money(net))) - accounted)
+        if difference:
+            adjustments["unallocated_net_difference"] = difference
+    return {"currency": currency, "net": _money(net), "sales": sale, "shipping": shipping,
+            "quantity": cint(row.quantity), "fees": fee_amounts, "adjustments": adjustments}
 
 
 def _order_summary_totals(rows):
     totals = defaultdict(lambda: {**dict.fromkeys(ORDER_TOTAL_FIELDS, Decimal(0)),
-                                  "quantity": 0, "fees": defaultdict(Decimal)})
+                                  "quantity": 0, "fees": defaultdict(Decimal), "adjustments": defaultdict(Decimal)})
     for row in rows:
         total = totals[row["currency"]]
         total["quantity"] += row["quantity"]
         for field in ORDER_TOTAL_FIELDS:
             total[field] += Decimal(str(row[field]))
-        for fee, amount in row["fees"].items():
-            total["fees"][fee] += Decimal(str(amount))
+        for group in ("fees", "adjustments"):
+            for key, amount in row[group].items():
+                total[group][key] += Decimal(str(amount))
     return [{"currency": currency, "quantity": values["quantity"],
              **{field: float(values[field]) for field in ORDER_TOTAL_FIELDS},
-             "fees": {fee: float(amount) for fee, amount in values["fees"].items()}}
+             **{group: {key: float(value) for key, value in values[group].items()}
+                for group in ("fees", "adjustments")}}
             for currency, values in sorted(totals.items())]
 
 
@@ -1139,37 +1312,49 @@ def _order_sku_price_lines(amounts):
     fees = {key: Decimal(str(value)) for key, value in amounts["fees"].items()}
     first_fees = {key: first_share(value) for key, value in fees.items()}
     second_fees = {key: value - first_fees[key] for key, value in fees.items()}
+    adjustments = {key: Decimal(str(value)) for key, value in amounts.get("adjustments", {}).items()}
+    first_adjustments = {key: first_share(value) for key, value in adjustments.items()}
+    second_adjustments = {key: value - first_adjustments[key] for key, value in adjustments.items()}
     shipping = Decimal(str(amounts["shipping"]))
     first_shipping = first_share(shipping)
     net = Decimal(str(amounts["net"]))
-    other = net - sales - shipping - sum(fees.values())
+    other = net - sales - shipping - sum(fees.values()) - sum(adjustments.values())
     first_sale = first_quantity * first_price * cent
-    first_net = first_sale + first_shipping + sum(first_fees.values()) + first_share(other)
+    first_net = first_sale + first_shipping + sum(first_fees.values()) + sum(first_adjustments.values()) + first_share(other)
     return [
         {"currency": amounts["currency"], "quantity": qty, "unit_price": float(price * cent),
          "sales": float(qty * price * cent), "shipping": float(shipping_share), "net": float(net_share),
-         "fees": {key: float(value) for key, value in fee_shares.items()}, "adjustment": adjustment}
-        for qty, price, shipping_share, net_share, fee_shares, adjustment in (
-            (first_quantity, first_price, first_shipping, first_net, first_fees, False),
-            (second_quantity, second_price, shipping - first_shipping, net - first_net, second_fees, True),
+         "fees": {key: float(value) for key, value in fee_shares.items()},
+         "adjustments": {key: float(value) for key, value in adjustment_shares.items()}, "adjustment": adjustment}
+        for qty, price, shipping_share, net_share, fee_shares, adjustment_shares, adjustment in (
+            (first_quantity, first_price, first_shipping, first_net, first_fees, first_adjustments, False),
+            (second_quantity, second_price, shipping - first_shipping, net - first_net, second_fees, second_adjustments, True),
         )
     ]
 
 
-def _refund_summary(rows):
-    sales_rows, fee_rows = {}, {}
-    totals = defaultdict(lambda: {"sales": Decimal(0), "fees": Decimal(0), "net": Decimal(0)})
-    centers = {row.store for row in rows if row.store}
+def _fee_accounts_by_cost_center(centers, account_numbers):
     companies = {row.name: row.company for row in frappe.get_all(
         "Cost Center", filters={"name": ["in", sorted(centers)]},
         fields=["name", "company"], limit_page_length=0,
     )} if centers else {}
     accounts = {(row.company, row.account_number): row.name for row in frappe.get_all(
         "Account", filters={"company": ["in", sorted(set(companies.values()))],
-                            "account_number": ["in", sorted(set(REFUND_FEE_ACCOUNTS.values()))],
+                            "account_number": ["in", sorted(set(account_numbers.values()))],
                             "is_group": 0, "disabled": 0},
         fields=["name", "account_number", "company"], limit_page_length=0,
     )} if companies else {}
+    return {
+        center: {key: accounts[(company, number)] for key, number in account_numbers.items()
+                 if (company, number) in accounts}
+        for center, company in companies.items()
+    }
+
+
+def _refund_summary(rows):
+    sales_rows, fee_rows = {}, {}
+    totals = defaultdict(lambda: {"sales": Decimal(0), "fees": Decimal(0), "net": Decimal(0)})
+    accounts = _fee_accounts_by_cost_center({row.store for row in rows if row.store}, REFUND_FEE_ACCOUNTS)
 
     for row in rows:
         currency = row.currency_code or "未知"
@@ -1215,7 +1400,7 @@ def _refund_summary(rows):
                 continue
             fee = fee_rows.setdefault((*key, code), {
                 **base, "fee_type": REFUND_FEE_LABELS.get(code, code),
-                "account": accounts.get((companies.get(row.store), REFUND_FEE_ACCOUNTS.get(code)), ""),
+                "account": accounts.get(row.store, {}).get(code, ""),
                 "amount": Decimal(0),
             })
             fee["amount"] += value
@@ -1234,6 +1419,43 @@ def _refund_summary(rows):
         "fee_rows": [{**row, "amount": float(row["amount"])} for _, row in sorted(fee_rows.items()) if row["amount"]],
         "totals": [{"currency": currency, **{key: float(value) for key, value in total.items()}}
                    for currency, total in sorted(totals.items())],
+    }
+
+
+def _order_sku_summary(rows, truncated):
+    groups = {}
+    for row in rows:
+        sku = (row.sku or "").strip()
+        group = groups.setdefault(sku, {"sku": sku, "product_name": row.product_name, "items": {},
+                                        "item_amounts": defaultdict(list)})
+        item_id = row.corresponding_item or ""
+        if item_id:
+            group["items"][item_id] = {
+                "name": item_id, "label": row.item_name, "image": row.item_image,
+            }
+        if "display_net_amount" not in row:
+            _, row.display_net_amount = _item_display(row)
+        group["item_amounts"][row.store or "", item_id].append(
+            _order_summary_amounts(row.currency_code or "未知", row))
+    summary = []
+    for group in groups.values():
+        item_amounts = group.pop("item_amounts")
+        amounts = _order_summary_totals(amount for entries in item_amounts.values() for amount in entries)
+        price_lines = [
+            {**line, "cost_center": cost_center, "item_id": item_id}
+            for (cost_center, item_id), entries in sorted(item_amounts.items())
+            for total in _order_summary_totals(entries)
+            for line in _order_sku_price_lines(total)
+        ]
+        summary.append({**group, "items": list(group["items"].values()), "amounts": amounts,
+                        "price_lines": price_lines,
+                        "quantity": sum(amount["quantity"] for amount in amounts)})
+    return {
+        "rows": sorted(summary, key=lambda row: (-row["quantity"], row["sku"])),
+        "fee_labels": ORDER_FEE_LABELS,
+        "adjustment_labels": ORDER_ADJUSTMENT_LABELS,
+        "fee_accounts": _fee_accounts_by_cost_center({row.store for row in rows if row.store}, ORDER_FEE_ACCOUNTS),
+        "truncated": truncated,
     }
 
 
@@ -1262,12 +1484,18 @@ def _order_reconciliation(rows, filters, truncated, order_count):
             product["stores"].add(row.store)
         order_key = (scope, sku, row.amazon_order_id or row.name)
         if order_key not in orders:
-            orders[order_key] = {"id": row.amazon_order_id, "dates": set(), "amounts": [],
+            orders[order_key] = {"id": row.amazon_order_id, "dates": set(), "posting_dates": set(), "amounts": [],
                                  "quantity": 0, "days": set(), "transaction_count": 0}
             product["orders"].append(orders[order_key])
         order = orders[order_key]
-        if row.report_posted_date:
-            order["dates"].add(row.report_posted_date.date().isoformat())
+        release_date = row.cutoff_release_date if row.cutoff_status else row.report_posted_date
+        if release_date:
+            order["dates"].add(release_date.date().isoformat())
+        posting_date = row.cutoff_activity_date or row.original_transaction_date
+        if not posting_date and not row.release_transaction_id:
+            posting_date = row.report_posted_date
+        if posting_date:
+            order["posting_dates"].add(getdate(posting_date).isoformat())
         quantity = cint(row.quantity)
         order["quantity"] += quantity
         order["transaction_count"] += 1
@@ -1368,6 +1596,7 @@ def _order_reconciliation(rows, filters, truncated, order_count):
         for order in product["orders"]:
             order["amounts"] = _order_summary_totals(order["amounts"])
             order["dates"] = sorted(order["dates"])
+            order["posting_dates"] = sorted(order["posting_dates"])
             order["days"] = sorted(order["days"])
         product["days"] = [{
             "date": day, "centers": entries,
@@ -1387,12 +1616,17 @@ def _order_reconciliation(rows, filters, truncated, order_count):
     fee_names = {fee for line in finance_lines for fee in line["fees"]}
     fee_columns = [fee for fee in ORDER_FEE_LABELS if fee in fee_names]
     fee_columns.extend(sorted(fee_names.difference(ORDER_FEE_LABELS)))
+    adjustment_names = {name for line in finance_lines for name in line["adjustments"]}
+    adjustment_columns = [name for name in ORDER_ADJUSTMENT_LABELS if name in adjustment_names]
+    adjustment_columns.extend(sorted(adjustment_names.difference(ORDER_ADJUSTMENT_LABELS)))
     return {
         "products": sorted(products.values(), key=lambda item: (-item["quantity"], item["sku"])),
         "sku_summary": sorted(sku_summary.values(), key=lambda item: (-item["quantity"], item["sku"])),
         "order_count": order_count,
         "finance_rows": len(rows), "totals": _order_summary_totals(finance_lines),
         "fee_columns": [{"key": fee, "label": ORDER_FEE_LABELS.get(fee, fee)} for fee in fee_columns],
+        "adjustment_columns": [{"key": name, "label": ORDER_ADJUSTMENT_LABELS.get(name, name)}
+                               for name in adjustment_columns],
         "center_count": len(centers), "matched_count": statuses["matched"],
         "difference_count": statuses["difference"], "missing_count": statuses["missing"],
         "truncated": truncated,
@@ -1400,11 +1634,19 @@ def _order_reconciliation(rows, filters, truncated, order_count):
 
 
 @frappe.whitelist()
-def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconciliation=0):
+def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconciliation=0, order_sku_summary=0):
     f = _filters(filters)
     pending = f.period == "pending"
+    posted = f.period == "posted"
     pending_month = _selected_pending_month(f)
     detail_group = "logistics" if f.detail_group == "storage" else (f.detail_group or "")
+    sku_only = detail_group == "order" and cint(order_sku_summary)
+    cutoff_status = f.cutoff_status if not (pending or posted) and detail_group in CUTOFF_GROUPS and f.cutoff_status in {
+        "released", "pending",
+    } else None
+    today = datetime.now(REPORT_TIMEZONE).date()
+    cutoff_end = min(getdate(f.date_to), today) if f.date_to else today
+    cutoff_start = getdate(f.date_from) if f.date_from else cutoff_end.replace(day=1)
     fields = [
         "name", "transaction_sku_key", "transaction_id", "amazon_order_id",
         "amazon_order_item_id", "sku", "asin", "store", "country", "marketplace_id",
@@ -1421,14 +1663,10 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
         order_by="posted_date desc, modified desc", limit_page_length=100000,
     )
     truncated = len(rows) >= 100000
-    reverse_links = _reverse_release_rows(rows, fields, pending)
+    reverse_links = _reverse_release_rows(rows, fields, pending, cutoff=posted or bool(cutoff_status))
     all_rows, parent_for_child, release_children = _release_relationships(rows + reverse_links, fields)
     for row in all_rows:
-        try:
-            source = json.loads(row.get("raw_json") or "{}")
-        except (TypeError, ValueError):
-            source = {}
-        posted_at = source.get("postedDate") if isinstance(source, dict) else None
+        posted_at = _source_payload(row).get("postedDate")
         row.report_posted_date, row.report_timezone = _report_time(row.posted_date, posted_at)
     mappings = _mapping_rows()
     item_ids = set()
@@ -1506,7 +1744,8 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
     scope = f.scope or ""
     item_filter = f.corresponding_item or ""
     def matches_row(row, original=None):
-        if any(f.get(key) and str(row.get(key) or "") != str(f[key]) for key in FILTER_OPTION_FIELDS):
+        if any(f.get(key) and str(row.get(key) or "") != str(f[key]) for key in FILTER_OPTION_FIELDS
+               if not cutoff_status or key != "transaction_status"):
             return False
         if search:
             haystack = " ".join(
@@ -1533,7 +1772,8 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
         day = str(timestamp or "")[:10]
         return bool(day) and (not report_start or day >= report_start) and (not report_end or day <= report_end)
 
-    period_rows = _finance_period_rows(rows, parent_for_child, release_children, pending)
+    period_rows = _finance_period_rows(rows, parent_for_child, release_children, pending,
+                                     excluded_groups=CUTOFF_GROUPS if posted else ())
     pending_months = []
     if pending:
         # Derive month buttons before applying the selected month or other filters.
@@ -1543,7 +1783,17 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
                        or str(row.report_posted_date or "")[:7] == pending_month]
     else:
         option_rows = [row for row in period_rows if in_selected_dates(row.report_posted_date)]
+    if posted:
+        # The old cutoff groups share one list and one set of totals. Preserve
+        # the per-row release state for linked detail and journal suggestions.
+        classified, _ = _cutoff_activity_rows(
+            all_rows, parent_for_child, release_children, CUTOFF_GROUPS,
+            getdate(f.date_from) if f.date_from else date.min, cutoff_end, posted=True,
+        )
+        option_rows.extend((*classified["released"], *classified["pending"]))
     economic_rows = [row for row in option_rows if matches_row(row, parent_for_child.get(row.name))]
+    if sku_only and not (f.shipment_month or cutoff_status):
+        return _order_sku_summary([row for row in economic_rows if row.detail_group == "order"], truncated)
     _attach_order_report_dates(economic_rows, FULFILLED_SHIPMENT_DOCTYPE, "shipment_dates")
     shipment_months = sorted({
         day[:7]
@@ -1557,6 +1807,42 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
             row for row in economic_rows
             if any(day[:7] == f.shipment_month for day in row.shipment_dates)
         ]
+    cutoff = None
+    navigation_counts = None
+    available_refund_or_removal = {
+        row.detail_group for row in rows
+        if row.detail_group in {"refund", "removal"} and in_selected_dates(row.report_posted_date)
+        and matches_row(row)
+    }
+    if cutoff_status:
+        navigation_counts = Counter()
+        navigation_orders = set()
+        for row in economic_rows:
+            line_count = max(1, len(_item_display(row)[0]))
+            navigation_counts[""] += line_count
+            if row.detail_group == "order":
+                if row.amazon_order_id:
+                    navigation_orders.add((row.store, row.marketplace_id, row.amazon_order_id))
+            else:
+                navigation_counts[row.detail_group] += 1 if row.detail_group == "refund" else line_count
+        navigation_counts["order"] = len(navigation_orders)
+        classified, review_count = _cutoff_activity_rows(
+            all_rows, parent_for_child, release_children, {detail_group},
+            cutoff_start, cutoff_end, matches_row,
+        )
+        if detail_group == "order":
+            def count_orders(group):
+                return len({(r.store, r.marketplace_id, r.amazon_order_id) for r in group if r.amazon_order_id})
+        else:
+            count_orders = len
+        cutoff = {
+            "date": str(cutoff_end), "status": cutoff_status, "review_count": review_count,
+            "counts": {key: count_orders(group) for key, group in classified.items()},
+            "units": {key: sum(cint(row.quantity) for row in group) for key, group in classified.items()},
+        }
+        option_rows = [*option_rows, *classified["released"], *classified["pending"]]
+        navigation_counts[detail_group] = count_orders(classified["released"] + classified["pending"])
+        economic_rows = classified[cutoff_status]
     order_rows = [row for row in economic_rows if row.detail_group == "order"]
     order_count = len({
         (row.store, row.marketplace_id, row.amazon_order_id)
@@ -1580,10 +1866,14 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
         group_counts[row.detail_group] += line_count
     group_counts["order"] = order_count
     group_counts["refund"] = sum(row.detail_group == "refund" for row in economic_rows)
+    if sku_only:
+        return _order_sku_summary(order_rows, truncated)
     if detail_group == "order" and cint(order_reconciliation) and not pending:
         return _order_reconciliation(order_rows, f, truncated, order_count)
 
     detail_rows = [row for row in economic_rows if not detail_group or row.detail_group == detail_group]
+    summary_rows = detail_rows if posted and detail_group in CUTOFF_GROUPS else economic_rows
+    summary_row_count = sum(max(1, len(row.item_lines)) for row in summary_rows)
     if detail_group == "logistics":
         _attach_awd_fee_details(detail_rows)
 
@@ -1599,7 +1889,7 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
     product_count = 0
     store_fee_count = 0
 
-    for row in economic_rows:
+    for row in summary_rows:
         currency = row.currency_code or "未知"
         amount = _money(row.net_amount if row.net_amount is not None else row.total_amount)
         key = _transaction_key(row, row.release_transaction_id) if row.transaction_id or row.release_transaction_id else (row.store, row.marketplace_id, row.name)
@@ -1617,7 +1907,7 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
                 bound += 1
         else:
             store_fee_count += 1
-        day = str(getdate(row.report_posted_date)) if row.report_posted_date else "未知日期"
+        day = str(row.cutoff_activity_date or getdate(row.report_posted_date)) if row.report_posted_date else "未知日期"
         d = daily[day][currency]
         d["net"] += amount
         d["sales"] += _money(row.product_sales)
@@ -1648,17 +1938,37 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
     product_list.sort(key=lambda x: (x["quantity"], sum(abs(v) for v in x["amounts"].values())), reverse=True)
     settlement_list = sorted(settlements.values(), key=lambda x: str(x["last_date"] or ""), reverse=True)
     page, page_size = max(cint(page), 1), min(max(cint(page_size), 10), 500)
-    display_rows = sorted(detail_rows, key=lambda row: (str(row.report_posted_date or ""), row.name), reverse=True)
+    display_rows = sorted(detail_rows, key=lambda row: (
+        str((row.original_transaction_date if posted and row.cutoff_activity_date
+             else row.cutoff_activity_date) or row.report_posted_date or ""), row.name,
+    ), reverse=True)
     start = (page - 1) * page_size
     page_rows = display_rows[start:start + page_size]
     if detail_group == "order":
-        _attach_order_report_dates(page_rows, CUSTOMER_SALE_DOCTYPE, "completed_dates")
-    if detail_group == "removal" and pending:
+        if cutoff:
+            _attach_order_report_dates(page_rows, FULFILLED_SHIPMENT_DOCTYPE, "shipment_dates")
+        if posted:
+            for row in page_rows:
+                row.order_releases = _order_release_details(row, release_children)
+        else:
+            _attach_order_report_dates(page_rows, CUSTOMER_SALE_DOCTYPE, "completed_dates")
+        for row in page_rows:
+            amounts = _order_summary_amounts(row.currency_code, row)
+            row.order_amounts = {
+                "sales": amounts["sales"], "shipping": amounts["shipping"],
+                "fees": [{"label": ORDER_FEE_LABELS.get(key, key), "amount": value}
+                         for key, value in amounts["fees"].items()],
+                "adjustments": [{"label": ORDER_ADJUSTMENT_LABELS.get(key, key), "amount": value}
+                                for key, value in amounts["adjustments"].items()],
+            }
+    if detail_group == "removal" and (pending or cutoff or posted):
         for row in page_rows:
             _attach_liquidation_breakdown(row)
     if detail_group != "logistics":
         _attach_awd_fee_details(page_rows)
-    journal_summary = _platform_journal_summary(detail_rows, mappings) if detail_group in JOURNAL_DETAIL_GROUPS and not pending else []
+    journal_summary = _platform_journal_summary(detail_rows, mappings) if (
+        detail_group in JOURNAL_DETAIL_GROUPS and not pending
+    ) else []
     funds_summary = _funds_summary(display_rows) if detail_group == "funds" else None
     # The complete Amazon response is retained in its DocType; do not send it to the browser.
     for row in [*all_rows, *page_rows]:
@@ -1668,15 +1978,18 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
         for key in FILTER_OPTION_FIELDS
     }
     detail_groups = []
-    retained_groups = () if pending else ("order", "refund")
+    retained_groups = () if pending else ("order", "refund", *available_refund_or_removal)
     if detail_group and (pending_month or f.shipment_month):
         retained_groups = (*retained_groups, detail_group)
-    if report_row_count or groups_before_shipment_filter or detail_group in retained_groups:
-        detail_groups.append({"key": "", "label": "全部", "count": report_row_count})
+    if cutoff or report_row_count or groups_before_shipment_filter or detail_group in retained_groups:
+        detail_groups.append({"key": "", "label": "全部",
+                              "count": navigation_counts[""] if cutoff else report_row_count})
+    tab_counts = navigation_counts if cutoff else group_counts
     detail_groups.extend(
-        {"key": key, "label": label, "count": group_counts[key]}
+        {"key": key, "label": label, "count": tab_counts[key]}
         for key, label in DETAIL_GROUPS
-        if group_counts[key] > 0 or key in groups_before_shipment_filter
+        if tab_counts[key] > 0 or key in groups_before_shipment_filter
+        or key in available_refund_or_removal or (cutoff and key == detail_group)
         or (key in retained_groups and detail_group == key)
     )
     cost_center_options = [center.name for center in frappe.get_all(
@@ -1689,8 +2002,9 @@ def get_finance_dashboard_data(filters=None, page=1, page_size=300, order_reconc
         fields=["name"], order_by="name asc", limit_page_length=0,
     )] if detail_group == "logistics" else []
     return {
-        "period": "pending" if pending else "released",
-        "summary": {"row_count": len(economic_rows), "report_row_count": report_row_count, "transaction_count": len(unique_transactions), "release_count": sum(len(row.get("related_releases") or []) for row in economic_rows), "sku_count": len(products), "product_count": product_count, "store_fee_count": store_fee_count, "bound_count": bound, "unbound_count": product_count - bound, "binding_rate": round(bound * 100 / product_count, 1) if product_count else 0, "currencies": dict(currencies), "truncated": truncated},
+        "period": "pending" if pending else "posted" if posted else "released",
+        "cutoff": cutoff,
+        "summary": {"row_count": len(summary_rows), "report_row_count": summary_row_count, "transaction_count": len(unique_transactions), "release_count": sum(len(row.get("related_releases") or []) for row in summary_rows), "sku_count": len(products), "product_count": product_count, "store_fee_count": store_fee_count, "bound_count": bound, "unbound_count": product_count - bound, "binding_rate": round(bound * 100 / product_count, 1) if product_count else 0, "currencies": dict(currencies), "truncated": truncated},
         "daily": {day: dict(values) for day, values in sorted(daily.items())},
         "fees": {c: dict(v) for c, v in fee_totals.items()},
         "types": {c: dict(v) for c, v in type_totals.items()},

@@ -17,31 +17,27 @@ const AMAZON_FUNDS_COLUMNS = [
     ['disbursement_date','汇出日期（北京时间）'], ['settlement_id','交易结算ID'],
 ];
 const AMAZON_FUNDS_AMOUNT_COLUMNS = new Set(['amount','disbursement_amount']);
-
 class AmazonFinancePage {
     constructor(page) {
-        this.page=page; this.pageNo=1; this.pageSize=300; this.returnPage=1; this.detailGroup=''; this.charts=[]; this.loading=false; this.summaryOpen=false; this.collapsedGroups=new Set();
+        this.page=page; this.pageNo=1; this.pageSize=300; this.returnPage=1; this.detailGroup='order'; this.charts=[]; this.loading=false; this.summaryOpen=false; this.collapsedGroups=new Set();
         this.selectedMonths=new Set([this.currentMonthKey()]); this.monthSelectionStarted=false; this.selectedCountry=''; this.summaryCostCenters=new Map(); this.summaryAccounts=new Map();
-        this.transactionPeriod='released';
+        this.transactionPeriod='posted';
         this.pendingMonth='';
-        this.shipmentMonth='';
         this.returnDateBasis='inventory';
-        this.renderShell(); this.renderMonthButtons(); this.renderCountryButtons(); this.renderShipmentMonthButtons(); this.bindEvents();
+        this.renderShell(); this.renderMonthButtons(); this.renderCountryButtons(); this.bindEvents();
     }
     renderShell() {
         const {from,to}=this.monthBounds(this.currentMonthKey());
         $(this.page.main).html(`<div class="af-root">
           <section class="af-hero"><div><span>AMAZON FINANCE INTELLIGENCE</span><h1>财务交易中心</h1><p>销售、退款、税费、平台费用与结算批次，穿透至店铺、SKU和ERPNext物料。</p></div><div><button class="btn af-refresh-bind">重新匹配物料</button><button class="btn btn-primary af-refresh">刷新数据</button></div></section>
           <section class="af-filter-panel">
-            <div class="af-ranges"><span>释放月份</span><div class="af-month-range af-release-month-range"></div></div>
+            <div class="af-ranges"><span>记账月份</span><div class="af-month-range af-release-month-range"></div></div>
             <div class="af-ranges af-pending-ranges" hidden><span>原交易月份</span><div class="af-month-range af-pending-month-range" role="group" aria-label="未释放交易的原交易月份"></div></div>
             <div class="af-country-ranges"><span>国家</span><div class="af-country-range"></div></div><div class="af-filters">
             ${this.input('date_from','开始日期（美西）','date',from)}${this.input('date_to','结束日期（美西）','date',to)}${this.select('store','店铺')}${this.select('marketplace_id','站点')}${this.select('currency_code','币种')}${this.select('transaction_type','交易类型')}${this.select('transaction_status','状态')}
             <label>交易归属<select data-filter="scope"><option value="">全部</option><option value="product">商品级交易</option><option value="store">店铺级费用</option></select></label><label>物料绑定<select data-filter="binding"><option value="">全部</option><option value="bound">已绑定</option><option value="unbound">未绑定</option></select></label><label class="af-search-label">搜索<input data-filter="search" placeholder="订单号 / SKU / ASIN / 费用内容 / 物料 / 结算ID"></label></div></section>
           <div class="af-loading"><i></i>正在分析财务交易…</div><main class="af-content"><section class="af-kpis"></section>
-          <section class="af-card af-table-card"><header><div><h2>完整交易明细</h2><span class="af-table-count"></span></div><div class="af-table-actions"><a class="af-profit-link" href="https://sellercentral.amazon.com/manage/profit-analytics?" target="_blank" rel="noopener noreferrer">费用分配</a><a class="af-profit-link" href="https://sellercentral.amazon.com/manage/shipments" target="_blank" rel="noopener noreferrer">管理货件</a><a class="af-profit-link" href="https://sellercentral.amazon.com/awd/reports/fee?reportType=AwdOutboundTransportationFee" target="_blank" rel="noopener noreferrer">AWD费用</a><a class="af-profit-link af-return-links" href="https://sellercentral.amazon.com/reportcentral/CUSTOMER_RETURNS/0" target="_blank" rel="noopener noreferrer">退货管理</a><button class="af-summary-toggle" type="button">汇总明细</button><div class="af-pages"></div><button class="af-table-expand" type="button" title="放大交易明细" aria-label="放大交易明细"><svg class="af-expand-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><svg class="af-compress-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button></div></header><div class="af-ranges af-shipment-ranges">
-            <span>FBA 发货月份</span><div class="af-month-range af-shipment-month-range" role="group" aria-label="FBA 发货月份"></div>
-          </div><div class="af-detail-tabs"></div><div class="af-table-wrap"><table><thead></thead><tbody></tbody></table></div><div class="af-summary-overlay" hidden><div class="af-summary-backdrop" data-summary-close></div><aside class="af-summary-drawer" role="dialog" aria-label="汇总明细"><header><div><h3>汇总明细</h3><span class="af-summary-count"></span></div><button type="button" data-summary-close aria-label="关闭汇总明细">×</button></header><p>按交易类型、交易内容和币种汇总当前筛选范围，包含所有分页。</p><div class="af-summary-body"></div></aside></div></section>
+          <section class="af-card af-table-card"><header><div><h2>完整交易明细</h2><span class="af-table-count"></span></div><div class="af-table-actions"><a class="af-profit-link" href="https://sellercentral.amazon.com/manage/profit-analytics?" target="_blank" rel="noopener noreferrer">费用分配</a><a class="af-profit-link" href="https://sellercentral.amazon.com/manage/shipments" target="_blank" rel="noopener noreferrer">管理货件</a><a class="af-profit-link" href="https://sellercentral.amazon.com/awd/reports/fee?reportType=AwdOutboundTransportationFee" target="_blank" rel="noopener noreferrer">AWD费用</a><a class="af-profit-link af-return-links" href="https://sellercentral.amazon.com/reportcentral/CUSTOMER_RETURNS/0" target="_blank" rel="noopener noreferrer">退货管理</a><button class="af-summary-toggle" type="button">汇总明细</button><div class="af-pages"></div><button class="af-table-expand" type="button" title="放大交易明细" aria-label="放大交易明细"><svg class="af-expand-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><svg class="af-compress-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button></div></header><div class="af-detail-tabs"></div><div class="af-table-wrap"><table><thead></thead><tbody></tbody></table></div><div class="af-summary-overlay" hidden><div class="af-summary-backdrop" data-summary-close></div><aside class="af-summary-drawer" role="dialog" aria-label="汇总明细"><header><div><h3>汇总明细</h3><span class="af-summary-count"></span></div><button type="button" data-summary-close aria-label="关闭汇总明细">×</button></header><p>按交易类型、交易内容和币种汇总当前筛选范围，包含所有分页。</p><div class="af-summary-body"></div></aside></div></section>
           <section class="af-card af-returns-card">
             <header><div><h2>FBA 客户退货</h2><span class="af-return-count"></span></div>
               <div class="af-return-actions"><div class="af-return-date-basis" role="group" aria-label="退货记录归属日期">
@@ -86,7 +82,8 @@ class AmazonFinancePage {
                 monthButton('','全部月份')+months.join('')
             );
         }
-        this.$.find('[data-filter=date_from], [data-filter=date_to], [data-filter=transaction_status]').prop('disabled',pending);
+        this.$.find('[data-filter=date_from], [data-filter=date_to]').prop('disabled',pending);
+        this.$.find('[data-filter=transaction_status]').prop('disabled',pending);
     }
     renderCountryButtons(){
         const order=['United States','Canada','Mexico','Brazil'];
@@ -97,7 +94,7 @@ class AmazonFinancePage {
         this.$.find('.af-country-range').html(buttons);
     }
     countryFlag(country){return ({'United States':'🇺🇸',Canada:'🇨🇦',Mexico:'🇲🇽',Brazil:'🇧🇷'})[country]||'🌐'}
-    selectMonth(month){const months=this.availableMonths();if(!months.includes(month))return;if(this.transactionPeriod==='pending')this.monthSelectionStarted=false;this.transactionPeriod='released';if(!this.monthSelectionStarted||!this.selectedMonths.size){this.selectedMonths=new Set([month]);this.monthSelectionStarted=true}else if(this.selectedMonths.has(month)){if(this.selectedMonths.size>1)this.selectedMonths.delete(month)}else this.selectedMonths.add(month);const indexes=months.map((value,index)=>this.selectedMonths.has(value)?index:-1).filter(index=>index>=0);if(indexes.length)this.selectedMonths=new Set(months.slice(Math.min(...indexes),Math.max(...indexes)+1));this.applyMonthSelection()}
+    selectMonth(month){const months=this.availableMonths();if(!months.includes(month))return;if(this.transactionPeriod==='pending')this.monthSelectionStarted=false;this.transactionPeriod='posted';if(!this.monthSelectionStarted||!this.selectedMonths.size){this.selectedMonths=new Set([month]);this.monthSelectionStarted=true}else if(this.selectedMonths.has(month)){if(this.selectedMonths.size>1)this.selectedMonths.delete(month)}else this.selectedMonths.add(month);const indexes=months.map((value,index)=>this.selectedMonths.has(value)?index:-1).filter(index=>index>=0);if(indexes.length)this.selectedMonths=new Set(months.slice(Math.min(...indexes),Math.max(...indexes)+1));this.applyMonthSelection()}
     applyMonthSelection(){const months=[...this.selectedMonths].sort();if(!months.length)return;const first=this.monthBounds(months[0]),last=this.monthBounds(months[months.length-1]);this.$.find('[data-filter=date_from]').val(first.from);this.$.find('[data-filter=date_to]').val(last.to);this.renderMonthButtons();this.pageNo=1;this.returnPage=1;this.load()}
     selectPendingPeriod(){
         if(this.transactionPeriod==='pending')return;
@@ -114,18 +111,6 @@ class AmazonFinancePage {
         this.pageNo=1;
         this.renderMonthButtons();
         this.load();
-    }
-    renderShipmentMonthButtons(){
-        const currentYear=this.currentMonthKey().slice(0,4);
-        const button=(month,label)=>{
-            const active=this.shipmentMonth===month;
-            return `<button type="button" data-shipment-month="${this.esc(month)}" class="af-month ${active?'active':''}" aria-pressed="${active}">${this.esc(label)}</button>`;
-        };
-        const months=(this.data?.shipment_months||[]).map(month=>{
-            const [year,number]=month.split('-');
-            return button(month,`${year===currentYear?'':`${year}年`}${Number(number)}月`);
-        });
-        this.$.find('.af-shipment-month-range').html(button('','全部月份')+months.join(''));
     }
     bindEvents(){
         this.$.on('click','.af-refresh',()=>this.load()).on('click','.af-refresh-bind',()=>this.refreshBindings());
@@ -145,19 +130,11 @@ class AmazonFinancePage {
             this.loadReturnCard();
         });
         this.$.on('click','[data-detail-group]',e=>{
-            const group=e.currentTarget.dataset.detailGroup||'';
-            if(group===this.detailGroup)return;
+            const group=e.currentTarget.dataset.detailGroup;
+            if(!group||group===this.detailGroup)return;
             this.detailGroup=group;
-            if(!group)this.toggleSummary(false);
             this.pageNo=1;
-            this.load();
-        });
-        this.$.on('click','[data-shipment-month]',e=>{
-            const month=e.currentTarget.dataset.shipmentMonth;
-            if(this.shipmentMonth===month)return;
-            this.shipmentMonth=month;
-            this.pageNo=1;
-            this.renderShipmentMonthButtons();
+            this.renderMonthButtons();
             this.load();
         });
         this.$.on('click','.af-manual-select',e=>this.openManualItems(e.currentTarget.dataset.manualRow,e.currentTarget.dataset.childKey||''));
@@ -199,7 +176,6 @@ class AmazonFinancePage {
         if(this.selectedCountry)r.country=this.selectedCountry;
         if(this.detailGroup)r.detail_group=this.detailGroup;
         if(this.transactionPeriod==='pending'&&this.pendingMonth)r.pending_month=this.pendingMonth;
-        if(this.shipmentMonth)r.shipment_month=this.shipmentMonth;
         return r;
     }
     toggleTableExpand(force){const card=this.$.find('.af-table-card'),expand=typeof force==='boolean'?force:!card.hasClass('is-expanded');card.toggleClass('is-expanded',expand);$('body').toggleClass('af-table-expanded',expand);card.find('.af-table-expand').attr({'title':expand?'还原交易明细':'放大交易明细','aria-label':expand?'还原交易明细':'放大交易明细'})}
@@ -255,10 +231,13 @@ class AmazonFinancePage {
     }
     renderPlatformJournalSummary(){
         const groups=this.data.journal_summary||[];
+        const removal=this.detailGroup==='removal';
         const rowCount=groups.reduce((total,group)=>total+group.rows.length,0);
         this.$.find('.af-summary-drawer h3').text(`${AMAZON_JOURNAL_SUMMARY_TITLES[this.detailGroup]}汇总明细`);
         this.$.find('.af-summary-count').text(`共 ${this.num(rowCount)} 行日记账分录`);
-        this.$.find('.af-summary-drawer>p').text('点击列头复制。外币交易的人民币科目用外币辅助列换算，余额科目直接填科目货币金额。');
+        this.$.find('.af-summary-drawer>p').text(removal
+            ?'点击列头复制。期末待释放款保留原币净额，对方科目按实际记账情况选择。'
+            :'点击列头复制。外币交易的人民币科目用外币辅助列换算，余额科目直接填科目货币金额。');
         const html=groups.map((group,index)=>{
             const headers=AMAZON_JOURNAL_COLUMNS.map(([key,label])=>`<th scope="col"><button type="button" class="af-journal-copy" data-journal-summary-copy="${key}" data-journal-summary-group="${index}" title="点击复制${label}整列">${label} ⧉</button></th>`).join('');
             const rows=group.rows.map(row=>`<tr>${AMAZON_JOURNAL_COLUMNS.map(([key])=>{
@@ -267,8 +246,8 @@ class AmazonFinancePage {
                 return `<td title="${value}">${value||'—'}</td>`;
             }).join('')}</tr>`).join('');
             return `<section class="af-journal-summary">
-                <header><strong>${this.esc(group.currency)}${groups.length>1&&group.company?` · ${this.esc(group.company)}`:''}</strong><span>平台余额变动 ${this.esc(this.money(group.platform_net,group.currency))}</span></header>
-                ${group.rows.some(row=>!row.account)?'<p class="af-summary-balance is-mismatched">部分交易没有匹配到科目，粘贴后请补齐。</p>':''}
+                <header><strong>${this.esc(group.currency)}${groups.length>1&&group.company?` · ${this.esc(group.company)}`:''}</strong><span>${removal?'交易净额':'平台余额变动'} ${this.esc(this.money(group.platform_net,group.currency))}</span></header>
+                ${group.rows.some(row=>!row.account)?'<p class="af-summary-balance is-mismatched">部分交易的科目需在粘贴后补齐。</p>':''}
                 <div class="af-summary-table-wrap"><table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table></div>
             </section>`;
         }).join('');
@@ -329,15 +308,9 @@ class AmazonFinancePage {
                 this.reloadPending=true;
                 return;
             }
-            if(this.shipmentMonth
-                &&!(this.data.shipment_months||[]).includes(this.shipmentMonth)){
-                this.shipmentMonth='';
-                this.pageNo=1;
-                this.reloadPending=true;
-                return;
-            }
-            if(this.detailGroup&&!(this.data.detail_groups||[]).some(group=>group.key===this.detailGroup)){
-                this.detailGroup='';
+            const groups=(this.data.detail_groups||[]).filter(group=>group.key);
+            if(groups.length&&!groups.some(group=>group.key===this.detailGroup)){
+                this.detailGroup=groups[0].key;
                 this.pageNo=1;
                 this.reloadPending=true;
                 return;
@@ -357,7 +330,8 @@ class AmazonFinancePage {
     }
     render(){
         const pending=this.transactionPeriod==='pending';
-        this.$.find('.af-trend-basis').text(pending?'按美西原交易日期与币种':'按美西释放或入账日期与币种');
+        const basis=pending?'按美西原交易日期与币种':'按美西记账日期与币种';
+        this.$.find('.af-trend-basis').text(basis);
         this.renderMonthButtons();this.renderCountryButtons();this.fillOptions();this.renderKpis();this.renderCurrencies();this.renderCharts();this.renderProducts();this.renderSettlements();this.renderTable();
         this.$.find('.af-returns-card').prop('hidden',pending);
         if(pending)this.returnRequestId=(this.returnRequestId||0)+1;
@@ -375,7 +349,8 @@ class AmazonFinancePage {
     renderSettlements(){this.$.find('.af-settlements').html(`<div class="af-scroll-list">${(this.data.settlements||[]).map(s=>`<div class="af-settlement"><i>结</i><div><b>${this.esc(s.settlement_id)}</b><small>${this.esc(s.store||'未归属')} · ${s.count}条 · ${this.date(s.last_date)}</small></div><strong class="${s.amount>=0?'positive':'negative'}">${this.money(s.amount,s.currency)}</strong></div>`).join('')||'<div class="af-empty">暂无结算批次</div>'}</div>`)}
     renderSummary(){
         const pending=this.transactionPeriod==='pending';
-        const orderSummary=this.detailGroup==='order'&&!pending;
+        const orderSummary=this.detailGroup==='order';
+        this.$.find('.af-summary-drawer').toggleClass('af-order-summary-drawer',orderSummary);
         if(this.detailGroup==='funds')return this.renderFundsSummary();
         if(!pending&&Object.hasOwn(AMAZON_JOURNAL_SUMMARY_TITLES,this.detailGroup))return this.renderPlatformJournalSummary();
         if(this.detailGroup==='refund'&&!pending)return this.renderRefundSummary();
@@ -463,8 +438,8 @@ class AmazonFinancePage {
         const summary=this.data?.refund_summary||{},totals=summary.totals||[];
         const net=totals.map(row=>this.money(row.net,row.currency)).join(' / ');
         this.$.find('.af-summary-drawer h3').text('退款汇总明细');
-        this.$.find('.af-summary-count').text(`共 ${this.num(summary.count)} 条已释放退款${net?` · 净额 ${net}`:''}`);
-        this.$.find('.af-summary-drawer>p').text('按美西实际释放日期和 SKU 汇总。点击表头复制整列。');
+        this.$.find('.af-summary-count').text(`共 ${this.num(summary.count)} 条退款${net?` · 净额 ${net}`:''}`);
+        this.$.find('.af-summary-drawer>p').text('按美西原退款交易的记账日期与 SKU 汇总。点击列头复制整列。');
         this.$.find('.af-summary-body').html(
             this.refundSummaryTable('sales','销售额',summary.sales_rows||[],totals)
             +this.refundSummaryTable('fee','费用',summary.fee_rows||[],totals)
@@ -473,26 +448,26 @@ class AmazonFinancePage {
     async renderOrderSummary(){
         const filters=this.filters(), key=JSON.stringify(filters);
         const body=this.$.find('.af-summary-body');
-        this.$.find('.af-summary-drawer>p').text('按美西实际释放日期汇总，包含本期释放的跨月订单。库存按发货日期、SKU 和履约中心核对。');
+        this.$.find('.af-summary-drawer>p').text('点击列头复制。');
         if(this.orderSummary?.key===key){
             const current=this.orderSummary;
-            if(current.data)return this.renderOrderReconciliation(current.data);
+            if(current.data)return this.renderOrderSkuSummary(current.data);
             if(current.error){
                 this.$.find('.af-summary-count').text('加载失败');
                 body.html('<div class="af-empty">订单汇总读取失败。<button class="btn btn-default btn-xs" type="button" data-order-summary-retry>重试</button></div>');
                 return;
             }
         }
-        this.$.find('.af-summary-count').text('正在读取财务、发货和库存记录…');
-        body.html('<div class="af-empty" role="status">正在核对订单明细…</div>');
+        this.$.find('.af-summary-count').text('正在汇总订单…');
+        body.html('<div class="af-empty" role="status">正在读取财务明细…</div>');
         if(this.orderSummary?.key===key)return;
         const request=this.orderSummary={key};
         try{
             const response=await frappe.call({
                 method:'fengjing_app.fengjing_business.page.amazon_finance.amazon_finance.get_finance_dashboard_data',
-                args:{filters,order_reconciliation:1},
+                args:{filters,order_sku_summary:1},
             });
-            if(!Array.isArray(response.message?.products))throw new Error('订单汇总数据格式错误');
+            if(!Array.isArray(response.message?.rows))throw new Error('订单汇总数据格式错误');
             request.data=response.message;
         }catch(error){
             console.error('订单汇总加载失败',error);
@@ -504,125 +479,118 @@ class AmazonFinancePage {
     orderSummaryAmounts(entries,field){
         return entries.map(entry=>`<span>${this.esc(this.money(entry[field],entry.currency))}</span>`).join('')||'—';
     }
-    orderSummaryMoneyHeaders(feeColumns){
-        return `<th scope="col">销售额</th>${feeColumns.map(column=>
-            `<th scope="col" title="${this.esc(column.key)}">${this.esc(column.label)}</th>`).join('')}<th scope="col">净额</th>`;
+    orderSkuCopyButton(key,label,text=label){
+        const title=this.esc(`复制整列${label}`);
+        return `<button type="button" data-order-sku-copy="${this.esc(key)}" title="${title}">${this.esc(text)}</button>`;
     }
-    orderSummaryFeeAmount(entries,key){
-        return entries.filter(entry=>Object.hasOwn(entry.fees||{},key))
-            .map(entry=>`<span>${this.esc(this.money(entry.fees[key],entry.currency))}</span>`).join('')||'—';
+    orderSkuColumnAmount(entry,key){
+        const separator=key.indexOf(':');
+        if(separator<0)return entry[key]??0;
+        return entry[key.slice(0,separator)]?.[key.slice(separator+1)]??0;
     }
-    orderSummaryMoneyCells(entries,feeColumns){
-        const feeCells=feeColumns.map(column=>`<td>${this.orderSummaryFeeAmount(entries,column.key)}</td>`).join('');
-        return `<td>${this.orderSummaryAmounts(entries,'sales')}</td>${feeCells}<td>${this.orderSummaryAmounts(entries,'net')}</td>`;
-    }
-    orderSummaryStatus(entries){
-        const state=entries.some(entry=>entry.status==='difference')?'difference'
-            :entries.some(entry=>entry.status==='missing')?'missing':'matched';
-        const label={matched:'数量一致',missing:'待核对',difference:'数量有差异'}[state];
-        return `<span class="af-order-status ${state}">${label}</span>`;
-    }
-    orderSummaryCount(value){
-        return value==null?'<small>无记录</small>':`${this.num(value)} 件`;
-    }
-    orderSummaryCenter(entry){
-        const counts=[
-            ['库存分类账',entry.ledger,null],
-            ['已配送',entry.fulfilled,entry.selected_fulfilled],
-            ['已完成',entry.completed,entry.selected_completed],
-        ];
-        const shipments=lines=>lines.slice().sort((a,b)=>a.time.localeCompare(b.time))
-            .map(line=>`<span>${this.esc(line.time)} · ${this.num(line.quantity)} 件</span>`).join('')||'<small>无记录</small>';
-        const quantity=entry.orders.length>1
-            ?`当天关联 ${this.num(entry.orders.length)} 个订单，库存按仓库合计核对。`
-            :'库存分类账没有订单号，按仓库合计核对。';
-        return `<section class="af-order-center">
-            <header><b>${this.esc(entry.center||'履约中心缺失')}</b>
-                <span>${this.esc(entry.countries.map(country=>this.translate(country)).join(' / '))}</span>${this.orderSummaryStatus([entry])}</header>
-            <div class="af-order-center-counts">${counts.map(([label,value,selected])=>`
-                <div><span>${label} · 当天</span><b>${this.orderSummaryCount(value)}</b>
-                ${selected!=null&&selected!==value?`<small>筛选订单 ${this.num(selected)} 件</small>`:''}</div>`).join('')}</div>
-            <div class="af-order-table"><table><thead><tr><th>当前筛选订单</th><th>已配送 · 美西</th><th>已完成 · 美西</th></tr></thead>
-                <tbody>${entry.orders.map(order=>`<tr><td><button type="button" data-copy="${this.esc(order.id)}" title="复制订单号">${this.esc(order.id)}</button></td>
-                    <td>${shipments(order.fulfilled)}</td><td>${shipments(order.completed)}</td></tr>`).join('')}</tbody></table></div>
-            <small class="af-order-note">${quantity}</small>
-        </section>`;
-    }
-    orderSummaryDay(day){
-        const counts=['ledger','fulfilled','completed'].map(key=>day.centers.every(center=>center[key]!=null)
-            ?day.centers.reduce((total,center)=>total+center[key],0):null);
-        return `<details class="af-order-day"><summary>
-            <span class="af-order-day-title"><b>${this.esc(day.date)}</b>
-                <small>${this.num(day.centers.length)} 个履约中心${day.outside_finance_period?' · 跨财务期间':''}</small></span>
-            <span class="af-order-day-count"><small>库存出库</small><b>${this.orderSummaryCount(counts[0])}</b></span>
-            <span class="af-order-day-count"><small>已配送</small><b>${this.orderSummaryCount(counts[1])}</b></span>
-            <span class="af-order-day-count"><small>已完成</small><b>${this.orderSummaryCount(counts[2])}</b></span>
-            ${this.orderSummaryStatus(day.centers)}
-        </summary><div class="af-order-centers">${day.centers.map(center=>this.orderSummaryCenter(center)).join('')}</div></details>`;
-    }
-    orderSummaryProduct(product,feeColumns){
-        const items=product.items||[],first=items[0];
-        const unlinked=product.orders.filter(order=>!order.days.length).length;
-        const financial=`<details class="af-order-finance"><summary>财务订单明细 · ${this.num(product.orders.length)} 行
-            ${unlinked?`<small>${this.num(unlinked)} 行未找到关联发货</small>`:''}</summary>
-            <div class="af-order-table"><table><thead><tr><th>订单号</th><th>释放日期（美西）</th><th>数量</th>${this.orderSummaryMoneyHeaders(feeColumns)}<th>关联发货日</th></tr></thead>
-                <tbody>${product.orders.map(order=>`<tr>
-                    <td>${order.id?`<button type="button" data-copy="${this.esc(order.id)}" title="复制订单号">${this.esc(order.id)}</button>`:'—'}</td>
-                    <td>${this.esc(order.dates.join('、')||'—')}</td><td>${this.num(order.quantity)}</td>
-                    ${this.orderSummaryMoneyCells(order.amounts,feeColumns)}
-                    <td>${this.esc(order.days.join('、')||'未找到关联发货')}</td></tr>`).join('')}</tbody>
-                <tfoot><tr><th scope="row" colspan="2">SKU 小计</th><td>${this.num(product.quantity)}</td>
-                    ${this.orderSummaryMoneyCells(product.totals,feeColumns)}<td>—</td></tr></tfoot></table></div></details>`;
-        return `<details class="af-order-product"><summary>
-            ${first?.image?`<img src="${this.esc(this.image(first.image))}" alt="">`:''}
-            <span class="af-order-product-name"><b>${this.esc(product.sku||'无 SKU')}</b>
-                <small>${this.esc(first?.label||product.product_name||'')}</small></span>
-            <span class="af-order-product-quantity"><b>${this.num(product.quantity)} 件</b><small>${this.num(product.order_count)} 个订单</small></span>
-            <span class="af-order-product-net"><small>财务净额</small><b>${this.orderSummaryAmounts(product.totals,'net')}</b></span>
-        </summary><div class="af-order-product-body">
-            <div class="af-order-product-meta"><span>${this.esc(product.stores.join(' / '))}</span>
-                ${items.map(item=>`<a href="/app/item/${encodeURIComponent(item.name)}" target="_blank" rel="noopener noreferrer">${this.esc(item.name)}</a>`).join('')}</div>
-            ${financial}
-            ${product.days.map(day=>this.orderSummaryDay(day)).join('')
-            ||'<div class="af-empty">当前订单未找到对应发货记录</div>'}
-        </div></details>`;
-    }
-    orderSummarySkuRows(skus){
-        return skus.flatMap(entry=>{
-            const items=new Map((entry.items||[]).map(item=>[item.name,item]));
-            return (entry.price_lines||[]).map(line=>({
-                ...line,sku:entry.sku,productName:entry.product_name,item:items.get(line.item_id),
-            }));
+    orderSkuSummaryRows(data){
+        return data.rows.flatMap(group=>{
+            const items=new Map(group.items.map(item=>[item.name,item]));
+            return group.price_lines.map(line=>({...line,sku:group.sku,item:items.get(line.item_id)}));
         });
     }
-    orderSummarySkuColumns(feeColumns){
+    orderSkuDetails(row,data){
+        const accounts=data.fee_accounts?.[row.cost_center]||{};
         return [
-            {key:'cost_center',label:'成本中心',value:row=>row.cost_center},
-            {key:'item',label:'SKU / 物料',value:row=>row.item_id},
-            {key:'quantity',label:'数量',value:row=>row.quantity},
-            {key:'unit_price',label:'销售单价',value:row=>row.unit_price},
-            {key:'sales',label:'销售额',value:row=>row.sales},
-            {key:'shipping',label:'买家运费',value:row=>row.shipping},
-            ...feeColumns.map(({key,label})=>({key:`fee:${key}`,label,value:row=>row.fees[key]??0})),
-            {key:'net',label:'净额',value:row=>row.net},
-            {key:'description',label:'说明',value:()=>'亚马逊销售订单'},
-        ];
+            ...Object.entries(row.fees).map(([key,amount])=>[`fees:${key}`,data.fee_labels[key]||key,amount]),
+            ['shipping','配送收入',row.shipping],
+            ...Object.entries(row.adjustments).map(([key,amount])=>[`adjustments:${key}`,data.adjustment_labels[key]||key,amount]),
+        ].filter(([, ,amount])=>amount).map(([key,label,amount])=>[key,label,amount,accounts[key]||'']);
     }
     copyOrderSkuColumn(key){
         const data=this.orderSummary?.data;
-        if(this.detailGroup!=='order'||!data)return;
-        const column=this.orderSummarySkuColumns(data.fee_columns||[]).find(entry=>entry.key===key);
-        if(!column)return;
-        const values=this.orderSummarySkuRows(data.sku_summary||[]).map(row=>{
-            const value=column.value(row);
-            if(value==null)return '';
-            return typeof value==='number'&&key!=='quantity'?value.toFixed(2):String(value);
+        if(this.detailGroup!=='order'||!data?.rows?.length||this.orderSummary.key!==JSON.stringify(this.filters()))return;
+        const labels={cost_center:'成本中心',detail_cost_center:'明细成本中心',item_id:'物料 ID',
+            detail_item_id:'明细物料 ID',quantity:'数量',unit_price:'单价',sales:'销售额',shipping:'配送收入',
+            charge_type:'税费类型',fee_account:'费用科目',detail_amount:'费用',details:'明细',net:'净额'};
+        const separator=key.indexOf(':');
+        const group=key.slice(0,separator),name=key.slice(separator+1);
+        const label=separator<0?labels[key]:(group==='fees'?data.fee_labels:data.adjustment_labels)?.[name]||name;
+        const rows=this.orderSkuSummaryRows(data);
+        const multipleCurrencies=new Set(rows.map(row=>row.currency)).size>1;
+        const formatAmount=(row,amount)=>{
+            const value=Number(amount).toFixed(2);
+            return multipleCurrencies?`${row.currency} ${value}`:value;
+        };
+        const values=rows.flatMap(row=>{
+            if(['charge_type','fee_account','detail_amount','detail_item_id','detail_cost_center','details'].includes(key)){
+                return this.orderSkuDetails(row,data).map(([,name,amount,account])=>{
+                    if(key==='charge_type')return 'Actual';
+                    if(key==='fee_account')return account;
+                    if(key==='detail_item_id')return row.item_id;
+                    if(key==='detail_cost_center')return row.cost_center;
+                    if(key==='details')return name.replace(/[;；]/g,'，');
+                    return formatAmount(row,amount);
+                });
+            }
+            if(['cost_center','item_id','quantity'].includes(key))return String(row[key]??'');
+            if(key==='unit_price'&&row.unit_price==null)return '';
+            return formatAmount(row,this.orderSkuColumnAmount(row,key));
         });
         if(!values.length)return;
-        frappe.utils.copy_to_clipboard(values.join(key==='description'?';':'\n'));
-        frappe.show_alert({message:`已复制${column.label} · ${values.length} 行`,indicator:'green'});
+        frappe.utils.copy_to_clipboard(values.join(key==='details'?';':'\n'));
+        frappe.show_alert({message:`已复制${label} · ${values.length} 行`,indicator:'green'});
     }
-    summarySkuItem(row){
+    renderOrderSkuTotals(lines){
+        let quantity=0;
+        const amounts=new Map();
+        const cents=value=>Math.round(Number(value)*100);
+        for(const line of lines){
+            quantity+=line.quantity;
+            const total=amounts.get(line.currency)||{sales:0,fees:0,net:0};
+            total.sales+=cents(line.sales);
+            total.fees+=Object.values(line.fees).reduce((sum,fee)=>sum+cents(fee),0);
+            total.net+=cents(line.net);
+            amounts.set(line.currency,total);
+        }
+        const currencies=[...amounts].sort(([left],[right])=>left.localeCompare(right));
+        const totals=key=>currencies.map(([currency,total])=>`<strong>${this.esc(this.money(total[key]/100,currency))}</strong>`).join('')||'<strong>—</strong>';
+        return `<div class="af-summary-totals af-order-sku-totals" aria-label="订单汇总合计">
+            <article><span>总数量</span><strong>${this.num(quantity)} 件</strong></article>
+            <article><span>总销售额</span>${totals('sales')}</article>
+            <article><span title="佣金、FBA 履约费、运费扣回等平台费用">总费用</span>${totals('fees')}</article>
+            <article><span>总净额</span>${totals('net')}</article>
+        </div>`;
+    }
+    renderOrderSkuSummary(data){
+        const lines=this.orderSkuSummaryRows(data);
+        this.$.find('.af-summary-count').text(`${this.num(data.rows.length)} 个 SKU · ${this.num(lines.length)} 行`);
+        const columns=[['cost_center','成本中心'],['item_id','SKU / 物料','物料 ID'],['quantity','数量'],
+            ['unit_price','单价'],['sales','销售额'],['detail_cost_center','成本中心','明细成本中心'],
+            ['detail_item_id','物料','明细物料 ID'],['charge_type','税费类型'],['fee_account','费用科目'],
+            ['detail_amount','费用'],['details','明细'],['net','净额']];
+        const headers=columns.map(([key,label,copyLabel])=>
+            `<th scope="col">${this.orderSkuCopyButton(key,copyLabel||label,label)}</th>`).join('');
+        const rows=lines.map(row=>{
+            const money=key=>this.esc(this.money(this.orderSkuColumnAmount(row,key),row.currency));
+            const details=this.orderSkuDetails(row,data);
+            const span=Math.max(1,details.length);
+            const costCenter=this.esc(row.cost_center||'—');
+            const itemId=this.esc(row.item_id||'—');
+            const [first,...rest]=details.map(([key,label,amount,account])=>
+                `<td class="af-order-sku-cost-center">${costCenter}</td><td>${itemId}</td><td>实际</td>
+                <td class="af-order-sku-fee-account">${this.esc(account||'—')}</td>
+                <td>${this.esc(this.money(amount,row.currency))}</td><td>${this.orderSkuCopyButton(key,label)}</td>`);
+            return `<tbody><tr><td rowspan="${span}" class="af-order-sku-cost-center">${costCenter}</td>
+                <th scope="rowgroup" rowspan="${span}">${this.summarySkuItem(row,'拆分行')}</th>
+                <td rowspan="${span}">${this.num(row.quantity)}</td>
+                <td rowspan="${span}">${row.unit_price==null?'—':money('unit_price')}</td><td rowspan="${span}">${money('sales')}</td>
+                ${first||'<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>'}<td rowspan="${span}">${money('net')}</td></tr>
+                ${rest.map(cells=>`<tr>${cells}</tr>`).join('')}</tbody>`;
+        }).join('');
+        this.$.find('.af-summary-body').html(`
+            ${data.truncated?'<p class="af-summary-balance is-mismatched">财务记录达到查询上限，请缩小日期范围。</p>':''}
+            ${this.renderOrderSkuTotals(lines)}
+            ${lines.length?`<div class="af-order-table af-order-sku-grid"><table aria-label="订单汇总明细">
+                <thead><tr>${headers}</tr></thead>${rows}</table></div>`:
+                '<div class="af-empty">当前范围内没有订单</div>'}`);
+    }
+    summarySkuItem(row,adjustmentLabel='调整行'){
         const image=row.item?.image||row.item_image;
         const name=row.item_id?`<a href="/app/item/${encodeURIComponent(row.item_id)}" target="_blank"
             rel="noopener noreferrer">${this.esc(row.item?.label||row.item_name||row.item_id)}</a>`
@@ -630,55 +598,9 @@ class AmazonFinancePage {
         return `<div class="af-order-sku-item">
             ${image?`<img src="${this.esc(this.image(image))}" alt="" loading="lazy">`:''}
             <div><b>${this.esc(row.sku||'无 SKU')}</b>
-            ${row.adjustment?'<span class="af-order-sku-adjustment">调整行</span>':''}
+            ${row.adjustment?`<span class="af-order-sku-adjustment">${this.esc(adjustmentLabel)}</span>`:''}
             ${name}</div>
         </div>`;
-    }
-    orderSummarySkuTable(skus,feeColumns){
-        const rows=this.orderSummarySkuRows(skus);
-        const heading=`<summary>SKU 财务汇总 · 本期已释放 · ${this.num(skus.length)} 个 SKU</summary>`;
-        if(!rows.length){
-            return `<details class="af-order-finance af-order-sku-summary">${heading}<div class="af-empty">该组暂无记录</div></details>`;
-        }
-        const columns=this.orderSummarySkuColumns(feeColumns);
-        return `<details class="af-order-finance af-order-sku-summary">
-            ${heading}
-            <div class="af-order-table"><table>
-                <thead><tr>${columns.map(column=>{
-                    const label=this.esc(column.label);
-                    const title=column.key==='item'?'复制整列物料 ID':`复制整列${label}`;
-                    return `<th scope="col"><button type="button" class="af-order-copy-head" data-order-sku-copy="${this.esc(column.key)}"
-                        title="${title}" aria-label="${title}">${label} <span aria-hidden="true">⧉</span></button></th>`;
-                }).join('')}</tr></thead>
-                <tbody>${rows.map(row=>`<tr><td><div class="af-order-sku-cost-center">${this.esc(row.cost_center||'—')}</div></td>
-                    <th scope="row">${this.summarySkuItem(row)}</th>${columns.slice(2).map(column=>{
-                        const value=column.value(row);
-                        if(column.key==='description'){
-                            return `<td><div class="af-order-sku-note">${this.esc(value)}</div></td>`;
-                        }
-                        const display=value==null?'—':column.key==='quantity'?this.num(value):this.money(value,row.currency);
-                        return `<td>${this.esc(display)}</td>`;
-                    }).join('')}</tr>`).join('')}</tbody>
-            </table></div>
-        </details>`;
-    }
-    renderOrderReconciliation(data){
-        const metrics=[['已释放订单',data.order_count],['履约中心分组一致',data.matched_count],['数量有差异',data.difference_count],['分组待核对',data.missing_count]];
-        const unlinked=data.products.reduce((count,product)=>count+product.orders.filter(order=>!order.days.length).length,0);
-        const unlinkedLabel=unlinked?` · ${this.num(unlinked)} 条订单商品未关联发货`:'';
-        this.$.find('.af-summary-count').text(`${this.num(data.products.length)} 个 SKU 分组 · ${this.num(data.finance_rows)} 条财务记录 · ${this.num(data.center_count)} 个日期和履约中心分组${unlinkedLabel}`);
-        const feeColumns=data.fee_columns||[];
-        this.$.find('.af-summary-body').html(`
-            <div class="af-order-metrics">${metrics.map(([label,value])=>`<div><b>${this.num(value)}</b><span>${label}</span></div>`).join('')}</div>
-            ${data.truncated?'<div class="af-summary-balance is-mismatched">财务记录达到查询上限，请缩小日期范围后重新核对。</div>':''}
-            <nav class="af-order-sources" aria-label="原始报告">
-                <a href="/app/amazon-ledger" target="_blank" rel="noopener noreferrer">库存分类账 ↗</a>
-                <a href="/app/amazon_fba_shipment_analysis" target="_blank" rel="noopener noreferrer">FBA 已配送货件 ↗</a>
-                <a href="/app/amazon_fba_customer_sales_analysis" target="_blank" rel="noopener noreferrer">FBA 已完成订单销售 ↗</a>
-            </nav>
-            ${this.orderSummarySkuTable(data.sku_summary||[],feeColumns)}
-            ${data.products.map(product=>this.orderSummaryProduct(product,feeColumns)).join('')
-            ||'<div class="af-empty">所选日期内没有符合筛选的订单财务交易</div>'}`);
     }
     async loadReturnCard(){
         const requestId=this.returnRequestId=(this.returnRequestId||0)+1;
@@ -758,20 +680,22 @@ class AmazonFinancePage {
         this.$.find('.af-return-pages').html(`<span>第 ${pagination.page||1} / ${pagination.pages||1} 页</span><button type="button" data-return-page="${(pagination.page||1)-1}" ${(pagination.page||1)<=1?'disabled':''}>上一页</button><button type="button" data-return-page="${(pagination.page||1)+1}" ${(pagination.page||1)>=(pagination.pages||1)?'disabled':''}>下一页</button>`);
     }
     renderTable(){
-        this.renderShipmentMonthButtons();
         const p=this.data.pagination||{};
         const pending=this.transactionPeriod==='pending';
         const refundOnly=this.detailGroup==='refund';
         const orderOnly=this.detailGroup==='order';
-        this.$.find('.af-summary-toggle').prop('disabled',!this.detailGroup).attr('title',orderOnly&&!pending?'查看当前范围内的已释放订单汇总':this.detailGroup?'汇总当前分类':'请先选择一个交易分类');
-        const columns=['店铺 / 站点','交易 / 订单','交易内容'];
-        if(this.detailGroup==='logistics')columns.push('关联物料');
-        const amounts=this.detailGroup==='removal'?['清算回收额','清算处理费','清算佣金','净额']:['净额','费用'];
-        if(this.detailGroup==='funds')amounts.push('汇出金额','汇出日期（北京时间）');
-        const time=pending?'原交易时间（美国太平洋）':orderOnly||refundOnly?'释放时间（美国太平洋）':'释放 / 入账时间（美国太平洋）';
-        columns.push('类型 / 状态',...amounts,time,'物料 / 费用归属','币种','销售额','结算ID');
+        this.$.find('.af-table-wrap').toggleClass('af-orders-table',orderOnly);
+        this.$.find('.af-summary-toggle').prop('disabled',!this.detailGroup).attr('title',this.detailGroup?'汇总当前分类':'请先选择一个交易分类');
+        let columns=['订单','交易内容','物料','商品销售额','配送收入','费用','调整明细','净额','释放金额','释放时间','财务时间'];
+        if(!orderOnly){
+            columns=['店铺 / 站点','交易 / 订单','交易内容'];
+            if(this.detailGroup==='logistics')columns.push('关联物料');
+            const amounts=this.detailGroup==='removal'?['清算回收额','清算处理费','清算佣金','净额']:['净额','费用'];
+            if(this.detailGroup==='funds')amounts.push('汇出金额','汇出日期（北京时间）');
+            columns.push('类型 / 状态',...amounts,'财务时间（美西）','物料 / 费用归属','币种','销售额','结算ID');
+        }
         this.$.find('.af-table-wrap > table > thead').html(`<tr>${columns.map(label=>`<th scope="col"${label==='关联物料'?' class="af-manual-items-head"':''}>${label}</th>`).join('')}</tr>`);
-        this.$.find('.af-detail-tabs').html((this.data.detail_groups||[]).map(group=>`<button type="button" class="af-detail-tab ${group.key===this.detailGroup?'active':''}" data-detail-group="${this.esc(group.key)}"><span>${this.esc(group.label)}</span><b>${this.num(group.count)}</b></button>`).join(''));
+        this.$.find('.af-detail-tabs').html((this.data.detail_groups||[]).filter(group=>group.key).map(group=>`<button type="button" class="af-detail-tab ${group.key===this.detailGroup?'active':''}" data-detail-group="${this.esc(group.key)}"><span>${this.esc(group.label)}</span><b>${this.num(group.count)}</b></button>`).join(''));
         const releaseCount=(this.data.rows||[]).reduce((count,row)=>count+(row.related_releases||[]).length,0);
         const itemCount=refundOnly?0:(this.data.rows||[]).reduce((count,row)=>count+(row.item_lines||[]).length,0);
         const awdCount=refundOnly?0:(this.data.rows||[]).reduce((count,row)=>count+(row.awd_fee_details||[]).length,0);
@@ -783,41 +707,47 @@ class AmazonFinancePage {
         const count=pending
             ?`共 ${pendingCount} · ${pageLabel}`
             :orderOnly
-            ?`共 ${this.num(orderTotals.orders)} 笔已释放订单 · ${this.num(orderTotals.units)} 件商品 · ${this.num(p.display_total??p.total)} 条商品明细 · ${pageLabel}`
-            :refundOnly?`共 ${this.num(p.total)} 条已释放退款 · ${pageLabel}`
+            ?`共 ${this.num(orderTotals.orders)} 笔订单 · ${this.num(orderTotals.units)} 件商品 · ${pageLabel}`
+            :refundOnly?`共 ${this.num(p.total)} 条退款 · ${pageLabel}`
                 :`共 ${this.num(p.display_total??p.total)} 条交易明细（${this.num(p.total)} 组）· 当前页展开 ${this.num(itemCount)} 条商品明细、${this.num(releaseCount)} 条释放记录、${this.num(awdCount)} 条 AWD 费用明细 · ${pageLabel}`;
         this.$.find('.af-table-count').text(count);
         this.$.find('.af-pages').html(`<button class="btn btn-xs" data-page="${p.page-1}" ${p.page<=1?'disabled':''}>上一页</button><button class="btn btn-xs" data-page="${p.page+1}" ${p.page>=p.pages?'disabled':''}>下一页</button>`);
-        this.$.find('.af-table-wrap > table > tbody').html((this.data.rows||[]).flatMap(r=>[
+        this.$.find('.af-table-wrap > table > tbody').html((this.data.rows||[]).flatMap(r=>orderOnly?this.transactionRow(r):[
             this.transactionRow(r),
             ...(refundOnly?[]:(r.item_lines||[]).map(line=>this.transactionRow(r,false,r.name,line))),
             ...(refundOnly?[]:(r.awd_fee_details||[]).map(detail=>this.awdFeeRow(r,detail))),
             ...(r.related_releases||[]).map(child=>this.transactionRow(child,true,r.name)),
-        ]).join('')||`<tr><td colspan="${columns.length}" class="af-empty">${pending?'当前筛选下没有未释放交易':orderOnly?'当前范围内没有已释放订单':refundOnly?'当前范围内没有已释放退款':'暂无交易'}</td></tr>`)
+        ]).join('')||`<tr><td colspan="${columns.length}" class="af-empty">${pending?'当前筛选下没有未释放交易':orderOnly?'当前范围内没有订单':refundOnly?'当前范围内没有退款':'暂无交易'}</td></tr>`)
     }
     transactionTime(row,isRelease){
+        if(!isRelease&&row.cutoff_activity_date){
+            return `${this.esc(this.date(row.original_transaction_date||row.cutoff_activity_date))}<small>${this.esc(row.original_report_timezone||'')}</small>`;
+        }
         const label=isRelease?'释放时间 · ':'';
         const original=!isRelease&&row.original_transaction_date
             ?`<small>${this.detailGroup==='refund'?'退款发生':'原交易'} · ${this.esc(this.date(row.original_transaction_date))}</small>`:'';
-        const maturity=this.transactionPeriod==='pending'&&row.report_maturity_date
+        const maturity=this.detailGroup!=='order'&&this.transactionPeriod==='pending'&&row.report_maturity_date
             ?`<small>预计释放 · ${this.esc(this.date(row.report_maturity_date))}</small>`:'';
         return `${this.esc(this.date(row.report_posted_date||row.posted_date))}<small>${label}${this.esc(row.report_timezone||'')}</small>${original}${maturity}`;
     }
     transactionRow(r,isRelease=false,parentName='',itemLine=null){
             const isItem=Boolean(itemLine);
+            const orderOnly=this.detailGroup==='order';
             const detail=itemLine||r;
-            const fees=detail.display_fees??((detail.selling_fees||0)+(detail.fba_fees||0)+(detail.other_transaction_fees||0));
+            const orderAmounts=r.order_amounts;
+            const fees=orderOnly&&orderAmounts?orderAmounts.fees.reduce((total,fee)=>total+fee.amount,0)
+                :detail.display_fees??((detail.selling_fees||0)+(detail.fba_fees||0)+(detail.other_transaction_fees||0));
             const net=isItem?detail.net_amount:(r.display_net_amount??r.net_amount);
             const product=Boolean(r.is_product);
-            const releases=r.related_releases||[];
+            const releases=orderOnly?[]:(r.related_releases||[]);
             const refundOnly=this.detailGroup==='refund'&&!isRelease;
-            const itemLines=refundOnly?[]:(r.item_lines||[]);
-            const awdDetails=refundOnly?[]:(r.awd_fee_details||[]);
+            const itemLines=refundOnly||orderOnly?[]:(r.item_lines||[]);
+            const awdDetails=refundOnly||orderOnly?[]:(r.awd_fee_details||[]);
             const collapsed=this.collapsedGroups.has(r.name);
             const toggle=!isRelease&&!isItem&&(itemLines.length||releases.length||awdDetails.length)?`<button type="button" class="af-release-toggle" data-release-toggle="${this.esc(r.name)}" aria-expanded="${!collapsed}" title="${collapsed?'展开':'收起'}关联明细">${collapsed?'▸':'▾'}</button>`:'';
             const relation=isItem?`<span class="af-item-label">↳ 商品明细 ${this.num(detail.line_no)}/${this.num(detail.line_count)}</span>`:isRelease?`<span class="af-release-label">↳ 资金释放${r.context_only?' · 范围外':''}</span>`:itemLines.length||releases.length||awdDetails.length?`<span class="af-parent-label">原交易${itemLines.length?` · ${this.num(itemLines.length)} 条商品`:''}${awdDetails.length?` · ${this.num(awdDetails.length)} 条 AWD 明细`:''}${releases.length?` · ${this.num(releases.length)} 条释放`:''}</span>`:'';
             const content=product
-                ? `<div class="af-table-product"><img src="${this.image(r.item_image)}"><span><b>${this.esc((isItem&&detail.description)||r.product_name||r.sku||'未命名商品')}</b><small>${this.esc(detail.asin||r.asin||'无ASIN')} · ${r.transaction_type==='RemovalShipment'?'FNSKU ':''}${this.esc(detail.sku||r.sku||'无SKU')}${isItem?` · 数量 ${this.num(detail.quantity)}`:''}</small></span></div>`
+                ? `<div class="af-table-product"><img src="${this.image(r.item_image)}"><span><b>${this.esc((isItem&&detail.description)||r.product_name||r.sku||'未命名商品')}</b><small>${this.esc(detail.asin||r.asin||'无ASIN')} · ${r.transaction_type==='RemovalShipment'?'FNSKU ':''}${this.esc(detail.sku||r.sku||'无SKU')}${isItem||orderOnly?` · 数量 ${this.num(detail.quantity)}`:''}</small></span></div>`
                 : `<div class="af-fee-content"><span class="af-fee-icon">${this.feeIcon(r.description,r.transaction_type)}</span><span><b>${this.esc(this.translate(r.description||r.transaction_type||'店铺级费用'))}</b><small>${this.esc(this.translate(r.transaction_type||'未分类'))} · 不对应具体SKU</small></span></div>`;
             const assignment=product
                 ? (r.corresponding_item?`<a href="/app/item/${encodeURIComponent(r.corresponding_item)}">${this.esc(r.item_name||r.corresponding_item)}</a><small class="af-scope-tag product">商品级交易</small>`:`<button class="btn btn-xs btn-primary af-bind" ${this.bindData(r)}>绑定物料</button><small class="af-scope-tag product">商品级交易</small>`)
@@ -828,30 +758,35 @@ class AmazonFinancePage {
             const rowClass=isItem?'af-item-child':isRelease?'af-release-child':`${product?'af-product-row':'af-fee-row'}${this.detailGroup==='refund'?' af-refund-parent':''}`;
             const groupAttr=(isItem||isRelease)?` data-release-parent="${this.esc(parentName)}"${this.collapsedGroups.has(parentName)?' hidden':''}`:'';
             const taxNote=isItem&&((detail.product_sales_tax||0)||(detail.marketplace_withheld_tax||0))?`<small>销售税 ${this.money(detail.product_sales_tax,r.currency_code)} · 平台代扣税 ${this.money(detail.marketplace_withheld_tax,r.currency_code)}</small>`:'';
-            const feeComponents=isItem?detail:(r.display_fee_categories||r);
             const refundFeeLabels={Commission:'退回销售佣金',RefundCommission:'退款管理费',
-                selling_fees:'销售费',fba_fees:'FBA履约费',other_transaction_fees:'其他交易费'};
+                selling_fees:'销售费',fba_fees:'FBA履约费',other_transaction_fees:'平台费用（源数据未列名称）'};
             const feesByType=refundOnly
                 ?Object.entries(r.refund_fee_details||{}).map(([type,amount])=>[refundFeeLabels[type]||this.translate(type),amount])
-                :this.detailGroup==='order'&&!isRelease
-                    ?[['佣金',feeComponents.selling_fees],['FBA履约费',feeComponents.fba_fees],['其他交易费',feeComponents.other_transaction_fees]]
-                    :[];
+                :(orderAmounts?.fees||[]).map(({label,amount})=>[label,amount]);
             const feeDetails=feesByType.filter(([,amount])=>Math.abs(Number(amount||0))>=0.005)
                 .map(([label,amount])=>`<small>${this.esc(label)} ${this.money(amount,r.currency_code)}</small>`).join('');
             const parentRow=!isItem&&!isRelease;
+            const statusLabel=this.translate(r.transaction_status||'');
             const transactionDate=this.date(r.original_transaction_date);
             const crossPeriodTag=parentRow&&r.detail_group==='order'&&r.finance_outside_period
                 ?`<span class="af-shipment-month finance" title="原交易日期 ${this.esc(transactionDate)}">${this.esc(transactionDate.slice(0,7))} 原交易</span>`
                 :'';
-            const shipmentTags=parentRow
-                ?[
-                    ...(r.shipment_dates||[]).filter(date=>/^\d{4}-\d{2}-\d{2}$/.test(date)).map(date=>`<span class="af-shipment-month" title="数据来自亚马逊FBA已配送货件分析 · 美国太平洋时间 ${this.esc(date)}">${Number(date.slice(5,7))}月${Number(date.slice(8,10))}日已配送</span>`),
-                    ...(r.completed_dates||[]).filter(date=>/^\d{4}-\d{2}-\d{2}$/.test(date)).map(date=>`<span class="af-shipment-month completed" title="数据来自亚马逊FBA已完成订单销售分析 · 美国太平洋时间 ${this.esc(date)}">${Number(date.slice(5,7))}月${Number(date.slice(8,10))}日已完成</span>`),
-                    crossPeriodTag,
-                ].join('')
-                :'';
             const netCell=`<td class="num ${net>=0?'positive':'negative'}">${this.money(net,r.currency_code)}${isRelease?'<small>资金流转，不重复计入汇总</small>':isItem?'<small>已计入原交易，不重复汇总</small>':''}${taxNote}</td>`;
             const feeCell=`<td class="num ${fees<0?'negative':''}">${isRelease?'—':this.money(fees,r.currency_code)}${feeDetails}</td>`;
+            if(orderOnly){
+                const order=this.esc(r.amazon_order_id||'');
+                const orderId=order?`<button type="button" data-copy="${order}">${order}</button>`:'—';
+                const releaseAmounts=new Map(),releaseTimes=new Set();
+                for(const release of r.order_releases||[]){
+                    releaseAmounts.set(release.currency,(releaseAmounts.get(release.currency)||0)+release.amount);
+                    releaseTimes.add(`${this.date(release.time)} ${release.timezone||''}`.trim());
+                }
+                const released=[...releaseAmounts].map(([currency,amount])=>this.esc(this.money(amount,currency))).join('<br>')||'—';
+                const releasedAt=[...releaseTimes].map(time=>this.esc(time)).join('<br>')||'—';
+                const adjustments=(orderAmounts?.adjustments||[]).map(({label,amount})=>`<small>${this.esc(label)} ${this.money(amount,r.currency_code)}</small>`).join('')||'—';
+                const shipping=orderAmounts?.shipping??r.shipping_credits;
+                return `<tr class="${rowClass}"><td><div class="af-transaction-id">${orderId}</div></td><td>${content}</td><td>${assignment}</td><td class="num">${this.money(orderAmounts?.sales??detail.product_sales,r.currency_code)}</td><td class="num">${shipping?this.money(shipping,r.currency_code):'—'}</td>${feeCell}<td class="num">${adjustments}</td>${netCell}<td class="num">${released}</td><td>${releasedAt}</td><td>${this.transactionTime(r,false)}</td></tr>`;
+            }
             const liquidation=detail.liquidation||{};
             const amountCells=this.detailGroup==='removal'
                 ?[liquidation.gross_recovery,liquidation.processing_fee,liquidation.referral_fee]
@@ -860,7 +795,7 @@ class AmazonFinancePage {
             const disbursement=!isRelease&&!isItem?r.disbursement:null;
             const fundsCells=this.detailGroup==='funds'
                 ?`<td class="num af-disbursement-value">${disbursement?.amount==null?'—':this.esc(this.money(disbursement.amount,disbursement.currency))}</td><td class="af-disbursement-value">${this.esc(disbursement?.date||'—')}</td>`:'';
-            return `<tr class="${rowClass}"${groupAttr}><td><b>${this.esc(r.store||'—')}</b><small>${this.esc(this.translate(r.country||''))} · ${this.esc(this.translate(r.marketplace_id||''))}</small></td><td><div class="af-transaction-id">${toggle}${relation}<button data-copy="${this.esc(r.transaction_id||'')}">${this.esc(r.transaction_id||'—')}</button></div><small>${this.esc(r.amazon_order_id||'无订单号')}</small>${shipmentTags?`<div class="af-shipment-months">${shipmentTags}</div>`:''}</td><td>${content}</td>${manualCell}<td><b>${this.esc(this.translate(r.transaction_type||'未分类'))}</b><small>${this.esc(this.translate(r.transaction_status||''))}</small></td>${amountCells}${fundsCells}<td>${this.transactionTime(r,isRelease)}</td><td>${assignment}</td><td>${this.esc(r.currency_code||'—')}</td><td class="num">${isRelease?'—':this.money(detail.product_sales,r.currency_code)}</td><td>${this.esc(r.settlement_id||'—')}</td></tr>`;
+            return `<tr class="${rowClass}"${groupAttr}><td><b>${this.esc(r.store||'—')}</b><small>${this.esc(this.translate(r.country||''))} · ${this.esc(this.translate(r.marketplace_id||''))}</small></td><td><div class="af-transaction-id">${toggle}${relation}<button data-copy="${this.esc(r.transaction_id||'')}">${this.esc(r.transaction_id||'—')}</button></div><small>${this.esc(r.amazon_order_id||'无订单号')}</small>${crossPeriodTag?`<div class="af-shipment-months">${crossPeriodTag}</div>`:''}</td><td>${content}</td>${manualCell}<td><b>${this.esc(this.translate(r.transaction_type||'未分类'))}</b><small>${this.esc(statusLabel)}</small></td>${amountCells}${fundsCells}<td>${this.transactionTime(r,isRelease)}</td><td>${assignment}</td><td>${this.esc(r.currency_code||'—')}</td><td class="num">${isRelease?'—':this.money(detail.product_sales,r.currency_code)}</td><td>${this.esc(r.settlement_id||'—')}</td></tr>`;
     }
     manualItemsCell(row,hide=false,childKey='',childItems){
         if(hide)return '<td class="af-manual-items-column"></td>';
