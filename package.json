@@ -7,7 +7,7 @@
   "dependencies": {
     "@antv/x6": "^3.1.8",
     "@excalidraw/excalidraw": "^0.18.1",
-    "@svar-ui/react-kanban": "^2.6.0",
+    "@svar-ui/react-kanban": "^2.7.0",
     "bootstrap-icons": "^1.13.2",
     "d3-force": "^3.0.1",
     "echarts": "^6.1.0",

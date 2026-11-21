@@ -21,9 +21,9 @@
     utility-types "^3.10.0"
 
 "@babel/runtime@^7.13.10":
-  version "7.29.14"
-  resolved "https://registry.npmmirror.com/@babel/runtime/-/runtime-7.29.14.tgz#9ad0cc2addbbc8c46adaec9e90b21bb76d42b483"
-  integrity sha512-Y5tqevQaUAZhhj82BpYMNC1ssvLQTVAfwKdm8iy8qwmhvC2/CpcAu8OC+QEtjM7pMk7knx83u1Qj8gzkicyelw==
+  version "7.29.15"
+  resolved "https://registry.npmmirror.com/@babel/runtime/-/runtime-7.29.15.tgz#fd047349f32c2e89c28527e023af277e3dc747b6"
+  integrity sha512-304gsbbGVmQc+cNGHzwHBlqepYdWLKj3VXCQBGt/EGcV7PUPfKI7kAUNW1FZEOCwlQiLvQjg1JEaAlRQ616h+Q==
 
 "@braintree/sanitize-url@6.0.2":
   version "6.0.2"
@@ -488,69 +488,56 @@
   resolved "https://registry.npmmirror.com/@radix-ui/rect/-/rect-1.1.0.tgz#f817d1d3265ac5415dadc67edab30ae196696438"
   integrity sha512-A9+lCBZoaMJlVKcRBz2YByCG+Cp2t6nAnMnNba+XiWxnj6r4JUFqfsgwocMBZU9LPtdxC6wB56ySYpc7LQIoJg==
 
-"@svar-ui/comments-locales@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/comments-locales/-/comments-locales-2.6.0.tgz#b73ba5aa6eb8e81f222bafd9b04065f43a2f88e5"
-  integrity sha512-ctpmaE0BN2sXRc9MuCMzIut/2Piudnsxno7RoadJ8uIe3bZGRRSZfDW+kJ5pWgYmgdofLlWawTr3PCNjxt7R3w==
+"@svar-ui/core-locales@2.6.1":
+  version "2.6.1"
+  resolved "https://registry.npmmirror.com/@svar-ui/core-locales/-/core-locales-2.6.1.tgz#a7c8cacb6a2b22d7a1faf0cd28dfbd0d6eddce28"
+  integrity sha512-18xu7qn8Bxwi2EHguVV3Xya5kS+A+6Gnuo2wl55dofp9y948iZ5z7HIRh1+Mj1BgzbdVt6+B04JOCDMLJXyjtg==
 
-"@svar-ui/core-locales@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/core-locales/-/core-locales-2.6.0.tgz#fb7467d45cf47baadb990e3a91498d0e62d36533"
-  integrity sha512-Sma/BkR3we76Ix/67NmSh511yvtKVpi8LFK06ZbWSiC3xEsCSoKsJ5AtLmi8dxaXPa5HuCWI/jMwJsKRwQ0F2Q==
+"@svar-ui/editor-locales@2.7.0":
+  version "2.7.0"
+  resolved "https://registry.npmmirror.com/@svar-ui/editor-locales/-/editor-locales-2.7.0.tgz#cb9cd63c70f31eea484c088d000e8fc732d3ab39"
+  integrity sha512-Bp3yK6zoUC21ejfbzPclWJylICHrXVhvy/ebXrOJ3rvhEvX1C1lmqe/1rEXqZi4ETUY7/q5AoLRjLgDiTTrw7Q==
 
-"@svar-ui/editor-locales@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/editor-locales/-/editor-locales-2.6.0.tgz#df21d55c7aa651ff3d958fbfeddefd3bde1e03d5"
-  integrity sha512-xgLLHMi1rvIor+X9u3JChNEkjztZZxpwfpsUocUBIZ07jKqu+h0a/4Vqyue9ZMq3gIq2oyo+HP5Q9Ydb44CrqQ==
+"@svar-ui/excel-import-locales@2.7.0":
+  version "2.7.0"
+  resolved "https://registry.npmmirror.com/@svar-ui/excel-import-locales/-/excel-import-locales-2.7.0.tgz#8d48dbda0381ee4ae7e46626b3efe4615fddcf59"
+  integrity sha512-ERiTet5cS+ZYIxYPAjJzqIZHO1L6fGIPUUoRj9JoXk0vdWymFgyGJIpAk6kFxaTp62Ta9rXJ8KgvRpoSbw07fg==
 
-"@svar-ui/excel-import-locales@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/excel-import-locales/-/excel-import-locales-2.6.0.tgz#60d20712d71d9273105b524bd03a63cbf289e346"
-  integrity sha512-zFc0N3KAiB2taAcHy28ELpSuSMUmhBm9roByY0zeRJrbcpes/T2eqyYod+QAxub2lDv0So79/OGCVF0Pm1WyDw==
-
-"@svar-ui/excel-import-store@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/excel-import-store/-/excel-import-store-2.6.0.tgz#f3a90d71bcab5948e4099607e3f63b73ce358611"
-  integrity sha512-ftmZs2wyrc/Rytn8TirEI0ny7rrf6hQqxlYcDsHNyJ3quJrSNgnYyEWGEt4deXiDcBTcZFN4IEydCH03Tf03Jg==
+"@svar-ui/excel-import-store@2.7.0":
+  version "2.7.0"
+  resolved "https://registry.npmmirror.com/@svar-ui/excel-import-store/-/excel-import-store-2.7.0.tgz#0f9fbc9b5bc30c9a16419a4f331f3704378af4ae"
+  integrity sha512-0I0IbOxoICvW9Kp7gYEQ4piMzbzZ+ehaBTxb7E5/mvxaOT+vo7yxyxDpBkYMBRoOsUJlYrspO9cUGw9GnrXOyg==
   dependencies:
-    "@svar-ui/lib-dom" "0.13.1"
-    "@svar-ui/lib-state" "1.9.7"
-    xlsx-reader-lite "^0.1.0"
+    "@svar-ui/lib-dom" "0.14.0"
+    xlsx-reader-lite "0.2.1"
 
-"@svar-ui/export-popup-locales@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/export-popup-locales/-/export-popup-locales-2.6.0.tgz#e41eca30e5ad3a2b0ff5b82897ec9c41162ab08e"
-  integrity sha512-NGCBdGMeprgE2wkWw/Dl3O/lrNjWXbYm3UmbMlKN84GmtwtutKCBspNiGGCGlrUgpy0SVhqN+EFpDMg2M4Avzw==
+"@svar-ui/export-popup-locales@2.7.0":
+  version "2.7.0"
+  resolved "https://registry.npmmirror.com/@svar-ui/export-popup-locales/-/export-popup-locales-2.7.0.tgz#092a892aa047b0ef35e23ba6a8fc9c4129816c12"
+  integrity sha512-CUokajZ877pofMGz2TqQDkRPTPCRYMpGn3nJL3i2NaHbSLKD2Kf7r160odxuOqTI1FJGS3b4TJlHyf71lokVGQ==
 
-"@svar-ui/kanban-locales@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/kanban-locales/-/kanban-locales-2.6.0.tgz#df1d4f315484d83ddd53e79133f371c573908a0c"
-  integrity sha512-WchNgOChoCn6V+pw4/uGHLHarAjpwDLS5KgWHsT1PzvxtSuuY1L0hJbuiNjab38aQTEniRvfkAmsRZN4VkcNpA==
+"@svar-ui/kanban-locales@2.7.0":
+  version "2.7.0"
+  resolved "https://registry.npmmirror.com/@svar-ui/kanban-locales/-/kanban-locales-2.7.0.tgz#cf2dd495c6ec069cc1faeac6b2cd50867a21d580"
+  integrity sha512-EbTv/q7BIHy+0CTaqOQwNxi+FUZeX9maf+nAwJBYVogpgJPpzWL5K13yywOXXjT0qGH8sgM07RG2oZu7AzBIGw==
 
-"@svar-ui/kanban-provider@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/kanban-provider/-/kanban-provider-2.6.0.tgz#5188fd56034d48b3208721f6395760a3ecdd1eda"
-  integrity sha512-JUVY1NtzMMmyHe6JJh6yW8UQ8WR+z/2AYAJ6W/KKcgSWVBsJVPnbM1ITgKxUqFxDghOCRu7wobV7l9mCBvhA7g==
+"@svar-ui/kanban-provider@2.7.0":
+  version "2.7.0"
+  resolved "https://registry.npmmirror.com/@svar-ui/kanban-provider/-/kanban-provider-2.7.0.tgz#ace97ea1f08af790802f5ff6d60697d632e29336"
+  integrity sha512-OsUxqVhJSVeX2y9Reern8qspW+um9aoOXKs+0WhUchKRbvos2LEYcgvcCS4OcBKWyv2bbfdYWZ1SqBmzDZC46w==
 
-"@svar-ui/kanban-store@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/kanban-store/-/kanban-store-2.6.0.tgz#3004e6ac8e502fd992a43e510ae7a994346f50e2"
-  integrity sha512-mA3rQ1O+o5i1TowAk/jtnpkquilun5JLtWxz8k3ilQnokKEUVY7LgTrwAZgkry+0GO3eT3OcT5iZ3Jowat0hTw==
+"@svar-ui/kanban-store@2.7.0":
+  version "2.7.0"
+  resolved "https://registry.npmmirror.com/@svar-ui/kanban-store/-/kanban-store-2.7.0.tgz#e30bbb8b0f4bc7118dfa8e2ea9b7e9b9b2b37e22"
+  integrity sha512-Fx9TFrAOkG8xCMGPKae2a3Wxe2QofWmq93hmsn2hp2tlS3wL1G/fpG303iMfxz0uTJakqYzX2eG0nZKeZGYQkQ==
   dependencies:
-    "@svar-ui/lib-dom" "0.13.1"
+    "@svar-ui/lib-dom" "0.14.0"
     "@svar-ui/lib-state" "1.9.7"
 
-"@svar-ui/lib-data-provider@1.7.1":
-  version "1.7.1"
-  resolved "https://registry.npmmirror.com/@svar-ui/lib-data-provider/-/lib-data-provider-1.7.1.tgz#a539cefb564b834403e086357f4071a7dbb9523e"
-  integrity sha512-5Bi9ywngcMTKpGtan0s7q8ivd84Bp0ZnRP+5bLZg6oiRB7YMyN5D5X+apc3CWDAnG4zZn3en4YwS2qc/aHIIuQ==
-  dependencies:
-    "@svar-ui/lib-state" "1.9.6"
-
-"@svar-ui/lib-dom@0.13.1":
-  version "0.13.1"
-  resolved "https://registry.npmmirror.com/@svar-ui/lib-dom/-/lib-dom-0.13.1.tgz#d0394f74e59672b185a06ce4659d6391c66bf2d2"
-  integrity sha512-e9+RIEkppVkAUJqfHEr7KmiVXi3uf+qddr513h5mhgSx3PNYtG9eHwtI8OQf4JMc6Hvuu3y0iv+fL6jqE340yw==
+"@svar-ui/lib-dom@0.14.0":
+  version "0.14.0"
+  resolved "https://registry.npmmirror.com/@svar-ui/lib-dom/-/lib-dom-0.14.0.tgz#150fb2dfa27213a211c89a57cf0ad1ecee266e66"
+  integrity sha512-9uao5ebcQmuW0RoMu1LCesPsZ7i6G3xIvYAQzX/aeg662Yy/ETsNVy1pXoSa2q5v6ccAMjVxFrFCYReK7fzaJQ==
 
 "@svar-ui/lib-dom@^0.11.1":
   version "0.11.1"
@@ -569,134 +556,98 @@
   dependencies:
     "@svar-ui/lib-dom" "^0.11.1"
 
-"@svar-ui/lib-react@1.3.0":
-  version "1.3.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/lib-react/-/lib-react-1.3.0.tgz#7d42c04546189a33948e51e46a7c6db62677dc41"
-  integrity sha512-jVcREYAMAXOhZB/lbMmLteGKIZoUW3rzmoXCMcFLGcHIGUH7AjFrKOAG/SJvgV0grcG9XyuRTG3jp++6NIGtuw==
+"@svar-ui/lib-react@1.3.1":
+  version "1.3.1"
+  resolved "https://registry.npmmirror.com/@svar-ui/lib-react/-/lib-react-1.3.1.tgz#fc2676f543965b24f11e298037468aee4d3e2503"
+  integrity sha512-7wPBA5YyjHELs+VgTSSpGYxmVksJxP2lkN2i4WGjP0eaAE/4ZMjeM2TUfjCKb/KEX61Mq/sqR0bfoFsz4Lqv+A==
   dependencies:
     "@svar-ui/lib-dom" "^0.12.1"
-
-"@svar-ui/lib-state@1.9.6":
-  version "1.9.6"
-  resolved "https://registry.npmmirror.com/@svar-ui/lib-state/-/lib-state-1.9.6.tgz#b2359f2a212565eaa72d6a15fc4d27aadd42a070"
-  integrity sha512-twoHa8wZvzdxtES68s6Wnp4Xi1WivScNaFFK6sJ6WDgqVYOzJw0ZhVVrdwHQgieLITTKl/DYh/U3nuqtMetKYw==
 
 "@svar-ui/lib-state@1.9.7":
   version "1.9.7"
   resolved "https://registry.npmmirror.com/@svar-ui/lib-state/-/lib-state-1.9.7.tgz#4f60647d3f4b8a56e4c41436db33a08fb0e0485c"
   integrity sha512-nxRdk+54m1RJjGT2yDH7NjxAM5KECxA39kdTZezEIj1ixykyefssB9BrgxKy2jIseYxJMtd6lPZvQ3SZXuvn2g==
 
-"@svar-ui/react-comments@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/react-comments/-/react-comments-2.6.0.tgz#1a1572b13f7de3d12ac077a5a3707a09b6c511e6"
-  integrity sha512-58V9iqxC3RtRB4M37B9EE4c0RdZJ/VW5uA4yIIbuctdHOLbRDhp0WsVwBhQSMF16VXbxwDY5LL3v32TkPWRyZA==
+"@svar-ui/react-core@2.6.1":
+  version "2.6.1"
+  resolved "https://registry.npmmirror.com/@svar-ui/react-core/-/react-core-2.6.1.tgz#a237807474eedd76c525c4d5793cc018b9a1c2b5"
+  integrity sha512-1b0R+n4r/XLM2FC4mAxhyRYCI79HdrDbfe0nsOr/uJ0Ty+wxEfWglamCf6yJSM2tvmpGJQ388flDIXPbzep4Fg==
   dependencies:
-    "@svar-ui/comments-locales" "2.6.0"
-    "@svar-ui/core-locales" "2.6.0"
-    "@svar-ui/lib-data-provider" "1.7.1"
-    "@svar-ui/lib-dom" "0.13.1"
-    "@svar-ui/lib-state" "1.9.7"
-    "@svar-ui/react-core" "2.6.0"
-    "@svar-ui/react-menu" "2.6.0"
-
-"@svar-ui/react-core@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/react-core/-/react-core-2.6.0.tgz#48c670de76ba5851c5f33a911af496b5f08ba707"
-  integrity sha512-9y3SfwZjGDgMxfJYZvnT4UA9ebPuIyKiGmVQR2vqvJQ4qxiXuXLPDxIxV08tDcPM57j+fN1bWRMaZLmg50ucoQ==
-  dependencies:
-    "@svar-ui/core-locales" "2.6.0"
-    "@svar-ui/lib-dom" "0.13.1"
+    "@svar-ui/core-locales" "2.6.1"
+    "@svar-ui/lib-dom" "0.14.0"
     "@svar-ui/lib-react" "1.2.2"
 
-"@svar-ui/react-editor@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/react-editor/-/react-editor-2.6.0.tgz#8ebce646e14d70323b07a54d476f394f4a8af01a"
-  integrity sha512-pSx2bIPOjdJJAkaypeogXNCLblBHbk1/wRB6WV8tQEGbZUhhSYBL+h+T9LlUeUA7PH2DCS4NSak1WPzTy3PN0g==
+"@svar-ui/react-editor@2.7.0":
+  version "2.7.0"
+  resolved "https://registry.npmmirror.com/@svar-ui/react-editor/-/react-editor-2.7.0.tgz#813db18cc769565a5606e4b5a3e33cfd96b0f71e"
+  integrity sha512-7+/AWGAaffwjBsyHXtDBe5UK7IAbALGAVqyd2NWjW6O9WqQs1vv1fjx2t7pxRww/g59ZqJjeLsp1eiZNqy/8Wg==
   dependencies:
-    "@svar-ui/editor-locales" "2.6.0"
-    "@svar-ui/lib-dom" "0.13.1"
+    "@svar-ui/editor-locales" "2.7.0"
+    "@svar-ui/lib-dom" "0.14.0"
+    "@svar-ui/lib-react" "1.3.1"
     "@svar-ui/lib-state" "1.9.7"
-    "@svar-ui/react-comments" "2.6.0"
-    "@svar-ui/react-core" "2.6.0"
-    "@svar-ui/react-tasklist" "2.6.0"
-    "@svar-ui/react-toolbar" "2.6.0"
+    "@svar-ui/react-core" "2.6.1"
+    "@svar-ui/react-toolbar" "2.6.1"
 
-"@svar-ui/react-excel-import@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/react-excel-import/-/react-excel-import-2.6.0.tgz#c70cc6b0055d4e07d690c773d926f45ed1bc4ab6"
-  integrity sha512-gdX9PEk9WjPMS3TnaU+YMoxRQEnSYRypMFlOXqpEkw1qcJjlST7h7E/+Z2tKgkVKats3KUWOXNZu0kjn9zbg6A==
+"@svar-ui/react-excel-import@2.7.0":
+  version "2.7.0"
+  resolved "https://registry.npmmirror.com/@svar-ui/react-excel-import/-/react-excel-import-2.7.0.tgz#fb4a79dc6b6ef76cbdba37e5cf995e3569c9a40b"
+  integrity sha512-hh6JGcQ4IlMnJGd7cqM6io6tv6iZzXc0rQVBapXMtXUYIQA6s6aKFa4qh8cOI3NSShCko4bZOyrQMQv9P6cK3Q==
   dependencies:
-    "@svar-ui/excel-import-locales" "2.6.0"
-    "@svar-ui/excel-import-store" "2.6.0"
-    "@svar-ui/lib-dom" "0.13.1"
-    "@svar-ui/lib-react" "1.3.0"
+    "@svar-ui/excel-import-locales" "2.7.0"
+    "@svar-ui/excel-import-store" "2.7.0"
+    "@svar-ui/lib-dom" "0.14.0"
+    "@svar-ui/lib-react" "1.3.1"
+    "@svar-ui/react-core" "2.6.1"
+
+"@svar-ui/react-export-popup@2.7.0":
+  version "2.7.0"
+  resolved "https://registry.npmmirror.com/@svar-ui/react-export-popup/-/react-export-popup-2.7.0.tgz#dd823a2db54e7165a096621cab8b3e0ed4600ad4"
+  integrity sha512-KMcl5GdhjP9pVnxwhWqsT/9xxYdzav5aslRZxTHwNOD1te+j92oIgKMQcKFAGgVjb+KPcLx/gKkMmFfRcfxkPg==
+  dependencies:
+    "@svar-ui/core-locales" "2.6.1"
+    "@svar-ui/export-popup-locales" "2.7.0"
+    "@svar-ui/lib-dom" "0.14.0"
+    "@svar-ui/lib-react" "1.3.1"
+    "@svar-ui/react-core" "2.6.1"
+
+"@svar-ui/react-kanban@^2.7.0":
+  version "2.7.0"
+  resolved "https://registry.npmmirror.com/@svar-ui/react-kanban/-/react-kanban-2.7.0.tgz#78f3f70bdc5f3c8cca9dce458eb93bb0e7332248"
+  integrity sha512-+cUCNfqbL/0XihdYteoMcPWV1dBIMvk0YdNVEo7z/5wrs1AR/dYBiQrTV0VvcQy+vzfD+y++OouvZQDtF5Q5dg==
+  dependencies:
+    "@svar-ui/core-locales" "2.6.1"
+    "@svar-ui/kanban-locales" "2.7.0"
+    "@svar-ui/kanban-provider" "2.7.0"
+    "@svar-ui/kanban-store" "2.7.0"
+    "@svar-ui/lib-dom" "0.14.0"
+    "@svar-ui/lib-react" "1.3.1"
     "@svar-ui/lib-state" "1.9.7"
-    "@svar-ui/react-core" "2.6.0"
-
-"@svar-ui/react-export-popup@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/react-export-popup/-/react-export-popup-2.6.0.tgz#e4fb1793fa130560ce271ca6cc3ee311117a75ca"
-  integrity sha512-X86NLNEBfnvtlo3FOQHFVuhOy5xfcXlvhBUhrrh5ru88f4H2zBwWj/xlovn8saNTCHMfsBtsae/dARkCQqYDyQ==
-  dependencies:
-    "@svar-ui/core-locales" "2.6.0"
-    "@svar-ui/export-popup-locales" "2.6.0"
-    "@svar-ui/lib-dom" "0.13.1"
-    "@svar-ui/lib-react" "1.3.0"
-    "@svar-ui/react-core" "2.6.0"
-
-"@svar-ui/react-kanban@^2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/react-kanban/-/react-kanban-2.6.0.tgz#66fbf9a43c576655034b79643324f12961ca3401"
-  integrity sha512-n+XcTUjQtDxBLtj6k+nfBsCCoGQ41omlmp9Ep9CNuvIA1IhrktQzdC+f+uogM8D1ZouOixuwDZUwuuuBj9T+cA==
-  dependencies:
-    "@svar-ui/core-locales" "2.6.0"
-    "@svar-ui/kanban-locales" "2.6.0"
-    "@svar-ui/kanban-provider" "2.6.0"
-    "@svar-ui/kanban-store" "2.6.0"
-    "@svar-ui/lib-dom" "0.13.1"
-    "@svar-ui/lib-react" "1.3.0"
-    "@svar-ui/lib-state" "1.9.7"
-    "@svar-ui/react-core" "2.6.0"
-    "@svar-ui/react-editor" "2.6.0"
-    "@svar-ui/react-excel-import" "2.6.0"
-    "@svar-ui/react-export-popup" "2.6.0"
-    "@svar-ui/react-menu" "2.6.0"
-    "@svar-ui/react-toolbar" "2.6.0"
+    "@svar-ui/react-core" "2.6.1"
+    "@svar-ui/react-editor" "2.7.0"
+    "@svar-ui/react-excel-import" "2.7.0"
+    "@svar-ui/react-export-popup" "2.7.0"
+    "@svar-ui/react-menu" "2.6.1"
+    "@svar-ui/react-toolbar" "2.6.1"
     xlsx-writer-lite "0.2.0"
 
-"@svar-ui/react-menu@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/react-menu/-/react-menu-2.6.0.tgz#d533bae8123acc2e2836467245354c671592f53d"
-  integrity sha512-2Z95S2gzqgxWEAXw8AMMkZ/NITLseXH+7lgdyT23E1/RYMOQhjOdjl3GBeIBHWpN8UUFGtd63ULZrwA8cMViSQ==
+"@svar-ui/react-menu@2.6.1":
+  version "2.6.1"
+  resolved "https://registry.npmmirror.com/@svar-ui/react-menu/-/react-menu-2.6.1.tgz#40a82b4fa501cfda3200ffc74a1a175320fecb54"
+  integrity sha512-/wu6vaLVPN2AJp8r+axIkjaSpoZOAgE46CRsdM2d0yc+hbJdeMo997LXZTGQzBziwLZttW1DDwOvL+uLIeTOug==
   dependencies:
-    "@svar-ui/core-locales" "2.6.0"
-    "@svar-ui/lib-dom" "0.13.1"
-    "@svar-ui/react-core" "2.6.0"
+    "@svar-ui/core-locales" "2.6.1"
+    "@svar-ui/lib-dom" "0.14.0"
+    "@svar-ui/react-core" "2.6.1"
 
-"@svar-ui/react-tasklist@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/react-tasklist/-/react-tasklist-2.6.0.tgz#0057782636e8dabfde2ae2a03b55de9b5205e675"
-  integrity sha512-oIU1wpT2kZujZkPjin2GQVnb1+5EYQp7flO8LsOf+R8043WHucUGtnJn4bmrRDujjklWZa+ySXEhfrGYj7vu5A==
+"@svar-ui/react-toolbar@2.6.1":
+  version "2.6.1"
+  resolved "https://registry.npmmirror.com/@svar-ui/react-toolbar/-/react-toolbar-2.6.1.tgz#7c9907c299da65bcfd359a12577085367c65e78c"
+  integrity sha512-jSxcTW8WNgpSgkxicGyu76cKjVuwwxOvdDXJqQpLnxIIdN/RNeWuY8ak4sD0IqhCOp7AicgfPg2t+K4YUp+LMQ==
   dependencies:
-    "@svar-ui/lib-data-provider" "1.7.1"
-    "@svar-ui/lib-dom" "0.13.1"
-    "@svar-ui/lib-state" "1.9.7"
-    "@svar-ui/react-core" "2.6.0"
-    "@svar-ui/tasklist-locales" "2.6.0"
-
-"@svar-ui/react-toolbar@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/react-toolbar/-/react-toolbar-2.6.0.tgz#af5ead632a19609e3e9aa6e8c8ad4d328ca046c6"
-  integrity sha512-Jt4fg5OifGub6claWKwJTx2jBTBRIwpEXvSUQ5h/PVG6IGQpeyJgaqbPHsILw3oM/QZkdax8nxOZ+RoI2efEsQ==
-  dependencies:
-    "@svar-ui/core-locales" "2.6.0"
-    "@svar-ui/lib-dom" "0.13.1"
-    "@svar-ui/react-core" "2.6.0"
-
-"@svar-ui/tasklist-locales@2.6.0":
-  version "2.6.0"
-  resolved "https://registry.npmmirror.com/@svar-ui/tasklist-locales/-/tasklist-locales-2.6.0.tgz#32de9b34e1f83cc7b7988ae81e5d747e8de5db6f"
-  integrity sha512-0VxhXVJJPFrfWiyLin5QrdRbp/9ESK74S3y7vmTmha17hLnI9kiz7+CNT4K4B98mSyS2KzD2BrPej5bhsZ7f8w==
+    "@svar-ui/core-locales" "2.6.1"
+    "@svar-ui/lib-dom" "0.14.0"
+    "@svar-ui/react-core" "2.6.1"
 
 "@types/d3-array@*":
   version "3.2.2"
@@ -1374,9 +1325,9 @@ dom-align@^1.12.4:
   integrity sha512-R8LUSEay/68zE5c8/3BDxiTEvgb4xZTF0RKmAHfiEVN3klfIpXfi2/QCoiWPccVQ0J/ZGdz9OjzL4uJEP/MRAw==
 
 dompurify@^3.3.3:
-  version "3.4.17"
-  resolved "https://registry.npmmirror.com/dompurify/-/dompurify-3.4.17.tgz#074bbb24eaa419535ac19ffe7f663104b0e1543d"
-  integrity sha512-B/pSlYVHQ58kqISD/yDjuJ1yfzI34m1gF4lAod2bwSRhiN4K5Cl3H8Af7hqB2PmTL911tdEudnnXn5FnhRoz0w==
+  version "3.4.18"
+  resolved "https://registry.npmmirror.com/dompurify/-/dompurify-3.4.18.tgz#82161003672c8780ad1db0335787e6aa6587e5d2"
+  integrity sha512-ofe3wI/uNm68HInABYFJYqQxRw1EaKAjNdrFVKqjUY+UZurvNd2L/HuQe097s/4RivWiZyP6tT7aoT8atjfhwg==
   optionalDependencies:
     "@types/trusted-types" "^2.0.7"
 
@@ -1881,9 +1832,9 @@ sliced@^1.0.1:
   integrity sha512-VZBmZP8WU3sMOZm1bdgTadsQbcscK0UM8oKxKVBs4XAhUo2Xxzm/OFMGBkPusxw9xL3Uy8LrzEqGqJhclsr0yA==
 
 "source-map-js@>=0.6.2 <2.0.0":
-  version "1.2.2"
-  resolved "https://registry.npmmirror.com/source-map-js/-/source-map-js-1.2.2.tgz#79fb88d97535a21cb27162cb05d211b67acea4ab"
-  integrity sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==
+  version "1.2.4"
+  resolved "https://registry.npmmirror.com/source-map-js/-/source-map-js-1.2.4.tgz#b9303bf27115446da5e6ca3a4a2ee3e9f7b69633"
+  integrity sha512-J7ZjMvHd9O1fcT/5V09QWaaSl2BbWx3F6O08spde82Namf9UB0GxRVIPiNbVsdKkoizHiSpTodo3vp2bAy91MA==
 
 strictdom@^1.0.1:
   version "1.0.1"
@@ -2056,10 +2007,10 @@ which@^2.0.1:
   dependencies:
     isexe "^2.0.0"
 
-xlsx-reader-lite@^0.1.0:
-  version "0.1.0"
-  resolved "https://registry.npmmirror.com/xlsx-reader-lite/-/xlsx-reader-lite-0.1.0.tgz#816e7d2e04c543b30111d064a3a3c27015714f82"
-  integrity sha512-garyGV1U9KsB6aiOmwPYgqd7uEaiHOoDpm6nPuzQjUN6a6IxDFHFE1Cl4s4y8xnm8pI3bHbvsyCjhKTvCcYbDA==
+xlsx-reader-lite@0.2.1:
+  version "0.2.1"
+  resolved "https://registry.npmmirror.com/xlsx-reader-lite/-/xlsx-reader-lite-0.2.1.tgz#4974a4588b3ae0ffd997ef66d39d847c3f63cdb6"
+  integrity sha512-8NECkQy/4l1DMfOki7aF3hZtUCpNuMhN6n6rfSoZ7VP0Ah2tECnwYSCjKAKMX5V8C4kf4S2GOqPbhqQPxXa49w==
   dependencies:
     fflate "^0.8.2"
     txml "^5.2.1"
