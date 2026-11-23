@@ -426,6 +426,10 @@ def create_amazon_report(
 	return report_id
 
 
+class AmazonReportFatalError(RuntimeError):
+	pass
+
+
 def wait_for_amazon_report(store, report_id, *, timeout_seconds=3600, poll_seconds=15):
 	"""等待 Amazon 报告完成，并返回报告元数据。"""
 	deadline = time.monotonic() + max(int(timeout_seconds), 60)
@@ -446,7 +450,7 @@ def wait_for_amazon_report(store, report_id, *, timeout_seconds=3600, poll_secon
 		if status == "CANCELLED":
 			return payload
 		if status == "FATAL":
-			raise RuntimeError(f"Amazon report {report_id} ended with status {status}")
+			raise AmazonReportFatalError(f"Amazon report {report_id} ended with status {status}")
 		if time.monotonic() >= deadline:
 			raise TimeoutError(f"Amazon report {report_id} did not finish within {timeout_seconds} seconds")
 		time.sleep(max(int(poll_seconds), 5))

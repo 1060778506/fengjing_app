@@ -22,6 +22,7 @@
   "history_progress",
   "history_summary",
   "history_last_error",
+  "history_pending_report",
   "incremental_section",
   "incremental_checkpoint",
   "incremental_last_at",
@@ -185,6 +186,13 @@
    "fieldname": "history_last_error",
    "fieldtype": "Small Text",
    "label": "History Last Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "history_pending_report",
+   "fieldtype": "JSON",
+   "label": "Pending Historical Report",
+   "hidden": 1,
    "read_only": 1
   },
   {

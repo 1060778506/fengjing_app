@@ -20,7 +20,7 @@ from frappe.model.document import Document
 from frappe.utils import cint, flt, get_datetime, get_system_timezone, now_datetime
 
 from fengjing_app.fengjing_business.doctype.amazon_store_configuration.amazon_store_configuration import (
-    AmazonAPIError, create_amazon_report, download_amazon_report, ensure_database_connection,
+    AmazonAPIError, AmazonReportFatalError, create_amazon_report, download_amazon_report, ensure_database_connection,
     get_region, get_store, wait_for_amazon_report,
 )
 
@@ -35,11 +35,17 @@ LATEST_LOOKBACK_DAYS = 7
 # Amazon 允许每卖家 8 小时最多 12 次（包括 Seller Central 手动请求）；自动抓取最多占 10 次。
 REQUEST_LIMIT = 10
 REQUEST_WINDOW_SECONDS = 8 * 60 * 60
+HISTORY_RETRY_DELAY_MINUTES = (15, 30, 60)
+
 
 class QuotaDeferred(Exception):
     def __init__(self, retry_at):
         self.retry_at = retry_at
         super().__init__(f"FBA 发货报告请求额度暂满，预计 {retry_at} 后续跑")
+
+
+class HistoricalReportDeferred(Exception):
+    pass
 
 
 class AmazonFBAFulfilledShipmentConfiguration(Document):
@@ -66,6 +72,7 @@ class AmazonFBAFulfilledShipmentConfiguration(Document):
             self.history_progress = 0
             self.history_summary = ""
             self.history_last_error = ""
+            self.history_pending_report = None
         elif not cint(self.history_18_months) and not self.is_new() and self.has_value_changed("history_18_months"):
             self.history_status = "Not Started"
 
@@ -121,7 +128,7 @@ def start_history_sync(name):
         frappe.throw(_("请先勾选“倒推18个月抓取历史发货记录”并保存。"))
     _update_configuration(name, history_status="Waiting", history_checkpoint=None,
                           history_target_at=None, history_progress=0,
-                          history_summary="", history_last_error="", last_error="")
+                          history_summary="", history_last_error="", history_pending_report=None, last_error="")
     _enqueue(name, "history")
     return {"status": "queued", "message": _("18 个月历史发货任务已加入队列。")}
 
@@ -272,10 +279,10 @@ def _reserve_report_request(store):
         cache.set_value(key, requests, expires_in_sec=REQUEST_WINDOW_SECONDS + 120)
 
 
-def _fetch_window(store, start, end):
+def _request_report(store, start, end):
     _reserve_report_request(store)
     try:
-        report_id = create_amazon_report(
+        return create_amazon_report(
             store, REPORT_TYPE, marketplace_ids=[store.marketplace_id],
             data_start_time=_amazon_time(start), data_end_time=_amazon_time(end),
         )
@@ -284,7 +291,10 @@ def _fetch_window(store, start, end):
             delay = max(cint(exc.retry_after_seconds), REQUEST_WINDOW_SECONDS)
             raise QuotaDeferred(_to_system(datetime.now(timezone.utc) + timedelta(seconds=delay))) from exc
         raise
-    metadata = wait_for_amazon_report(store, report_id, timeout_seconds=3600, poll_seconds=15)
+
+
+def _read_report(store, report_id, *, timeout_seconds=3600):
+    metadata = wait_for_amazon_report(store, report_id, timeout_seconds=timeout_seconds, poll_seconds=15)
     if str(metadata.get("processingStatus") or "").upper() == "CANCELLED":
         return report_id, {"rows": 0, "created": 0, "updated": 0, "skipped": 0, "no_data": True}
     text, _ = download_amazon_report(store, metadata["reportDocumentId"])
@@ -294,6 +304,50 @@ def _fetch_window(store, start, end):
         raise ValueError("FBA fulfilled shipments report is missing expected columns")
     stats = _save_rows(store, rows, report_id, now_datetime())
     return report_id, stats
+
+
+def _fetch_window(store, start, end):
+    return _read_report(store, _request_report(store, start, end))
+
+
+def _pending_history_report(config):
+    return frappe.parse_json(config.get("history_pending_report")) or {}
+
+
+def _fetch_history_window(config, store, start, end):
+    window = {"start": _amazon_time(start), "end": _amazon_time(end)}
+    pending = _pending_history_report(config)
+    if any(pending.get(key) != value for key, value in window.items()):
+        pending = window
+    report_id = pending.get("report_id")
+    checking_existing = bool(report_id)
+    try:
+        if not report_id:
+            report_id = _request_report(store, start, end)
+            pending["report_id"] = report_id
+            # Save the ID before polling so a worker restart can reopen the same report.
+            _update_configuration(config.name, history_pending_report=json.dumps(pending))
+        return _read_report(store, report_id, timeout_seconds=60 if checking_existing else 3600)
+    except (TimeoutError, AmazonReportFatalError, AmazonAPIError) as exc:
+        expired = isinstance(exc, AmazonReportFatalError) or (
+            isinstance(exc, AmazonAPIError) and exc.status_code in {404, 410} and report_id
+        )
+        if not report_id or not (expired or isinstance(exc, TimeoutError)):
+            raise
+        retries = cint(pending.get("retries"))
+        if retries >= len(HISTORY_RETRY_DELAY_MINUTES):
+            raise RuntimeError(f"FBA 历史报告重试 {retries} 次后仍失败：{exc}") from exc
+        if expired:
+            pending.pop("report_id", None)
+        next_at = now_datetime() + timedelta(minutes=HISTORY_RETRY_DELAY_MINUTES[retries])
+        pending.update(retries=retries + 1, next_at=str(next_at))
+        message = f"FBA 历史报告 {report_id}：{exc}，预计 {next_at:%Y-%m-%d %H:%M} 进行第 {retries + 1} 次重试"
+        frappe.db.rollback()
+        _update_configuration(config.name, history_pending_report=json.dumps(pending),
+                              history_status="Waiting", history_last_error=message,
+                              current_task_status="Waiting", current_execution_type="",
+                              current_task_completed_at=now_datetime(), last_run_result=message)
+        raise HistoricalReportDeferred(message) from exc
 
 
 def _task_lock(name):
@@ -371,7 +425,7 @@ def execute_shipment_sync(configuration_name, sync_type):
                 if not window:
                     break
                 start, end, target_start, target_end = window
-                report_id, stats = _fetch_window(store, start, end)
+                report_id, stats = _fetch_history_window(config, store, start, end)
                 for key in ("rows", "created", "updated", "skipped"):
                     summary[key] += stats[key]
                 summary["windows"] += 1
@@ -380,7 +434,7 @@ def execute_shipment_sync(configuration_name, sync_type):
                                        (target_end - target_start).total_seconds() * 100))
                 _update_configuration(configuration_name, history_checkpoint=_to_system(end),
                                       history_progress=progress, history_summary=json.dumps(summary, ensure_ascii=False),
-                                      last_report_id=report_id)
+                                      history_pending_report=None, last_report_id=report_id)
             completed = _history_window(_configuration(configuration_name)) is None
             _update_configuration(configuration_name, history_status="Completed" if completed else "Waiting",
                                   history_progress=100 if completed else _configuration(configuration_name).history_progress,
@@ -420,6 +474,8 @@ def execute_shipment_sync(configuration_name, sync_type):
                            f"recheck_{days}_next_at": _next_recheck(finished_at, config.get(f"recheck_{days}_interval_days"))})
         _update_configuration(configuration_name, **values)
         return {"status": "success", "summary": summary}
+    except HistoricalReportDeferred as exc:
+        return {"status": "waiting", "message": str(exc)}
     except QuotaDeferred as exc:
         # 保留已完成历史时间片的 checkpoint，等窗口释放后自动续跑。
         frappe.db.rollback()
@@ -477,7 +533,8 @@ def run_scheduled_shipment_sync():
                     _enqueue(name, "incremental")
                     continue
             if cint(config.history_18_months) and config.history_status in {"Not Started", "Waiting", "Running"}:
-                if _history_window(config):
+                retry_at = _pending_history_report(config).get("next_at")
+                if (not retry_at or get_datetime(retry_at) <= now) and _history_window(config):
                     _enqueue(name, "history")
                     continue
             initialised = {}
