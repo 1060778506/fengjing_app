@@ -1,0 +1,36 @@
+{
+ "autoname": "hash",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": ["title", "blocks"],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "标题",
+   "in_list_view": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "blocks",
+   "fieldtype": "Long Text",
+   "label": "笔记正文",
+   "hidden": 1
+  }
+ ],
+ "module": "Fengjing Business",
+ "name": "Fengjing Note",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "if_owner": 1,
+   "read": 1,
+   "role": "Desk User",
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "title"
+}

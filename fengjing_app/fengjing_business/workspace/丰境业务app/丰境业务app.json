@@ -892,7 +892,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "主配置",
-   "link_count": 5,
+   "link_count": 6,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -940,9 +940,19 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "丰境经营蓝图",
+   "label": "经营蓝图",
    "link_count": 0,
    "link_to": "fengjing_idea_board",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "丰境笔记",
+   "link_count": 0,
+   "link_to": "fengjing_notes",
    "link_type": "Page",
    "onboard": 0,
    "type": "Link"

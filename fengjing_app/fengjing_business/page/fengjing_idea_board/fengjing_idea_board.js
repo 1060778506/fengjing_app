@@ -2,7 +2,7 @@ frappe.pages["fengjing_idea_board"].on_page_load = async function (wrapper) {
 	const assetVersion = "20261118-menu-without-flex-width";
 	const page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: "丰境经营蓝图",
+		title: "经营蓝图",
 		single_column: true,
 	});
 	page.main.html('<div class="fjib-mount">正在加载经营蓝图…</div>');
