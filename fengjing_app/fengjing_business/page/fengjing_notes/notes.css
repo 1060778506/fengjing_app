@@ -3,7 +3,6 @@
 	grid-template-columns: minmax(210px, 260px) minmax(0, 1fr);
 	min-height: max(400px, calc(100dvh - var(--fj-notes-top, 140px) - 16px));
 	border: 1px solid var(--border-color, #e1e4e8);
-	border-radius: 12px;
 	background: var(--card-bg, #fff);
 }
 
@@ -12,7 +11,6 @@
 	padding: 18px 14px 14px;
 	background: var(--subtle-fg, #f7f8f9);
 	border-right: 1px solid var(--border-color, #e1e4e8);
-	border-radius: 12px 0 0 12px;
 }
 
 .fj-notes button {
@@ -114,9 +112,7 @@
 	box-sizing: border-box;
 	flex: 1;
 	width: 100%;
-	max-width: 900px;
-	margin: 0 auto;
-	padding: 20px clamp(12px, 4vw, 56px) 22px;
+	padding: 20px clamp(12px, 3.5vw, 64px) 22px;
 }
 
 .fj-notes-actions {
@@ -146,11 +142,13 @@
 	padding: 10px 0 12px;
 	margin: 12px 0 10px;
 	border: 0;
+	border-radius: 0;
 	border-bottom: 1px solid var(--border-color, #e1e4e8);
 	background: transparent;
 	color: var(--text-color, #222);
 	font-size: clamp(23px, 3vw, 32px);
 	font-weight: 650;
+	text-align: center;
 }
 
 .fj-notes .fj-notes-title:focus {
@@ -196,7 +194,6 @@
 	.fj-notes-sidebar {
 		border-right: 0;
 		border-bottom: 1px solid var(--border-color, #e1e4e8);
-		border-radius: 12px 12px 0 0;
 	}
 
 	.fj-notes-list {

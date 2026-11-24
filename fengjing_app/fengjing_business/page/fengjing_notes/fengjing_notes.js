@@ -1,6 +1,6 @@
 frappe.pages["fengjing_notes"].on_page_load = async function (wrapper) {
 	const assets = "/assets/fengjing_app/notes/fengjing_notes";
-	const version = "20261124-desk";
+	const version = "20261124-centered-title";
 	const page = frappe.ui.make_app_page({
 		parent: wrapper,
 		title: "丰境笔记",
