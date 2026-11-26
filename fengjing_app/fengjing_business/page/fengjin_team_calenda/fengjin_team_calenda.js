@@ -1727,6 +1727,8 @@ class FengjingTeamCalendarPage {
 	}
 
 	async openEventDialog(name = null, defaults = {}, occurrenceDate = null) {
+		const detailDoctype = "Fengjin Team Calendar Event Detail";
+		const detailField = "custom_calendar_event_details";
 		let event = {
 			subject: "",
 			starts_on: defaults.starts_on || this.dateTime(new Date()),
@@ -1738,26 +1740,54 @@ class FengjingTeamCalendarPage {
 			description: "",
 			status: "Open",
 			send_reminder: 1,
-			custom_店铺: "",
-			custom_物料: "",
 			can_write: true,
 			can_delete: false,
 		};
 
-		if (name) {
-			try {
+		try {
+			await frappe.model.with_doctype(detailDoctype);
+			if (name) {
 				const response = await frappe.call({
 					method: `${FENGJING_CALENDAR_METHOD}.get_event`,
 					args: { name },
 				});
 				event = { ...event, ...(response.message || {}) };
-			} catch (error) {
-				this.showError("日程读取失败", error);
-				return;
 			}
+		} catch (error) {
+			this.showError("日程读取失败", error);
+			return;
 		}
 
+		const { [detailField]: details, ...dialogValues } = event;
 		const readOnly = Boolean(name && !event.can_write);
+		const updateDetailItemName = async (gridRow) => {
+			const row = gridRow.doc;
+			const itemCode = row.item_code;
+			row.item_name = "";
+			gridRow.refresh_field("item_name");
+			if (!itemCode) return;
+			try {
+				const { message } = await frappe.db.get_value("Item", itemCode, "item_name");
+				if (row.item_code === itemCode) {
+					row.item_name = message?.item_name || "";
+					gridRow.refresh_field("item_name");
+				}
+			} catch (error) {
+				this.showError("物料名称读取失败", error);
+			}
+		};
+		const detailFields = frappe.get_meta(detailDoctype).fields.map((field) => {
+			const definition = { ...field, read_only: readOnly || field.read_only };
+			// In a dialog grid, update the selected row through its controls.
+			if (field.fieldname === "item_name") delete definition.fetch_from;
+			if (field.fieldname === "item_code") {
+				definition.onchange = function () {
+					const gridRow = this.grid_row || this.layout?.grid_row;
+					if (gridRow) return updateDetailItemName(gridRow);
+				};
+			}
+			return definition;
+		});
 		const yearly = Boolean(Number(event.repeat_this_event) && event.repeat_on === "Yearly");
 		const yearlyEnabled = yearly && !event.repeat_till;
 		const otherRepeat = Boolean(Number(event.repeat_this_event) && !yearly);
@@ -1779,8 +1809,6 @@ class FengjingTeamCalendarPage {
 			size: "large",
 			fields: [
 				{ fieldname: "subject", fieldtype: "Small Text", label: "日程标题", reqd: 1, read_only: readOnly },
-				{ fieldname: "custom_店铺", fieldtype: "Link", label: "店铺", options: "Cost Center", read_only: readOnly },
-				{ fieldname: "custom_物料", fieldtype: "Link", label: "物料", options: "Item", read_only: readOnly },
 				{ fieldname: "starts_on", fieldtype: "Datetime", label: "开始时间", reqd: 1, read_only: readOnly },
 				{ fieldname: "ends_on", fieldtype: "Datetime", label: "结束时间", read_only: readOnly },
 				{ fieldname: "time_column", fieldtype: "Column Break" },
@@ -1820,6 +1848,18 @@ class FengjingTeamCalendarPage {
 							`).join("")}
 						</div>`,
 				},
+				{ fieldname: "details_section", fieldtype: "Section Break" },
+				{
+					fieldname: detailField,
+					fieldtype: "Table",
+					label: "日程明细",
+					options: detailDoctype,
+					read_only: readOnly,
+					cannot_add_rows: readOnly,
+					cannot_delete_rows: readOnly,
+					fields: detailFields,
+					data: details || [],
+				},
 				{ fieldname: "description_section", fieldtype: "Section Break" },
 				{ fieldname: "description", fieldtype: "Text Editor", label: "日程说明", read_only: readOnly },
 			],
@@ -1830,8 +1870,19 @@ class FengjingTeamCalendarPage {
 					return;
 				}
 				try {
-					// Frappe omits optional empty fields, so send an explicit blank to clear a saved color.
-					const eventValues = { ...values, color: dialog.get_value("color") || "" };
+					// Send an explicit blank when clearing the color or deleting all detail rows.
+					const eventValues = {
+						...values,
+						color: dialog.get_value("color") || "",
+						[detailField]: (dialog.get_value(detailField) || []).map(
+							({ name, __islocal, store, item_code, description }) => ({
+								name: __islocal ? undefined : name,
+								store,
+								item_code,
+								description,
+							})
+						),
+					};
 					if (otherRepeat) {
 						delete eventValues.repeat_yearly;
 					} else {
@@ -1866,7 +1917,7 @@ class FengjingTeamCalendarPage {
 			);
 		}
 		dialog.show();
-		await dialog.set_values({ ...event, repeat_yearly: Number(yearlyEnabled) });
+		await dialog.set_values({ ...dialogValues, repeat_yearly: Number(yearlyEnabled) });
 		updatePresetSelection(dialog.get_value("color"));
 
 		if (name && event.can_delete) {

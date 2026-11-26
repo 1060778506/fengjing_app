@@ -14,6 +14,9 @@ from fengjing_app.fengjing_business.doctype.fengjin_calendar_holiday.holiday_syn
 
 
 DOCTYPE = "Event"
+EVENT_DETAIL_DOCTYPE = "Fengjin Team Calendar Event Detail"
+EVENT_DETAILS_FIELD = "custom_calendar_event_details"
+EVENT_DETAIL_FIELDS = ("store", "item_code", "description")
 SETTINGS_DOCTYPE = "Fengjin Team Calendar Settings"
 CITY_TIMEZONE_FILE = (Path(__file__).resolve().parents[3] / "public" / "data" / "Vector_map"
 	/ "城市位置ne_10m_populated_places" / "ne_10m_populated_places.geojson")
@@ -31,8 +34,6 @@ EVENT_FIELDS = {
 	"description",
 	"status",
 	"send_reminder",
-	"custom_店铺",
-	"custom_物料",
 }
 
 
@@ -480,6 +481,36 @@ def _yearly_occurrence_start(doc, occurrence_date):
 	return start
 
 
+def _apply_event_details(doc, details):
+	if not isinstance(details, list):
+		frappe.throw(_("日程明细格式无效。"))
+
+	existing = {row.name for row in doc.get(EVENT_DETAILS_FIELD, [])}
+	rows = []
+	for row in details:
+		if not isinstance(row, dict) or any(
+			row.get(field) is not None and not isinstance(row[field], str) for field in EVENT_DETAIL_FIELDS
+		):
+			frappe.throw(_("日程明细格式无效。"))
+		values = {field: (row.get(field) or "").strip() for field in EVENT_DETAIL_FIELDS}
+		if not any(values.values()):
+			continue
+		name = row.get("name")
+		if isinstance(name, str) and name in existing:
+			existing.remove(name)
+			values["name"] = name
+		elif name:
+			# Dialogs opened before the fix may still send Frappe's temporary grid ID.
+			if (
+				not isinstance(name, str)
+				or not re.fullmatch(r"[a-z0-9]{8}", name)
+				or frappe.db.exists(EVENT_DETAIL_DOCTYPE, name)
+			):
+				frappe.throw(_("日程明细已变更，请重新打开日程后再保存。"))
+		rows.append(values)
+	doc.set(EVENT_DETAILS_FIELD, rows)
+
+
 def _apply_values(doc, values, occurrence_date=None):
 	values = _parse_values(values)
 	last_year = None
@@ -489,6 +520,8 @@ def _apply_values(doc, values, occurrence_date=None):
 	for fieldname in EVENT_FIELDS:
 		if fieldname in values:
 			doc.set(fieldname, values.get(fieldname))
+	if EVENT_DETAILS_FIELD in values:
+		_apply_event_details(doc, values[EVENT_DETAILS_FIELD])
 
 	if not doc.subject:
 		frappe.throw(_("请输入日程标题。"))
@@ -538,8 +571,15 @@ def get_event(name):
 		"description": doc.description,
 		"status": doc.status,
 		"send_reminder": cint(doc.send_reminder),
-		"custom_店铺": doc.get("custom_店铺") or "",
-		"custom_物料": doc.get("custom_物料") or "",
+		EVENT_DETAILS_FIELD: [
+			{
+				"name": row.name,
+				"idx": row.idx,
+				"item_name": row.item_name or "",
+				**{field: row.get(field) or "" for field in EVENT_DETAIL_FIELDS},
+			}
+			for row in doc.get(EVENT_DETAILS_FIELD, [])
+		],
 		"repeat_this_event": cint(doc.repeat_this_event),
 		"repeat_on": doc.repeat_on,
 		"repeat_till": doc.repeat_till,
