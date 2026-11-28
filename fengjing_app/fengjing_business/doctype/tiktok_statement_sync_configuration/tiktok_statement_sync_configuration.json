@@ -1,0 +1,398 @@
+{
+ "doctype": "DocType",
+ "module": "Fengjing Business",
+ "name": "TikTok Statement Sync Configuration",
+ "engine": "InnoDB",
+ "autoname": "field:tiktok_store",
+ "title_field": "tiktok_store",
+ "field_order": [
+  "tiktok_store",
+  "enabled",
+  "interval_minutes",
+  "lookback_days",
+  "history_section",
+  "history_start_date",
+  "history_end_date",
+  "history_status",
+  "history_origin",
+  "history_cursor",
+  "history_until",
+  "task_section",
+  "sync_latest",
+  "sync_history",
+  "sync_retry",
+  "task_status",
+  "task_mode",
+  "task_requested_at",
+  "task_started_at",
+  "last_success_at",
+  "next_sync_at",
+  "last_error",
+  "last_result",
+  "task_id",
+  "last_incremental_at",
+  "recheck_7_section",
+  "enable_recheck_7",
+  "recheck_7_interval_days",
+  "recheck_7_last_at",
+  "recheck_7_next_at",
+  "recheck_14_section",
+  "enable_recheck_14",
+  "recheck_14_interval_days",
+  "recheck_14_last_at",
+  "recheck_14_next_at",
+  "recheck_30_section",
+  "enable_recheck_30",
+  "recheck_30_interval_days",
+  "recheck_30_last_at",
+  "recheck_30_next_at",
+  "recheck_180_section",
+  "enable_recheck_180",
+  "recheck_180_interval_days",
+  "recheck_180_last_at",
+  "recheck_180_next_at",
+  "recheck_cursor",
+  "recheck_until"
+ ],
+ "fields": [
+  {
+   "fieldname": "tiktok_store",
+   "label": "TikTok 店铺",
+   "fieldtype": "Link",
+   "options": "TikTok Order Configuration",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "enabled",
+   "label": "启用定时同步",
+   "fieldtype": "Check",
+   "default": "0",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "interval_minutes",
+   "label": "同步间隔（分钟）",
+   "fieldtype": "Int",
+   "reqd": 1,
+   "default": "120",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "lookback_days",
+   "label": "增量回看天数",
+   "fieldtype": "Int",
+   "reqd": 1,
+   "default": "14",
+   "non_negative": 1
+  },
+  {
+   "fieldname": "history_section",
+   "label": "历史补抓",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "history_start_date",
+   "label": "历史开始日期",
+   "fieldtype": "Date"
+  },
+  {
+   "fieldname": "history_end_date",
+   "label": "历史结束日期",
+   "fieldtype": "Date"
+  },
+  {
+   "fieldname": "history_status",
+   "label": "历史状态",
+   "fieldtype": "Select",
+   "read_only": 1,
+   "options": "\n待抓取\n进行中\n完成\n失败",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "history_origin",
+   "fieldtype": "Date",
+   "label": "本次历史范围起始日期",
+   "read_only": 1,
+   "no_copy": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "history_cursor",
+   "label": "下一段历史开始日期",
+   "fieldtype": "Date",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "history_until",
+   "label": "本轮历史结束日期",
+   "fieldtype": "Date",
+   "read_only": 1,
+   "hidden": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "task_section",
+   "label": "任务和结果",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "sync_latest",
+   "label": "抓取增量",
+   "fieldtype": "Button"
+  },
+  {
+   "fieldname": "sync_history",
+   "label": "开始历史补抓",
+   "fieldtype": "Button"
+  },
+  {
+   "fieldname": "sync_retry",
+   "label": "重试上次失败",
+   "fieldtype": "Button"
+  },
+  {
+   "fieldname": "task_status",
+   "label": "当前任务状态",
+   "fieldtype": "Select",
+   "read_only": 1,
+   "options": "\n排队中\n运行中\n成功\n失败\n待续跑",
+   "in_list_view": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "task_mode",
+   "label": "任务类型",
+   "fieldtype": "Select",
+   "read_only": 1,
+   "options": "\n增量\n历史\n核对7天\n核对14天\n核对30天\n核对180天",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "task_requested_at",
+   "label": "任务入队时间",
+   "fieldtype": "Datetime",
+   "read_only": 1,
+   "hidden": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "task_started_at",
+   "label": "任务开始时间",
+   "fieldtype": "Datetime",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "last_success_at",
+   "label": "最近一次成功",
+   "fieldtype": "Datetime",
+   "read_only": 1,
+   "in_list_view": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "next_sync_at",
+   "label": "下次增量同步",
+   "fieldtype": "Datetime",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "last_error",
+   "label": "最近错误",
+   "fieldtype": "Small Text",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "last_result",
+   "label": "最近运行结果",
+   "fieldtype": "Code",
+   "read_only": 1,
+   "options": "JSON",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "task_id",
+   "label": "任务编号",
+   "fieldtype": "Data",
+   "read_only": 1,
+   "hidden": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "last_incremental_at",
+   "label": "上次增量开始时间",
+   "fieldtype": "Datetime",
+   "read_only": 1,
+   "hidden": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "recheck_7_section",
+   "fieldtype": "Section Break",
+   "label": "最近 7 天核对"
+  },
+  {
+   "fieldname": "enable_recheck_7",
+   "fieldtype": "Check",
+   "label": "启用自动核对",
+   "default": "1"
+  },
+  {
+   "fieldname": "recheck_7_interval_days",
+   "fieldtype": "Int",
+   "label": "每隔多少天核对一次",
+   "default": "1",
+   "reqd": 1,
+   "non_negative": 1
+  },
+  {
+   "fieldname": "recheck_7_last_at",
+   "fieldtype": "Datetime",
+   "label": "上次核对成功",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "recheck_7_next_at",
+   "fieldtype": "Datetime",
+   "label": "下次自动核对",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "recheck_14_section",
+   "fieldtype": "Section Break",
+   "label": "最近 14 天核对"
+  },
+  {
+   "fieldname": "enable_recheck_14",
+   "fieldtype": "Check",
+   "label": "启用自动核对",
+   "default": "1"
+  },
+  {
+   "fieldname": "recheck_14_interval_days",
+   "fieldtype": "Int",
+   "label": "每隔多少天核对一次",
+   "default": "7",
+   "reqd": 1,
+   "non_negative": 1
+  },
+  {
+   "fieldname": "recheck_14_last_at",
+   "fieldtype": "Datetime",
+   "label": "上次核对成功",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "recheck_14_next_at",
+   "fieldtype": "Datetime",
+   "label": "下次自动核对",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "recheck_30_section",
+   "fieldtype": "Section Break",
+   "label": "最近 30 天核对"
+  },
+  {
+   "fieldname": "enable_recheck_30",
+   "fieldtype": "Check",
+   "label": "启用自动核对",
+   "default": "1"
+  },
+  {
+   "fieldname": "recheck_30_interval_days",
+   "fieldtype": "Int",
+   "label": "每隔多少天核对一次",
+   "default": "14",
+   "reqd": 1,
+   "non_negative": 1
+  },
+  {
+   "fieldname": "recheck_30_last_at",
+   "fieldtype": "Datetime",
+   "label": "上次核对成功",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "recheck_30_next_at",
+   "fieldtype": "Datetime",
+   "label": "下次自动核对",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "recheck_180_section",
+   "fieldtype": "Section Break",
+   "label": "最近 180 天核对"
+  },
+  {
+   "fieldname": "enable_recheck_180",
+   "fieldtype": "Check",
+   "label": "启用自动核对",
+   "default": "1"
+  },
+  {
+   "fieldname": "recheck_180_interval_days",
+   "fieldtype": "Int",
+   "label": "每隔多少天核对一次",
+   "default": "60",
+   "reqd": 1,
+   "non_negative": 1
+  },
+  {
+   "fieldname": "recheck_180_last_at",
+   "fieldtype": "Datetime",
+   "label": "上次核对成功",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "recheck_180_next_at",
+   "fieldtype": "Datetime",
+   "label": "下次自动核对",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "recheck_cursor",
+   "fieldtype": "Date",
+   "label": "核对下一段开始日期",
+   "read_only": 1,
+   "hidden": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "recheck_until",
+   "fieldtype": "Date",
+   "label": "核对结束日期",
+   "read_only": 1,
+   "hidden": 1,
+   "no_copy": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "creation": "2026-11-28 13:33:40.677457",
+ "modified": "2026-11-28 13:57:04.909952"
+}

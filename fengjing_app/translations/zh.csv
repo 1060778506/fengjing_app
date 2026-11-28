@@ -14985,3 +14985,15 @@ It's outside working hours - hold the send to message without pinging anyone.,�
 It's outside working hours - send silently to let people rest (⌘⇧↵).,当前不在工作时间。可静默发送，让大家休息（⌘⇧↵）。
 It's outside working hours - your messages will be sent silently.,当前不在工作时间，您的消息将静默发送。
 TikTok Order Configuration,TikTok订单配置
+TikTok Order Sync Configuration,TikTok订单同步配置,
+TikTok Order Record,TikTok订单记录,
+TikTok Aftersales Sync Configuration,TikTok退货退款同步配置,
+TikTok Aftersales Record,TikTok退货退款记录,
+TikTok Statement Sync Configuration,TikTok结算账单同步配置,
+TikTok Statement Record,TikTok结算账单记录,
+TikTok Statement Transaction Sync Configuration,TikTok账单交易明细同步配置,
+TikTok Statement Transaction Record,TikTok账单交易明细记录,
+TikTok Payout Sync Configuration,TikTok打款记录同步配置,
+TikTok Payout Record,TikTok打款记录记录,
+TikTok Shop Performance Sync Configuration,TikTok店铺表现同步配置,
+TikTok Shop Performance Record,TikTok店铺表现记录,

@@ -1,0 +1,13 @@
+{
+ "doctype": "Page",
+ "module": "Fengjing Business",
+ "name": "tiktok_order_analysis",
+ "page_name": "tiktok_order_analysis",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "standard": "Yes",
+ "title": "TikTok 订单分析"
+}

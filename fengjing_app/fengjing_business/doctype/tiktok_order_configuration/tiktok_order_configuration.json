@@ -9,18 +9,27 @@
   "store_name",
   "shop_id",
   "country",
+  "shop_timezone",
   "register_api",
   "credentials_section",
   "app_key",
   "app_secret",
-  "auth_code"
+  "auth_code",
+  "seller_authorization_url",
+  "authorize_shop",
+  "authorized_at",
+  "shop_cipher",
+  "access_token",
+  "refresh_token",
+  "access_expires_at",
+  "refresh_expires_at"
  ],
  "fields": [
   {
    "fieldname": "store_name",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "\u5e97\u94fa\u540d\u79f0",
+   "label": "店铺名称",
    "options": "Cost Center",
    "reqd": 1,
    "unique": 1
@@ -28,45 +37,111 @@
   {
    "fieldname": "shop_id",
    "fieldtype": "Data",
-   "label": "\u5e97\u94fa ID"
+   "label": "店铺 ID"
   },
   {
    "fieldname": "country",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "\u7ad9\u70b9\u56fd\u5bb6",
+   "label": "站点国家",
    "options": "Country"
+  },
+  {
+   "fieldname": "shop_timezone",
+   "label": "店铺时区",
+   "fieldtype": "Data",
+   "default": "America/Los_Angeles",
+   "description": "用于历史日期窗口和店铺表现统计。请按店铺登记的时区填写 IANA 名称。"
   },
   {
    "fieldname": "credentials_section",
    "fieldtype": "Section Break",
-   "label": "\u5e94\u7528\u51ed\u8bc1"
+   "label": "应用凭证"
   },
   {
    "fieldname": "app_key",
    "fieldtype": "Data",
-   "label": "\u5e94\u7528\u5bc6\u94a5\uff08App Key\uff09",
+   "label": "应用密钥（App Key）",
    "reqd": 1
   },
   {
    "fieldname": "app_secret",
    "fieldtype": "Small Text",
-   "label": "\u5e94\u7528\u5bc6\u7801\uff08App Secret\uff09",
+   "label": "应用密码（App Secret）",
    "no_copy": 1,
    "reqd": 1
   },
   {
-   "description": "\u586b\u5199 TikTok Shop \u6388\u6743\u8df3\u8f6c\u5730\u5740\u4e2d\u7684 code \u53c2\u6570\u503c\u3002",
+   "description": "填写 TikTok Shop 授权跳转地址中的 code 参数值。",
    "fieldname": "auth_code",
    "fieldtype": "Small Text",
-   "label": "\u6388\u6743\u7801\uff08Code\uff09",
+   "label": "授权码（Code）",
    "no_copy": 1
   },
   {
-   "description": "* \u9700\u8981\u9009\u62e9\"Become a Developer\"\u9009\u9879",
+   "fieldname": "seller_authorization_url",
+   "fieldtype": "Small Text",
+   "label": "卖家授权链接",
+   "default": "https://services.tiktokshop.com/open/authorize?service_id=7679643544932566791",
+   "description": "可改为 TikTok Shop Partner Center 提供的其他卖家授权链接（包含 service_id）。"
+  },
+  {
+   "fieldname": "authorize_shop",
+   "fieldtype": "Button",
+   "label": "授权店铺"
+  },
+  {
+   "fieldname": "authorized_at",
+   "fieldtype": "Datetime",
+   "label": "最近授权时间",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "shop_cipher",
+   "fieldtype": "Small Text",
+   "label": "Shop Cipher",
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "access_token",
+   "fieldtype": "Password",
+   "label": "访问令牌",
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "refresh_token",
+   "fieldtype": "Password",
+   "label": "刷新令牌",
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "description": "* 需要选择\"Become a Developer\"选项",
    "fieldname": "register_api",
    "fieldtype": "Button",
-   "label": "\u7533\u8bf7 API"
+   "label": "申请 API"
+  },
+  {
+   "fieldname": "access_expires_at",
+   "label": "访问令牌到期时间",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "refresh_expires_at",
+   "label": "刷新令牌到期时间",
+   "fieldtype": "Datetime",
+   "hidden": 1,
+   "read_only": 1,
+   "no_copy": 1
   }
  ],
  "link_display_mode": "Search",

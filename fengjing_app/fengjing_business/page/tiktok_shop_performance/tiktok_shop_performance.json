@@ -1,0 +1,13 @@
+{
+ "doctype": "Page",
+ "module": "Fengjing Business",
+ "name": "tiktok_shop_performance",
+ "page_name": "tiktok_shop_performance",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "standard": "Yes",
+ "title": "TikTok 店铺表现"
+}

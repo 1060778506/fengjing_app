@@ -1,0 +1,13 @@
+{
+ "doctype": "Page",
+ "module": "Fengjing Business",
+ "name": "tiktok_aftersales_analysis",
+ "page_name": "tiktok_aftersales_analysis",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "standard": "Yes",
+ "title": "TikTok 售后分析"
+}

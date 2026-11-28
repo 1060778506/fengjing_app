@@ -1,0 +1,5 @@
+from fengjing_app.fengjing_business.doctype.tiktok_order_configuration.tiktok_sync import TikTokSyncConfiguration
+
+
+class TikTokStatementTransactionSyncConfiguration(TikTokSyncConfiguration):
+	pass

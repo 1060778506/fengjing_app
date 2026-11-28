@@ -1,0 +1,13 @@
+{
+ "doctype": "Page",
+ "module": "Fengjing Business",
+ "name": "tiktok_finance",
+ "page_name": "tiktok_finance",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "standard": "Yes",
+ "title": "TikTok 财务交易中心"
+}

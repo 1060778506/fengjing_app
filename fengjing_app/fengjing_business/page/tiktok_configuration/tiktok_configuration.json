@@ -1,0 +1,9 @@
+{
+ "doctype": "Page",
+ "module": "Fengjing Business",
+ "name": "tiktok_configuration",
+ "page_name": "tiktok_configuration",
+ "roles": [{"role": "System Manager"}],
+ "standard": "Yes",
+ "title": "TikTok 配置中心"
+}

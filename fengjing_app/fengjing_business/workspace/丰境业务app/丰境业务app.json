@@ -1,7 +1,7 @@
 {
  "app": "fengjing_app",
  "charts": [],
- "content": "[{\"id\":\"zDZ9WZvvQO\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">丰境业务APP</span>\",\"col\":12}},{\"id\":\"fHKKg56N5o\",\"type\":\"card\",\"data\":{\"card_name\":\"主配置\",\"col\":3}},{\"id\":\"1Q4JsY6yWo\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"eVXsFSF7EY\",\"type\":\"card\",\"data\":{\"card_name\":\"ozon配置\",\"col\":3}},{\"id\":\"wAmdd8UE_D\",\"type\":\"card\",\"data\":{\"card_name\":\"亚马逊配置\",\"col\":3}},{\"id\":\"x9rFy2SmvR\",\"type\":\"card\",\"data\":{\"card_name\":\"temu数据\",\"col\":3}},{\"id\":\"_rynwZclHG\",\"type\":\"card\",\"data\":{\"card_name\":\"temu分析\",\"col\":3}},{\"id\":\"zlT1AqwYD3\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"P3xiATaZlI\",\"type\":\"card\",\"data\":{\"card_name\":\"ozon数据\",\"col\":3}},{\"id\":\"GO_LfWm4a0\",\"type\":\"card\",\"data\":{\"card_name\":\"ozon分析\",\"col\":3}},{\"id\":\"Mx4pMVMBHS\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Pm3j-1a5CI\",\"type\":\"card\",\"data\":{\"card_name\":\"亚马逊数据\",\"col\":3}},{\"id\":\"TnN8sPxIbP\",\"type\":\"card\",\"data\":{\"card_name\":\"亚马逊分析\",\"col\":3}},{\"id\":\"pNUcY93mFd\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"0ZOmBT4Klz\",\"type\":\"card\",\"data\":{\"card_name\":\"tiktok配置\",\"col\":4}}]",
+ "content": "[{\"id\":\"zDZ9WZvvQO\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">丰境业务APP</span>\",\"col\":12}},{\"id\":\"fHKKg56N5o\",\"type\":\"card\",\"data\":{\"card_name\":\"主配置\",\"col\":3}},{\"id\":\"1Q4JsY6yWo\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"eVXsFSF7EY\",\"type\":\"card\",\"data\":{\"card_name\":\"ozon配置\",\"col\":3}},{\"id\":\"wAmdd8UE_D\",\"type\":\"card\",\"data\":{\"card_name\":\"亚马逊配置\",\"col\":3}},{\"id\":\"x9rFy2SmvR\",\"type\":\"card\",\"data\":{\"card_name\":\"temu数据\",\"col\":3}},{\"id\":\"_rynwZclHG\",\"type\":\"card\",\"data\":{\"card_name\":\"temu分析\",\"col\":3}},{\"id\":\"zlT1AqwYD3\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"P3xiATaZlI\",\"type\":\"card\",\"data\":{\"card_name\":\"ozon数据\",\"col\":3}},{\"id\":\"GO_LfWm4a0\",\"type\":\"card\",\"data\":{\"card_name\":\"ozon分析\",\"col\":3}},{\"id\":\"Mx4pMVMBHS\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"Pm3j-1a5CI\",\"type\":\"card\",\"data\":{\"card_name\":\"亚马逊数据\",\"col\":3}},{\"id\":\"TnN8sPxIbP\",\"type\":\"card\",\"data\":{\"card_name\":\"亚马逊分析\",\"col\":3}},{\"id\":\"pNUcY93mFd\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"0ZOmBT4Klz\",\"type\":\"card\",\"data\":{\"card_name\":\"tiktok配置\",\"col\":3}},{\"id\":\"tkshopdata\",\"type\":\"card\",\"data\":{\"card_name\":\"TikTok 数据\",\"col\":3}},{\"id\":\"BhrWcQJo95\",\"type\":\"card\",\"data\":{\"card_name\":\"tiktok分析\",\"col\":3}}]",
  "creation": "2026-02-04 18:27:27.827398",
  "custom_blocks": [],
  "docstatus": 0,
@@ -1049,7 +1049,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "tiktok配置",
-   "link_count": 2,
+   "link_count": 9,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -1057,7 +1057,17 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "TikTok订单配置",
+   "label": "TikTok配置中心",
+   "link_count": 0,
+   "link_to": "tiktok_configuration",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok店铺授权配置",
    "link_count": 0,
    "link_to": "TikTok Order Configuration",
    "link_type": "DocType",
@@ -1073,9 +1083,187 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok订单同步配置",
+   "link_count": 0,
+   "link_to": "TikTok Order Sync Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok退货退款同步配置",
+   "link_count": 0,
+   "link_to": "TikTok Aftersales Sync Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok结算账单同步配置",
+   "link_count": 0,
+   "link_to": "TikTok Statement Sync Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok账单交易明细同步配置",
+   "link_count": 0,
+   "link_to": "TikTok Statement Transaction Sync Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok打款记录同步配置",
+   "link_count": 0,
+   "link_to": "TikTok Payout Sync Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok店铺表现同步配置",
+   "link_count": 0,
+   "link_to": "TikTok Shop Performance Sync Configuration",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok 数据",
+   "link_count": 6,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok订单记录",
+   "link_count": 0,
+   "link_to": "TikTok Order Record",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok退货退款记录",
+   "link_count": 0,
+   "link_to": "TikTok Aftersales Record",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok结算账单记录",
+   "link_count": 0,
+   "link_to": "TikTok Statement Record",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok账单交易明细记录",
+   "link_count": 0,
+   "link_to": "TikTok Statement Transaction Record",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok打款记录记录",
+   "link_count": 0,
+   "link_to": "TikTok Payout Record",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok店铺表现记录",
+   "link_count": 0,
+   "link_to": "TikTok Shop Performance Record",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "tiktok分析",
+   "link_count": 4,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok 订单分析",
+   "link_count": 0,
+   "link_to": "tiktok_order_analysis",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok 售后分析",
+   "link_count": 0,
+   "link_to": "tiktok_aftersales_analysis",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok 财务交易中心",
+   "link_count": 0,
+   "link_to": "tiktok_finance",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "TikTok 店铺表现",
+   "link_count": 0,
+   "link_to": "tiktok_shop_performance",
+   "link_type": "Page",
+   "onboard": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-11-28 12:05:55.194308",
+ "modified": "2026-11-28 14:27:56.741690",
  "modified_by": "Administrator",
  "module": "Fengjing Business",
  "name": "丰境业务APP",

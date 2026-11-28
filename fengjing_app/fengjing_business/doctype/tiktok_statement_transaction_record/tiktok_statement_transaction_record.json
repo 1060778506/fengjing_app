@@ -1,0 +1,180 @@
+{
+ "doctype": "DocType",
+ "module": "Fengjing Business",
+ "name": "TikTok Statement Transaction Record",
+ "engine": "InnoDB",
+ "autoname": "field:identity_key",
+ "title_field": "record_label",
+ "field_order": [
+  "identity_key",
+  "record_label",
+  "tiktok_store",
+  "transaction_id",
+  "statement",
+  "statement_id",
+  "source_order_id",
+  "adjustment_id",
+  "transaction_type",
+  "created_at",
+  "amount",
+  "currency",
+  "source_updated_at",
+  "fetched_at",
+  "raw_section",
+  "raw_json_hash",
+  "first_raw_json",
+  "raw_json",
+  "raw_json_history"
+ ],
+ "fields": [
+  {
+   "fieldname": "identity_key",
+   "label": "记录唯一键",
+   "fieldtype": "Data",
+   "read_only": 1,
+   "unique": 1,
+   "reqd": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "record_label",
+   "label": "记录标识",
+   "fieldtype": "Data",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "tiktok_store",
+   "label": "TikTok 店铺",
+   "fieldtype": "Link",
+   "read_only": 1,
+   "options": "TikTok Order Configuration",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "transaction_id",
+   "label": "交易 ID",
+   "fieldtype": "Data",
+   "read_only": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "statement",
+   "label": "结算账单",
+   "fieldtype": "Link",
+   "read_only": 1,
+   "options": "TikTok Statement Record",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "statement_id",
+   "label": "结算账单 ID",
+   "fieldtype": "Data",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "source_order_id",
+   "label": "订单号",
+   "fieldtype": "Data",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "adjustment_id",
+   "label": "调整 ID",
+   "fieldtype": "Data",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "transaction_type",
+   "label": "交易类型",
+   "fieldtype": "Data",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "created_at",
+   "label": "原订单创建时间",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amount",
+   "label": "结算金额",
+   "fieldtype": "Currency",
+   "read_only": 1,
+   "options": "currency",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "currency",
+   "label": "币种",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "source_updated_at",
+   "label": "平台更新时间",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "fetched_at",
+   "label": "最近抓取时间",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "raw_section",
+   "label": "源数据",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "raw_json_hash",
+   "label": "最新 JSON 校验值",
+   "fieldtype": "Data",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "first_raw_json",
+   "label": "首次原始 JSON",
+   "fieldtype": "Code",
+   "read_only": 1,
+   "options": "JSON"
+  },
+  {
+   "fieldname": "raw_json",
+   "label": "最新原始 JSON",
+   "fieldtype": "Code",
+   "read_only": 1,
+   "options": "JSON"
+  },
+  {
+   "fieldname": "raw_json_history",
+   "label": "原始 JSON 历史版本",
+   "fieldtype": "Code",
+   "read_only": 1,
+   "options": "JSON"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "report": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "creation": "2026-11-28 13:33:40.677457",
+ "modified": "2026-11-28 13:33:40.677457"
+}

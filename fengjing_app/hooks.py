@@ -300,6 +300,12 @@ doc_events = {
     }
 }
 
+def run_tiktok_sync():
+    from fengjing_app.fengjing_business.doctype.tiktok_order_configuration.tiktok_sync import run_scheduled_sync
+
+    run_scheduled_sync()
+
+
 # ERPNext 的原生冲回只交换标准借贷字段；丰境的外币辅助字段也要同时交换。
 override_whitelisted_methods = {
     "erpnext.accounts.doctype.journal_entry.journal_entry.make_reverse_journal_entry":
@@ -323,12 +329,19 @@ doctype_js = {
     "Sales Invoice": "public/js/runtime/sales_invoice.js",
     "Stock Entry": "public/js/runtime/stock_entry.js",
     "Material Request": "public/js/runtime/material_request.js",
+    "TikTok Order Sync Configuration": "public/js/runtime/tiktok_sync_configuration.js",
+    "TikTok Aftersales Sync Configuration": "public/js/runtime/tiktok_sync_configuration.js",
+    "TikTok Statement Sync Configuration": "public/js/runtime/tiktok_sync_configuration.js",
+    "TikTok Statement Transaction Sync Configuration": "public/js/runtime/tiktok_sync_configuration.js",
+    "TikTok Payout Sync Configuration": "public/js/runtime/tiktok_sync_configuration.js",
+    "TikTok Shop Performance Sync Configuration": "public/js/runtime/tiktok_sync_configuration.js",
 }
 
 
 # 各平台后台调度入口
 scheduler_events = {
     "all": [
+        "fengjing_app.hooks.run_tiktok_sync",
         "fengjing_app.hooks.run_amazon_rankings",
         "fengjing_app.hooks.run_amazon_orders",
         "fengjing_app.hooks.run_amazon_finances",
