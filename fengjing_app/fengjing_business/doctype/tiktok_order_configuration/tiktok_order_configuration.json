@@ -1,0 +1,94 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:store_name",
+ "creation": "2026-11-28 12:33:51.991919",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "store_name",
+  "shop_id",
+  "country",
+  "register_api",
+  "credentials_section",
+  "app_key",
+  "app_secret",
+  "auth_code"
+ ],
+ "fields": [
+  {
+   "fieldname": "store_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u5e97\u94fa\u540d\u79f0",
+   "options": "Cost Center",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "shop_id",
+   "fieldtype": "Data",
+   "label": "\u5e97\u94fa ID"
+  },
+  {
+   "fieldname": "country",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "\u7ad9\u70b9\u56fd\u5bb6",
+   "options": "Country"
+  },
+  {
+   "fieldname": "credentials_section",
+   "fieldtype": "Section Break",
+   "label": "\u5e94\u7528\u51ed\u8bc1"
+  },
+  {
+   "fieldname": "app_key",
+   "fieldtype": "Data",
+   "label": "\u5e94\u7528\u5bc6\u94a5\uff08App Key\uff09",
+   "reqd": 1
+  },
+  {
+   "fieldname": "app_secret",
+   "fieldtype": "Small Text",
+   "label": "\u5e94\u7528\u5bc6\u7801\uff08App Secret\uff09",
+   "no_copy": 1,
+   "reqd": 1
+  },
+  {
+   "description": "\u586b\u5199 TikTok Shop \u6388\u6743\u8df3\u8f6c\u5730\u5740\u4e2d\u7684 code \u53c2\u6570\u503c\u3002",
+   "fieldname": "auth_code",
+   "fieldtype": "Small Text",
+   "label": "\u6388\u6743\u7801\uff08Code\uff09",
+   "no_copy": 1
+  },
+  {
+   "description": "* \u9700\u8981\u9009\u62e9\"Become a Developer\"\u9009\u9879",
+   "fieldname": "register_api",
+   "fieldtype": "Button",
+   "label": "\u7533\u8bf7 API"
+  }
+ ],
+ "link_display_mode": "Search",
+ "links": [],
+ "modified": "2026-11-28 12:34:57.999033",
+ "modified_by": "Administrator",
+ "module": "Fengjing Business",
+ "name": "TikTok Order Configuration",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "store_name"
+}
